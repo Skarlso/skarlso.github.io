@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <title>
+    How to eliminate a parameter boom // Test Page
+  </title>
+
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+<meta name="description" content="">
+<meta name="keywords" content="">
+<meta name="author" content="hannibal">
+<meta name="generator" content="Hugo 0.14" />
+
+  <meta property="og:title" content="How to eliminate a parameter boom" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:url" content="https://skarlso.github.io/2012/10/09/how-to-eliminate-a-parameter-boom/" />
+
+
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/base-min.css">
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/pure-min.css">
+  
+  
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/grids-responsive-min.css">
+  
+  
+
+  <link rel="stylesheet" href="https://skarlso.github.io//css/redlounge.css">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+  <link href='//fonts.googleapis.com/css?family=Raleway:400,200,100,700,300,500,600,800' rel='stylesheet' type='text/css'>
+  <link href='//fonts.googleapis.com/css?family=Libre+Baskerville:400,700,400italic' rel='stylesheet' type='text/css'>
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://skarlso.github.io/touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="https://skarlso.github.io/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Test Page" />
+
+    
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.7/styles/tomorrow-night-bright.min.css">
+  
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.7/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+
+  
+
+  
+
+  
+</head>
+
+<body>
+	
+
+	<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+  <div class="header">
+    
+
+	
+
+    
+    
+
+    <nav class="nav">
+      <ul class="nav-list">
+        <li class="nav-item"><span class="nav-item-separator">//</span><a href="https://skarlso.github.io/">Home</a></li>
+        
+      </ul>
+    </nav>
+
+    
+
+  </div>
+</div>
+
+	
+	
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+		<a name="top"></a>
+		
+
+		
+			
+	    
+  		<section class="post">
+            <h1 class="post-title">
+              <a href="https://skarlso.github.io/2012/10/09/how-to-eliminate-a-parameter-boom">How to eliminate a parameter boom</a>
+            </h1>
+            <h3 class="post-subtitle">
+            	
+            </h3>
+            
+            	<span class="post-date">
+                	<span class="post-date-day"><sup>9</sup></span><span class="post-date-separator">/</span><span class="post-date-month">Oct</span> <span class="post-date-year">2012</span>
+            	</span>
+            	
+            
+            	
+            		<span class="post-author-single">By <a class="post-author"  target="">hannibal</a></span>
+            		
+
+
+
+
+            	
+            
+
+			
+			
+				<div class="post-categories">
+				
+					<a class="post-category post-category-java" href="https://skarlso.github.io//categories/java">java</a>
+				
+					<a class="post-category post-category-knowledge" href="https://skarlso.github.io//categories/knowledge">knowledge</a>
+				
+					<a class="post-category post-category-problem-solving" href="https://skarlso.github.io//categories/problem-solving">problem solving</a>
+				
+					<a class="post-category post-category-programming" href="https://skarlso.github.io//categories/programming">programming</a>
+				
+					<a class="post-category post-category-uncategorized" href="https://skarlso.github.io//categories/uncategorized">Uncategorized</a>
+				
+				</div>
+			
+
+			
+
+			
+
+            <p>Hello folks.</p>
+
+<p>Today I want to write about a little trick I learned.</p>
+
+<p>If you are working with legacy code and you don&#8217;t have the chance to eliminate core design problems, you can use this little pattern to help you out.</p>
+
+<p><strong>Problem</strong></p>
+
+<p>Problem is that you have a class that has a gazillion collaborators and at some point in time one of the clever devs thought it would be a cool idea to do dependancy injection via the constructor. We all know that doing this makes the class immutable which is very good for a number of reasons. However it doesn&#8217;t provide a flexible solution if you want to leave out one or two collabs. For that your would have to create Adapter constructors and chain them upwards which would get very ugly very fast. While using JavaBeans getters and setters can leave your class in a harmful state like not at all or partially initialised.</p>
+
+<p>So what&#8217;s a good solution then?</p>
+
+<p><strong>Solution</strong></p>
+
+<p>One possible solution would be to use some kind of initialisation framework like Springs @Autowired. But cluttering your classes with that isn&#8217;t really pretty either. But it&#8217;s A solution.</p>
+
+<p>Another solution is the usage of a builder pattern.</p>
+
+<p>Consider this class:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="line_numbers">
+        <pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre>
+      </td>
+      
+      <td class="code">
+        <pre class="java" style="font-family:monospace;">    <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #000000; font-weight: bold;">class</span> VeryImportantService <span style="color: #009900;">&#123;</span>
+&nbsp;
+        <span style="color: #000000; font-weight: bold;">public</span> VeryImportantService<span style="color: #009900;">&#40;</span>CollabOne collabOne, CollabTwo collabTwo, CollabThree collabThree, CollabFour collabFour,
+            CollabFive collabFive, CollabSix collabSix<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+            .
+            .
+            .
+        <span style="color: #009900;">&#125;</span>
+    <span style="color: #009900;">&#125;</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Don&#8217;t forget that we want these to be optional. I would like to leave out two or three here and there.</p>
+
+<p>The builder let&#8217;s you do that. It looks something like this:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="line_numbers">
+        <pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+</pre>
+      </td>
+      
+      <td class="code">
+        <pre class="java" style="font-family:monospace;">    <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #000000; font-weight: bold;">class</span> VeryImportantService <span style="color: #009900;">&#123;</span>
+&nbsp;
+        <span style="color: #000000; font-weight: bold;">private</span> CollabOne collabOne<span style="color: #339933;">;</span>
+        <span style="color: #000000; font-weight: bold;">private</span> CollabTwo collabTwo<span style="color: #339933;">;</span>
+        <span style="color: #000000; font-weight: bold;">private</span> CollabThree collabThree<span style="color: #339933;">;</span>
+        <span style="color: #000000; font-weight: bold;">private</span> CollabFour collabFour<span style="color: #339933;">;</span>
+        <span style="color: #000000; font-weight: bold;">private</span> CollabFive collabFive<span style="color: #339933;">;</span>
+        <span style="color: #000000; font-weight: bold;">private</span> CollabSix collabSix<span style="color: #339933;">;</span> 
+&nbsp;
+&nbsp;
+        <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #000000; font-weight: bold;">static</span> <span style="color: #000000; font-weight: bold;">class</span> Builder<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+            <span style="color: #000000; font-weight: bold;">private</span> CollabOne collabOne<span style="color: #339933;">;</span>
+            <span style="color: #000000; font-weight: bold;">private</span> CollabTwo collabTwo<span style="color: #339933;">;</span>
+            <span style="color: #000000; font-weight: bold;">private</span> CollabThree collabThree<span style="color: #339933;">;</span>
+            <span style="color: #000000; font-weight: bold;">private</span> CollabFour collabFour<span style="color: #339933;">;</span>
+            <span style="color: #000000; font-weight: bold;">private</span> CollabFive collabFive<span style="color: #339933;">;</span>
+            <span style="color: #000000; font-weight: bold;">private</span> CollabSix collabSix<span style="color: #339933;">;</span> 
+&nbsp;
+            <span style="color: #000000; font-weight: bold;">public</span> Builder<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span><span style="color: #009900;">&#125;</span>
+&nbsp;
+            <span style="color: #000000; font-weight: bold;">public</span> Builder collabOne<span style="color: #009900;">&#40;</span>CollabOne value<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+                <span style="color: #000000; font-weight: bold;">this</span>.<span style="color: #006633;">collabOne</span> <span style="color: #339933;">=</span> value<span style="color: #339933;">;</span>
+                <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #000000; font-weight: bold;">this</span><span style="color: #339933;">;</span>
+            <span style="color: #009900;">&#125;</span>
+&nbsp;
+            <span style="color: #000000; font-weight: bold;">public</span> Builder collabTwo<span style="color: #009900;">&#40;</span>CollabTwo value<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+                <span style="color: #000000; font-weight: bold;">this</span>.<span style="color: #006633;">collabTwo</span> <span style="color: #339933;">=</span> value<span style="color: #339933;">;</span>
+                <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #000000; font-weight: bold;">this</span><span style="color: #339933;">;</span>
+            <span style="color: #009900;">&#125;</span>
+&nbsp;
+            .
+            .
+            .
+&nbsp;
+            <span style="color: #000000; font-weight: bold;">public</span> VeryImportantService build<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+                <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #000000; font-weight: bold;">new</span> VeryImportantService<span style="color: #009900;">&#40;</span><span style="color: #000000; font-weight: bold;">this</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            <span style="color: #009900;">&#125;</span>
+&nbsp;
+        <span style="color: #009900;">&#125;</span>
+&nbsp;
+        <span style="color: #666666; font-style: italic;">//private constructor</span>
+        <span style="color: #000000; font-weight: bold;">private</span> VeryImportantService<span style="color: #009900;">&#40;</span>Builder builder<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+            <span style="color: #000000; font-weight: bold;">this</span>.<span style="color: #006633;">collabOne</span> <span style="color: #339933;">=</span> builder.<span style="color: #006633;">collabOne</span><span style="color: #339933;">;</span>
+            <span style="color: #000000; font-weight: bold;">this</span>.<span style="color: #006633;">collabTwo</span> <span style="color: #339933;">=</span> builder.<span style="color: #006633;">collabTwo</span><span style="color: #339933;">;</span>
+            .
+            .
+            .
+        <span style="color: #009900;">&#125;</span>
+    <span style="color: #009900;">&#125;</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Now&#8230; calling this would look something like this:</p>
+
+<pre lang="JAVA" lines="1">VeryImportantService veryImportantService = new VeryImportantService.Builder().collabOne(someValueOne).collabTwo(someValueTwo).collabFive(someValueFive);
+</pre>
+
+<p>This enables you to be flexible HOWEVER!! I HATE train wrecks. So I would probably tweak it not to return things, but set them. Then you would end up calling then line by line. Which is still not the best but better then the alternative.</p>
+
+<p><strong>End words</strong></p>
+
+<p>So there you go. This is A solution not THE solution obviously. The best would be to NOT design such a monster at all. If you have any better ideas please feel free to share. I would gladly put them on my blog.</p>
+
+<p>As always,</p>
+
+<p>Thanks for reading,</p>
+
+<p>Gergely.</p>
+
+	
+			
+
+			
+				<div class="tags-list">
+					<span class="dark-red">Tags</span><span class="decorative-marker">//</span>
+					
+	                <a class="post-tag post-tag-pattern" href="https://skarlso.github.io//tags/pattern">pattern</a>,
+	                
+				</div>
+			
+
+			
+				<div class="paging">
+					<span class="paging-label">More Reading</span>
+					
+					<div class="paging-newer">
+						<span class="dark-red">Newer</span><span class="decorative-marker">//</span>
+						<a class="paging-link" href="https://skarlso.github.io/2012/12/01/teas-testing-exploration-adventure-session">TEAS: Testing Exploration Adventure Session</a>
+		            </div>
+		            
+
+					
+					<div class="paging-older">
+						<span class="dark-red">Older</span><span class="decorative-marker">//</span>
+			            <a class="paging-link" href="https://skarlso.github.io/2012/09/30/89">Coderetreat London</a>
+		            </div>
+		            
+	            </div>
+            
+          </section>
+          
+          	
+          
+        
+      <div class="footer">
+	<hr class="thin" />
+	<div class="pure-menu pure-menu-horizontal pure-menu-open">
+		<ul class="footer-menu">
+		
+		</ul>
+	</div>
+
+	<p>&copy; 2015. All rights reserved.</p>
+</div>
+    </div>
+  </div>
+	
+
+	
+
+  
+</body>
+</html>

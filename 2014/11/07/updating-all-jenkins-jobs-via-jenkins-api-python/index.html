@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <title>
+    Updating All Jenkins Jobs Via Jenkins API – Python // Test Page
+  </title>
+
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+<meta name="description" content="">
+<meta name="keywords" content="">
+<meta name="author" content="hannibal">
+<meta name="generator" content="Hugo 0.14" />
+
+  <meta property="og:title" content="Updating All Jenkins Jobs Via Jenkins API – Python" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:url" content="https://skarlso.github.io/2014/11/07/updating-all-jenkins-jobs-via-jenkins-api-python/" />
+
+
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/base-min.css">
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/pure-min.css">
+  
+  
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/grids-responsive-min.css">
+  
+  
+
+  <link rel="stylesheet" href="https://skarlso.github.io//css/redlounge.css">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+  <link href='//fonts.googleapis.com/css?family=Raleway:400,200,100,700,300,500,600,800' rel='stylesheet' type='text/css'>
+  <link href='//fonts.googleapis.com/css?family=Libre+Baskerville:400,700,400italic' rel='stylesheet' type='text/css'>
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://skarlso.github.io/touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="https://skarlso.github.io/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Test Page" />
+
+    
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.7/styles/tomorrow-night-bright.min.css">
+  
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.7/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+
+  
+
+  
+
+  
+</head>
+
+<body>
+	
+
+	<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+  <div class="header">
+    
+
+	
+
+    
+    
+
+    <nav class="nav">
+      <ul class="nav-list">
+        <li class="nav-item"><span class="nav-item-separator">//</span><a href="https://skarlso.github.io/">Home</a></li>
+        
+      </ul>
+    </nav>
+
+    
+
+  </div>
+</div>
+
+	
+	
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+		<a name="top"></a>
+		
+
+		
+			
+	    
+  		<section class="post">
+            <h1 class="post-title">
+              <a href="https://skarlso.github.io/2014/11/07/updating-all-jenkins-jobs-via-jenkins-api-python">Updating All Jenkins Jobs Via Jenkins API – Python</a>
+            </h1>
+            <h3 class="post-subtitle">
+            	
+            </h3>
+            
+            	<span class="post-date">
+                	<span class="post-date-day"><sup>7</sup></span><span class="post-date-separator">/</span><span class="post-date-month">Nov</span> <span class="post-date-year">2014</span>
+            	</span>
+            	
+            
+            	
+            		<span class="post-author-single">By <a class="post-author"  target="">hannibal</a></span>
+            		
+
+
+
+
+            	
+            
+
+			
+			
+				<div class="post-categories">
+				
+					<a class="post-category post-category-python" href="https://skarlso.github.io//categories/python">Python</a>
+				
+				</div>
+			
+
+			
+
+			
+
+            <p>Hello everybody.</p>
+
+<p>I would like to share with you a small script I wrote to update all, or a single, Jenkins job from a Python script remotely.</p>
+
+<p>This will enable you to update a Jenkins job from anywhere using an admin credential based on a config.xml template that you have. With this, if you want to apply a config change to all or just a single job in Jenkins, you don&#8217;t have to go and do it for all the rest. You just call this script and it will cycle through all the jobs you have and update them if the begin with &#8220;yourpipelinedelimiter&#8221; or if they aren&#8217;t in a restricted list of jobs. The delimiter helps to identify pipelines which are dev pipelines. If you have multiple pipelines which are helpers or builders and you don&#8217;t usually apply the same config to them, than the delimiter can help identify the dev pipelines you actually want to update.</p>
+
+<p>Enjoy, hope it helps someone.</p>
+
+<p>And now, without any further ado:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="python" style="font-family:monospace;"><span style="color: #483d8b;">'''
+    Created to update multiple pipelines in jenkins with a given configuration and job list.
+    Usage: 
+    Example 1:
+    Updating a single pipeline's job with a given config.xml.
+    python update-jenkins-jobs.py job-name config.xml pipeline-name
+    Example 2:
+    Updating every pipeline in jenkins dynamically. !!!WARNING!!! This updates every job EXCEPT of the ones specified in restricted_jobs.
+    python update-jenkins-jobs.py job-name config.xml
+'''</span>
+<span style="color: #ff7700;font-weight:bold;">from</span> <span style="color: #dc143c;">xml</span>.<span style="color: black;">dom</span> <span style="color: #ff7700;font-weight:bold;">import</span> minidom
+<span style="color: #ff7700;font-weight:bold;">import</span> requests
+<span style="color: #ff7700;font-weight:bold;">import</span> <span style="color: #dc143c;">sys</span>
+&nbsp;
+<span style="color: #ff7700;font-weight:bold;">def</span> update_pipeline<span style="color: black;">&#40;</span>pipeline<span style="color: black;">&#41;</span>:
+    <span style="color: #483d8b;">'''
+    Takes in a list of pipelines to update.
+    '''</span>
+    config_file <span style="color: #66cc66;">=</span> <span style="color: #008000;">open</span><span style="color: black;">&#40;</span>config_to_use<span style="color: #66cc66;">,</span> <span style="color: #483d8b;">'rb'</span><span style="color: black;">&#41;</span>
+    headers <span style="color: #66cc66;">=</span> <span style="color: black;">&#123;</span><span style="color: #483d8b;">'content-type'</span>: <span style="color: #483d8b;">'application/xml'</span><span style="color: black;">&#125;</span>
+    <span style="color: #ff7700;font-weight:bold;">print</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">"Updating pipelines: "</span><span style="color: #66cc66;">,</span> pipeline<span style="color: black;">&#41;</span>
+&nbsp;
+    <span style="color: #ff7700;font-weight:bold;">for</span> dev_job <span style="color: #ff7700;font-weight:bold;">in</span> pipeline:
+        url <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">"http://jenkins:9999/job/%s/job/%s/config.xml"</span> % <span style="color: black;">&#40;</span>dev_job<span style="color: #66cc66;">,</span> job_to_update<span style="color: black;">&#41;</span>
+        r <span style="color: #66cc66;">=</span> requests.<span style="color: black;">post</span><span style="color: black;">&#40;</span>url<span style="color: #66cc66;">,</span> data<span style="color: #66cc66;">=</span>config_file<span style="color: #66cc66;">,</span> headers<span style="color: #66cc66;">=</span>headers<span style="color: #66cc66;">,</span> auth<span style="color: #66cc66;">=</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'user'</span><span style="color: #66cc66;">,</span> <span style="color: #483d8b;">'password'</span><span style="color: black;">&#41;</span><span style="color: black;">&#41;</span>
+        <span style="color: #ff7700;font-weight:bold;">print</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">"Updating pipeline: %s; Response Code: %s"</span> % <span style="color: black;">&#40;</span>dev_job<span style="color: #66cc66;">,</span> r<span style="color: black;">&#41;</span><span style="color: black;">&#41;</span>
+&nbsp;
+&nbsp;
+<span style="color: #ff7700;font-weight:bold;">def</span> get_dev_pipelines<span style="color: black;">&#40;</span><span style="color: black;">&#41;</span>:
+    <span style="color: #483d8b;">'''
+    Gets a list of pipelines which can be used by update_pipeline.
+    '''</span>
+    r <span style="color: #66cc66;">=</span> requests.<span style="color: black;">get</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'http://jenkins:9999/api/xml'</span><span style="color: #66cc66;">,</span> auth<span style="color: #66cc66;">=</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'user'</span><span style="color: #66cc66;">,</span> <span style="color: #483d8b;">'password'</span><span style="color: black;">&#41;</span><span style="color: #66cc66;">,</span> stream<span style="color: #66cc66;">=</span><span style="color: #008000;">True</span><span style="color: black;">&#41;</span>
+    job_list_xml <span style="color: #66cc66;">=</span> r.<span style="color: black;">text</span>
+&nbsp;
+    xmldoc <span style="color: #66cc66;">=</span> minidom.<span style="color: black;">parseString</span><span style="color: black;">&#40;</span>job_list_xml<span style="color: black;">&#41;</span>
+    itemlist <span style="color: #66cc66;">=</span> xmldoc.<span style="color: black;">getElementsByTagName</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'name'</span><span style="color: black;">&#41;</span> 
+&nbsp;
+    dev_job_list <span style="color: #66cc66;">=</span> <span style="color: black;">&#91;</span><span style="color: black;">&#93;</span>
+&nbsp;
+    restricted_jobs <span style="color: #66cc66;">=</span> <span style="color: black;">&#91;</span><span style="color: #483d8b;">"yourpipelinedelimiter-dev-pipeline1"</span><span style="color: #66cc66;">,</span> <span style="color: #483d8b;">"yourpipelinedelimiter-dev-pipeline2"</span><span style="color: #66cc66;">,</span> <span style="color: #483d8b;">"yourpipelinedelimiter-dev-pipeline3"</span><span style="color: black;">&#93;</span>
+    <span style="color: #ff7700;font-weight:bold;">for</span> s <span style="color: #ff7700;font-weight:bold;">in</span> itemlist:
+        <span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: black;">&#40;</span><span style="color: #483d8b;">"yourpipelinedelimiter-dev"</span> <span style="color: #ff7700;font-weight:bold;">in</span> s.<span style="color: black;">firstChild</span>.<span style="color: black;">nodeValue</span><span style="color: black;">&#41;</span> :
+            value <span style="color: #66cc66;">=</span> s.<span style="color: black;">firstChild</span>.<span style="color: black;">nodeValue</span>
+            <span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: black;">&#40;</span>value <span style="color: #ff7700;font-weight:bold;">not</span> <span style="color: #ff7700;font-weight:bold;">in</span> restricted_jobs<span style="color: black;">&#41;</span>:
+                dev_job_list.<span style="color: black;">append</span><span style="color: black;">&#40;</span>value<span style="color: black;">&#41;</span>
+&nbsp;
+    <span style="color: #ff7700;font-weight:bold;">return</span> dev_job_list
+&nbsp;
+&nbsp;
+job_to_update <span style="color: #66cc66;">=</span> <span style="color: #dc143c;">sys</span>.<span style="color: black;">argv</span><span style="color: black;">&#91;</span><span style="color: #ff4500;">1</span><span style="color: black;">&#93;</span>
+config_to_use <span style="color: #66cc66;">=</span> <span style="color: #dc143c;">sys</span>.<span style="color: black;">argv</span><span style="color: black;">&#91;</span><span style="color: #ff4500;">2</span><span style="color: black;">&#93;</span>
+dev_pipeline <span style="color: #66cc66;">=</span> <span style="color: black;">&#91;</span><span style="color: black;">&#93;</span>
+&nbsp;
+<span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: #008000;">len</span><span style="color: black;">&#40;</span><span style="color: #dc143c;">sys</span>.<span style="color: black;">argv</span><span style="color: black;">&#41;</span> &gt<span style="color: #66cc66;">;</span> <span style="color: #ff4500;">3</span>:
+    <span style="color: #ff7700;font-weight:bold;">print</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">"Args length:"</span><span style="color: #66cc66;">,</span> <span style="color: #008000;">len</span><span style="color: black;">&#40;</span><span style="color: #dc143c;">sys</span>.<span style="color: black;">argv</span><span style="color: black;">&#41;</span><span style="color: black;">&#41;</span>
+    dev_pipeline.<span style="color: black;">append</span><span style="color: black;">&#40;</span><span style="color: #dc143c;">sys</span>.<span style="color: black;">argv</span><span style="color: black;">&#91;</span><span style="color: #ff4500;">3</span><span style="color: black;">&#93;</span><span style="color: black;">&#41;</span>
+&nbsp;
+update_pipeline<span style="color: black;">&#40;</span>get_dev_pipelines<span style="color: black;">&#40;</span><span style="color: black;">&#41;</span> <span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: #ff7700;font-weight:bold;">not</span> dev_pipeline <span style="color: #ff7700;font-weight:bold;">else</span> dev_pipeline<span style="color: black;">&#41;</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Thanks for reading.</p>
+
+<p>Gergely.</p>
+
+	
+			
+
+			
+				<div class="tags-list">
+					<span class="dark-red">Tags</span><span class="decorative-marker">//</span>
+					
+	                <a class="post-tag post-tag-jenkins" href="https://skarlso.github.io//tags/jenkins">jenkins</a>,
+	                
+				</div>
+			
+
+			
+				<div class="paging">
+					<span class="paging-label">More Reading</span>
+					
+					<div class="paging-newer">
+						<span class="dark-red">Newer</span><span class="decorative-marker">//</span>
+						<a class="paging-link" href="https://skarlso.github.io/2014/11/15/why-the-expressiveness-of-your-tests-is-important-part-one">Why the expressiveness of your Tests is important – Part One</a>
+		            </div>
+		            
+
+					
+					<div class="paging-older">
+						<span class="dark-red">Older</span><span class="decorative-marker">//</span>
+			            <a class="paging-link" href="https://skarlso.github.io/2014/10/23/the-seven-guidelines-of-context-driven-testing">The seven Principles of Context Driven Testing – Mind Map</a>
+		            </div>
+		            
+	            </div>
+            
+          </section>
+          
+          	
+          
+        
+      <div class="footer">
+	<hr class="thin" />
+	<div class="pure-menu pure-menu-horizontal pure-menu-open">
+		<ul class="footer-menu">
+		
+		</ul>
+	</div>
+
+	<p>&copy; 2015. All rights reserved.</p>
+</div>
+    </div>
+  </div>
+	
+
+	
+
+  
+</body>
+</html>
