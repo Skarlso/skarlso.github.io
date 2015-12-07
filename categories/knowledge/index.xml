@@ -1,0 +1,1485 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Knowledge on Test Page</title>
+    <link>https://skarlso.github.io/categories/knowledge/</link>
+    <description>Recent content in Knowledge on Test Page</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Thu, 15 Oct 2015 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/categories/knowledge/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Jenkins Job DSL and Groovy goodness</title>
+      <link>https://skarlso.github.io/p629</link>
+      <pubDate>Thu, 15 Oct 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p629</guid>
+      <description>&lt;p&gt;Hi Folks.&lt;/p&gt;
+
+&lt;p&gt;Ever used &lt;a href=&#34;https://wiki.jenkins-ci.org/display/JENKINS/Job+DSL+Plugin&#34; target=&#34;_blank&#34;&gt;Job DSL plugin&lt;/a&gt; for Jenkins? What is that you say? Well, it&amp;#8217;s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.&lt;/p&gt;
+
+&lt;p&gt;Today, however, I&amp;#8217;m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.&lt;/p&gt;
+
+&lt;p&gt;Today, I would like to write about a part of it which is even more interesting. And that is, extracting re-occurring parts in your job configurations.&lt;/p&gt;
+
+&lt;p&gt;If you have jobs, which have a common part that is repeated everywhere, you usually have an urge to extracted that into one place, lest it changes and you have to go an apply the change everywhere. That&amp;#8217;s not very efficient. But how do you do that in something which looks like a JSON descriptor?&lt;/p&gt;
+
+&lt;p&gt;Fret not, it is just Groovy. And being just groovy, you can use Groovy to implement parts of the job description and then apply that implementation to the job in the DSL.&lt;/p&gt;
+
+&lt;p&gt;Suppose you have an email which you send after every job for which the DSL looks like this:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;groovy&#34; style=&#34;font-family:monospace;&#34;&gt;job&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;MyTestJob&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+    description &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;&amp;lt;strong&amp;gt;GENERATED - do not modify&amp;lt;/strong&amp;gt;&#39;&lt;/span&gt;
+    label&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;machine_label&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    logRotator&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;30&lt;/span&gt;, &lt;span style=&#34;color: #66cc66;&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #66cc66;&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #cc66cc;&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    parameters &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        stringParam&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;somestringparam&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;default_valye&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Description&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    wrappers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        timeout &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+            noActivity&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;600&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+            abortBuild&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+            failBuild&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+            writeDescription&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Build failed due to timeout after {0} minutes&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+        &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    deliveryPipelineConfiguration&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;Main&#34;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;MyTestJob&#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    wrappers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        preBuildCleanup &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+            deleteDirectories&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+        &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+        timestamps&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    triggers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        cron&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;H 12 * * 1,2&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    steps &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        batchFile&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;readFileFromWorkspace&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;relative/path/to/file&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+            publishers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+                wsCleanup&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+                extendedEmail&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;email@address.com&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+                    configure &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt; node &lt;span style=&#34;color: #66cc66;&#34;&gt;-&amp;gt;&lt;/span&gt;
+                        node / presendScript &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; readFileFromWorkspace&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;email_templates/emailtemplate.groovy&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+                        node / replyTo &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;
+                        node / contentType &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;default&#39;&lt;/span&gt;
+                    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;StillUnstable&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Fixed&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Failure&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+                &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+&amp;nbsp;
+            &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Now, that big chunk of email setting is copied into a bunch of files, which is pretty ugly. And once you try to change it, you&amp;#8217;ll have to change it everywhere. Also, the interesting bits here are those readFileFromWorkspace parts. Those allow us to export even larger chunks of the script into external files. Now, because the slave might be located somewhere else, you should not use new File(&amp;#8216;file&amp;#8217;).text in your job DSL. readFileFromWorkspace in the background does that, but applies correct way to the PATH it looks on for the file specified.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;#8217;s put this into a groovy script, shall we? Create a utilities folder where the DSL is and create a groovy file in it like this one:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;groovy&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color: #a1a100;&#34;&gt;utilities&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;class&lt;/span&gt; JobCommonTemplate &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #993333;&#34;&gt;void&lt;/span&gt; addEmailTemplate&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;def&lt;/span&gt; job, &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;def&lt;/span&gt; dslFactory&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        &lt;span style=&#34;color: #aaaadd; font-weight: bold;&#34;&gt;String&lt;/span&gt; emailScript &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; dslFactory.&lt;span style=&#34;color: #006600;&#34;&gt;readFileFromWorkspace&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;email_template/EmailTemplate.groovy&#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+        job.&lt;span style=&#34;color: #006600;&#34;&gt;with&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+            publishers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+                wsCleanup&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+                extendedEmail&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;email@address.com&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+                    configure &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt; node &lt;span style=&#34;color: #66cc66;&#34;&gt;-&amp;gt;&lt;/span&gt;
+                        node / presendScript &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; emailScript
+                        node / replyTo &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;
+                        node / contentType &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;default&#39;&lt;/span&gt;
+                    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;StillUnstable&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Fixed&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Failure&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+                &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+&amp;nbsp;
+            &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+        &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;The function addEmailTemplate gets two parameters. A job, which is an implementation of a Job, and a dslFactory which is a DslFactory. That factory is an interface which defines our readFileFromWorkspace. Where do we get the implementation from then? That will be from the Job. Let&amp;#8217;s alter our job to apply this Groovy script.&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;groovy&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #a1a100;&#34;&gt;utilities.JobCommonTemplate&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;def&lt;/span&gt; myJob &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; job&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;MyTestJob&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+    description &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;&amp;lt;strong&amp;gt;GENERATED - do not modify&amp;lt;/strong&amp;gt;&#39;&lt;/span&gt;
+    label&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;machine_label&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    logRotator&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;30&lt;/span&gt;, &lt;span style=&#34;color: #66cc66;&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #66cc66;&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #cc66cc;&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    parameters &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        stringParam&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;somestringparam&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;default_valye&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Description&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    wrappers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        timeout &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+            noActivity&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;600&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+            abortBuild&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+            failBuild&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+            writeDescription&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Build failed due to timeout after {0} minutes&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+        &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    deliveryPipelineConfiguration&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;Main&#34;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;MyTestJob&#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    wrappers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        preBuildCleanup &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+            deleteDirectories&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+        &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+        timestamps&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    triggers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        cron&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;H 12 * * 1,2&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+    steps &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+        batchFile&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;readFileFromWorkspace&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;relative/path/to/file&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+&amp;nbsp;
+JobCommonTemplate.&lt;span style=&#34;color: #006600;&#34;&gt;addEmailTemplate&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;myJob, &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;this&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Notice three things here.&lt;/p&gt;
+
+&lt;p&gt;#1 =&amp;gt; &lt;strong&gt;import&lt;/strong&gt;. We import the script from utilities folder which we created and placed the script into it.&lt;/p&gt;
+
+&lt;p&gt;#2 =&amp;gt; &lt;strong&gt;def myJob&lt;/strong&gt;. We create a variable which will contain our job&amp;#8217;s description.&lt;/p&gt;
+
+&lt;p&gt;#3 =&amp;gt; &lt;strong&gt;this&lt;/strong&gt;. &amp;#8216;this&amp;#8217; will be the DslFactory. That&amp;#8217;s where we get our readFileFromWorkspace implementation.&lt;/p&gt;
+
+&lt;p&gt;And that&amp;#8217;s it. We have extracted a part of our job which is re-occurring and we found our implementation for our readFileFromWorkspace. DslFactory has most of the things which you need in a job description, would you want to expand on this and extract other bits and pieces.&lt;/p&gt;
+
+&lt;p&gt;Have fun, and happy coding!&lt;/p&gt;
+
+&lt;p&gt;As always,&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading!&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Why Lock Picking is like Testing</title>
+      <link>https://skarlso.github.io/p424</link>
+      <pubDate>Sun, 08 Feb 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p424</guid>
+      <description>
+
+&lt;p&gt;&amp;nbsp;&lt;/p&gt;
+
+&lt;p&gt;Not a great many people know that I&amp;#8217;m actually into Lock Picking as a hobby. This will not be a tutorial on how to do it, or I won&amp;#8217;t really talk about how I do it; I would like to write about something completely different. So if you came here for that, here are a few very good resources:&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.lockpicking101.com/%20&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.lockpicking101.com/&#34;&gt;http://www.lockpicking101.com/&lt;/a&gt; &lt;/a&gt;&amp;#8211; Tutorials&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.ukbumpkeys.com/collections/lock-picking&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.ukbumpkeys.com/collections/lock-picking&#34;&gt;http://www.ukbumpkeys.com/collections/lock-picking&lt;/a&gt;&lt;/a&gt; &amp;#8211; Tools ( UK )&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.reddit.com/r/lockpicking/&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.reddit.com/r/lockpicking/&#34;&gt;http://www.reddit.com/r/lockpicking/&lt;/a&gt;&lt;/a&gt; &amp;#8211; Reddit&lt;/p&gt;
+
+&lt;p&gt;For my post, click on&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;So, why is lock picking like testing? I saw a great many posts which where trying to compare software testing to some activity. I even knew somebody who compared it to dancing. Because&amp;#8230;? I don&amp;#8217;t know, maybe he was trying out a talk material maybe? And he said &amp;#8211; &amp;#8220;I was in this club and watched a couple dance, and I was thinking, wow, this is like software testing.&amp;#8221; &amp;#8211; I couldn&amp;#8217;t really react to that. But hey, kudos for out of the box thinking I guess.&lt;/p&gt;
+
+&lt;p&gt;But let&amp;#8217;s see some of the similarities in picking and testing:&lt;/p&gt;
+
+&lt;h4 id=&#34;thinking:6511026dbafeb039d1c895bd844bde2a&#34;&gt;Thinking&lt;/h4&gt;
+
+&lt;p&gt;It requires logical, critical thinking. It&amp;#8217;s a puzzle that you have to solve. A puzzle which you basically solve by testing out solutions and see if they work. You can achieve this by trial and error, something testers face on a daily basis. After awhile you acquire something called finesse. Which will help you identify breaking points more easily. Since you have experience with a certain lock type, you already have a wast knowledge to rely on when you are trying to solve a new lock with the same build. You did your research you know its weaknesses hence you immediately have an attack vector on your hand.&lt;/p&gt;
+
+&lt;h4 id=&#34;tools:6511026dbafeb039d1c895bd844bde2a&#34;&gt;Tools&lt;/h4&gt;
+
+&lt;p&gt;Lock picking has a wast number of tools. Each tool is design for a specific purpose. You can reuse tools but they are rarely a fit for other locks. Unless it&amp;#8217;s a similar one. There are delicate tools and then there are brute force tools, which are very hard to use at first but after you get used to it and know how to handle it, it becomes massively helpful. You can build your own tools or use tools that are built for you by tool experts.&lt;/p&gt;
+
+&lt;h4 id=&#34;solving-process:6511026dbafeb039d1c895bd844bde2a&#34;&gt;Solving Process&lt;/h4&gt;
+
+&lt;p&gt;When can you test an application to its fullest extend and capabilities? How can you achieve the most and best testing ever possible? You have to know how the application works. You have to know its components, its abilities, its capabilities and &lt;strong&gt;limits. &lt;/strong&gt;For Lock Picking to be the best at what you do and to be able to move to a completely new lock and try to pick it, you have to know its flaws. You have to know when, and how it was built. You have to know what makes it tick, how it works, what it uses, how the inside mechanics look like in order to try to exploit them.&lt;/p&gt;
+
+&lt;p&gt;After you acquire this knowledge you will be able to build, or purchase a tool which will help you in solving the puzzle. But you were only able to do that because after you researched its manufacturing procedure you know that the last pin is hard to get to and that it has an anti drilling shield, so drilling is out of the question, and that it has a safety spring which locks the lock permanently upon tampering. If you would not be in the possession of this information you could have made a fatal error and could have made the client lost money ( since at that point they pretty much need to break down the door, unless the key is found again ( assuming the picking took place because the key was lost ) ).&lt;/p&gt;
+
+&lt;h4 id=&#34;last-words:6511026dbafeb039d1c895bd844bde2a&#34;&gt;Last Words&lt;/h4&gt;
+
+&lt;p&gt;There you have it folks. That&amp;#8217;s why Lock Picking is like software testing. Knowing structure, inside workings and the proper tools will help to achieve your goal. Just like in testing when you know your field, you know what to use, when, and how. &lt;strong&gt;Knowledge&lt;/strong&gt; makes you the Best.&lt;/p&gt;
+
+&lt;p&gt;Good luck,&lt;/p&gt;
+
+&lt;p&gt;Happy Picking,&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>JavaScript Web Framework – Meteor</title>
+      <link>https://skarlso.github.io/p355</link>
+      <pubDate>Thu, 29 Jan 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p355</guid>
+      <description>
+
+&lt;p&gt;Hi,&lt;/p&gt;
+
+&lt;p&gt;This time I would like to write about something that interests me. I wanted to try out a pure JavaScript web framework.&lt;/p&gt;
+
+&lt;p&gt;My choice is: &lt;a href=&#34;https://www.meteor.com/&#34; target=&#34;_blank&#34;&gt;Meteor&lt;/a&gt;. Looks interesting enough and it was recommended by a friend of mine. So, let&amp;#8217;s dive in.&lt;/p&gt;
+
+&lt;h4 id=&#34;installation:99643218ea35093992bc40ccf6f62326&#34;&gt;&lt;strong&gt;Installation&lt;/strong&gt;&lt;/h4&gt;
+
+&lt;p&gt;As always, one starts with installation. The page tells us to follow this simple step:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;curl https:&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;//&lt;/span&gt;install.meteor.com&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sh&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Easy enough, when you are on Linux. Turns out, that there is no official release yet for Windows. I&amp;#8217;m in luck then. After running the command though, I saw this popping up into my face:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;curl: &lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;60&lt;/span&gt;&lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;&amp;#41;&lt;/span&gt; Peer certificate cannot be authenticated with known CA certificates
+More details here: http:&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;//&lt;/span&gt;curl.haxx.se&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;docs&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;sslcerts.html&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;There is always something&amp;#8230; in that case a more accurate command to use would be the following:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;curl &lt;span style=&#34;color: #660033;&#34;&gt;-k&lt;/span&gt; https:&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;//&lt;/span&gt;install.meteor.com&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sh&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;This will force an insecure download. You might not face this issue, but just in case you do, use this command instead.&lt;/p&gt;
+
+&lt;p&gt;Branching off here. For those of you whom the curl didn&amp;#8217;t work because you are sitting behind a proxy you can specify a &amp;#8211;proxy  protocol//username:password@proxy:port after your curl. Of course if that doesn&amp;#8217;t work then the script won&amp;#8217;t work either.&lt;/p&gt;
+
+&lt;p&gt;So open the script in one of your favourite editors, for me it&amp;#8217;s Sublime text, and find this line: &amp;#8220;&lt;em&gt;Downloading Meteor distribution&lt;/em&gt;&amp;#8220;. Lo, and behold; it uses curl. This is the only one in the script, so just edit it by adding in your &amp;#8211;proxy setting as before and you should be right on track.&lt;/p&gt;
+
+&lt;p&gt;If that still gives you problems, try this:&lt;/p&gt;
+
+&lt;p&gt;Assuming that your browser is set up correctly with the proxy and just command line commands aren&amp;#8217;t working, you can go to this URL defined by the variable TARBALL_URL:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #007800;&#34;&gt;TARBALL_URL&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;https://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/&lt;span style=&#34;color: #007800;&#34;&gt;${RELEASE}&lt;/span&gt;/meteor-bootstrap-&lt;span style=&#34;color: #007800;&#34;&gt;${PLATFORM}&lt;/span&gt;.tar.gz&#34;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Note that there are two variables in there. For me these are:&lt;/p&gt;
+
+&lt;p&gt;RELEASE: 1.0.3.1&lt;/p&gt;
+
+&lt;p&gt;PLATFORM: os.linux.x86_64&lt;/p&gt;
+
+&lt;p&gt;The full URL is:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;https:&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;//&lt;/span&gt;d3sqy0vbqsdhku.cloudfront.net&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;packages-bootstrap&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;1.0.3.1&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;meteor-bootstrap-os.linux.x86_64.tar.gz&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Download the latest tarball and delete the CURL AND TAR command on the following line. After that, you just have to extract the tarball and move the directory to ~/.meteor.&lt;/p&gt;
+
+&lt;p&gt;Now you can run your sh again and you should be on the road, for sure this time.&lt;/p&gt;
+
+&lt;p&gt;Just to make sure, these are the line which you need to comment out:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;# If you already have a tropohouse/warehouse, we do a clean install here:&lt;/span&gt;
+&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;&amp;#91;&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-e&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;$HOME&lt;/span&gt;/.meteor&#34;&lt;/span&gt; &lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;&amp;#93;&lt;/span&gt;; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;then&lt;/span&gt;
+&lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;Removing your existing Meteor installation.&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;rm&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-rf&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;$HOME&lt;/span&gt;/.meteor&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;fi&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #007800;&#34;&gt;TARBALL_URL&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;https://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/&lt;span style=&#34;color: #007800;&#34;&gt;${RELEASE}&lt;/span&gt;/meteor-bootstrap-&lt;span style=&#34;color: #007800;&#34;&gt;${PLATFORM}&lt;/span&gt;.tar.gz&#34;&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #007800;&#34;&gt;INSTALL_TMPDIR&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;$HOME&lt;/span&gt;/.meteor-install-tmp&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;rm&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-rf&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;$INSTALL_TMPDIR&lt;/span&gt;&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;mkdir&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;$INSTALL_TMPDIR&lt;/span&gt;&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;Downloading Meteor distribution&#34;&lt;/span&gt;
+curl &lt;span style=&#34;color: #660033;&#34;&gt;--proxy&lt;/span&gt; https:&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;//&lt;/span&gt;ggbrau:Daleks37&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;@&lt;/span&gt;10.120.28.130:&lt;span style=&#34;color: #000000;&#34;&gt;80&lt;/span&gt;--progress-bar &lt;span style=&#34;color: #660033;&#34;&gt;--fail&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;$TARBALL_URL&lt;/span&gt;&#34;&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;tar&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-xzf&lt;/span&gt; - &lt;span style=&#34;color: #660033;&#34;&gt;-C&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;$INSTALL_TMPDIR&lt;/span&gt;&#34;&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-o&lt;/span&gt;
+&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;# bomb out if it didn&#39;t work, eg no net&lt;/span&gt;
+&lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;test&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-x&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;${INSTALL_TMPDIR}&lt;/span&gt;/.meteor/meteor&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;mv&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;${INSTALL_TMPDIR}&lt;/span&gt;/.meteor&#34;&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;$HOME&lt;/span&gt;&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;rm&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-rf&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;${INSTALL_TMPDIR}&lt;/span&gt;&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;# just double-checking :)&lt;/span&gt;
+&lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;test&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-x&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;&lt;span style=&#34;color: #007800;&#34;&gt;$HOME&lt;/span&gt;/.meteor/meteor&#34;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;h4 id=&#34;getting-started:99643218ea35093992bc40ccf6f62326&#34;&gt;Getting started&lt;/h4&gt;
+
+&lt;p&gt;After a nice installation process we can continue to the getting started phase.&lt;/p&gt;
+
+&lt;p&gt;So, the documentation tells us that we have to simply execute a command.&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;meteor create simple-todos&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;At this point we should get a directory structure which is written in the manual. And, behold, that&amp;#8217;s exactly what happened. As usually, creating a skeleton is easy. Lets run the app. For that, the command is:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;meteor&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;I can do that, I think.&lt;/p&gt;
+
+&lt;p&gt;And sure enough, I&amp;#8217;ve got this little message, which I actually expected to see:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;Can&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;t listen on port 3000. Perhaps another Meteor is running?&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;In this world, where there are tons of applications running on your dev environment at any given time, it&amp;#8217;s possible to have something already running on the port 3000. Luckily this is something that&amp;#8217;s anticipated by now, and we are presented with an option to add in a proxy setting of our choice with &amp;#8211;port &lt;port&gt;.&lt;/p&gt;
+
+&lt;p&gt;After I did that, I&amp;#8217;ve got a nice confirm message that meteor is up and running. A quick check on the presented URL provided me with the confidence that my app is indeed reachable.&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;App running at: http:&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;//&lt;/span&gt;localhost:&lt;span style=&#34;color: #000000;&#34;&gt;9999&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;h4 id=&#34;after-getting-started-8230:99643218ea35093992bc40ccf6f62326&#34;&gt;After Getting Started&amp;#8230;&lt;/h4&gt;
+
+&lt;p&gt;Now that we know that it&amp;#8217;s up and running we can continue with the tutorial. Up comes next a simple Todo list application with Templates. It&amp;#8217;s telling us to replace the code in the default starter app. At this point I&amp;#8217;m wondering if it can hotswap. It should, since javascript and HTML is dynamic so there should be no problems there, right?&lt;/p&gt;
+
+&lt;p&gt;And sure enough, the moment I replaced the code and checked on my server status, I could see this:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;Client modified &lt;span style=&#34;color: #660033;&#34;&gt;--&lt;/span&gt; refreshing
+Meteor server restarted&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;With a brief flash of &amp;#8220;Rebuilding&amp;#8230;&amp;#8221;. So it does sort of work. It did, however, restart the server it just did it without your manual intervention. Which is nice, but on a larger scale application it might prove to be a tad bit annoying. For example, I add another item to the list, and suddenly, the server is restarted.&lt;/p&gt;
+
+&lt;p&gt;Since, I am a tester, let&amp;#8217;s see how it handles some problems.&lt;/p&gt;
+
+&lt;p&gt;I modified the JavaScript so that it has a syntax error.&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;javascript&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #006600; font-style: italic;&#34;&gt;// simple-todos.js&lt;/span&gt;
+&lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;Meteor.&lt;span style=&#34;color: #660066;&#34;&gt;isClient&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt;
+  &lt;span style=&#34;color: #006600; font-style: italic;&#34;&gt;// This code only runs on the client&lt;/span&gt;
+  Template.&lt;span style=&#34;color: #660066;&#34;&gt;body&lt;/span&gt;.&lt;span style=&#34;color: #660066;&#34;&gt;helpers&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt;
+    tasks&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;
+      &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt; text&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #3366CC;&#34;&gt;&#34;This is task 1&#34;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt;
+      &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt; text&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #3366CC;&#34;&gt;&#34;This is task 2&#34;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt;
+      &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt; text&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #3366CC;&#34;&gt;&#34;This is task 3&#34;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;
+      &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt; text&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #3366CC;&#34;&gt;&#34;This is task 4&#34;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;
+    &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt;
+  &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Note the missing &amp;#8220;,&amp;#8221;. And, nicely enough I&amp;#8217;m getting an error message telling me that I messed something up:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;Errors prevented startup:
+&amp;nbsp;
+While building the application:
+my_cool_app.js:&lt;span style=&#34;color: #000000;&#34;&gt;10&lt;/span&gt;:&lt;span style=&#34;color: #000000;&#34;&gt;7&lt;/span&gt;: Unexpected token &lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;&amp;#123;&lt;/span&gt;
+&amp;nbsp;
+Your application has errors. Waiting &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;file&lt;/span&gt; change.&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;It even tells you where the error is and it&amp;#8217;s waiting for you to fix it. After I&amp;#8217;ve corrected my error it compiled fine and the application is up and running. Deleting the files did little difference as did corrupting the HTML pages or the CSS file. Nothing to see here, moving on&amp;#8230;&lt;/p&gt;
+
+&lt;h4 id=&#34;android-device:99643218ea35093992bc40ccf6f62326&#34;&gt;Android Device&lt;/h4&gt;
+
+&lt;p&gt;I&amp;#8217;m sure everybody can read a manual and continue with collections, forms, events and such. What I&amp;#8217;m more interested in is that Meteor promises it can run on Android devices. Now that perked my curiosity. With the rise of mobile devices, the desktop platform is slowly pushed back into a dark corner where even a &lt;a href=&#34;http://mistborn.wikia.com/wiki/Tineye&#34; target=&#34;_blank&#34;&gt;Tineye &lt;/a&gt;would have problems seeing it.&lt;/p&gt;
+
+&lt;p&gt;Hence, I want to see how easy it really is.&lt;/p&gt;
+
+&lt;p&gt;Meteor gives you a set of commands to install the android sdk and droid support for your application, which is nice. You just need to run this:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;meteor install-sdk android
+meteor add-platform android &lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;# Perform this step in the app&#39;s folder and agree to terms and conditions.&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Now, if you are like me, someone who has experience with the android SDK and its emulator, you&amp;#8217;ll know that running that thing requires more time and processing power than simulating the chances of Leonardo DiCaprio winning an Oscar. I&amp;#8217;ll use a real device instead. For that, it appears I only have to run a simple command again.&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;meteor run android-device&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;And sure enough the app appeared on my device.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/01/meteor.png&#34;&gt;&lt;img class=&#34;alignnone size-thumbnail wp-image-402&#34; src=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/01/meteor-150x150.png&#34; alt=&#34;meteor&#34; width=&#34;150&#34; height=&#34;150&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;This is actually quite awesome. I only plugged in my device, enabled developer options and USB debugging and that&amp;#8217;s it. I&amp;#8217;m quite impressed so far with Meteor and the Power of JavaScript. The app is on my phone and the static JavaScript parts are still working even though I shut the server down.&lt;/p&gt;
+
+&lt;p&gt;So my next burning question is&amp;#8230; Will it Blend? I mean, Perform?&lt;/p&gt;
+
+&lt;h4 id=&#34;benchmarking:99643218ea35093992bc40ccf6f62326&#34;&gt;Benchmarking&lt;/h4&gt;
+
+&lt;p&gt;So, now that I know that using, installing and getting started is pretty simple, what I also would like to know is how well it performs.&lt;/p&gt;
+
+&lt;p&gt;I have a quad core i7 16GB RAM Samsung SSD running Linux. Let&amp;#8217;s see 100 threads 10 second interval 10 times loop for a start. Look at how gorgeous this is.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/01/performance1-e1422478859195.png&#34;&gt;&lt;img class=&#34;alignnone size-thumbnail wp-image-404&#34; src=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/01/performance1-e1422478859195-150x150.png&#34; alt=&#34;performance1&#34; width=&#34;150&#34; height=&#34;150&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;40ms on average. Now let&amp;#8217;s crank it up and I&amp;#8217;m performing the test on a separate machine but still on the same network. 1000 threads.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/01/performance2.png&#34;&gt;&lt;img class=&#34;alignnone size-thumbnail wp-image-405&#34; src=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/01/performance2-150x150.png&#34; alt=&#34;performance2&#34; width=&#34;150&#34; height=&#34;150&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;This time I&amp;#8217;ve got a bit more churn and my pc started to fan like there is no tomorrow. But the server stayed stable. Latency did not waver for a bit. Next, 10.000 for as long as my machine can handle it&amp;#8230;. Better save my work. Hah, my JMeter died. But it clocked at an average of 1000ms response time and the server stayed absolutely stable with no package lost, or errors.&lt;/p&gt;
+
+&lt;h4 id=&#34;conclusion:99643218ea35093992bc40ccf6f62326&#34;&gt;Conclusion&lt;/h4&gt;
+
+&lt;p&gt;I can say with a full heart that I&amp;#8217;m impressed by Meteor and I very much like it. It&amp;#8217;s easy to use, even more easy to install and definitely can handle itself given that it&amp;#8217;s rather lightweight. The hot swapping / server re-starting can&amp;#8217;t be avoided, but that&amp;#8217;s only a minor inconvenience and we got used to that already.&lt;/p&gt;
+
+&lt;p&gt;I recommend Meteor and I&amp;#8217;ll be playing around with it a bit more for sure.&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading!&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>The seven Principles of Context Driven Testing – Mind Map</title>
+      <link>https://skarlso.github.io/p330</link>
+      <pubDate>Thu, 23 Oct 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p330</guid>
+      <description>&lt;p&gt;Hi Folks!&lt;/p&gt;
+
+&lt;p&gt;I just wanted to share with you my mind map on the seven principles of Context Driven Testing.&lt;/p&gt;
+
+&lt;p&gt;I used the notion of dragons since it&amp;#8217;s seven. And a dragon is usually seven headed in my mind&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;So without further ado&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2014/10/ContextDragon2.jpg&#34;&gt;&lt;img class=&#34;alignnone size-thumbnail wp-image-331&#34; src=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2014/10/ContextDragon2-150x150.jpg&#34; alt=&#34;ContextDragon2&#34; width=&#34;150&#34; height=&#34;150&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Click for larger image.&lt;/p&gt;
+
+&lt;p&gt;I have a hand drawn as well but I&amp;#8217;m guessing that one wouldn&amp;#8217;t be of much use since it follows my own imagination.&lt;/p&gt;
+
+&lt;p&gt;Here are the seven principles in points which correspond to the leafs.&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Value -&amp;gt; Practice -&amp;gt; Depends -&amp;gt; Context =&amp;gt; The value of any practice depends on its context.&lt;/li&gt;
+&lt;li&gt;People -&amp;gt; Working -&amp;gt; Together -&amp;gt; Important =&amp;gt; People, working together, are the most important part of any project’s context. ( The mob, trying to kill the dragon by working together. )&lt;/li&gt;
+&lt;li&gt;Problem -&amp;gt; Project -&amp;gt; Solution =&amp;gt; The product is a solution. If the problem isn’t solved, the product doesn’t work. ( The sword. It&amp;#8217;s a sword but if it doesn&amp;#8217;t kill the Dragon it&amp;#8217;s useless. )&lt;/li&gt;
+&lt;li&gt;Good Testing -&amp;gt; Intellectual Challenge =&amp;gt; Good software testing is a challenging intellectual process. ( Well it&amp;#8217;s a dragon with glasses. That&amp;#8217;s something you rarely see. )&lt;/li&gt;
+&lt;li&gt;Good Practice | Bad Practice -&amp;gt; In Context -&amp;gt; No Best Practices =&amp;gt; There are good practices in context, but there are no best practices. ( This one was a little bit tricky. But basically you want to solve the dungeon and not plow through it )&lt;/li&gt;
+&lt;li&gt;Uncertainty =&amp;gt; &lt;span style=&#34;font-size: 14px; line-height: 1.8em;&#34;&gt;Projects unfold over time in ways that are often not predictable. ( For me this one word was enough. )&lt;/span&gt;&lt;/li&gt;
+&lt;li&gt;Exercised By All In Time -&amp;gt; Judgement | Skill | Cooperatively =&amp;gt; Only through judgment and skill, exercised cooperatively throughout the entire project, are we able to do the right things at the right times to effectively test our products. ( It&amp;#8217;s a flexing dragon&amp;#8230; Easy, right? )&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;So this map helped me to remember everything. The descriptions, applications that are further described I remembered by using this mind map as a &lt;a href=&#34;http://en.wikipedia.org/wiki/Method_of_loci&#34; target=&#34;_blank&#34;&gt;loci&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;I hope somebody found this useful.&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading!&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Using Chrome Search Engine – Multiple Search Params</title>
+      <link>https://skarlso.github.io/p278</link>
+      <pubDate>Sun, 18 May 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p278</guid>
+      <description>&lt;p&gt;Hello Everybody.&lt;/p&gt;
+
+&lt;p&gt;Today I would like to write a few words about Chrome&amp;#8217;s Search Engines.&lt;/p&gt;
+
+&lt;p&gt;You&amp;#8217;re probably already using it for a couple of things, like Google, or Amazon searches or YouTube or anything like that. But are you using it to access environments and testing tools faster, with queries?&lt;/p&gt;
+
+&lt;p&gt;For example, here is a quick Jira Search made easy:&lt;/p&gt;
+
+&lt;p&gt;Keyword: jira&lt;/p&gt;
+
+&lt;p&gt;URL: &lt;a href=&#34;https://atlas.projectname.com/jira/browse/PROJECT-%s&#34;&gt;https://atlas.projectname.com/jira/browse/PROJECT-%s&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;So just type: jira|space|9999&lt;/p&gt;
+
+&lt;p&gt;Will immediately bring you to your ticket.&lt;/p&gt;
+
+&lt;p&gt;&amp;#8220;Bah, why would I want that?&amp;#8221; &amp;#8211; you ask.&lt;/p&gt;
+
+&lt;p&gt;Well, it&amp;#8217;s easy, and quick access, but wait. There is more. How about you want to access a test environment that changes only a number?&lt;/p&gt;
+
+&lt;p&gt;Keyword: testenv&lt;/p&gt;
+
+&lt;p&gt;URL: &lt;a href=&#34;https://qa%s.projectname.com/testenv&#34;&gt;https://qa%s.projectname.com/testenv&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Just type: testenv|space|14&lt;/p&gt;
+
+&lt;p&gt;&amp;#8220;Humbug!&amp;#8221; &amp;#8211; you might say. &amp;#8220;What if I have a different URL for an admin site and my main web site AND the number, hmmm? Also I have that stuff bookmarked anyways&amp;#8230;&amp;#8221; &amp;#8211; you might add in.&lt;/p&gt;
+
+&lt;p&gt;Well, don&amp;#8217;t fret. By default, Chrome, does not provide this. I know FF does, but I don&amp;#8217;t like FF. That&amp;#8217;s that. So I have to make due with what I have. And indeed there is a solution for using multiple search parameters. It&amp;#8217;s is a JavaScript you can add in into the URL part and Chrome will interpret that. You can find that JavaScript in a few posts but you will find that THAT script is actually Wrong. Here is the &lt;strong&gt;fixed&lt;/strong&gt; Script, courtesy of yours truly:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;line_numbers&#34;&gt;
+        &lt;pre&gt;1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+&lt;/pre&gt;
+      &lt;/td&gt;
+      
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;javascript&#34; style=&#34;font-family:monospace;&#34;&gt;javascript&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt;
+&lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;var&lt;/span&gt; s&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color: #3366CC;&#34;&gt;&#39;%s&#39;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+url&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color: #3366CC;&#34;&gt;&#39;https://%s.test%s.projectname.com/&#39;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+query&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color: #3366CC;&#34;&gt;&#39;&#39;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+urlchunks&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt;url.&lt;span style=&#34;color: #660066;&#34;&gt;split&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #3366CC;&#34;&gt;&#39;%s&#39;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+schunks&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt;s.&lt;span style=&#34;color: #660066;&#34;&gt;split&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #3366CC;&#34;&gt;&#39;;&#39;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+&lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;for&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;i&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color: #CC0000;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; i&lt;span style=&#34;color: #339933;&#34;&gt;&amp;&lt;/span&gt;lt&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;urlchunks.&lt;span style=&#34;color: #660066;&#34;&gt;length&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; i&lt;span style=&#34;color: #339933;&#34;&gt;++&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt;
+    query&lt;span style=&#34;color: #339933;&#34;&gt;+=&lt;/span&gt;urlchunks&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;i&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+    &lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;typeof&lt;/span&gt; schunks&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;i&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #3366CC;&#34;&gt;&#39;undefined&#39;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt;
+        query&lt;span style=&#34;color: #339933;&#34;&gt;+=&lt;/span&gt;schunks&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;i&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+    &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;
+&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;
+location.&lt;span style=&#34;color: #660066;&#34;&gt;replace&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;query&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;So no you will have an entry like this:&lt;/p&gt;
+
+&lt;p&gt;Keyword: testenv&lt;/p&gt;
+
+&lt;p&gt;URL: paste in the upper script&lt;/p&gt;
+
+&lt;p&gt;And try&amp;#8230; testenv|space|admin;14 =&amp;gt; which should result in: &lt;a href=&#34;https://admin.test14.projectname.com/&#34;&gt;https://admin.test14.projectname.com/&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;The location.replace at the end will bring you to the web page. It&amp;#8217;s interesting to note the s will be replaced by admin;14 which is a nice magic by JavaScript.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;NOTE&lt;/strong&gt;: This only works on a page like google.co.uk. For chrome pages, like the new tab, omnibox has this ability disabled unfortunately. &lt;img src=&#34;http://ramblingsofaswtester.com/wp-includes/images/smilies/frownie.png&#34; alt=&#34;:(&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&amp;#8220;Well then it&amp;#8217;s completely useless, isn&amp;#8217;t it?&amp;#8221; &amp;#8211; you might say. Well, it&amp;#8217;s usage is limited in power, that&amp;#8217;s true. But it&amp;#8217;s still useful as I&amp;#8217;m sure you have a couple of pages open anyways which you don&amp;#8217;t mind using up&amp;#8230;? And you have to remember less keywords only a few powerful ones.&lt;/p&gt;
+
+&lt;p&gt;Credit for telling about Chrome Search Engines power in the first place goes to&amp;#8230; *drumrolls* =&amp;gt; &lt;a href=&#34;http://www.testfeed.co.uk/&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.testfeed.co.uk/&#34;&gt;http://www.testfeed.co.uk/&lt;/a&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Anyhow&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;As always, thanks for reading.&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>How to write a blog – Why long posts rarely work</title>
+      <link>https://skarlso.github.io/p259</link>
+      <pubDate>Thu, 13 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p259</guid>
+      <description>&lt;p&gt;Hello.&lt;/p&gt;
+
+&lt;p&gt;So let&amp;#8217;s clarify this&amp;#8230; They rarely or ever work if you are a beginner blogger. If you have a reputation it will probably work or people will use it as a reference. But I&amp;#8217;m skipping ahead.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Beginnings&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;When you are a beginner blog writer you want to get out as much content as possible. Write mostly relevant things and interesting information because you need to establish a name for yourself. To get that starting you want to be as interesting as possible and make people leave with the intent to come back for more.&lt;/p&gt;
+
+&lt;p&gt;After you&amp;#8217;ve established a name for yourself you can do larger, more coherent updates with more information in between the line because people know you and know what you write is worth reading. Also you have to bear in mind that longer posts are rarely read to the fullest. They are skimmed and then if it is good it will be used as reference material or a post to point to. Also people rarely have a lot of time on their hand to read a long post, several smaller chunks can be digested more easily!&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Updating frequency&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;In the age of modern information overload it is hard to be relevant and interesting and keep people to come back to you. Apart from what you are writing about, which is up to you, you have to schedule your updates to a certain frequency. You don&amp;#8217;t want people to wait for to long but you don&amp;#8217;t want to get them flooded either. Since people do read a lot of blogs they will choose carefully what to read and what to discard. And you might just end up on the discarded list if you already had a post at that moment.&lt;/p&gt;
+
+&lt;p&gt;I&amp;#8217;m suggesting that you write you post what you would like to write at that moment and then use a scheduler to post it in certain frequencies. Maybe once or twice weekly is good enough. You need to experiment it out.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Write, write, write&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;The way to success is pawed with writing. You want to be visible and you want to keep people engaged with you. That means that you have to come up with content.&lt;/p&gt;
+
+&lt;p&gt;With a technical blog that&amp;#8217;s a little bit difficult from time to time since so many people already might have solved your problem of which you are trying to write about. That&amp;#8217;s okay. It doesn&amp;#8217;t have to be a technical blog where you write about new ideas every day. It doesn&amp;#8217;t have to be a troubleshoot blog about how to solve a particular problem.&lt;/p&gt;
+
+&lt;p&gt;It doesn&amp;#8217;t have to be about showing some people how to write this and that in a completely new environment.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;So about what then?&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Guess what? It&amp;#8217;s up to you!!! If you wrote a script you like and are fond if, post it. If you created an interesting configuration, post it. If you wrote a line of code you find interesting, post it. You&amp;#8217;ve read a blog post about something and have an opinion about it, post it. Is it scientific, some discovery, some idea, some random thought, post it! You wrote a particularly ugly script you never ever want to see, POST IT!!&lt;/p&gt;
+
+&lt;p&gt;Your blog doesn&amp;#8217;t need to be a portfolio of how awesome you are. You are allowed to be human. You are allowed to post some very boring or trivial stuff you came across but YOU find it interesting! You don&amp;#8217;t need to be new every day in every post.&lt;/p&gt;
+
+&lt;p&gt;So my suggestion is, write, write, write. As often as you like, schedule it and post it in a timely manner. Be responsive if people write you a comment always answer. Nobody likes an anonymous somebody who writes then disappears. People like bloggers who engage them and give a damn about their opinion as well.&lt;/p&gt;
+
+&lt;p&gt;Always be yourself. The blog is for you too so retain what ever you want to retain and read back later maybe to learn from it. And of course writing it down makes you remember it better.&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading!&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>How to check content header on unknown number of items – Python</title>
+      <link>https://skarlso.github.io/p254</link>
+      <pubDate>Tue, 11 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p254</guid>
+      <description>&lt;p&gt;Hello guys.&lt;/p&gt;
+
+&lt;p&gt;I&amp;#8217;d like to share a little something with you. It&amp;#8217;s what I cooked up in Python to check an unknown number of content items in a web application.&lt;/p&gt;
+
+&lt;p&gt;Basically the script runs from a script folder under Grails. It goes through all the configured folders where there is static content like images, javascript, css and so on and so forth.&lt;/p&gt;
+
+&lt;p&gt;And then with curl it calls these items up in using their respective paths&amp;#8217;. This works best on localhost if you have your local environment configured to access these elements because in some places direct access is restricted.&lt;/p&gt;
+
+&lt;p&gt;This script only check static content. Dynamically generated content would have to be hard coded to check.&lt;/p&gt;
+
+&lt;p&gt;It only generated a file currently with ERROR on a not match an success on match and not found if it encounters an item which it doesn&amp;#8217;t know about.&lt;/p&gt;
+
+&lt;p&gt;So without further ado&amp;#8230; The Script:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;python&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;#!/usr/bin/python&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;import&lt;/span&gt; pycurl&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;sys&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;os&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;urllib&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;class&lt;/span&gt; Storage:
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color: #0000cd;&#34;&gt;__init__&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #008000;&#34;&gt;self&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;:
+        &lt;span style=&#34;color: #008000;&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;contents&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;&#39;&lt;/span&gt;
+&amp;nbsp;
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;def&lt;/span&gt; store&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #008000;&#34;&gt;self&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; buf&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;:
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type&#39;&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;in&lt;/span&gt; buf:
+            &lt;span style=&#34;color: #008000;&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;contents&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; buf
+&amp;nbsp;
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color: #0000cd;&#34;&gt;__str__&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #008000;&#34;&gt;self&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;:
+        &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #008000;&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;contents&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;#print retrieved_headers&lt;/span&gt;
+&amp;nbsp;
+filesInDir &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: black;&#34;&gt;&amp;#91;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#93;&lt;/span&gt;
+headers &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: black;&#34;&gt;&amp;#91;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#93;&lt;/span&gt;
+headerRestrictions &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: black;&#34;&gt;&amp;#123;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.css&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type: text/css&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.jpg&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type: image/jpeg&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.ico&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;image/vnd.microsoft.icon&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.html&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type: text/html&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.js&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type: application/javascript&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.gif&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type: image/gif&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.png&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type: image/png&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.swf&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type: application/x-shockwave-flash&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.json&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type: application/json&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.htc&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type: text/x-component&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.xml&#39;&lt;/span&gt;: &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;Content-Type: application/xml&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#125;&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;for&lt;/span&gt; dirname&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; dirnames&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; filenames &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;os&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;walk&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;../web-app&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;:
+    &lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;# editing the &#39;dirnames&#39; list will stop os.walk() from recursing into there.&lt;/span&gt;
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.git&#39;&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;in&lt;/span&gt; dirnames:
+        &lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;# don&#39;t go into any .git directories.&lt;/span&gt;
+        dirnames.&lt;span style=&#34;color: black;&#34;&gt;remove&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;.git&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+&amp;nbsp;
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;WEB-INF&#39;&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;in&lt;/span&gt; dirnames:
+        &lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;# don&#39;t go into any WEB-INF directories.&lt;/span&gt;
+        dirnames.&lt;span style=&#34;color: black;&#34;&gt;remove&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;WEB-INF&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+&amp;nbsp;
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;test&#39;&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;in&lt;/span&gt; dirnames:
+        &lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;# don&#39;t go into any test directories.&lt;/span&gt;
+        dirnames.&lt;span style=&#34;color: black;&#34;&gt;remove&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;test&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+&amp;nbsp;
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;META-INF&#39;&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;in&lt;/span&gt; dirnames:
+        &lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;# don&#39;t go into any META-INF directories.&lt;/span&gt;
+        dirnames.&lt;span style=&#34;color: black;&#34;&gt;remove&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;META-INF&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+&amp;nbsp;
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;for&lt;/span&gt; filename &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;in&lt;/span&gt; filenames:
+    trimmedDir &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; dirname.&lt;span style=&#34;color: black;&#34;&gt;replace&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;web-app/&#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;&#34;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    trimmedDir &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; trimmedDir.&lt;span style=&#34;color: black;&#34;&gt;replace&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;../&#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;&#34;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    filesInDir.&lt;span style=&#34;color: black;&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #dc143c;&#34;&gt;os&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;path&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;join&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;trimmedDir&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; filename&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;#    print os.path.join(dirname, filename)&lt;/span&gt;
+&amp;nbsp;
+f &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #008000;&#34;&gt;open&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;headersandfiles.txt&#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;w&#34;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;for&lt;/span&gt; fileName &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;in&lt;/span&gt; filesInDir:
+    retrieved_body &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; Storage&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    retrieved_headers &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; Storage&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    c &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; pycurl.&lt;span style=&#34;color: black;&#34;&gt;Curl&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    fileName &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; fileName.&lt;span style=&#34;color: black;&#34;&gt;replace&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#34; &#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;%20&#34;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    url &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;http://localhost:8080/%s&#39;&lt;/span&gt; % fileName
+    c.&lt;span style=&#34;color: black;&#34;&gt;setopt&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;c.&lt;span style=&#34;color: black;&#34;&gt;URL&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; url&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    c.&lt;span style=&#34;color: black;&#34;&gt;setopt&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;c.&lt;span style=&#34;color: black;&#34;&gt;WRITEFUNCTION&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; retrieved_body.&lt;span style=&#34;color: black;&#34;&gt;store&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    c.&lt;span style=&#34;color: black;&#34;&gt;setopt&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;c.&lt;span style=&#34;color: black;&#34;&gt;HEADERFUNCTION&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; retrieved_headers.&lt;span style=&#34;color: black;&#34;&gt;store&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    c.&lt;span style=&#34;color: black;&#34;&gt;perform&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    c.&lt;span style=&#34;color: black;&#34;&gt;close&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    fileLine &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;&#34;&lt;/span&gt;
+    fileNameBase&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; fileExtension &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;os&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;path&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;splitext&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;fileName&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+&amp;nbsp;
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; headerRestrictions.&lt;span style=&#34;color: black;&#34;&gt;has_key&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;fileExtension&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;:
+&lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;# print &#34;Header:%s, Content:%s&#34; % (headerRestrictions[fileExtension], retrieved_headers.__str__())&lt;/span&gt;
+        fileLine &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;CORRECT: Content: %s; Header: %s&#34;&lt;/span&gt; % &lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;fileName&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; retrieved_headers&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; headerRestrictions&lt;span style=&#34;color: black;&#34;&gt;&amp;#91;&lt;/span&gt;fileExtension&lt;span style=&#34;color: black;&#34;&gt;&amp;#93;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;==&lt;/span&gt; retrieved_headers.&lt;span style=&#34;color: #0000cd;&#34;&gt;__str__&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;strip&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;else&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;ERROR: Content: %s; Header: %s; URL: %s&#34;&lt;/span&gt; % &lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;fileName&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; retrieved_headers&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;http://localhost:8080/%s&lt;span style=&#34;color: #000099; font-weight: bold;&#34;&gt;\n&lt;/span&gt;&#34;&lt;/span&gt; % fileName&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;else&lt;/span&gt;:
+    fileLine &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;NOT FOUND: Content: %s; Header: %s&#34;&lt;/span&gt; % &lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;fileName&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; retrieved_headers&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+&amp;nbsp;
+    f.&lt;span style=&#34;color: black;&#34;&gt;write&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;fileLine&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+    headers.&lt;span style=&#34;color: black;&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;retrieved_headers.&lt;span style=&#34;color: #0000cd;&#34;&gt;__str__&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
+&amp;nbsp;
+f.&lt;span style=&#34;color: black;&#34;&gt;close&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Hope you like it. Feel free to improve however you want.&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading,&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>The method of Loci and how it works for me</title>
+      <link>https://skarlso.github.io/p257</link>
+      <pubDate>Tue, 11 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p257</guid>
+      <description>&lt;p&gt;Hello.&lt;/p&gt;
+
+&lt;p&gt;Today I would like to write about something very interesting to you folks.&lt;/p&gt;
+
+&lt;p&gt;It&amp;#8217;s a common remember / recall technique called the Method of loci. Otherwise known as the Memory Palace. A very popular usage can be seen in the episodes of Sherlock Holmes from BBC. He uses it often.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;What is the Method of loci?&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;As the Wikipedia page write so properly&amp;#8230;&amp;#8221;In basic terms, it is a method of memory enhancement which uses visualization to organize and recall information.&amp;#8221;&lt;/p&gt;
+
+&lt;p&gt;This says all&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;So&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;How does it work?&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;I don&amp;#8217;t want to go too much into details with this one since everybody can use Google I&amp;#8217;m assuming but just for my sanities sake I will repeat a very basic idea. You brain works with associations. It can remember something when it&amp;#8217;s linked to something you already know much much better. Also it can remember very easily places you&amp;#8217;ve been to or people you&amp;#8217;ve met. ( most of the time&amp;#8230; ).&lt;/p&gt;
+
+&lt;p&gt;Very popular Roman Leaders where known to use this while they were giving speeches for hours out of memory. While they were speaking, mentally they were walking along a very well known and often used path where they linked key elements of their speeches to landmarks along the way.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Enough. Show me concretes.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So how do I make use of it you ask? I give you an example. In my flat there are two stairs. I use those stairs to initialize my Palace. I go up the two stairs to get myself into my Memory. Once I&amp;#8217;m in my Palace, which is my flat, I have a lot of holder items like drawer, desk, wall, painting, couch and many many more.&lt;/p&gt;
+
+&lt;p&gt;So for example to recall all of the 23 design patterns in order I use a mnemonic and my palace.&lt;/p&gt;
+
+&lt;p&gt;I have three drawers. I go up up&amp;#8230; there is my drawer before me. I open the first and out comes the following sight&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;Memento and Mediator are playing a game of Chess ( strategy ). There is a Visitor standing by who is Observing ( Observer ) the game. State is constantly recording the state of the game while Template is providing support and Iterator is counting rounds. Command is constantly yelling orders that they should hurry up because he has better things to do while wielding a huge broad sword ( Interpreter -&amp;gt; for me this pattern was used in MUD games which were early RPGs ). The whole gang is held together by a Chain which is responsible for not letting things go out of hand.&lt;/p&gt;
+
+&lt;p&gt;I know this sounds very complicated. And the order? Where is that? That&amp;#8217;s the mnemonic: CCIIMMOSSTV. Easy, right?&lt;/p&gt;
+
+&lt;p&gt;So why this huge story around a few patterns? Because it&amp;#8217;s not just these. Then along comes ABCDFFP which is Adapter, Bridge, Composite, Decorator, Facade, Flyweight and Proxy and the rest BFFPS which is Builder, Factory, Abstract Factory, Prototype and Singleton.&lt;/p&gt;
+
+&lt;p&gt;I have stories around those as well. This makes it easy to remember them.&lt;/p&gt;
+
+&lt;p&gt;For small amount of things it would be an overkill yes. But for many things it makes it EASY!&lt;/p&gt;
+
+&lt;p&gt;You already remembered my Chess play story. 😉&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;But how do you remember a complex story?&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Recall. You don&amp;#8217;t just put stuff in there and then move on. I have a routine. Every day when I go to bed before I fall asleep I walk around in my Palace. I look at things, recall them strengthen the memory a bit here and there. And after an Item has been retained in my long term memory strong enough, I can recall it fewer and fewer times. So I don&amp;#8217;t have to walk in the whole palace every time. Only parts.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;FAQ&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Q:&lt;/strong&gt;But isn&amp;#8217;t this too slow to recall something?&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;A:&lt;/strong&gt;This is only a tool to retain information more easily. Of course if you want to recall something at a moments notice, you won&amp;#8217;t have the time to go into your palace and search around. But after a while it will strengthen and will be more and more easier to recall information faster and faster. And you rarely get into a position where you need to recall something in a second.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Q:&lt;/strong&gt;This seems like a major overhead to learn something.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;A:&lt;/strong&gt;For small amount of information I suggest using a mnemonic or flash cards rather then a palace.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Q:&lt;/strong&gt;What if I run out of space?&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;A:&lt;/strong&gt;You can create as many locations as you like. Use your current home and homes in your past which you knew very well. You could create a lane with houses after each other. Or create a fictional palace like Hogwarts based on some real places to retain them better. And draw a sketch of of it to be able to visualize it better.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Q:&lt;/strong&gt;What if I forget where I put things?&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;A:&lt;/strong&gt;Recall recall recall is the name of the game. In order to stabilize the vision of your palace you need to practice walking around in it. Remembering each and every small room. With practice it will get better and better and every information will be stored much easier.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Q:&lt;/strong&gt;How do you put thing into it? Can I just put in a number and I will remember it forever?&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;A:&lt;/strong&gt;Short answer: no. Long answer: You don&amp;#8217;t just imagine a place and then put a whole bunch of words into a pocket somewhere and expect it to be recalled better. You need to combine the Loci with mnemonics and imagination and sounds and smells stories images. The more powerful the image in a place the better the recall. As you saw with the design patterns I didn&amp;#8217;t just put a bunch of names into a box and then remembered it. I created a story around them and a mnemonic. The combination is the key.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Q:&lt;/strong&gt;Are you physically walking your house or in your mind?&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;A:&lt;/strong&gt;In my mind. Once I learned something and created my story and found the appropriate image or smell or sound I&amp;#8217;d like to use I close my eyes and go into my palace in my mind. Then I start to place things where I think they will be in a good place. This can be any number of things. It&amp;#8217;s up to you.&lt;/p&gt;
+
+&lt;p&gt;So that&amp;#8217;s all folks. Hope you enjoyed it. Please feel free to try it out and experiment I assure you you won&amp;#8217;t be disappointed.&lt;/p&gt;
+
+&lt;p&gt;As always,&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading.&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Why you should learn using Vim</title>
+      <link>https://skarlso.github.io/p252</link>
+      <pubDate>Mon, 10 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p252</guid>
+      <description>&lt;p&gt;Hello,&lt;/p&gt;
+
+&lt;p&gt;So Vim is a very powerful editing tool and has lots and lots of potential in regarding plug-ins.&lt;/p&gt;
+
+&lt;p&gt;It has years and years of gathered knowledge and extensions and can virtually do anything you want. But that&amp;#8217;s not even it&amp;#8217;s final form&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;The real power of Vim lies in navigation and manipulation. The ability to navigate and edit without the use of arrow keys or mouse chops of a large portion of your time which you didn&amp;#8217;t even realize you are wasting until you try it without it.&lt;/p&gt;
+
+&lt;p&gt;The one thing people are seem to miss regarding this editor is that you are not supposed to stay in &lt;strong&gt;Edit&lt;/strong&gt; mode all the time. You are supposed to be in &lt;strong&gt;Control&lt;/strong&gt; mode most of times and enter in to &lt;strong&gt;Edit&lt;/strong&gt; for sort bursts. And one more thing is that commands are supposed to be used together. For example deleting a word is very easy and can be achieved in multiple ways. The easiest is combining Delete + Go to the end of a word like this: &amp;#8220;de&amp;#8221;. So once you are in Control mode you navigate to a word and press d + e. d =&amp;gt; Delete a word until new cursor and e =&amp;gt; go to the end of the word. Hence &amp;#8220;de&amp;#8221; will delete a whole word. Awesome.&lt;/p&gt;
+
+&lt;p&gt;Handling text is easy as goblin pie and there lots and lots of tutorials and blogs on the web which tell you in detail how to do that so I&amp;#8217;m not going to go do that. It does take some time to get used to it because you are wired to handle the mouse and use the arrow keys. But once you start using h j k l and x X and w and $ ^ you realize you don&amp;#8217;t need the mouse or the arrow keys to get around.&lt;/p&gt;
+
+&lt;p&gt;And it&amp;#8217;s much faster since your hand is already there. And suddenly you are using &lt;a href=&#34;https://chrome.google.com/webstore/detail/vimium/dbepggeogbaibhgnhhndojpepiihcmeb?hl=en&#34; title=&#34;Vimium&#34; target=&#34;_blank&#34;&gt;Vimium&lt;/a&gt; the Vim extension for Chrome and you find yourself saying&amp;#8230; &amp;#8220;Where were you all my life?&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;Vim has a mirriad of plugins ready to be used most popular being &lt;a href=&#34;https://github.com/scrooloose/nerdtree&#34; title=&#34;Nerdtree&#34; target=&#34;_blank&#34;&gt;NerdTree&lt;/a&gt;, &lt;a href=&#34;https://github.com/gmarik/Vundle.vim&#34; title=&#34;Vundle&#34; target=&#34;_blank&#34;&gt;Vundle&lt;/a&gt; and &lt;a href=&#34;https://github.com/scrooloose/syntastic&#34; title=&#34;Syntastic&#34; target=&#34;_blank&#34;&gt;Syntastic&lt;/a&gt; for compile errors. And it has a large community to back it up and people who will eagerly help you on your way and pass on tips to understand the logic behind it and the phylosophy.&lt;/p&gt;
+
+&lt;p&gt;So all in all it&amp;#8217;s a powerful editing tool and a neat friend along the way and completely free of any charge or license. It can be used for &lt;strong&gt;anything&lt;/strong&gt; you want including macros and key phrase replacements where you type two characters which will be replaced with something that you use commonly like public static void main.&lt;/p&gt;
+
+&lt;p&gt;I hope this got you a watery mouth towards trying. The only thing I can say is to not give up after 20 minutes you will get a feel for it and you will fall in love with it immediately.&lt;/p&gt;
+
+&lt;p&gt;As always,&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading!&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Low Tech – Why having less will fell more</title>
+      <link>https://skarlso.github.io/p226</link>
+      <pubDate>Mon, 26 Aug 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p226</guid>
+      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
+
+&lt;p&gt;I&amp;#8217;d like to share today something with all of you. I&amp;#8217;ve been thinking about how technology affected my life in the long run. And how I perceive the world today around me. So let&amp;#8217;s go around this topic for a little bit shall we?&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;The Past&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So as somebody who lived for a while without technology coming near family for a decade or so I have a little bit of past in me without smart phones, gadgets, tv or computers for that matter. Much times needed to pass as my family slowly got the money to gather to buy us our new part of the family the ZX Spectrum.&lt;/p&gt;
+
+&lt;p&gt;What a wonderful piece of technology that was back then. But before that our two main technological equipments were a bakelite disc player and the TV. Both of which we couldn&amp;#8217;t get enough. I sat before the tv for a long time and listened to music and stories from the bakelite discs dozens of times until the disc wore down. I learned English and German from the TV.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Present&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So time goes by I grew older I&amp;#8217;ve got a better PC technological advances are made and so on and so forth. 20 years have past. 20 years. ONLY 20 years. And we are at the age of digital communication, nanotechnology, a mapped DNA and a found Boson Particle. I&amp;#8217;d say we achieved quite a lot. But I also say that we should never forget where we came from. Why you ask? Because knowing your past let&amp;#8217;s predict your future better and makes you appreciate your present even more.&lt;/p&gt;
+
+&lt;p&gt;So what do I want to say with this philosophical mumbo jumbo?&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;The Future&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;I want to say that in order to enjoy your present you have to think of your future while considering your past.&lt;/p&gt;
+
+&lt;p&gt;In my past I enjoyed being alone a little bit. It gave me time to think to brainstorm to be with my thoughts while I was playing or just reading a book or just watching a candle flicker in the dark. It was satisfying. It was relaxing. Or when I was faced with a problem I couldn&amp;#8217;t solve it was good to step back. Or I was just looking out of my head on the toilet.&lt;/p&gt;
+
+&lt;p&gt;Now, for me technology ruined that. I&amp;#8217;m taking my phone virtually everywhere with me. I read emails, web pages, news and shit on the toilet, while eating, why brushing my teeth before sleeping after sleeping while sleeping?! I abandoned my brain. I no longer have moments to myself. No longer reflect. No longer take the time to think.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Solution&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Simple set of rules. No phone on the toilet, while eating, while brushing teeth, while standing in the line, waiting or on meetings. Kindle / Book is allowed. Tablet isn&amp;#8217;t.&lt;/p&gt;
+
+&lt;p&gt;For me this works. For me in order to appreciate technology more I have to use it less. Works for you? Don&amp;#8217;t know. You should try it out. Think back. What has technology changed for you? I&amp;#8217;m sure there are plenty of very good gains and things. I&amp;#8217;m not saying you should give that up. I&amp;#8217;m saying think of what you might have lost?! Maybe you don&amp;#8217;t even recognize you lost something. Maybe you are fine like that&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;But do you feel anxious sometimes? Do you feel bored? Do you feel like something is missing? Do you reply to an email with a second? Do you check your facebook/twitter/whatever while a friend is TALKING TO YOU? Then maybe it&amp;#8217;s time for you to step back. And relax. And take it slow&amp;#8230; and low.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Inspiration&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So I took this inspiration from a couple of sources and I thank them for opening my eyes a little that I went to far from course.&lt;/p&gt;
+
+&lt;p&gt;Link 1: I forgot my phone for a day (I&amp;#8217;m sure you know this one already)&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.youtube.com/watch?v=OINa46HeWg8&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.youtube.com/watch?v=OINa46HeWg8&#34;&gt;http://www.youtube.com/watch?v=OINa46HeWg8&lt;/a&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Link 2: The real zombies:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/zombies3.jpeg&#34; alt=&#34;&#34; /&gt;
+&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/mobile-phone-zombies.jpg&#34; alt=&#34;&#34; /&gt;
+&lt;/p&gt;
+
+&lt;p&gt;So think a little.&lt;/p&gt;
+
+&lt;p&gt;As always&amp;#8230;Have a nice day.&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Why not to automate everything…</title>
+      <link>https://skarlso.github.io/p224</link>
+      <pubDate>Wed, 31 Jul 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p224</guid>
+      <description>&lt;p&gt;Hello. I created a tale of why not to automate everything&amp;#8230; With legos&amp;#8230; Enjoy.&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture1.jpg&#34; alt=&#34;Picture 1&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture2.jpg&#34; alt=&#34;Picture 2&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture3.jpg&#34; alt=&#34;Picture 3&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture4.jpg&#34; alt=&#34;Picture 4&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture5.jpg&#34; alt=&#34;Picture 5&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture6.jpg&#34; alt=&#34;Picture 6&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture7fixed.jpg&#34; alt=&#34;Picture 7&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture8.jpg&#34; alt=&#34;Picture 8&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture9.jpg&#34; alt=&#34;Picture 9&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture10.jpg&#34; alt=&#34;Picture 10&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture11.jpg&#34; alt=&#34;Picture 11&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture12.jpg&#34; alt=&#34;Picture 12&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture13.jpg&#34; alt=&#34;Picture 13&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture14.jpg&#34; alt=&#34;Picture 14&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture15.jpg&#34; alt=&#34;Picture 15&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture16.jpg&#34; alt=&#34;Picture 16&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture17.jpg&#34; alt=&#34;Picture 17&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture18.jpg&#34; alt=&#34;Picture 18&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://dl.dropboxusercontent.com/u/7604030/lego/picture19.jpg&#34; alt=&#34;Picture 19&#34; /&gt;
+&lt;/br&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Groovy and Grails course summary</title>
+      <link>https://skarlso.github.io/p128</link>
+      <pubDate>Thu, 11 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p128</guid>
+      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
+
+&lt;p&gt;I attended a 4 day course of Groovy and Grails and this is my attempt at writing up a summary to see how much I retained. I&amp;#8217;ll try to do this from the top of my head without peaking at my notes.&lt;/p&gt;
+
+&lt;p&gt;So let&amp;#8217;s begin.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Introductions&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;First of all, introductions. The course was held by Peter Ledbrook. He is the guy who wrote &lt;a href=&#34;http://www.amazon.co.uk/Grails-Action-Peter-Ledbrook/dp/1617290963/ref=sr_1_2?ie=UTF8&amp;amp;qid=1365713080&amp;amp;sr=8-2&amp;amp;keywords=peter+ledbrook&#34; title=&#34;Grails in Action&#34;&gt;Grails in Action&lt;/a&gt;. He is awesome, go check him out. :: &lt;a href=&#34;https://twitter.com/pledbrook&#34; title=&#34;Twitter for Peter&#34;&gt;Twitter&lt;/a&gt; ::&lt;/p&gt;
+
+&lt;p&gt;The place where it was held is &lt;a href=&#34;http://skillsmatter.com/&#34; title=&#34;Skills Matter&#34;&gt;Skillsmatter&lt;/a&gt;. Which of course is known to all, if not, go check them out as well!&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Day One&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Day one and two were about Groovy. We were faced with the quirks and hinges of the language. First tasks were Closures and Currying both of which were really interesting. A bit of functional thinking mixed into the soup.&lt;/p&gt;
+
+&lt;p&gt;The course was divided into Peter telling us about stuff for 1:30 hours and then 1:00 hour lab work which really made the whole thing interactive. We could ask questions while he was talking which I&amp;#8217;m sure was very distracting but I hope he is used to it by now. 😉&lt;/p&gt;
+
+&lt;p&gt;The tasks which we faced I&amp;#8217;m sure were no real challenge for somebody who was used to thinking with closures and functions. But for us they were very intriguing.&lt;/p&gt;
+
+&lt;p&gt;For example:&lt;/p&gt;
+
+&lt;p&gt;Convert this class to it&amp;#8217;s groovy eq.&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;line_numbers&#34;&gt;
+        &lt;pre&gt;1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+&lt;/pre&gt;
+      &lt;/td&gt;
+      
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;java&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;class&lt;/span&gt; NumberHelper &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt; findPositives&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt; numbers&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt;
+        &lt;span style=&#34;color: #003399;&#34;&gt;List&lt;/span&gt; positivesList &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #003399;&#34;&gt;ArrayList&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;int&lt;/span&gt; i &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; i &lt;span style=&#34;color: #339933;&#34;&gt;&amp;&lt;/span&gt;lt&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; numbers.&lt;span style=&#34;color: #006633;&#34;&gt;length&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; i&lt;span style=&#34;color: #339933;&#34;&gt;++&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt;
+            &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;numbers&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;i&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;&amp;&lt;/span&gt;gt&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt;
+                positivesList.&lt;span style=&#34;color: #006633;&#34;&gt;add&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #003399;&#34;&gt;Integer&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;numbers&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;i&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+            &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;
+        &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;
+&amp;nbsp;
+        &lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt; positivesArray &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;positivesList.&lt;span style=&#34;color: #006633;&#34;&gt;size&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000066; font-weight: bold;&#34;&gt;int&lt;/span&gt; i &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; i &lt;span style=&#34;color: #339933;&#34;&gt;&amp;&lt;/span&gt;lt&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; positivesArray.&lt;span style=&#34;color: #006633;&#34;&gt;length&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; i&lt;span style=&#34;color: #339933;&#34;&gt;++&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#123;&lt;/span&gt;
+            positivesArray&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#91;&lt;/span&gt;i&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#93;&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #003399;&#34;&gt;Integer&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt; positivesList.&lt;span style=&#34;color: #006633;&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;i&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;.&lt;span style=&#34;color: #006633;&#34;&gt;intValue&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+        &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;return&lt;/span&gt; positivesArray&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt;
+    &lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;
+&lt;span style=&#34;color: #009900;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Which basically became:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;line_numbers&#34;&gt;
+        &lt;pre&gt;1
+2
+3
+&lt;/pre&gt;
+      &lt;/td&gt;
+      
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;groovy&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;def&lt;/span&gt; findPositive&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;def&lt;/span&gt; numbers&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
+    numbers.&lt;span style=&#34;color: #663399;&#34;&gt;findAll&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt; it &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;&lt;/span&gt;lt&lt;span style=&#34;color: #66cc66;&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;That&amp;#8217;s pretty damn awesome.&lt;/p&gt;
+
+&lt;p&gt;For quite some time now functional languages are re-living their golden age. There are various reasons for that which I won&amp;#8217;t list here. But it has mainly to do with scalability, concurrency and threaded programming. Also the need to eliminate boilerplate code is bigger then ever. I guess people got fed up with Java being so talkative.&lt;/p&gt;
+
+&lt;p&gt;So we moved on learning a lot about groovy and its power. We also learned some good practices from Peter what to do and what not to do. For example a line he always repeated is that he hates how a function cannot exist without a class wrapped around it. Another important thing is, which we never ever should forget, that closures are Closures. Which means they aren&amp;#8217;t functions. They are of the type Closure.&lt;/p&gt;
+
+&lt;p&gt;And that we shouldn&amp;#8217;t use Closures just because we can. Be sensible. If a method can achieve your task, use a method.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Day Two&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;On day 2 we got into meta-programming. That&amp;#8217;s when the real fun started. Groovy is not only powerful and lightweight it also gives the ability to change its behaviour. Meta programming is sort of a bit new to me. So this was my first definitive intro to it. But I must say that it blew me away. The capabilities are limitless.&lt;/p&gt;
+
+&lt;p&gt;There is a class called Expando in groovy which can be used to create virtually anything on the fly what you want.&lt;/p&gt;
+
+&lt;p&gt;For example look at this code ::&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;line_numbers&#34;&gt;
+        &lt;pre&gt;1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+&lt;/pre&gt;
+      &lt;/td&gt;
+      
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;groovy&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;def&lt;/span&gt; p &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;new&lt;/span&gt; Expando&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;name: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;Jake&#34;&lt;/span&gt;, age: &lt;span style=&#34;color: #cc66cc;&#34;&gt;24&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+&lt;span style=&#34;color: #993399;&#34;&gt;println&lt;/span&gt; p
+&amp;nbsp;
+&lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;//Add properties&lt;/span&gt;
+p.&lt;span style=&#34;color: #006600;&#34;&gt;gender&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;Male&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #993399;&#34;&gt;println&lt;/span&gt; p.&lt;span style=&#34;color: #006600;&#34;&gt;name&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;//Add metods&lt;/span&gt;
+&lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;//Override the default toString at runtime.&lt;/span&gt;
+p.&lt;span style=&#34;color: #006600;&#34;&gt;toString&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;-&amp;&lt;/span&gt;gt&lt;span style=&#34;color: #66cc66;&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;${name} (${age})&#34;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+&lt;span style=&#34;color: #993399;&#34;&gt;println&lt;/span&gt; p
+&amp;nbsp;
+&lt;span style=&#34;color: #808080; font-style: italic;&#34;&gt;//Learn how groovy resolves names - &amp;gt; How does it find age.&lt;/span&gt;
+p.&lt;span style=&#34;color: #006600;&#34;&gt;addYears&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt; years &lt;span style=&#34;color: #66cc66;&#34;&gt;-&amp;&lt;/span&gt;gt&lt;span style=&#34;color: #66cc66;&#34;&gt;;&lt;/span&gt; age &lt;span style=&#34;color: #66cc66;&#34;&gt;+=&lt;/span&gt; years &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
+p.&lt;span style=&#34;color: #006600;&#34;&gt;addYears&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;25&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
+&lt;span style=&#34;color: #993399;&#34;&gt;println&lt;/span&gt; p&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Neat hmm? Just create expando and build up the class as you go however you want to use it.&lt;/p&gt;
+
+&lt;p&gt;And you can do this jazz to other, normal classes as well. You can add properties and methods at runtime by implementing the propertyMissing and methodMissing methods. In them afterwards you can specify some custom behaviour you would like to see. By implementing these guys you can directly control what&amp;#8217;s happening to your class. Who is calling it how and where and why.&lt;/p&gt;
+
+&lt;p&gt;To grasp the power of metacoding and the abilities with which closures provided us with took a day to properly go over. So we moved on&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Day Three&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So groovy was over. The time has come to move on and venture into the foggy land of Grails. Turned out it wasn&amp;#8217;t so foggy after all.&lt;/p&gt;
+
+&lt;p&gt;Grails is a rapid prototyping kind of a framework. It allows you to set up an application with a blink of an eye. And provides conventions over configuration which is a really good thing to have. But as the day was going by we realised that we would find ourself not once but many times in the bubbling boils of the underbelly of /conf.&lt;/p&gt;
+
+&lt;p&gt;Again, fortunately, it wasn&amp;#8217;t really hard. The config was groovy and it was pretty straight forward too.&lt;/p&gt;
+
+&lt;p&gt;Our third day mostly took as off to explore scaffolding, dynamic &amp;amp; static as well, and the interesting land of GORM Peter showed us the power of grails to create a CRUD application with in a matter of seconds / minutes ( depending on how fast your machine is ) with a fairly nice view. These types of application are usually not accepted of course as an end product&amp;#8230; For that you need to thinker a bit here and there.&lt;/p&gt;
+
+&lt;p&gt;But things like admin portal are easily put together. So use it often and use it will and get it to know how it works.&lt;/p&gt;
+
+&lt;p&gt;In the land of GORM we explored the 4 different possibilities of data retriaval and generally how everything maps together and how GORM work with ORM.&lt;/p&gt;
+
+&lt;p&gt;The four different retrieval capabilities are:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Where clauses&lt;/li&gt;
+&lt;li&gt;HQL (Hybernate Query Language)&lt;/li&gt;
+&lt;li&gt;Criteria searches&lt;/li&gt;
+&lt;li&gt;Dynamic finder methods&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Each of which we found very interesting in there own respective ways.&lt;/p&gt;
+
+&lt;p&gt;Example of a dynamic finder::&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;groovy&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;assert&lt;/span&gt; Account.&lt;span style=&#34;color: #006600;&#34;&gt;findAllBy&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;*&lt;/span&gt;PropertyName&lt;span style=&#34;color: #66cc66;&#34;&gt;**&lt;/span&gt;&lt;span style=&#34;color: #aaaadd; font-weight: bold;&#34;&gt;Modifier&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;Parameters&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;.&lt;span style=&#34;color: #663399;&#34;&gt;size&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;2&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Where propertyName is the name of the property to find by, modifier can be a sql&amp;#8217;s Like for example.&lt;/p&gt;
+
+&lt;p&gt;So this could become something like this:&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;groovy&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;assert&lt;/span&gt; Hitman.&lt;span style=&#34;color: #006600;&#34;&gt;findAllByNameLike&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;Agent %&#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;15&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;That day was really knowledge packed. I don&amp;#8217;t say I remember everything but luckily I wrote up some notes and I know what and where to look for if I would be in need of something.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Day Four&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;On the last day everybody was pretty much exhausted. It takes a lot to learn all that from 9 to 5 for 4 days. And Peter gave his best to staff that stuff into our heads and as much as possible of it. I think he did a pretty good job.&lt;/p&gt;
+
+&lt;p&gt;Last day was all about Controllers, Commands, Models, Views and GSPs and BootStrap config, Environment changes durring start up, the configurability of the whole framework, messages, templates, internationalisation and many thing more which can be easily put together.&lt;/p&gt;
+
+&lt;p&gt;It was pretty interesting. GSPs have similarities to JSPs but retained only the good parts. And although you can do JSP stuff in GSPs as well with nice embedded tags you have the ability to actually create a nice page which won&amp;#8217;t be that big a maintenance nightmare.&lt;/p&gt;
+
+&lt;p&gt;Peter very much pressed the fact that the Controllers should be your only entry point from HTML requests and the views should be the only output of it. The controllers shouldn&amp;#8217;t be throwing around business logic they should only act as proxies between the outer shell and the inner layering.&lt;/p&gt;
+
+&lt;p&gt;I think I understood most of the stuff which we were going through. Again, it was pretty straight forward. The application of it is what need practice. &lt;img src=&#34;http://ramblingsofaswtester.com/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Durring the course we created several applications. With dynamic scaffolding as well as static. We created and edited our own views and gsps. Created our own Controllers and what nots. One thing is clear. Grails let&amp;#8217;s you progress a hell of a lot in a matter of minutes.&lt;/p&gt;
+
+&lt;p&gt;And we were also talking about testing of course. Using Geb, Spock and the unit testing capabilities of Grails. All very powerful stuff. Spock has some impressive Mocking powers in junction with the good ol&amp;#8217; Given When Then structure. If done correctly the test can be very fast and robust.&lt;/p&gt;
+
+&lt;p&gt;As final words we talked about plugins and the testing of Views and a bit more configuration.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Closing words&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So all in all the course was excellent. Peter did a very good job of introducing use to Grails and Groovy. It&amp;#8217;s a very good framework to build upon with a powerful language at our disposal. I&amp;#8217;m pretty certain that Grails will evolve even more and be a great asset to people who choose to develop with it. Handle with Care though. Because no matter how awesome a tool is, it can always be used for bad purposes. 😉&lt;/p&gt;
+
+&lt;p&gt;As always,&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading and have a nice day / evening.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>My history in testing</title>
+      <link>https://skarlso.github.io/p125</link>
+      <pubDate>Thu, 11 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p125</guid>
+      <description>&lt;p&gt;Hello folks.&lt;/p&gt;
+
+&lt;p&gt;Today I&amp;#8217;d like to share with you some of the experiences I had as a beginner tester. I hope it sets you off on a path to enlightenment and leaves you off with a good appetite for testing. Shall we begin then?&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;The early days&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;It was 2004 when I finished school and started working at my first company. I finished as a software developer which is kind of an exaggeration since I only finished a 2 years course of it. I wasn&amp;#8217;t really one for school. I was more of a home learner. That&amp;#8217;s how you learn programming these days anyways.&lt;/p&gt;
+
+&lt;p&gt;The company didn&amp;#8217;t hire developers at that moment. At least not junior ones&amp;#8230; But! They were kind enough to offer a position as a tester. As the saying goes, Don&amp;#8217;t look a gift horse in the mouth, I accepted the position although my intention was to go over to development as soon as possible.&lt;/p&gt;
+
+&lt;p&gt;Years went by. I was still a tester. I foamed and fumed about it I wanted to be a dev guy. I was furious. I was angry. I was inpatient. I was an idiot. Instead of crying and instead of the light going on after 2-3 years or more I should have realised the potential of my position sooner.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Revelation&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So there I was. I was sitting at my desk clicking away at stuff and writing up dull documentations about why I&amp;#8217;m clicking at that stuff and how I&amp;#8217;m clicking it. My document infect was so pretty and well formatted that I was fairly proud of it.&lt;/p&gt;
+
+&lt;p&gt;I ignored calls of my sanity and went on producing test cases and documents for many many more months / years. I was bad at my job. And I tell you why. I missed bugs I missed the little things that made the difference. I was following documentation by the letter I was leaving out things I wasn&amp;#8217;t paying attention I wanted to be a developer damn it!&lt;/p&gt;
+
+&lt;p&gt;But fortunately because of various people in my life, like my brother, my resource manager, my friends and this guy :: James Marcus Bach ( &lt;a href=&#34;http://www.satisfice.com/&#34; title=&#34;http://www.satisfice.com/&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.satisfice.com/&#34;&gt;http://www.satisfice.com/&lt;/a&gt;&lt;/a&gt; ) :: I soon begun to realise that this job is about so much more! I read Jame&amp;#8217;s book &lt;a href=&#34;http://www.buccaneerscholar.com/&#34; title=&#34;The buccaneer scholar&#34; target=&#34;_blank&#34;&gt;The buccaneer scholar&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;It opened my eyes in so many ways. I knew that there is somebody else out there how is like me. Passionet and keen on learning new things. Exploring technology and going where nobody else went before. I was beginning to understand that I could be much more in this position. In my country at that time Testers weren&amp;#8217;t regarded for too much. We were the enemy that needed defeating. We were in the way. We were somebody who had to be hated. Fortunately it changed much since then and lucky for us The Company had great support for Testers.&lt;/p&gt;
+
+&lt;p&gt;I learned that I can use my passion. I learned that testing can be / IS, indeed, the best thing that could have happened to me.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Ascension&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;With these new thoughts in my mind I begun to evolve. I realised that I can incorporate my dev skills into testing and later my testing skill into development. I was no longer following test cases blindly. I was no longer writing up pretty documentations ( I was writing other kind of documentations.. 😉 ). I was following instinct, skills, knowledge I hoarded from people. I was talking to the Devs, I was talking to the deployment team, I was talking to the managers AND the product owners. I hoarded knowledge as much as possible. I wrote everything down into my Mind Maps and was determined to become the single most knowledgable entity on the projects I was working on.&lt;/p&gt;
+
+&lt;p&gt;I created small tools that helped in my tedious, boring, unimaginative tasks of repetitive clicking. It didn&amp;#8217;t took so long I was sharing my tools between other testers. Small javascripts which filled in forms. Tools, perl scripts to format docs and test results and so and so forth.&lt;/p&gt;
+
+&lt;p&gt;I embraced testing. It become my way of Life. It wasn&amp;#8217;t a simple job anymore. It was embedded into my brain processes and synapses. And that&amp;#8217;s when I got into automation.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;The later years&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So I got into automation. I loved it. The thought that I can bend the computers will to do my bidding / job was absolutely mind blowing. I&amp;#8217;ve done development at that point already of course that wasn&amp;#8217;t new to me. And I also was shown some way of automation but that wasn&amp;#8217;t so great so I dismissed this possibility for a long time. After a while I came back to it with the thought that, hey I could do this better. Selenium came out at that time around, Watir was also there and a couple of other tools in Perl.&lt;/p&gt;
+
+&lt;p&gt;I started developing with / in / for those tools and noted that despite the believe that it&amp;#8217;s only automation it actually took quite some thinking to come up with a framework that was adaptable, concise, manageable, fast and so on and so fort. It was an effort that most people didn&amp;#8217;t realise or care to know about.&lt;/p&gt;
+
+&lt;p&gt;So for the better part of those years I was trying to convince people that building a testing framework requires actual development work. And is not something that should be taken lightly. I sort of succeeded with it&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Now&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;After various circumstances in my life I moved to UK and took a job as an SET(Software Developer in Test). It sounds fancy but is rather just an automation guy who from time to time looks at production code. It was a spring board for me. And now days it seems I&amp;#8217;m simply just a developer. But!!! And here comes the twist.&lt;/p&gt;
+
+&lt;p&gt;Because of my years of background in Test I feel I&amp;#8217;m so much more. I know to write testable code. I know many ways how my code could fail. I know many ways of writing something and then coding up a script for testing or do extensive unit testing. I don&amp;#8217;t love my code blindly so that when it&amp;#8217;s done I only test the &amp;#8220;happy path&amp;#8221; because I don&amp;#8217;t have the time to code up more.&lt;/p&gt;
+
+&lt;p&gt;I will always have time for testing. I will &lt;strong&gt;begin&lt;/strong&gt; with testing. Because people need to understand that the only way to go fast is to go slow. If you go fast it will bite you in the behind and you will suffer more then you would have suffered if you would have written up that one last little test for that one last little corner for the world that is your boiling, brooding, breathing pile of code.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;The future&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Honestly I don&amp;#8217;t know were I&amp;#8217;m going from here. Being a full pledged developed is a new territory for me even though I was an automation dev before. But I&amp;#8217;m looking forward to this exciting new life. And I will NEVER ditch my Testing carrier. In fact I&amp;#8217;m aiming to complete the BBST course next month. Because once you&amp;#8217;ve been a tester you will never go back being anything else. It becomes a part of you. And stays with you forever.&lt;/p&gt;
+
+&lt;p&gt;Thank you for reading.&lt;/p&gt;
+
+&lt;p&gt;And as always,&lt;/p&gt;
+
+&lt;p&gt;Have a nice day!&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>It’s all about human interaction.</title>
+      <link>https://skarlso.github.io/p122</link>
+      <pubDate>Thu, 31 Jan 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p122</guid>
+      <description>&lt;p&gt;Hello everybody.&lt;/p&gt;
+
+&lt;p&gt;Today I would like to write about something I experienced over the years of being in the software industry.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Some History&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;I&amp;#8217;ve been a tester for a long time now. I&amp;#8217;ve been up and down and down and up. I struggled for a very long time until I became somebody who I am today. And I still have many things to learn ahead of me.&lt;/p&gt;
+
+&lt;p&gt;I learned from many people. I personally thing my greatest influence on testing was James Marcus Bach and his Brother Jon Bach you should definitely check out these guys. It took me a long time to get to where I am today. And after ~10 years now I can state with a reasonable confidence that this industry is no longer about technology or solutions to technological problems.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Surly you Jest&amp;#8230;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Nope&amp;#8230; I&amp;#8217;m not joking. I can see people struggling to understand people and mostly it&amp;#8217;s not because of knowledge differences it&amp;#8217;s because they simply can&amp;#8217;t stand each other. Or they simply think that their solution must be better then the one the other has. Or the guy just woke up with a bad foot.&lt;/p&gt;
+
+&lt;p&gt;And industrial problems? Management? Sure it can be knowledge but mostly it&amp;#8217;s simply ignorance and pride. &lt;strong&gt;Pride&lt;/strong&gt; because he / she does not want to admit that they don&amp;#8217;t understand something. &lt;strong&gt;Pride&lt;/strong&gt; to ask a question that might make them look stupid. I&amp;#8217;d rather look stupid for five minutes then for the rest of my life. I rather ask the question that I want to know because I can&amp;#8217;t make a proper decision without it. I rather learn then be ignorant for the rest of my life.&lt;/p&gt;
+
+&lt;p&gt;People need to overcome their differences. People need to understand that this behaviour hurts the company. It hurts them it hurts the people around them and the product. Swallow your pride and be a bigger man / woman. Face your fear. Be Strong. Be clever be intelligent be a proper grown up human being!!!!&lt;/p&gt;
+
+&lt;p&gt;You hate my face? SAY IT IN MY FACE!! I can&amp;#8217;t resolve issues I DON&amp;#8217;T KNOW ABOUT!!&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Last but not least&amp;#8230;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Grow up people. Be nice. Be curious. Don&amp;#8217;t be afraid to ask. Don&amp;#8217;t be afraid to ask again if you still don&amp;#8217;t understand. It might be that the person speaking has a completely different view of something and it might be that nobody really understands him and they are just afraid to ask. And if you ask something stupid? Who cares.. You learned from it.&lt;/p&gt;
+
+&lt;p&gt;Be a professional. A professional is not afraid. And encourage others to be one too. In the today&amp;#8217;s technological world solutions can be found by the dozens on the internet. You will be a better work force by adjusting your personal habits a little bit.&lt;/p&gt;
+
+&lt;p&gt;Be nice.&lt;/p&gt;
+
+&lt;p&gt;And as always,&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading.&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>What you really need to know to become a Testing Expert</title>
+      <link>https://skarlso.github.io/p116</link>
+      <pubDate>Mon, 21 Jan 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/p116</guid>
+      <description>&lt;p&gt;Hello Everybody.&lt;/p&gt;
+
+&lt;p&gt;Today I would like to show you what you need to become a Testing expert.&lt;/p&gt;
+
+&lt;p&gt;If you had noticed I deliberately left out the word Software. Why? Because becoming and expert in Testing Anything has the same root as becoming an expert to test software. And for that let me take you back to a Galaxy Far Far Away in Time AND Space.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;The beginnings&amp;#8230;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;I went to school in Oroszlany, my home town in Hungary. My official Technical title would be Mechanical Testing Engineer. I had the luck that most things which were thought at that school and I liked were thought by people I liked too and were clever in their respective fields. Like Pneumatics, Metallurgy, Mechanics, Chemistry these were all really awesome fields. To this day I don&amp;#8217;t know why I haven&amp;#8217;t ended up in some lab testing the breaking point of metals and the capacity of various chemicals.&lt;/p&gt;
+
+&lt;p&gt;But ahh well.. I still remember some of the ISO standards we had to memorize. Like in Metallurgy the Charpy pendulum impact test which we loved so very much to perform. The ISO standard for that is ISO 148-1:2009. Now let me see if I still remember that correctly&amp;#8230; Yes! I&amp;#8217;ve still got it. So where am I going with this?&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Moving on&amp;#8230;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Back then we performed a lot of operations on various metals and a lot of chemical testings and the like. The most important part of every performed test was always to have insight. Insight in the structure of the metal. How it was made, how it was moulded and then shaped and heated and cooled and so on and so forth. We had to know EVERYTHING about the creation of this element that we had to test. Without that knowledge you could of corse still perform the test but you didn&amp;#8217;t had any additional information why that test was useful or what it proved. Sure, you could have looked at the specification of the metal but that didn&amp;#8217;t give you anything about the inner structure of it.&lt;/p&gt;
+
+&lt;p&gt;That was provided to you by the knowledge of the procedure that created it.&lt;/p&gt;
+
+&lt;p&gt;You get where I&amp;#8217;m going with this&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Insight&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So back to software testing&amp;#8230; What is the single most important thing that gives you insight, that gives you the edge to be a professional? Knowing the development process. Knowing architecture. Knowing programming. Knowing the language and its capabilities and limitations.&lt;/p&gt;
+
+&lt;p&gt;Sure you can be a good manual Tester. Of course you can be an excellent Exploratory Tester. But look at the others. James Marcus Bach. Alan Richardson. Michael Bolton and I could go on&amp;#8230; They all know programming. They all know it by heart and they could be exceptional programmers if they wanted to. They already know that in order to get very good at testing something you must have an insight on the subject matter. You can&amp;#8217;t test it thoughtfully without knowing its limitations its rules that it obeys its exploits that you can use.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Last words&amp;#8230;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So in order to excel at your craft of test you have to have insight of the subject of the test. You can still become good but you always have to aim high don&amp;#8217;t you? A friend of mine reply to one of my tweets with a really good sentence:&amp;#8221;&amp;#8230;and then you realize that being the best in one implies being excellent in the other.&amp;#8221;. Exactly. Because the two are interconnected. They aren&amp;#8217;t actually two. It&amp;#8217;s one. It&amp;#8217;s called Engineering.&lt;/p&gt;
+
+&lt;p&gt;Have a nice day and as always,&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading.&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
