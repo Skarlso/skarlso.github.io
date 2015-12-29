@@ -5,8 +5,125 @@
     <link>https://skarlso.github.io/categories/go/</link>
     <description>Recent content in Go on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Wed, 23 Dec 2015 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 29 Dec 2015 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/categories/go/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Use Byte Array Instead of Strings</title>
+      <link>https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings/</link>
+      <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings/</guid>
+      <description>&lt;p&gt;Hello Folks.&lt;/p&gt;
+
+&lt;p&gt;This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.&lt;/p&gt;
+
+&lt;p&gt;[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.&lt;/p&gt;
+
+&lt;p&gt;Sample code:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package solutions
+
+import &amp;quot;fmt&amp;quot;
+
+const (
+    //INPUT input
+    INPUT = &amp;quot;1321131112&amp;quot;
+    //LIMIT limit
+    LIMIT = 50
+)
+
+//LookAndSay translates numbers according to Look and Say algo
+func LookAndSay(s string, c chan string) {
+    charCount := 1
+    look := &amp;quot;&amp;quot;
+    for i := range s {
+        if i+1 &amp;lt; len(s) {
+            if s[i] == s[i+1] {
+                charCount++
+            } else {
+                look += fmt.Sprintf(&amp;quot;%d%s&amp;quot;, charCount, string(s[i]))
+                charCount = 1
+            }
+        } else {
+            look += fmt.Sprintf(&amp;quot;%d%s&amp;quot;, charCount, string(s[i]))
+        }
+    }
+    c &amp;lt;- look
+}
+
+//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+func GetLengthOfLookAndSay() {
+    c := make(chan string, 0)
+    go LookAndSay(INPUT, c)
+    finalString := &amp;lt;-c
+    for i := 0; i &amp;lt;= LIMIT-2; i++ {
+        go LookAndSay(finalString, c)
+        finalString = &amp;lt;-c
+        // fmt.Println(finalString)
+    }
+    fmt.Println(&amp;quot;Lenght of final String:&amp;quot;, len(finalString))
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This, with the limit raised to 50 run for ~1 hour. Even with the routines although they were just for show since they had to wait for each others input.&lt;/p&gt;
+
+&lt;p&gt;Now change this to []byte and the run time was almost under 2 seconds on my machine.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package solutions
+
+import (
+    &amp;quot;fmt&amp;quot;
+    &amp;quot;strconv&amp;quot;
+)
+
+const (
+    //LIMIT limit
+    LIMIT = 50
+)
+
+//INPUT puzzle input
+//This used to be a string until I was reminded that BYTE ARRAY IS ALWAYS FASTER!
+var INPUT = []byte(&amp;quot;1321131112&amp;quot;)
+
+//LookAndSay translates numbers according to Look and Say algo
+func LookAndSay(s []byte) (look []byte) {
+    charCount := 1
+    for i := range s {
+        if i+1 &amp;lt; len(s) {
+            if s[i] == s[i+1] {
+                charCount++
+            } else {
+                b := []byte(strconv.FormatInt(int64(charCount), 10))
+                look = append(look, b[0], s[i])
+                charCount = 1
+            }
+        } else {
+            b := []byte(strconv.FormatInt(int64(charCount), 10))
+            look = append(look, b[0], s[i])
+        }
+    }
+    return
+}
+
+//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+func GetLengthOfLookAndSay() {
+    finalString := INPUT
+    for i := 0; i &amp;lt;= LIMIT-1; i++ {
+        finalString = LookAndSay(finalString)
+    }
+    fmt.Println(&amp;quot;Lenght of final String:&amp;quot;, len(finalString))
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is the solutions for Day 10 on &lt;a href=&#34;http://adventofcode.com/&#34;&gt;AdventOfCode&lt;/a&gt; by the way.&lt;/p&gt;
+
+&lt;p&gt;Thanks for readin&amp;rsquo;.
+Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Recursive Letter Frequency Count</title>

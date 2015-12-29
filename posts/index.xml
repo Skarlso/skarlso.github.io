@@ -5,8 +5,125 @@
     <link>https://skarlso.github.io/posts/</link>
     <description>Recent content in Posts on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Wed, 23 Dec 2015 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 29 Dec 2015 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Use Byte Array Instead of Strings</title>
+      <link>https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings/</link>
+      <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings/</guid>
+      <description>&lt;p&gt;Hello Folks.&lt;/p&gt;
+
+&lt;p&gt;This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.&lt;/p&gt;
+
+&lt;p&gt;[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.&lt;/p&gt;
+
+&lt;p&gt;Sample code:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package solutions
+
+import &amp;quot;fmt&amp;quot;
+
+const (
+    //INPUT input
+    INPUT = &amp;quot;1321131112&amp;quot;
+    //LIMIT limit
+    LIMIT = 50
+)
+
+//LookAndSay translates numbers according to Look and Say algo
+func LookAndSay(s string, c chan string) {
+    charCount := 1
+    look := &amp;quot;&amp;quot;
+    for i := range s {
+        if i+1 &amp;lt; len(s) {
+            if s[i] == s[i+1] {
+                charCount++
+            } else {
+                look += fmt.Sprintf(&amp;quot;%d%s&amp;quot;, charCount, string(s[i]))
+                charCount = 1
+            }
+        } else {
+            look += fmt.Sprintf(&amp;quot;%d%s&amp;quot;, charCount, string(s[i]))
+        }
+    }
+    c &amp;lt;- look
+}
+
+//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+func GetLengthOfLookAndSay() {
+    c := make(chan string, 0)
+    go LookAndSay(INPUT, c)
+    finalString := &amp;lt;-c
+    for i := 0; i &amp;lt;= LIMIT-2; i++ {
+        go LookAndSay(finalString, c)
+        finalString = &amp;lt;-c
+        // fmt.Println(finalString)
+    }
+    fmt.Println(&amp;quot;Lenght of final String:&amp;quot;, len(finalString))
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This, with the limit raised to 50 run for ~1 hour. Even with the routines although they were just for show since they had to wait for each others input.&lt;/p&gt;
+
+&lt;p&gt;Now change this to []byte and the run time was almost under 2 seconds on my machine.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package solutions
+
+import (
+    &amp;quot;fmt&amp;quot;
+    &amp;quot;strconv&amp;quot;
+)
+
+const (
+    //LIMIT limit
+    LIMIT = 50
+)
+
+//INPUT puzzle input
+//This used to be a string until I was reminded that BYTE ARRAY IS ALWAYS FASTER!
+var INPUT = []byte(&amp;quot;1321131112&amp;quot;)
+
+//LookAndSay translates numbers according to Look and Say algo
+func LookAndSay(s []byte) (look []byte) {
+    charCount := 1
+    for i := range s {
+        if i+1 &amp;lt; len(s) {
+            if s[i] == s[i+1] {
+                charCount++
+            } else {
+                b := []byte(strconv.FormatInt(int64(charCount), 10))
+                look = append(look, b[0], s[i])
+                charCount = 1
+            }
+        } else {
+            b := []byte(strconv.FormatInt(int64(charCount), 10))
+            look = append(look, b[0], s[i])
+        }
+    }
+    return
+}
+
+//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+func GetLengthOfLookAndSay() {
+    finalString := INPUT
+    for i := 0; i &amp;lt;= LIMIT-1; i++ {
+        finalString = LookAndSay(finalString)
+    }
+    fmt.Println(&amp;quot;Lenght of final String:&amp;quot;, len(finalString))
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is the solutions for Day 10 on &lt;a href=&#34;http://adventofcode.com/&#34;&gt;AdventOfCode&lt;/a&gt; by the way.&lt;/p&gt;
+
+&lt;p&gt;Thanks for readin&amp;rsquo;.
+Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Recursive Letter Frequency Count</title>
@@ -1130,82 +1247,6 @@ JobCommonTemplate.&lt;span style=&#34;color: #006600;&#34;&gt;addEmailTemplate&l
 &lt;p&gt;Enjoy,&lt;/p&gt;
 
 &lt;p&gt;Gergely.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Converting numbers into string representations</title>
-      <link>https://skarlso.github.io/2015/07/19/converting-numbers-into-string-representations/</link>
-      <pubDate>Sun, 19 Jul 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/07/19/converting-numbers-into-string-representations/</guid>
-      <description>&lt;p&gt;I quiet like this one. My first go program snippet without any peaking or googling. I&amp;#8217;m proud, though it could be improved with a bit of struct magic and such and such. And it only counts &amp;#8217;till 1000&amp;#8230;&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;go&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;package&lt;/span&gt; main
-&amp;nbsp;
-&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;fmt&#34;&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;var&lt;/span&gt; words &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #993333;&#34;&gt;map&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;one&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;two&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;3&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;three&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;4&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;four&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;five&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;6&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;six&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;7&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;seven&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;8&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;eight&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;9&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;nine&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;10&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;ten&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;eleven&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;12&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;twelve&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;13&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;thirteen&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;14&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;fourteen&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;15&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;fifteen&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;16&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;sixteen&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;17&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;seventeen&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;18&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;eighteen&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;19&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;nineteen&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;20&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;twenty&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;30&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;thirty&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;40&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;forty&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;50&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;fifty&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;60&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;sixty&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;70&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;seventy&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;80&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;eighty&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;90&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;ninety&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;// CountLetters count the letters in a long string number representation&lt;/span&gt;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; CountLetters&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;limit &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    myLongNumberString &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;&#34;&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt; &amp;lt;&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; limit&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;++&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        addLettersToMyString&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&amp;myLongNumberString&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;// fmt.Println(&#34;1-9 written with letters is: &#34;, len(myLongNumberString))&lt;/span&gt;
-    fmt&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;The string is:&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; myLongNumberString&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    fmt&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;Lenght of string is:&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;len&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;myLongNumberString&lt;span style=&#34;color: #339933;&#34;&gt;))&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; addLettersToMyString&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;myString &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; num &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; num &amp;lt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;20&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;myString &lt;span style=&#34;color: #339933;&#34;&gt;+=&lt;/span&gt; words&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;num&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; num &amp;gt;&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;20&lt;/span&gt; &amp;&amp; num &amp;lt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;100&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;myString &lt;span style=&#34;color: #339933;&#34;&gt;+=&lt;/span&gt; countMiddle&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;num&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; num &amp;gt;&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;100&lt;/span&gt; &amp;&amp; num &amp;lt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1000&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        hundred&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; tenth &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; countHundred&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;num&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-        &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; tenth &lt;span style=&#34;color: #339933;&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-            &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;myString &lt;span style=&#34;color: #339933;&#34;&gt;+=&lt;/span&gt; hundred
-        &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;else&lt;/span&gt; &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; tenth &amp;gt;&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;11&lt;/span&gt; &amp;&amp; tenth &amp;lt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;20&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-            &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;myString &lt;span style=&#34;color: #339933;&#34;&gt;+=&lt;/span&gt; hundred &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;and&#34;&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; words&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;tenth&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt;
-        &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;else&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-            &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;myString &lt;span style=&#34;color: #339933;&#34;&gt;+=&lt;/span&gt; hundred &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;and&#34;&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; countMiddle&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;tenth&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-        &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; num &lt;span style=&#34;color: #339933;&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1000&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;myString &lt;span style=&#34;color: #339933;&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;onethousand&#34;&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; countMiddle&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;num &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    minues &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; num &lt;span style=&#34;color: #339933;&#34;&gt;%&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;10&lt;/span&gt;
-    num &lt;span style=&#34;color: #339933;&#34;&gt;-=&lt;/span&gt; minues
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; words&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;num&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; words&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;minues&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; countHundred&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;num &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    minues &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; num &lt;span style=&#34;color: #339933;&#34;&gt;%&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;100&lt;/span&gt;
-    num &lt;span style=&#34;color: #339933;&#34;&gt;-=&lt;/span&gt; minues
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;words&lt;span style=&#34;color: #339933;&#34;&gt;[(&lt;/span&gt;num&lt;span style=&#34;color: #339933;&#34;&gt;/&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;100&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)]&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;hundred&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;),&lt;/span&gt; minues
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
 </description>
     </item>
     

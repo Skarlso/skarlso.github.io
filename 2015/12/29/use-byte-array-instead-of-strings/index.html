@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
 <head>
   <title>
-    Recursive Letter Frequency Count // Ramblings of a build engineer
+    Use Byte Array Instead of Strings // Ramblings of a build engineer
   </title>
 
   <link href="http://gmpg.org/xfn/11" rel="profile">
@@ -16,11 +16,11 @@
 <meta name="author" content="hannibal">
 <meta name="generator" content="Hugo 0.14" />
 
-  <meta property="og:title" content="Recursive Letter Frequency Count" />
+  <meta property="og:title" content="Use Byte Array Instead of Strings" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="en_US" />
-<meta property="og:url" content="https://skarlso.github.io/2015/12/23/recursive-freq-count/" />
+<meta property="og:url" content="https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings/" />
 
 
   
@@ -106,14 +106,14 @@
 	    
   		<section class="post">
             <h1 class="post-title">
-              <a href="https://skarlso.github.io/2015/12/23/recursive-freq-count">Recursive Letter Frequency Count</a>
+              <a href="https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings">Use Byte Array Instead of Strings</a>
             </h1>
             <h3 class="post-subtitle">
             	
             </h3>
             
             	<span class="post-date">
-                	<span class="post-date-day"><sup>23</sup></span><span class="post-date-separator">/</span><span class="post-date-month">Dec</span> <span class="post-date-year">2015</span>
+                	<span class="post-date-day"><sup>29</sup></span><span class="post-date-separator">/</span><span class="post-date-month">Dec</span> <span class="post-date-year">2015</span>
             	</span>
             	
             
@@ -142,49 +142,113 @@
 
 			
 
-            <p>Hello everybody!</p>
+            <p>Hello Folks.</p>
 
-<p>I wanted to do a sort post about word frequency count. I did it many times now and I was curious as how a recursive solution would perform as opposed to looping.</p>
+<p>This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.</p>
 
-<p>So I wrote it up quickly and added a few benchmarks with different sized data.</p>
+<p>[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.</p>
 
-<p>First&hellip;. The code:</p>
+<p>Sample code:</p>
 
-<pre><code class="language-go">var freqMap = make(map[string]int, 0)
+<pre><code class="language-go">package solutions
 
-func countLettersRecursive(s string) string {
-    if len(s) == 0 {
-        return s
+import &quot;fmt&quot;
+
+const (
+    //INPUT input
+    INPUT = &quot;1321131112&quot;
+    //LIMIT limit
+    LIMIT = 50
+)
+
+//LookAndSay translates numbers according to Look and Say algo
+func LookAndSay(s string, c chan string) {
+    charCount := 1
+    look := &quot;&quot;
+    for i := range s {
+        if i+1 &lt; len(s) {
+            if s[i] == s[i+1] {
+                charCount++
+            } else {
+                look += fmt.Sprintf(&quot;%d%s&quot;, charCount, string(s[i]))
+                charCount = 1
+            }
+        } else {
+            look += fmt.Sprintf(&quot;%d%s&quot;, charCount, string(s[i]))
+        }
     }
-    freqMap[string(s[0])]++
-    return countLettersRecursive(s[1:])
+    c &lt;- look
 }
 
-func countLettersLoop(s string) {
-    for _, v := range s {
-        freqMap[string(v)]++
+//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+func GetLengthOfLookAndSay() {
+    c := make(chan string, 0)
+    go LookAndSay(INPUT, c)
+    finalString := &lt;-c
+    for i := 0; i &lt;= LIMIT-2; i++ {
+        go LookAndSay(finalString, c)
+        finalString = &lt;-c
+        // fmt.Println(finalString)
     }
+    fmt.Println(&quot;Lenght of final String:&quot;, len(finalString))
 }
+
 </code></pre>
 
-<p>Very simple. The first run with a small sample: &ldquo;asdfasdfasdfasdfasdf&rdquo;</p>
+<p>This, with the limit raised to 50 run for ~1 hour. Even with the routines although they were just for show since they had to wait for each others input.</p>
 
-<pre><code class="language-bash">BenchmarkLoopFrequencyCount  5000000           377 ns/op
-BenchmarkRecursiveFrequencyCount     5000000           380 ns/op
+<p>Now change this to []byte and the run time was almost under 2 seconds on my machine.</p>
+
+<pre><code class="language-go">package solutions
+
+import (
+    &quot;fmt&quot;
+    &quot;strconv&quot;
+)
+
+const (
+    //LIMIT limit
+    LIMIT = 50
+)
+
+//INPUT puzzle input
+//This used to be a string until I was reminded that BYTE ARRAY IS ALWAYS FASTER!
+var INPUT = []byte(&quot;1321131112&quot;)
+
+//LookAndSay translates numbers according to Look and Say algo
+func LookAndSay(s []byte) (look []byte) {
+    charCount := 1
+    for i := range s {
+        if i+1 &lt; len(s) {
+            if s[i] == s[i+1] {
+                charCount++
+            } else {
+                b := []byte(strconv.FormatInt(int64(charCount), 10))
+                look = append(look, b[0], s[i])
+                charCount = 1
+            }
+        } else {
+            b := []byte(strconv.FormatInt(int64(charCount), 10))
+            look = append(look, b[0], s[i])
+        }
+    }
+    return
+}
+
+//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+func GetLengthOfLookAndSay() {
+    finalString := INPUT
+    for i := 0; i &lt;= LIMIT-1; i++ {
+        finalString = LookAndSay(finalString)
+    }
+    fmt.Println(&quot;Lenght of final String:&quot;, len(finalString))
+}
+
 </code></pre>
 
-<p>They almost equal but Recursive seems to be lagging behind. So I increased the sample size to a text which was 496 long.</p>
+<p>This is the solutions for Day 10 on <a href="http://adventofcode.com/">AdventOfCode</a> by the way.</p>
 
-<pre><code class="language-bash">PASS
-BenchmarkLoopFrequencyCount    30000         53336 ns/op
-BenchmarkRecursiveFrequencyCount       20000         61780 ns/op
-</code></pre>
-
-<p>And, as expected, recursing is less performant than looping. Also, I think my machine would die from a larger data size&hellip;</p>
-
-<p>But the recursive looks so much cooler though.</p>
-
-<p>Thanks for reading!
+<p>Thanks for readin&rsquo;.
 Gergely.</p>
 
 	
@@ -196,16 +260,11 @@ Gergely.</p>
 				<div class="paging">
 					<span class="paging-label">More Reading</span>
 					
-					<div class="paging-newer">
-						<span class="dark-red">Newer</span><span class="decorative-marker">//</span>
-						<a class="paging-link" href="https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings">Use Byte Array Instead of Strings</a>
-		            </div>
-		            
 
 					
 					<div class="paging-older">
 						<span class="dark-red">Older</span><span class="decorative-marker">//</span>
-			            <a class="paging-link" href="https://skarlso.github.io/2015/12/08/go-development-environment">Go Development Environment</a>
+			            <a class="paging-link" href="https://skarlso.github.io/2015/12/23/recursive-freq-count">Recursive Letter Frequency Count</a>
 		            </div>
 		            
 	            </div>
