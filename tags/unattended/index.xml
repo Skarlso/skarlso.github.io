@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Unattended on Ramblings of a build engineer</title>
+    <link>https://skarlso.github.io/tags/unattended/</link>
+    <description>Recent content in Unattended on Ramblings of a build engineer</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 30 Jun 2015 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/tags/unattended/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Powershell can also be nice -Or Installing Java silently and waiting</title>
+      <link>https://skarlso.github.io/2015/06/30/powershell-can-also-be-nice-or-installing-java-silently-and-waiting/</link>
+      <pubDate>Tue, 30 Jun 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/06/30/powershell-can-also-be-nice-or-installing-java-silently-and-waiting/</guid>
+      <description>&lt;p&gt;Hello folks.&lt;/p&gt;
+
+&lt;p&gt;Today, I would like to show you a small script. It installs Java JDK, both version, x86 and 64 bit, silently, and wait for that process to finish.&lt;/p&gt;
+
+&lt;p&gt;The wait is necessary because /s on a java install has the nasty habit of running in the background. If you are using a .bat file, &lt;strong&gt;you shouldn&amp;#8217;t&lt;/strong&gt;, than you would use something like: start /w jdk-setup.exe /s. This gets it done, but is ugly. Also, if you are using Packer and PowerShell provisioning, you might want to set up some environment variables as well for the next script. And you want that property to be available and you don&amp;#8217;t want to mess it up with setting a path into a file and then re-setting your path on the begin of your other script. Or pass it around with Packer. No. Use a proper PowerShell script. Learn it. It&amp;#8217;s not that hard. Be a professional. Don&amp;#8217;t hack something together for the next person to suffer at.&lt;/p&gt;
+
+&lt;p&gt;Here is how I did it. Hope it helps somebody out.&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;powershell&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #800080;&#34;&gt;$JDK_VER&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color: #800000;&#34;&gt;&#34;7u75&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #800080;&#34;&gt;$JDK_FULL_VER&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color: #800000;&#34;&gt;&#34;7u75-b13&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #800080;&#34;&gt;$JDK_PATH&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color: #800000;&#34;&gt;&#34;1.7.0_75&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #800080;&#34;&gt;$source86&lt;/span&gt; &lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-i586.exe&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #800080;&#34;&gt;$source64&lt;/span&gt; &lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-x64.exe&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #800080;&#34;&gt;$destination86&lt;/span&gt; &lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;C:\vagrant\$JDK_VER-x86.exe&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #800080;&#34;&gt;$destination64&lt;/span&gt; &lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;C:\vagrant\$JDK_VER-x64.exe&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #800080;&#34;&gt;$client&lt;/span&gt; &lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;new-object&lt;/span&gt; System.Net.WebClient
+&lt;span style=&#34;color: #800080;&#34;&gt;$cookie&lt;/span&gt; &lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;oraclelicense=accept-securebackup-cookie&#34;&lt;/span&gt;
+&lt;span style=&#34;color: #800080;&#34;&gt;$client&lt;/span&gt;.Headers.Add&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#91;&lt;/span&gt;System.Net.HttpRequestHeader&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#93;&lt;/span&gt;::Cookie&lt;span style=&#34;color: pink;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #800080;&#34;&gt;$cookie&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;Checking if Java is already installed&#39;&lt;/span&gt;
+&lt;span style=&#34;color: #0000FF;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Test-Path&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;c:\Program Files (x86)\Java&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #FF0000;&#34;&gt;-Or&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Test-Path&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;c:\Program Files\Java&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#123;&lt;/span&gt;
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;No need to Install Java&#39;&lt;/span&gt;
+    Exit
+&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#125;&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;Downloading x86 to $destination86&#39;&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #800080;&#34;&gt;$client&lt;/span&gt;.downloadFile&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #800080;&#34;&gt;$source86&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #800080;&#34;&gt;$destination86&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;
+&lt;span style=&#34;color: #0000FF;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;!&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Test-Path&lt;/span&gt; &lt;span style=&#34;color: #800080;&#34;&gt;$destination86&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#123;&lt;/span&gt;
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;Downloading $destination86 failed&#34;&lt;/span&gt;
+    Exit
+&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#125;&lt;/span&gt;
+&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;Downloading x64 to $destination64&#39;&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #800080;&#34;&gt;$client&lt;/span&gt;.downloadFile&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #800080;&#34;&gt;$source64&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #800080;&#34;&gt;$destination64&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;
+&lt;span style=&#34;color: #0000FF;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;!&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Test-Path&lt;/span&gt; &lt;span style=&#34;color: #800080;&#34;&gt;$destination64&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#123;&lt;/span&gt;
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;Downloading $destination64 failed&#34;&lt;/span&gt;
+    Exit
+&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#125;&lt;/span&gt;
+&amp;nbsp;
+&amp;nbsp;
+try &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#123;&lt;/span&gt;
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;Installing JDK-x64&#39;&lt;/span&gt;
+    &lt;span style=&#34;color: #800080;&#34;&gt;$proc1&lt;/span&gt; &lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt; Start&lt;span style=&#34;color: pink;&#34;&gt;-&lt;/span&gt;Process &lt;span style=&#34;color: #008080; font-style: italic;&#34;&gt;-FilePath&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;$destination64&#34;&lt;/span&gt; &lt;span style=&#34;color: #008080; font-style: italic;&#34;&gt;-ArgumentList&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;/s REBOOT=ReallySuppress&#34;&lt;/span&gt; &lt;span style=&#34;color: #008080; font-style: italic;&#34;&gt;-Wait&lt;/span&gt; &lt;span style=&#34;color: #008080; font-style: italic;&#34;&gt;-PassThru&lt;/span&gt;
+    &lt;span style=&#34;color: #800080;&#34;&gt;$proc1&lt;/span&gt;.waitForExit&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;Installation Done.&#39;&lt;/span&gt;
+&amp;nbsp;
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;Installing JDK-x86&#39;&lt;/span&gt;
+    &lt;span style=&#34;color: #800080;&#34;&gt;$proc2&lt;/span&gt; &lt;span style=&#34;color: pink;&#34;&gt;=&lt;/span&gt; Start&lt;span style=&#34;color: pink;&#34;&gt;-&lt;/span&gt;Process &lt;span style=&#34;color: #008080; font-style: italic;&#34;&gt;-FilePath&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;$destination86&#34;&lt;/span&gt; &lt;span style=&#34;color: #008080; font-style: italic;&#34;&gt;-ArgumentList&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;/s REBOOT=ReallySuppress&#34;&lt;/span&gt; &lt;span style=&#34;color: #008080; font-style: italic;&#34;&gt;-Wait&lt;/span&gt; &lt;span style=&#34;color: #008080; font-style: italic;&#34;&gt;-PassThru&lt;/span&gt;
+    &lt;span style=&#34;color: #800080;&#34;&gt;$proc2&lt;/span&gt;.waitForExit&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;Installtion Done.&#39;&lt;/span&gt;
+&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#125;&lt;/span&gt; catch &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#91;&lt;/span&gt;exception&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#93;&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#123;&lt;/span&gt;
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;write-host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;$_ is&#39;&lt;/span&gt; &lt;span style=&#34;color: #000080;&#34;&gt;$_&lt;/span&gt;
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;write-host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;$_.GetType().FullName is&#39;&lt;/span&gt; &lt;span style=&#34;color: #000080;&#34;&gt;$_&lt;/span&gt;.GetType&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;.FullName
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;write-host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;$_.Exception is&#39;&lt;/span&gt; &lt;span style=&#34;color: #000080;&#34;&gt;$_&lt;/span&gt;.Exception
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;write-host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;$_.Exception.GetType().FullName is&#39;&lt;/span&gt; &lt;span style=&#34;color: #000080;&#34;&gt;$_&lt;/span&gt;.Exception.GetType&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;.FullName
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;write-host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;$_.Exception.Message is&#39;&lt;/span&gt; &lt;span style=&#34;color: #000080;&#34;&gt;$_&lt;/span&gt;.Exception.Message
+&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#125;&lt;/span&gt;
+&amp;nbsp;
+&lt;span style=&#34;color: #0000FF;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Test-Path&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;c:\Program Files (x86)\Java&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #FF0000;&#34;&gt;-Or&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Test-Path&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;c:\Program Files\Java&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;&amp;#123;&lt;/span&gt;
+    &lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;Java installed successfully.&#39;&lt;/span&gt;
+&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#125;&lt;/span&gt;
+&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;Setting up Path variables.&#39;&lt;/span&gt;
+&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#91;&lt;/span&gt;System.Environment&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#93;&lt;/span&gt;::SetEnvironmentVariable&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #800000;&#34;&gt;&#34;JAVA_HOME&#34;&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;c:\Program Files (x86)\Java\jdk$JDK_PATH&#34;&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;Machine&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;
+&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#91;&lt;/span&gt;System.Environment&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#93;&lt;/span&gt;::SetEnvironmentVariable&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #800000;&#34;&gt;&#34;PATH&#34;&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #800080;&#34;&gt;$Env&lt;/span&gt;:Path &lt;span style=&#34;color: pink;&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;;c:\Program Files (x86)\Java\jdk$JDK_PATH\bin&#34;&lt;/span&gt;&lt;span style=&#34;color: pink;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#34;Machine&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000;&#34;&gt;&amp;#41;&lt;/span&gt;
+&lt;span style=&#34;color: #008080; font-weight: bold;&#34;&gt;Write-Host&lt;/span&gt; &lt;span style=&#34;color: #800000;&#34;&gt;&#39;Done. Goodbye.&#39;&lt;/span&gt;&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Now, there is room for improvement here. Like checking exit code, doing something extra after a failed exit. Throwing an exception, and so on and so forth. But this is a much needed improvement from calling a BAT file.&lt;/p&gt;
+
+&lt;p&gt;And you would use this in a Packer JSON file like this..&lt;/p&gt;
+
+&lt;div class=&#34;wp_syntax&#34;&gt;
+  &lt;table&gt;
+    &lt;tr&gt;
+      &lt;td class=&#34;code&#34;&gt;
+        &lt;pre class=&#34;json&#34; style=&#34;font-family:monospace;&#34;&gt;{
+      &#34;type&#34;: &#34;powershell&#34;,
+      &#34;scripts&#34;: [
+        &#34;./scripts/jdk_inst.ps1&#34;
+      ]
+}&lt;/pre&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Easy. And at the end, the System.Environment actually writes out into the registry permanently so no need to pass it around in a file or something ugly like that.&lt;/p&gt;
+
+&lt;p&gt;Hope this helps somebody.&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading.&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
