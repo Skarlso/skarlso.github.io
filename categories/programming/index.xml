@@ -5,8 +5,199 @@
     <link>https://skarlso.github.io/categories/programming/</link>
     <description>Recent content in Programming on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Tue, 29 Dec 2015 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 01 Jan 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/categories/programming/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Byte arrays and Channels</title>
+      <link>https://skarlso.github.io/2016/01/01/byte-arrays-and-channels</link>
+      <pubDate>Fri, 01 Jan 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/01/01/byte-arrays-and-channels</guid>
+      <description>&lt;p&gt;Hi folks and a Happy new Year!&lt;/p&gt;
+
+&lt;p&gt;Today, I would like to show you some interesting things you can do with channels. Consider the following simple example.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
+
+import &amp;quot;fmt&amp;quot;
+
+func main() {
+	generatedPassword := make(chan int, 100)
+	correctPassword := make(chan int)
+	defer close(generatedPassword)
+	defer close(correctPassword)
+	go passwordIncrement(generatedPassword)
+	go checkPassword(generatedPassword, correctPassword)
+	pass := &amp;lt;-correctPassword
+	fmt.Println(pass)
+}
+
+func checkPassword(input &amp;lt;-chan int, output chan&amp;lt;- int) {
+	for {
+		p := &amp;lt;-input
+		//Introduce lengthy operation here
+		// time.Sleep(time.Second)
+		fmt.Println(&amp;quot;Checking p:&amp;quot;, p)
+		if p &amp;gt; 100000 {
+			output &amp;lt;- p
+		}
+	}
+}
+
+func passwordIncrement(out chan&amp;lt;- int) {
+	p := 0
+	for {
+		p++
+		out &amp;lt;- p
+	}
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The premise is as follows. It launches two go routines. One, which generates passwords, and an other which checks for validity. The two routines talk to each other through the channel &lt;code&gt;generatedPassword&lt;/code&gt;. That&amp;rsquo;s the providing connections between them. The channel &lt;code&gt;correctPassword&lt;/code&gt; provides output for the &lt;code&gt;checkPassword&lt;/code&gt; routine.&lt;/p&gt;
+
+&lt;p&gt;If there is data received from &lt;code&gt;correctPassword&lt;/code&gt; channel, we found our first password and there is no need to look further so we, print the password and quit. The channels will close with defer. This works. But the password is usually either a []byte or a string. With string, it still works.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
+
+import &amp;quot;fmt&amp;quot;
+
+func main() {
+	generatedPassword := make(chan string, 100)
+	correctPassword := make(chan string)
+	defer close(generatedPassword)
+	defer close(correctPassword)
+	go passwordIncrement(generatedPassword)
+	go checkPassword(generatedPassword, correctPassword)
+	pass := &amp;lt;-correctPassword
+	fmt.Println(pass)
+}
+
+func checkPassword(input &amp;lt;-chan string, output chan&amp;lt;- string) {
+	for {
+		p := &amp;lt;-input
+		//Introduce lengthy operation here
+		// time.Sleep(time.Second)
+		fmt.Println(&amp;quot;Checking p:&amp;quot;, p)
+		if performSomeCheckingOperation(p) {
+			output &amp;lt;- p
+		}
+	}
+}
+
+func generateNewPassword(out chan&amp;lt;- string) {
+	var p string
+	for {
+		p = generate(p)
+		out &amp;lt;- p
+	}
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The generating happens based on the previously generated password. For example, we increment, or permeate. aaaa, aaab, aaac&amp;hellip;&lt;/p&gt;
+
+&lt;p&gt;So &lt;code&gt;generatedPassword&lt;/code&gt; is a buffered channel, it gathers a 100 passwords from which checking retrieves passwords one by one and works on them in a slower process.&lt;/p&gt;
+
+&lt;p&gt;Now, this is fine, but using []byte arrays will always be more powerful and faster. So we would like to use []byte. Like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
+
+import &amp;quot;fmt&amp;quot;
+
+func main() {
+	generatedPassword := make(chan []byte, 100)
+	correctPassword := make(chan []byte)
+	defer close(generatedPassword)
+	defer close(correctPassword)
+	go passwordIncrement(generatedPassword)
+	go checkPassword(generatedPassword, correctPassword)
+	pass := &amp;lt;-correctPassword
+	fmt.Println(string(pass))
+}
+
+func checkPassword(input &amp;lt;-chan []byte, output chan&amp;lt;- []byte) {
+	for {
+		p := &amp;lt;-input
+		//Introduce lengthy operation here
+		// time.Sleep(time.Second)
+		fmt.Println(&amp;quot;Checking p:&amp;quot;, string(p))
+		if performSomeCheckingOperation(p) {
+			output &amp;lt;- p
+		}
+	}
+}
+
+func generateNewPassword(out chan&amp;lt;- []byte) {
+	var p []byte
+	for {
+		p = generate(p)
+		out &amp;lt;- p
+	}
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This will not work. Why? Because []byte is a slice and thus will be constantly overwritten. The checking go routine will always only check the last data and many generated passwords will be lost. This is also noted in go&amp;rsquo;s scanner here =&amp;gt; &lt;a href=&#34;https://golang.org/pkg/bufio/#Scanner.Bytes&#34;&gt;Scanner.Bytes&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;We have a couple of options here.&lt;/p&gt;
+
+&lt;p&gt;We could use &lt;code&gt;string&lt;/code&gt; channels and convert to []byte after. This is still okay, because the conversion isn&amp;rsquo;t very CPU intensive.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
+generatedPassword := make(chan string, 100)
+correctPassword := make(chan string)
+...
+p := []byte(&amp;lt;-input) //This will work very nicely.
+...
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Options two would be If you have a fixed password to handle, fix data, for example MD5 hash, you can use a byte array. Like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
+
+import &amp;quot;fmt&amp;quot;
+
+const PASSWD=13
+
+func main() {
+	generatedPassword := make(chan [PASSWD]byte, 100)
+	correctPassword := make(chan [PASSWD]byte)
+	defer close(generatedPassword)
+	defer close(correctPassword)
+	go passwordIncrement(generatedPassword)
+	go checkPassword(generatedPassword, correctPassword)
+	pass := &amp;lt;-correctPassword
+	fmt.Println(string(pass))
+}
+
+func checkPassword(input &amp;lt;-chan [PASSWD]byte, output chan&amp;lt;- [PASSWD]byte) {
+	for {
+		p := &amp;lt;-input
+		//Introduce lengthy operation here
+		// time.Sleep(time.Second)
+		fmt.Println(&amp;quot;Checking p:&amp;quot;, string(p))
+		if performSomeCheckingOperation(p) {
+			output &amp;lt;- p
+		}
+	}
+}
+
+func generateNewPassword(out chan&amp;lt;- [PASSWD]byte) {
+	var p [8]byte
+	for {
+		p = generate(p)
+		out &amp;lt;- p
+	}
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is also one solution. If you have to convert between the two, could go with &lt;code&gt;p := byte[:]&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Conclusion is, that use conversion rather than string types and be aware that using slices in channels is dangerous.&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading!
+Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Use Byte Array Instead of Strings</title>
@@ -1185,189 +1376,6 @@ myrpg/urls.&lt;span style=&#34;color: black;&#34;&gt;py&lt;/span&gt;&lt;/pre&gt;
 &lt;p&gt;Tune in next time, when I&amp;#8217;ll attempt to create a view to create a Character for a logged in user and link it to the user. I&amp;#8217;ll do this with django&amp;#8217;s model framework.&lt;/p&gt;
 
 &lt;p&gt;Thanks for reading,&lt;/p&gt;
-
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Django – RPG – Part 1</title>
-      <link>https://skarlso.github.io/2015/04/10/django-rpg-2/</link>
-      <pubDate>Fri, 10 Apr 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/04/10/django-rpg-2/</guid>
-      <description>
-
-&lt;p&gt;Hi folks.&lt;/p&gt;
-
-&lt;p&gt;So last time, we tried to implement a little RPG of mine using Meteor, which failed miserably. This time we are going to try and use Django. Let&amp;#8217;s have at it, shall we?&lt;/p&gt;
-
-&lt;p&gt;If you don&amp;#8217;t know what django is (than you are probably not reading this blog entry anyways&amp;#8230; ), have a look =&amp;gt; &lt;a href=&#34;https://www.djangoproject.com/&#34; target=&#34;_blank&#34;&gt;Link&lt;/a&gt;. It&amp;#8217;s a Python Web Framework.&lt;/p&gt;
-
-&lt;h1 id=&#34;in-the-beginning:71cda7585bcb20a0da23b90a1f44f17f&#34;&gt;In the beginning&lt;/h1&gt;
-
-&lt;p&gt;So here we are again. I&amp;#8217;m starting off by creating the skeleton for my RPG. First, the welcome page with a tiny login capability. Which means session tracking. For now, on the same page.&lt;/p&gt;
-
-&lt;p&gt;To create the skeleton I just run this little command:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;django-admin.py startproject myrpg&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Easy enough, right? Basic directory structure is created. You can read that in django&amp;#8217;s own documentation: &lt;a href=&#34;https://docs.djangoproject.com/en/1.8/intro/tutorial01/&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;https://docs.djangoproject.com/en/1.8/intro/tutorial01/&#34;&gt;https://docs.djangoproject.com/en/1.8/intro/tutorial01/&lt;/a&gt;&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;I&amp;#8217;m using Sublime Text 3 to build this app. I was thinking of pycharm, but that would take away too much fun.&lt;/p&gt;
-
-&lt;p&gt;By default Django uses SQLlite and I&amp;#8217;m okay with that.&lt;/p&gt;
-
-&lt;p&gt;The basics are there. Let&amp;#8217;s move to higher ground. The next step can be to design the login page. I&amp;#8217;m not much of a designer so I&amp;#8217;ll leave that part to people who care more / understand it better. I&amp;#8217;m only looking for a simple Login with a username and a password. Nothing fancy. And I&amp;#8217;m going to use Django&amp;#8217;s auth system for users: &lt;tt class=&#34;xref py py-mod docutils literal&#34;&gt;&lt;span class=&#34;pre&#34;&gt;&lt;a class=&#34;reference internal&#34; title=&#34;django.contrib.auth: Django&#39;s authentication framework.&#34; href=&#34;https://docs.djangoproject.com/en/1.8/topics/auth/#module-django.contrib.auth&#34; target=&#34;_blank&#34;&gt;django.contrib.auth&lt;/a&gt;.&lt;/span&gt;&lt;/tt&gt;&lt;/p&gt;
-
-&lt;p&gt;It&amp;#8217;s pretty good, has lots of features and can auth a user pretty quickly given a username and password, which is all I want for now.&lt;/p&gt;
-
-&lt;p&gt;I running a migrate command to create all the necessary tables and data:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;python&#34; style=&#34;font-family:monospace;&#34;&gt;python manage.&lt;span style=&#34;color: black;&#34;&gt;py&lt;/span&gt; migrate&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;A quick check with sqlite3 and running &lt;strong&gt;.schema &lt;/strong&gt;showed me that the tables are indeed created and filled with default data for all the &lt;strong&gt;INSTALLED_APPS &lt;/strong&gt;django has at the moment.&lt;/p&gt;
-
-&lt;p&gt;I did a quick check with &lt;em&gt;python manage.py runserver&lt;/em&gt; and everything seems to work fine.&lt;/p&gt;
-
-&lt;h1 id=&#34;the-rpg-app:71cda7585bcb20a0da23b90a1f44f17f&#34;&gt;The RPG App&lt;/h1&gt;
-
-&lt;p&gt;So, that concludes the setup. Following the tutorial, django has this notion of apps and projects. In short, a project is a set of configurations and applications which forms a website. Hence, I&amp;#8217;m going to create an RPG APP for now. The tutorial continues with a Poll type of App, but I&amp;#8217;m sure I can apply the same things to a login page.&lt;/p&gt;
-
-&lt;p&gt;First, let&amp;#8217;s create the App using the command:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;python&#34; style=&#34;font-family:monospace;&#34;&gt;python manage.&lt;span style=&#34;color: black;&#34;&gt;py&lt;/span&gt; startapp rpg&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;That creates the skeleton for the app. The tutorial then suggests to define the database first. Which I think is a bad idea; usually when doing design, you don&amp;#8217;t want to start with the database model. But for now, I shall comply. We want a login page and we are using the auth module, which means, for now, I don&amp;#8217;t care about the database. Skip.&lt;/p&gt;
-
-&lt;p&gt;I&amp;#8217;m going to go off corse for now, since I only want to create a basic login. For that, I have to read up on views and models a little bit in order to create a simple login page. Be right back&amp;#8230;&lt;/p&gt;
-
-&lt;p&gt;I&amp;#8217;m fighting the basic auth system at the moment. Everything seems to be working fine. In the Admin screen I was able to add a basic user to do some debugging, but for now, the login seems to not work with this error:&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;&lt;span style=&#34;color: #ff6600;&#34;&gt;CSRF verification failed. Request aborted.&lt;/span&gt;&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;This is the CSRF protection which came out with Django. I did a bit of more document reading and setup the CSRF as was described here:&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&#34;https://docs.djangoproject.com/en/1.8/ref/csrf/&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;https://docs.djangoproject.com/en/1.8/ref/csrf/&#34;&gt;https://docs.djangoproject.com/en/1.8/ref/csrf/&lt;/a&gt;&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;However, I&amp;#8217;m still facing the same problem. Let&amp;#8217;s research further&amp;#8230; Ahh yes. I wasn&amp;#8217;t returning the request context I&amp;#8217;ve set up. Before:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;python&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;from&lt;/span&gt; django.&lt;span style=&#34;color: black;&#34;&gt;shortcuts&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;import&lt;/span&gt; render_to_response
-&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;from&lt;/span&gt; django.&lt;span style=&#34;color: black;&#34;&gt;contrib&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;auth&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;import&lt;/span&gt; authenticate&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; login
-&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;from&lt;/span&gt; django.&lt;span style=&#34;color: black;&#34;&gt;template&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;context_processors&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;import&lt;/span&gt; csrf
-&amp;nbsp;
-&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;def&lt;/span&gt; login_user&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;request&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;:
-    c &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: black;&#34;&gt;&amp;#123;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#125;&lt;/span&gt;
-    c.&lt;span style=&#34;color: black;&#34;&gt;update&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;csrf&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;request&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
-    state &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;Please log in below...&#34;&lt;/span&gt;
-    username &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; password &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;&#39;&lt;/span&gt;
-    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; request.&lt;span style=&#34;color: black;&#34;&gt;POST&lt;/span&gt;:
-        username &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; request.&lt;span style=&#34;color: black;&#34;&gt;POST&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;username&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
-        password &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; request.&lt;span style=&#34;color: black;&#34;&gt;POST&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;password&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
-&amp;nbsp;
-        &lt;span style=&#34;color: #dc143c;&#34;&gt;user&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; authenticate&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;username&lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt;username&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; password&lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt;password&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
-        &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;user&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;not&lt;/span&gt; &lt;span style=&#34;color: #008000;&#34;&gt;None&lt;/span&gt;:
-            &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;user&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;is_active&lt;/span&gt;:
-                login&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;request&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;user&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
-                state &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;You&#39;re successfully logged in!&#34;&lt;/span&gt;
-            &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;else&lt;/span&gt;:
-                state &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;Your account is not active, please contact the site admin.&#34;&lt;/span&gt;
-        &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;else&lt;/span&gt;:
-            state &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;Your username and/or password were incorrect.&#34;&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;return&lt;/span&gt; render_to_response&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;auth.html&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#123;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;state&#39;&lt;/span&gt;:state&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;username&#39;&lt;/span&gt;: username&lt;span style=&#34;color: black;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;After:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;python&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;from&lt;/span&gt; django.&lt;span style=&#34;color: black;&#34;&gt;shortcuts&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;import&lt;/span&gt; render_to_response
-&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;from&lt;/span&gt; django.&lt;span style=&#34;color: black;&#34;&gt;contrib&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;auth&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;import&lt;/span&gt; authenticate&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; login
-&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;from&lt;/span&gt; django.&lt;span style=&#34;color: black;&#34;&gt;template&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;context_processors&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;import&lt;/span&gt; csrf
-&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;from&lt;/span&gt; django.&lt;span style=&#34;color: black;&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;import&lt;/span&gt; RequestContext
-&amp;nbsp;
-&lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;def&lt;/span&gt; login_user&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;request&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;:
-    state &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;Please log in below...&#34;&lt;/span&gt;
-    username &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; password &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;&#39;&lt;/span&gt;
-    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; request.&lt;span style=&#34;color: black;&#34;&gt;POST&lt;/span&gt;:
-        username &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; request.&lt;span style=&#34;color: black;&#34;&gt;POST&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;username&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
-        password &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; request.&lt;span style=&#34;color: black;&#34;&gt;POST&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;password&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
-&amp;nbsp;
-        &lt;span style=&#34;color: #dc143c;&#34;&gt;user&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; authenticate&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;username&lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt;username&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; password&lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt;password&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
-        &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;user&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;not&lt;/span&gt; &lt;span style=&#34;color: #008000;&#34;&gt;None&lt;/span&gt;:
-            &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;user&lt;/span&gt;.&lt;span style=&#34;color: black;&#34;&gt;is_active&lt;/span&gt;:
-                login&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;request&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #dc143c;&#34;&gt;user&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;
-                state &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;You&#39;re successfully logged in!&#34;&lt;/span&gt;
-            &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;else&lt;/span&gt;:
-                state &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;Your account is not active, please contact the site admin.&#34;&lt;/span&gt;
-        &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;else&lt;/span&gt;:
-            state &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#34;Your username and/or password were incorrect.&#34;&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #ff7700;font-weight:bold;&#34;&gt;return&lt;/span&gt; render_to_response&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;auth.html&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#123;&lt;/span&gt;&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;state&#39;&lt;/span&gt;:state&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;username&#39;&lt;/span&gt;: username&lt;span style=&#34;color: black;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; context_instance&lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt;RequestContext&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;request&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Notice that now I&amp;#8217;m returning the request context at the end when I&amp;#8217;m rendering the response. And lo&amp;#8217; and behold, my login is now working.&lt;/p&gt;
-
-&lt;h1 id=&#34;progress-so-far:71cda7585bcb20a0da23b90a1f44f17f&#34;&gt;Progress so far&lt;/h1&gt;
-
-&lt;p&gt;&amp;nbsp;&lt;/p&gt;
-
-&lt;p&gt;So, I&amp;#8217;ve set up a user using the Admin portal accessible from the app / admin. Created my default rpg app, and added my default auth view into a template folder. Configured the URL setting in &lt;strong&gt;urls.py&lt;/strong&gt; to look like this:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;python&#34; style=&#34;font-family:monospace;&#34;&gt;url&lt;span style=&#34;color: black;&#34;&gt;&amp;#40;&lt;/span&gt;r&lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;^login/$&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #483d8b;&#34;&gt;&#39;rpg.views.login_user&#39;&lt;/span&gt;&lt;span style=&#34;color: black;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;,&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Very basic for now, but when I return to it, we are going to clean it up and then continue with implementing the main screen which will greet the user and display some stats about his/her character.&lt;/p&gt;
-
-&lt;p&gt;The whole code is under github here =&amp;gt; &lt;a href=&#34;https://github.com/Skarlso/myrpg&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;https://github.com/Skarlso/myrpg&#34;&gt;https://github.com/Skarlso/myrpg&lt;/a&gt;&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;Bye for now,&lt;/p&gt;
-
-&lt;p&gt;And thanks for reading.&lt;/p&gt;
 
 &lt;p&gt;Gergely.&lt;/p&gt;
 </description>
