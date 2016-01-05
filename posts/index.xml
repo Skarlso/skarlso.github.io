@@ -5,8 +5,319 @@
     <link>https://skarlso.github.io/posts/</link>
     <description>Recent content in Posts on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Fri, 01 Jan 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 05 Jan 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Improving performance with byte slice and int map</title>
+      <link>https://skarlso.github.io/2016/01/05/improving-performance-with-byte-slice-and-int-map</link>
+      <pubDate>Tue, 05 Jan 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/01/05/improving-performance-with-byte-slice-and-int-map</guid>
+      <description>&lt;p&gt;Hello Folks.&lt;/p&gt;
+
+&lt;p&gt;Today I would like to share with you my little tale of refactoring my solution to &lt;a href=&#34;http://adventofcode.com/day/13&#34;&gt;Advent Of Code Day 13&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;It&amp;rsquo;s a lovely tale of action, adventure, drama, and comedy.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s being with my first iteration of the problem.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
+
+import (
+	&amp;quot;bufio&amp;quot;
+	&amp;quot;fmt&amp;quot;
+	&amp;quot;math&amp;quot;
+	&amp;quot;os&amp;quot;
+	&amp;quot;strconv&amp;quot;
+	&amp;quot;strings&amp;quot;
+
+	&amp;quot;github.com/skarlso/goutils/arrayutils&amp;quot;
+)
+
+var seatingCombinations = make([][]string, 0)
+var table = make(map[string][]map[string]int)
+var keys = make([]string, 0)
+
+//Person a person
+type Person struct {
+	// neighbour *Person
+	name string
+	like int
+}
+
+func main() {
+	file, _ := os.Open(&amp;quot;input.txt&amp;quot;)
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		split := strings.Split(line, &amp;quot; &amp;quot;)
+		like, _ := strconv.Atoi(split[3]) //If lose -&amp;gt; * -1
+		if split[2] == &amp;quot;lose&amp;quot; {
+			like *= -1
+		}
+		table[split[0]] = append(table[split[0]], map[string]int{strings.Trim(split[10], &amp;quot;.&amp;quot;): like})
+		if !arrayutils.ContainsString(keys, split[0]) {
+			keys = append(keys, split[0])
+		}
+	}
+	generatePermutation(keys, len(keys))
+	fmt.Println(&amp;quot;Best seating efficiency:&amp;quot;, calculateSeatingEfficiancy())
+}
+
+func generatePermutation(s []string, n int) {
+	if n == 1 {
+		news := make([]string, len(s))
+		copy(news, s)
+		seatingCombinations = append(seatingCombinations, news)
+	}
+	for i := 0; i &amp;lt; n; i++ {
+		s[i], s[n-1] = s[n-1], s[i]
+		generatePermutation(s, n-1)
+		s[i], s[n-1] = s[n-1], s[i]
+	}
+}
+
+func calculateSeatingEfficiancy() int {
+	bestSeating := math.MinInt64
+	for _, v := range seatingCombinations {
+		calculatedOrder := 0
+
+		for i := range v {
+			left := (i - 1) % len(v)
+			//This is to work around the fact that in Go
+			//modulo of a negative number will not return a positive number.
+			//So -1 % 4 will not return 3 but -1. In that case we add length.
+			if left &amp;lt; 0 {
+				left += len(v)
+			}
+			right := (i + 1) % len(v)
+			// fmt.Printf(&amp;quot;Left: %d; Right: %d\n&amp;quot;, left, right)
+			leftLike := getLikeForTargetConnect(v[i], v[left])
+			rightLike := getLikeForTargetConnect(v[i], v[right])
+			// fmt.Printf(&amp;quot;Name: %s; Left:%d; Right:%d\n&amp;quot;, v[i], leftLike, rightLike)
+			calculatedOrder += leftLike + rightLike
+		}
+		// fmt.Printf(&amp;quot;Order for: %v; Calc:%d\n&amp;quot;, v, calculatedOrder)
+		if calculatedOrder &amp;gt; bestSeating {
+			bestSeating = calculatedOrder
+		}
+	}
+
+	return bestSeating
+}
+
+func getLikeForTargetConnect(name string, neighbour string) int {
+	neighbours := table[name]
+	for _, t := range neighbours {
+		if v, ok := t[neighbour]; ok {
+			return v
+		}
+	}
+	return 0
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is quiet large. And takes a bit of explaining. So what is happening here? We are putting the names which correspond with numbers and neighbours into a map which has a map as a value. The map contains seating information for a person. For example, next to Alice, a bunch of people can sit, and they have a certain relationship to Alice, represented by a number.&lt;/p&gt;
+
+&lt;p&gt;We could, at this point, represent it with a graph, but that would be overkill.&lt;/p&gt;
+
+&lt;p&gt;Permutation is simple because I choose to represent a Table with a Circular Slice. This means that a slice like this =&amp;gt; Alice, Bob, Tom; means that Alice is sitting next to Bob and Tom. So Alice&amp;rsquo;s neighbour of -1 (left) is in fact i-1 % 3. And Bob is i + 1. For Tom, Alice is i + 1 % 3. After we got this, we just permutate the possible combinations into slices of slices and iterate over them.&lt;/p&gt;
+
+&lt;p&gt;The benchmark for this is terrible.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;
+================With Strings================
+20	 589571259 ns/op
+ok  	github.com/skarlso/goprojects/advent/day13/part1	11.873s
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So, my first thought was, convert everything I can to []byte. But because slices cannot be map keys, we are still stuck with the same ns/ops.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;//var seatingCombinations = make([][]string, 0)
+//var keys = make([]string, 0)
+var seatingCombinations = make([][][]byte, 0)
+var keys = make([][]byte, 0)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And I adjusted the code to work with []byte instead. What can we do to fix the map though? One obvious gain is, not to use string as a key. Because strings are immutable, working with them always means copy-ing and that&amp;rsquo;s why they get to be very slow. So removing them from Keys and using Numbers instead will mean a huge gain for us.&lt;/p&gt;
+
+&lt;p&gt;To do this, I created a map which maps names with numbers. I could hardcode them with iota, but that is a very bad thing to do. It would mean, that when I add a new name, I would have to go, and re-compile my code, because data changed. That&amp;rsquo;s not what we want.&lt;/p&gt;
+
+&lt;p&gt;So, I added this little tid-bit into the for cycle when I&amp;rsquo;m reading in the file lines =&amp;gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
+if _, ok := nameMapping[split[0]]; !ok {
+    nameMapping[split[0]] = id
+    id++
+}
+if _, ok := nameMapping[trimmedNeighbour]; !ok {
+    nameMapping[trimmedNeighbour] = id
+    id++
+}
+...
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Id starts as Zero. And nameMapping is a simple map[string]int. After this, we fix all the map calls, from &lt;code&gt;table[split[0]]&lt;/code&gt; to &lt;code&gt;table[nameMapping[split[0]]]&lt;/code&gt;. Table&amp;rsquo;s map will now work with int, but we can still work with strings otherwise.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;table[nameMapping[split[0]]] = append(table[nameMapping[split[0]]], map[int]int{nameMapping[trimmedNeighbour]: like})
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This has now a marginally better performance as before:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkCalculateSeating	      50	  32637879 ns/op
+ok  	github.com/skarlso/goprojects/advent/day13/part1	1.698s
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;But, we can still do a HUGE one better. Can you notice the other bottleneck? See, how keys are still []byte? That&amp;rsquo;s, now completely unnecessary. We can use int, since our keys are ints! &lt;em&gt;Permutation&lt;/em&gt; changes, and the retrieve.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
+func generatePermutation(s []int, n int) {
+...
+
+...
+func getLikeForTargetConnect(name int, neighbour int) int {
+	neighbours := table[name]
+	for _, t := range neighbours {
+		if v, ok := t[neighbour]; ok {
+			return v
+		}
+	}
+	return 0
+}
+...
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Permutation was the Other huge performance consumption. Now, our run time is&amp;hellip;. drum rolls&amp;hellip;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkCalculateSeating	   10000	    166431 ns/op
+ok  	github.com/skarlso/goprojects/advent/day13/part1	1.695s
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Down to 166431 ns/op!!! From 32637879 ns/op!! And notice how suddenly, go&amp;rsquo;s benchmark jumped up in sample count. Our code is now blazing fast. It&amp;rsquo;s 0.05% of the previous run! It&amp;rsquo;s almost &lt;strong&gt;200 times faster&lt;/strong&gt;!&lt;/p&gt;
+
+&lt;p&gt;We could still improve it here and there. I&amp;rsquo;m sure I&amp;rsquo;m doing some extra stuff which is not needed or could be made easier somehow. But I&amp;rsquo;m actually quiet happy with this solution right now.&lt;/p&gt;
+
+&lt;p&gt;The full code:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
+
+import (
+	&amp;quot;bufio&amp;quot;
+	&amp;quot;math&amp;quot;
+	&amp;quot;os&amp;quot;
+	&amp;quot;strconv&amp;quot;
+	&amp;quot;strings&amp;quot;
+
+	&amp;quot;github.com/skarlso/goutils/arrayutils&amp;quot;
+)
+
+var seatingCombinations = make([][]int, 0)
+var table = make(map[int][]map[int]int)
+var keys = make([]int, 0)
+var nameMapping = make(map[string]int)
+
+//Person a person
+type Person struct {
+	// neighbour *Person
+	name string
+	like int
+}
+
+func main() {
+	CalculatePerfectSeating()
+}
+
+//CalculatePerfectSeating returns the perfect seating order based on Love/Hate relations
+func CalculatePerfectSeating() {
+	file, _ := os.Open(&amp;quot;input.txt&amp;quot;)
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	id := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		split := strings.Split(line, &amp;quot; &amp;quot;)
+		trimmedNeighbour := strings.Trim(split[10], &amp;quot;.&amp;quot;)
+		like, _ := strconv.Atoi(split[3]) //If lose -&amp;gt; * -1
+		if _, ok := nameMapping[split[0]]; !ok {
+			nameMapping[split[0]] = id
+			id++
+		}
+		if _, ok := nameMapping[trimmedNeighbour]; !ok {
+			nameMapping[trimmedNeighbour] = id
+			id++
+		}
+		if split[2] == &amp;quot;lose&amp;quot; {
+			like *= -1
+		}
+		table[nameMapping[split[0]]] = append(table[nameMapping[split[0]]], map[int]int{nameMapping[trimmedNeighbour]: like})
+		if !arrayutils.ContainsInt(keys, nameMapping[split[0]]) {
+			keys = append(keys, nameMapping[split[0]])
+		}
+	}
+	generatePermutation(keys, len(keys))
+	// fmt.Println(&amp;quot;Best seating efficiency:&amp;quot;, calculateSeatingEfficiancy())
+}
+
+func generatePermutation(s []int, n int) {
+	if n == 1 {
+		news := make([]int, len(s))
+		copy(news, s)
+		seatingCombinations = append(seatingCombinations, news)
+	}
+	for i := 0; i &amp;lt; n; i++ {
+		s[i], s[n-1] = s[n-1], s[i]
+		generatePermutation(s, n-1)
+		s[i], s[n-1] = s[n-1], s[i]
+	}
+}
+
+func calculateSeatingEfficiancy() int {
+	bestSeating := math.MinInt64
+	for _, v := range seatingCombinations {
+		calculatedOrder := 0
+
+		for i := range v {
+			left := (i - 1) % len(v)
+			//This is to work around the fact that in Go
+			//modulo of a negative number will not return a positive number.
+			//So -1 % 4 will not return 3 but -1. In that case we add length.
+			if left &amp;lt; 0 {
+				left += len(v)
+			}
+			right := (i + 1) % len(v)
+			calculatedOrder += getLikeForTargetConnect(v[i], v[left]) + getLikeForTargetConnect(v[i], v[right])
+		}
+		if calculatedOrder &amp;gt; bestSeating {
+			bestSeating = calculatedOrder
+		}
+	}
+
+	return bestSeating
+}
+
+func getLikeForTargetConnect(name int, neighbour int) int {
+	neighbours := table[name]
+	for _, t := range neighbours {
+		if v, ok := t[neighbour]; ok {
+			return v
+		}
+	}
+	return 0
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Also, on github =&amp;gt; &lt;a href=&#34;https://github.com/Skarlso/goprojects/tree/master/advent/day13&#34;&gt;Advent Of Code Day 13&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Any thoughts are welcome, please feel free to leave a comment below.&lt;/p&gt;
+
+&lt;p&gt;Thank you for reading!
+And as always,
+Have a nice day!
+Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Byte arrays and Channels</title>
@@ -1381,43 +1692,6 @@ JobCommonTemplate.&lt;span style=&#34;color: #006600;&#34;&gt;addEmailTemplate&l
 &lt;p&gt;Have a nice day.&lt;/p&gt;
 
 &lt;p&gt;Gergely.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Sieve of Eratosthenes in Go</title>
-      <link>https://skarlso.github.io/2015/07/30/sieve-of-eratosthenes-in-go/</link>
-      <pubDate>Thu, 30 Jul 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/07/30/sieve-of-eratosthenes-in-go/</guid>
-      <description>&lt;p&gt;I&amp;#8217;m pretty proud of this one as well.&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;go&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;package&lt;/span&gt; sieve
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//Sieve Uses the Sieve of Eratosthenes to calculate primes to a certain limit&lt;/span&gt;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; Sieve&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;limit &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;var&lt;/span&gt; listOfPrimes &lt;span style=&#34;color: #339933;&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;
-    markers &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;make&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;([]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;bool&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; limit&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt; &amp;lt; limit&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;++&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;!&lt;/span&gt;markers&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-            &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;for&lt;/span&gt; j &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; j &amp;lt; limit&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; j &lt;span style=&#34;color: #339933;&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-                markers&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;j&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;
-            &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-            listOfPrimes &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; append&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;listOfPrimes&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-        &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; listOfPrimes
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
 </description>
     </item>
     
