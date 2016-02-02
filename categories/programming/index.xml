@@ -5,8 +5,104 @@
     <link>https://skarlso.github.io/categories/programming/</link>
     <description>Recent content in Programming on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Fri, 22 Jan 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 02 Feb 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/categories/programming/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Doing CORS in Go with Gin and JSON</title>
+      <link>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json</link>
+      <pubDate>Tue, 02 Feb 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json</guid>
+      <description>
+
+&lt;h2 id=&#34;basics:2debf7d5538355b3343d354786c24e4a&#34;&gt;Basics&lt;/h2&gt;
+
+&lt;p&gt;Hello folks.&lt;/p&gt;
+
+&lt;p&gt;This will be a quick post about how to do CORS with jQuery, Gin in Go with a very simple ajax GET and Json.&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;m choosing JSON here because basically I don&amp;rsquo;t really like JSONP. And actually, it&amp;rsquo;s not very complicated to do CORS, it&amp;rsquo;s just hidden enough so that it doesn&amp;rsquo;t become transparent.&lt;/p&gt;
+
+&lt;p&gt;First, what is CORS? It&amp;rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization, Javascript can&amp;rsquo;t reach outside of your domain and be potentially harmful to your visitors.&lt;/p&gt;
+
+&lt;p&gt;But what if you know that your site would like to talk with an Agent who is outside of your domain and do a GET on a JSON resource. Well, you could use JSONP, which is padded JSON. JSON like structure but using html tags, which, in my opinion, is ugly as hell. But like I said, it is not difficult to do it properly with JSON.&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;m using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt; for my REST service for &lt;a href=&#34;https://github.com/Skarlso/dockmaster2&#34;&gt;Dockmaster&lt;/a&gt;. My agent has two way communications and I wanted to display that on my frontend html page with an ajax call. You have two components which you need to adjust in order to be able to do that.&lt;/p&gt;
+
+&lt;h2 id=&#34;server:2debf7d5538355b3343d354786c24e4a&#34;&gt;Server&lt;/h2&gt;
+
+&lt;p&gt;There is thing called a Preflight-Check. In essence, the preflight check is sent BEFORE the actual request to check if the next request is allowed to go out of the domain. The preflight check is sent to the same URI just with OPTIONS method. In order to tell the caller that the next one will be safe, you need three things.&lt;/p&gt;
+
+&lt;p&gt;First, you need to set two Headers.
+#1 -&amp;gt; Access-Control-Allow-Origin to &amp;ldquo;*&amp;ldquo;.
+#2 -&amp;gt; Access-Control-Allow-Headers to &amp;ldquo;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;Second, you need to respond to the OPTIONS method with a 200. In order to do that, I added a simple rule with the same end-point but with OPTIONS.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func main() {
+    router := gin.Default()
+    v1 := router.Group(APIBASE)
+    {
+        v1.GET(&amp;quot;/list&amp;quot;, listContainers)
+        v1.POST(&amp;quot;/add&amp;quot;, addContainers)
+        v1.POST(&amp;quot;/delete&amp;quot;, deleteContainers)
+        v1.GET(&amp;quot;/inspect/:agentID/:containerID&amp;quot;, inspectContainer)
+        v1.OPTIONS(&amp;quot;/inspect/:agentID/:containerID&amp;quot;, preflight)
+        v1.POST(&amp;quot;/stopAll&amp;quot;, stopAll)
+        v1.OPTIONS(&amp;quot;/stopAll&amp;quot;, preflight)
+    }
+    router.Run(&amp;quot;:8989&amp;quot;)
+}
+
+func preflight(c *gin.Context) {
+    c.Header(&amp;quot;Access-Control-Allow-Origin&amp;quot;, &amp;quot;*&amp;quot;)
+    c.Header(&amp;quot;Access-Control-Allow-Headers&amp;quot;, &amp;quot;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&amp;quot;)
+    c.JSON(http.StatusOK, struct{}{})
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You can see that the preflight method is there for two end-points. I added it to those end-points which will reach over the domain. The others are all local, thus they don&amp;rsquo;t need that. This leads to a little duplication, but that is fine. I have a very fine control over what actually is allowed to go over. If there would be a CORS request for any other end-point, it would still be caught.&lt;/p&gt;
+
+&lt;p&gt;So, how do we call this?&lt;/p&gt;
+
+&lt;h2 id=&#34;frontend:2debf7d5538355b3343d354786c24e4a&#34;&gt;Frontend&lt;/h2&gt;
+
+&lt;p&gt;In the front-end&amp;rsquo;s web layout, I&amp;rsquo;m doing an Ajax GET, which looks like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-javascript&#34;&gt;                $.ajax({
+                    url: &#39;http://localhost:8989/api/1/inspect/&#39;+data.agentid+&#39;/&#39;+data.id,
+                    type: &#39;GET&#39;,
+                    dataType:&amp;quot;json&amp;quot;,
+                    headers: {&amp;quot;Access-Control-Allow-Origin&amp;quot;: &amp;quot;*&amp;quot;, &amp;quot;Access-Control-Allow-Headers&amp;quot;: &amp;quot;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&amp;quot;},
+                    processData: false,
+                    crossDomain: true,
+                    success: function(data) {
+                        var json = JSON.stringify(data, null, 4)
+                        independentPopup.html(&amp;quot;&amp;lt;pre &amp;gt;&amp;quot;+json+&amp;quot;&amp;lt;/pre&amp;gt;&amp;quot;);
+                        $(link).after(independentPopup);
+                    }
+                });
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;After the headers are set, the request will work nicely.&lt;/p&gt;
+
+&lt;h2 id=&#34;y-u-no-middleware:2debf7d5538355b3343d354786c24e4a&#34;&gt;Y U No Middleware?&lt;/h2&gt;
+
+&lt;p&gt;And now you could say that, why not just have a middleware which will always accept OPTIONS for every end-point. Because that would defeat the purpose of CORS. I only allow end-points which I know are to be safe or are shielded othervise. I will NOT allow EVERY request to be able to go over the domain. I think that is a bad design decision.&lt;/p&gt;
+
+&lt;h2 id=&#34;summary:2debf7d5538355b3343d354786c24e4a&#34;&gt;Summary&lt;/h2&gt;
+
+&lt;p&gt;This is it. You can see the code in its entirety on Github. Have a better idea on how to do it? Please! Do not hesitate to share. I always like to learn.&lt;/p&gt;
+
+&lt;p&gt;Thank you for reading!&lt;/p&gt;
+
+&lt;p&gt;And as always,
+Have a nice day!&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>My Journey in advent of code</title>
@@ -1532,70 +1628,6 @@ JobCommonTemplate.&lt;span style=&#34;color: #006600;&#34;&gt;addEmailTemplate&l
     minues &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; num &lt;span style=&#34;color: #339933;&#34;&gt;%&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;100&lt;/span&gt;
     num &lt;span style=&#34;color: #339933;&#34;&gt;-=&lt;/span&gt; minues
     &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;words&lt;span style=&#34;color: #339933;&#34;&gt;[(&lt;/span&gt;num&lt;span style=&#34;color: #339933;&#34;&gt;/&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;100&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)]&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;hundred&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;),&lt;/span&gt; minues
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Bitwise &amp; Operator</title>
-      <link>https://skarlso.github.io/2015/07/15/bitwise-operator/</link>
-      <pubDate>Wed, 15 Jul 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/07/15/bitwise-operator/</guid>
-      <description>&lt;p&gt;The first, and only time so far, that I got to use the bitwise &amp;amp; operator. I enjoyed doing so!!&lt;/p&gt;
-
-&lt;p&gt;And of course from now on, I&amp;#8217;ll be looking for more opportunities to (ab)use it.&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;go&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;package&lt;/span&gt; secret
-&amp;nbsp;
-&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;sort&#34;&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;const&lt;/span&gt; REVERSE &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;16&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; Handshake&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;code &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;// binary_rep := convertDecimalToBinary(code)&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; code &amp;lt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt; &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    secret_map &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #993333;&#34;&gt;map&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        &lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;wink&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt;
-        &lt;span style=&#34;color: #cc66cc;&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;double blink&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt;
-        &lt;span style=&#34;color: #cc66cc;&#34;&gt;4&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;close your eyes&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt;
-        &lt;span style=&#34;color: #cc66cc;&#34;&gt;8&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;jump&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;var&lt;/span&gt; keys &lt;span style=&#34;color: #339933;&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;for&lt;/span&gt; k &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;range&lt;/span&gt; secret_map &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        keys &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; append&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;keys&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; k&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;// To make sure iteration is always in the same order.&lt;/span&gt;
-    sort&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Ints&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;keys&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-&amp;nbsp;
-    code_array &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;make&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;([]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;for&lt;/span&gt; _&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; key &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;range&lt;/span&gt; keys &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; code &amp; key &lt;span style=&#34;color: #339933;&#34;&gt;==&lt;/span&gt; key &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-            code_array &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; append&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;code_array&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; secret_map&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;key&lt;span style=&#34;color: #339933;&#34;&gt;])&lt;/span&gt;
-        &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; code &amp; REVERSE &lt;span style=&#34;color: #339933;&#34;&gt;==&lt;/span&gt; REVERSE &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        code_array &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; reverse_array&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;code_array&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; code_array
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; reverse_array &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;array_to_reverse &lt;span style=&#34;color: #339933;&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; j &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;len&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;array_to_reverse&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt; &amp;lt; j&lt;span style=&#34;color: #339933;&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; j &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; j &lt;span style=&#34;color: #339933;&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        array_to_reverse&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;],&lt;/span&gt; array_to_reverse&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;j&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; array_to_reverse&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;j&lt;span style=&#34;color: #339933;&#34;&gt;],&lt;/span&gt; array_to_reverse&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; array_to_reverse
 &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;&lt;/pre&gt;
       &lt;/td&gt;
     &lt;/tr&gt;

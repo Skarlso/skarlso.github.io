@@ -5,8 +5,104 @@
     <link>https://skarlso.github.io/</link>
     <description>Recent content on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Fri, 22 Jan 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 02 Feb 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Doing CORS in Go with Gin and JSON</title>
+      <link>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json</link>
+      <pubDate>Tue, 02 Feb 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json</guid>
+      <description>
+
+&lt;h2 id=&#34;basics:2debf7d5538355b3343d354786c24e4a&#34;&gt;Basics&lt;/h2&gt;
+
+&lt;p&gt;Hello folks.&lt;/p&gt;
+
+&lt;p&gt;This will be a quick post about how to do CORS with jQuery, Gin in Go with a very simple ajax GET and Json.&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;m choosing JSON here because basically I don&amp;rsquo;t really like JSONP. And actually, it&amp;rsquo;s not very complicated to do CORS, it&amp;rsquo;s just hidden enough so that it doesn&amp;rsquo;t become transparent.&lt;/p&gt;
+
+&lt;p&gt;First, what is CORS? It&amp;rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization, Javascript can&amp;rsquo;t reach outside of your domain and be potentially harmful to your visitors.&lt;/p&gt;
+
+&lt;p&gt;But what if you know that your site would like to talk with an Agent who is outside of your domain and do a GET on a JSON resource. Well, you could use JSONP, which is padded JSON. JSON like structure but using html tags, which, in my opinion, is ugly as hell. But like I said, it is not difficult to do it properly with JSON.&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;m using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt; for my REST service for &lt;a href=&#34;https://github.com/Skarlso/dockmaster2&#34;&gt;Dockmaster&lt;/a&gt;. My agent has two way communications and I wanted to display that on my frontend html page with an ajax call. You have two components which you need to adjust in order to be able to do that.&lt;/p&gt;
+
+&lt;h2 id=&#34;server:2debf7d5538355b3343d354786c24e4a&#34;&gt;Server&lt;/h2&gt;
+
+&lt;p&gt;There is thing called a Preflight-Check. In essence, the preflight check is sent BEFORE the actual request to check if the next request is allowed to go out of the domain. The preflight check is sent to the same URI just with OPTIONS method. In order to tell the caller that the next one will be safe, you need three things.&lt;/p&gt;
+
+&lt;p&gt;First, you need to set two Headers.
+#1 -&amp;gt; Access-Control-Allow-Origin to &amp;ldquo;*&amp;ldquo;.
+#2 -&amp;gt; Access-Control-Allow-Headers to &amp;ldquo;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;Second, you need to respond to the OPTIONS method with a 200. In order to do that, I added a simple rule with the same end-point but with OPTIONS.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func main() {
+    router := gin.Default()
+    v1 := router.Group(APIBASE)
+    {
+        v1.GET(&amp;quot;/list&amp;quot;, listContainers)
+        v1.POST(&amp;quot;/add&amp;quot;, addContainers)
+        v1.POST(&amp;quot;/delete&amp;quot;, deleteContainers)
+        v1.GET(&amp;quot;/inspect/:agentID/:containerID&amp;quot;, inspectContainer)
+        v1.OPTIONS(&amp;quot;/inspect/:agentID/:containerID&amp;quot;, preflight)
+        v1.POST(&amp;quot;/stopAll&amp;quot;, stopAll)
+        v1.OPTIONS(&amp;quot;/stopAll&amp;quot;, preflight)
+    }
+    router.Run(&amp;quot;:8989&amp;quot;)
+}
+
+func preflight(c *gin.Context) {
+    c.Header(&amp;quot;Access-Control-Allow-Origin&amp;quot;, &amp;quot;*&amp;quot;)
+    c.Header(&amp;quot;Access-Control-Allow-Headers&amp;quot;, &amp;quot;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&amp;quot;)
+    c.JSON(http.StatusOK, struct{}{})
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You can see that the preflight method is there for two end-points. I added it to those end-points which will reach over the domain. The others are all local, thus they don&amp;rsquo;t need that. This leads to a little duplication, but that is fine. I have a very fine control over what actually is allowed to go over. If there would be a CORS request for any other end-point, it would still be caught.&lt;/p&gt;
+
+&lt;p&gt;So, how do we call this?&lt;/p&gt;
+
+&lt;h2 id=&#34;frontend:2debf7d5538355b3343d354786c24e4a&#34;&gt;Frontend&lt;/h2&gt;
+
+&lt;p&gt;In the front-end&amp;rsquo;s web layout, I&amp;rsquo;m doing an Ajax GET, which looks like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-javascript&#34;&gt;                $.ajax({
+                    url: &#39;http://localhost:8989/api/1/inspect/&#39;+data.agentid+&#39;/&#39;+data.id,
+                    type: &#39;GET&#39;,
+                    dataType:&amp;quot;json&amp;quot;,
+                    headers: {&amp;quot;Access-Control-Allow-Origin&amp;quot;: &amp;quot;*&amp;quot;, &amp;quot;Access-Control-Allow-Headers&amp;quot;: &amp;quot;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&amp;quot;},
+                    processData: false,
+                    crossDomain: true,
+                    success: function(data) {
+                        var json = JSON.stringify(data, null, 4)
+                        independentPopup.html(&amp;quot;&amp;lt;pre &amp;gt;&amp;quot;+json+&amp;quot;&amp;lt;/pre&amp;gt;&amp;quot;);
+                        $(link).after(independentPopup);
+                    }
+                });
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;After the headers are set, the request will work nicely.&lt;/p&gt;
+
+&lt;h2 id=&#34;y-u-no-middleware:2debf7d5538355b3343d354786c24e4a&#34;&gt;Y U No Middleware?&lt;/h2&gt;
+
+&lt;p&gt;And now you could say that, why not just have a middleware which will always accept OPTIONS for every end-point. Because that would defeat the purpose of CORS. I only allow end-points which I know are to be safe or are shielded othervise. I will NOT allow EVERY request to be able to go over the domain. I think that is a bad design decision.&lt;/p&gt;
+
+&lt;h2 id=&#34;summary:2debf7d5538355b3343d354786c24e4a&#34;&gt;Summary&lt;/h2&gt;
+
+&lt;p&gt;This is it. You can see the code in its entirety on Github. Have a better idea on how to do it? Please! Do not hesitate to share. I always like to learn.&lt;/p&gt;
+
+&lt;p&gt;Thank you for reading!&lt;/p&gt;
+
+&lt;p&gt;And as always,
+Have a nice day!&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>My Journey in advent of code</title>
@@ -1599,187 +1695,6 @@ JobCommonTemplate.&lt;span style=&#34;color: #006600;&#34;&gt;addEmailTemplate&l
     &lt;/tr&gt;
   &lt;/table&gt;
 &lt;/div&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs</title>
-      <link>https://skarlso.github.io/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/</link>
-      <pubDate>Fri, 02 Oct 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/</guid>
-      <description>
-
-&lt;p&gt;Hello folks.&lt;/p&gt;
-
-&lt;p&gt;Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.&lt;/p&gt;
-
-&lt;p&gt;So I&amp;#8217;m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work. So here is how, I fixed the issue.&lt;/p&gt;
-
-&lt;h1 id=&#34;connection:8d940ee57e10d456fdd2ccfe653ed909&#34;&gt;Connection&lt;/h1&gt;
-
-&lt;p&gt;In order for the aggregation to work, there needs to be an &lt;strong&gt;artifact connection&lt;/strong&gt; between the upstream and downstream projects. And that is the key. But if you don&amp;#8217;t have that, well, let&amp;#8217;s create one. I have a parent job configured like this one. =&amp;gt;&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;xml&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;?xml&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;version&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;1.0&#39;&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;encoding&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;UTF-8&#39;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;project&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;actions&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;description&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/description&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;keepDependencies&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/keepDependencies&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;properties&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;scm&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;class&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;hudson.scm.NullSCM&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;canRoam&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;true&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/canRoam&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;disabled&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/disabled&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;blockBuildWhenDownstreamBuilding&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/blockBuildWhenDownstreamBuilding&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;blockBuildWhenUpstreamBuilding&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/blockBuildWhenUpstreamBuilding&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;triggers&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;concurrentBuild&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/concurrentBuild&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;builders&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;publishers&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;hudson.tasks.test.AggregatedTestResultPublisher&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;plugin&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;junit@1.9&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;includeFailedBuilds&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/includeFailedBuilds&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/hudson.tasks.test.AggregatedTestResultPublisher&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;hudson.tasks.BuildTrigger&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;childProjects&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;ChildJob&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/childProjects&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;threshold&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-        &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;name&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;SUCCESS&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/name&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-        &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;ordinal&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/ordinal&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-        &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;color&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;BLUE&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/color&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-        &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;completeBuild&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;true&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/completeBuild&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/threshold&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/hudson.tasks.BuildTrigger&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/publishers&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;buildWrappers&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/project&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;As you can see, it&amp;#8217;s pretty basic. It isn&amp;#8217;t much. It&amp;#8217;s supposed to be a trigger job for downstream projects. You could have this one at anything. Maybe scheduled, or have some kind of gathering here of some results, and so on and so forth. The end part of the configuration is the interesting bit.&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/parentJobConfig1.png&#34;&gt;&lt;img src=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/parentJobConfig1-150x150.png&#34; alt=&#34;parentJobConfig&#34; width=&#34;150&#34; height=&#34;150&#34; class=&#34;alignnone size-thumbnail wp-image-616&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;Aggregation is setup, but it won&amp;#8217;t work, because despite there being an upstream/downstream relationship, there also needs to be an artifact connection which uses &lt;strong&gt;fingerprinting&lt;/strong&gt;. Fingerprinting for Jenkins is needed in oder to make the physical connection between the jobs via hashes. This is what you will get if that is not setup:&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/statusBeforeFingerprint.png&#34;&gt;&lt;img src=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/statusBeforeFingerprint-150x150.png&#34; alt=&#34;statusBeforeFingerprint&#34; width=&#34;150&#34; height=&#34;150&#34; class=&#34;alignnone size-thumbnail wp-image-615&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;But if there is no artifact between them, what do you do? You create one.&lt;/p&gt;
-
-&lt;h1 id=&#34;the-artifact-which-binds-us:8d940ee57e10d456fdd2ccfe653ed909&#34;&gt;The Artifact which Binds Us&lt;/h1&gt;
-
-&lt;p&gt;Adding a simple &lt;strong&gt;timestamp file&lt;/strong&gt; is enough to make a connection. So let&amp;#8217;s do that. This is how it will look like =&amp;gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/statusAfterFingerprint.png&#34;&gt;&lt;img src=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/statusAfterFingerprint-150x150.png&#34; alt=&#34;statusAfterFingerprint&#34; width=&#34;150&#34; height=&#34;150&#34; class=&#34;alignnone size-thumbnail wp-image-614&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;The important bits about this picture are the small echo which simply creates a file which will contain some time stamp data, and after that the archive artifact, which also fingerprints that file, marking it with a hash which identifies this job as using that particular artifact.&lt;/p&gt;
-
-&lt;p&gt;Now, the next step is to create the connection. For that, you need the artifact copy plugin =&amp;gt; &lt;a href=&#34;https://wiki.jenkins-ci.org/display/JENKINS/Copy+Artifact+Plugin&#34; target=&#34;_blank&#34;&gt;Copy Artifact Plugin&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;With this, we create the childs configuration like this:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;xml&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;?xml&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;version&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;1.0&#39;&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;encoding&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;UTF-8&#39;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;project&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;actions&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;description&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/description&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;keepDependencies&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/keepDependencies&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;properties&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;scm&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;class&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;hudson.plugins.git.GitSCM&#34;&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;plugin&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;git@2.4.0&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;configVersion&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;2&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/configVersion&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;userRemoteConfigs&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;hudson.plugins.git.UserRemoteConfig&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-        &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;url&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;https://github.com/Skarlso/DataMung.git&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/url&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/hudson.plugins.git.UserRemoteConfig&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/userRemoteConfigs&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;branches&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;hudson.plugins.git.BranchSpec&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-        &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;name&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;*/master&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/name&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/hudson.plugins.git.BranchSpec&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/branches&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;doGenerateSubmoduleConfigurations&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/doGenerateSubmoduleConfigurations&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;submoduleCfg&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;class&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;list&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;extensions&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/scm&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;canRoam&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;true&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/canRoam&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;disabled&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/disabled&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;blockBuildWhenDownstreamBuilding&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/blockBuildWhenDownstreamBuilding&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;blockBuildWhenUpstreamBuilding&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/blockBuildWhenUpstreamBuilding&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;triggers&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&amp;gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;concurrentBuild&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/concurrentBuild&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;builders&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;hudson.plugins.gradle.Gradle&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;plugin&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;gradle@1.24&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;description&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/description&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;switches&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/switches&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;tasks&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;assemble check&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/tasks&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;rootBuildScriptDir&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/rootBuildScriptDir&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;buildFile&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;build.gradle&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/buildFile&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;gradleName&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;(Default)&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/gradleName&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;useWrapper&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;true&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/useWrapper&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;makeExecutable&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/makeExecutable&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;fromRootBuildScriptDir&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;true&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/fromRootBuildScriptDir&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;useWorkspaceAsHome&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/useWorkspaceAsHome&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/hudson.plugins.gradle.Gradle&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;hudson.plugins.copyartifact.CopyArtifact&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;plugin&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;copyartifact@1.36&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;project&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;ParentJob&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/project&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;filter&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;timestamp.data&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/filter&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;target&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/target&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;excludes&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/excludes&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;selector&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;class&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;hudson.plugins.copyartifact.TriggeredBuildSelector&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;
-        &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;upstreamFilterStrategy&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;UseGlobalSetting&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/upstreamFilterStrategy&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/selector&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;doNotFingerprintArtifacts&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/doNotFingerprintArtifacts&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/hudson.plugins.copyartifact.CopyArtifact&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/builders&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;publishers&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;hudson.tasks.junit.JUnitResultArchiver&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;plugin&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;junit@1.9&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;testResults&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;build/test-results/*.xml&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/testResults&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;keepLongStdio&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/keepLongStdio&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;healthScaleFactor&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;1.0&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/healthScaleFactor&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/hudson.tasks.junit.JUnitResultArchiver&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/publishers&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;buildWrappers&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;hudson.plugins.ws__cleanup.PreBuildCleanup&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;plugin&lt;/span&gt;=&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;ws-cleanup@0.28&#34;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;deleteDirs&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;false&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/deleteDirs&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;cleanupParameter&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/cleanupParameter&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-      &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;externalDelete&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/externalDelete&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/hudson.plugins.ws__cleanup.PreBuildCleanup&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-  &lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/buildWrappers&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span style=&#34;color: #009900;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;lt;/project&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Again, the improtant bit is this:&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/childJobWithArtifactCopy.png&#34;&gt;&lt;img src=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/childJobWithArtifactCopy-150x150.png&#34; alt=&#34;childJobWithArtifactCopy&#34; width=&#34;150&#34; height=&#34;150&#34; class=&#34;alignnone size-thumbnail wp-image-611&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;After the copy is setup, we launch our parent job and if everything is correct, you should see something like this:&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/resultAfterArtifactCopySuccess.png&#34;&gt;&lt;img src=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/resultAfterArtifactCopySuccess-150x150.png&#34; alt=&#34;resultAfterArtifactCopySuccess&#34; width=&#34;150&#34; height=&#34;150&#34; class=&#34;alignnone size-thumbnail wp-image-613&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
-
-&lt;h1 id=&#34;wrapping-it-up:8d940ee57e10d456fdd2ccfe653ed909&#34;&gt;Wrapping it Up&lt;/h1&gt;
-
-&lt;p&gt;For final words, important bit to take away from this is that you need an &lt;strong&gt;artifact connection between the jobs&lt;/strong&gt; to make this work. Whatever your downstream / upstream connection is, it doesn&amp;#8217;t matter. Also, there can be a problem that you have everything set up, and there are artifacts which bind the jobs together but you still can&amp;#8217;t see the results, then your best option is to specify the jobs BY NAME in the aggregate test plug-in like this:&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/aggregatingByName.png&#34;&gt;&lt;img src=&#34;http://ramblingsofaswtester.com/wp-content/uploads/2015/10/aggregatingByName-150x150.png&#34; alt=&#34;aggregatingByName&#34; width=&#34;150&#34; height=&#34;150&#34; class=&#34;alignnone size-thumbnail wp-image-622&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;I know this is a pain if there are multiple jobs, but at least, jenkins is providing you with Autoexpande once you start typing.&lt;/p&gt;
-
-&lt;p&gt;Of course this also works with multiple downstream jobs if they copy the artifact to themselves.&lt;/p&gt;
-
-&lt;p&gt;Any questions, please feel free to comment and I will answer to the best of my knowledge.&lt;/p&gt;
-
-&lt;p&gt;Cheers,&lt;/p&gt;
-
-&lt;p&gt;Gergely.&lt;/p&gt;
 </description>
     </item>
     
