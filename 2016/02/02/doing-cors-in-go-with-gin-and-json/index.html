@@ -179,9 +179,9 @@
 
 <p>I&rsquo;m choosing JSON here because basically I don&rsquo;t really like JSONP. And actually, it&rsquo;s not very complicated to do CORS, it&rsquo;s just hidden enough so that it doesn&rsquo;t become transparent.</p>
 
-<p>First, what is CORS? It&rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization, Javascript can&rsquo;t reach outside of your domain and be potentially harmful to your visitors.</p>
+<p>First, what is CORS? It&rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization in the header of a request, Javascript can&rsquo;t reach outside of your domain and be potentially harmful to your visitors.</p>
 
-<p>But what if you know that your site would like to talk with an Agent who is outside of your domain and do a GET on a JSON resource. Well, you could use JSONP, which is padded JSON. JSON like structure but using html tags, which, in my opinion, is ugly as hell. But like I said, it is not difficult to do it properly with JSON.</p>
+<p>But what if you know that your site would like to talk with an Agent who is outside of your domain and do a GET on a JSON resource. Well, you could use JSONP, which is padded JSON. JSON like structure but using html tags, which, in my opinion, is ugly. But like I said, it is not difficult to do it properly with JSON.</p>
 
 <p>I&rsquo;m using <a href="https://github.com/gin-gonic/gin">Gin</a> for my REST service for <a href="https://github.com/Skarlso/dockmaster2">Dockmaster</a>. My agent has two way communications and I wanted to display that on my frontend html page with an ajax call. You have two components which you need to adjust in order to be able to do that.</p>
 
@@ -191,7 +191,9 @@
 
 <p>First, you need to set two Headers.
 #1 -&gt; Access-Control-Allow-Origin to &ldquo;*&ldquo;.
-#2 -&gt; Access-Control-Allow-Headers to &ldquo;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&rdquo;.</p>
+#2 -&gt; Access-Control-Allow-Headers to &ldquo;access-control-allow-origin, access-control-allow-headers&rdquo;.</p>
+
+<p>These are the minimum headers you can set. If you allow Access-Control-Allow-Origin you also have to allow it in the headers section because the next request will expect it to be there. Also, note here that setting Origin to * is only recommended in development environment. Otherwise it should be set to whatever your domain is.</p>
 
 <p>Second, you need to respond to the OPTIONS method with a 200. In order to do that, I added a simple rule with the same end-point but with OPTIONS.</p>
 
@@ -212,12 +214,12 @@
 
 func preflight(c *gin.Context) {
     c.Header(&quot;Access-Control-Allow-Origin&quot;, &quot;*&quot;)
-    c.Header(&quot;Access-Control-Allow-Headers&quot;, &quot;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&quot;)
+    c.Header(&quot;Access-Control-Allow-Headers&quot;, &quot;access-control-allow-origin, access-control-allow-headers&quot;)
     c.JSON(http.StatusOK, struct{}{})
 }
 </code></pre>
 
-<p>You can see that the preflight method is there for two end-points. I added it to those end-points which will reach over the domain. The others are all local, thus they don&rsquo;t need that. This leads to a little duplication, but that is fine. I have a very fine control over what actually is allowed to go over. If there would be a CORS request for any other end-point, it would still be caught.</p>
+<p>You can see that the preflight method is there for two end-points. I added it to those end-points which will reach over the domain. The others are all local, thus they don&rsquo;t need that. This leads to a little duplication, but that is fine. I have a very fine control over what actually is allowed to go outside of the domain.</p>
 
 <p>So, how do we call this?</p>
 
@@ -229,9 +231,8 @@ func preflight(c *gin.Context) {
                     url: 'http://localhost:8989/api/1/inspect/'+data.agentid+'/'+data.id,
                     type: 'GET',
                     dataType:&quot;json&quot;,
-                    headers: {&quot;Access-Control-Allow-Origin&quot;: &quot;*&quot;, &quot;Access-Control-Allow-Headers&quot;: &quot;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&quot;},
+                    headers: {&quot;Access-Control-Allow-Origin&quot;: &quot;*&quot;, &quot;Access-Control-Allow-Headers&quot;: &quot;access-control-allow-origin, access-control-allow-headers&quot;},
                     processData: false,
-                    crossDomain: true,
                     success: function(data) {
                         var json = JSON.stringify(data, null, 4)
                         independentPopup.html(&quot;&lt;pre &gt;&quot;+json+&quot;&lt;/pre&gt;&quot;);
@@ -244,7 +245,7 @@ func preflight(c *gin.Context) {
 
 <h2 id="y-u-no-middleware:2debf7d5538355b3343d354786c24e4a">Y U No Middleware?</h2>
 
-<p>And now you could say that, why not just have a middleware which will always accept OPTIONS for every end-point. Because that would defeat the purpose of CORS. I only allow end-points which I know are to be safe or are shielded othervise. I will NOT allow EVERY request to be able to go over the domain. I think that is a bad design decision.</p>
+<p>And now you could say that, why not just have a middleware which will always accept OPTIONS for every end-point. Because I like it better this way. Some would argue that this is too granular, but fact is, that in my opinion, this is more readable and immediatly visible.</p>
 
 <h2 id="summary:2debf7d5538355b3343d354786c24e4a">Summary</h2>
 

@@ -24,9 +24,9 @@
 
 &lt;p&gt;I&amp;rsquo;m choosing JSON here because basically I don&amp;rsquo;t really like JSONP. And actually, it&amp;rsquo;s not very complicated to do CORS, it&amp;rsquo;s just hidden enough so that it doesn&amp;rsquo;t become transparent.&lt;/p&gt;
 
-&lt;p&gt;First, what is CORS? It&amp;rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization, Javascript can&amp;rsquo;t reach outside of your domain and be potentially harmful to your visitors.&lt;/p&gt;
+&lt;p&gt;First, what is CORS? It&amp;rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization in the header of a request, Javascript can&amp;rsquo;t reach outside of your domain and be potentially harmful to your visitors.&lt;/p&gt;
 
-&lt;p&gt;But what if you know that your site would like to talk with an Agent who is outside of your domain and do a GET on a JSON resource. Well, you could use JSONP, which is padded JSON. JSON like structure but using html tags, which, in my opinion, is ugly as hell. But like I said, it is not difficult to do it properly with JSON.&lt;/p&gt;
+&lt;p&gt;But what if you know that your site would like to talk with an Agent who is outside of your domain and do a GET on a JSON resource. Well, you could use JSONP, which is padded JSON. JSON like structure but using html tags, which, in my opinion, is ugly. But like I said, it is not difficult to do it properly with JSON.&lt;/p&gt;
 
 &lt;p&gt;I&amp;rsquo;m using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt; for my REST service for &lt;a href=&#34;https://github.com/Skarlso/dockmaster2&#34;&gt;Dockmaster&lt;/a&gt;. My agent has two way communications and I wanted to display that on my frontend html page with an ajax call. You have two components which you need to adjust in order to be able to do that.&lt;/p&gt;
 
@@ -36,7 +36,9 @@
 
 &lt;p&gt;First, you need to set two Headers.
 #1 -&amp;gt; Access-Control-Allow-Origin to &amp;ldquo;*&amp;ldquo;.
-#2 -&amp;gt; Access-Control-Allow-Headers to &amp;ldquo;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&amp;rdquo;.&lt;/p&gt;
+#2 -&amp;gt; Access-Control-Allow-Headers to &amp;ldquo;access-control-allow-origin, access-control-allow-headers&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;These are the minimum headers you can set. If you allow Access-Control-Allow-Origin you also have to allow it in the headers section because the next request will expect it to be there. Also, note here that setting Origin to * is only recommended in development environment. Otherwise it should be set to whatever your domain is.&lt;/p&gt;
 
 &lt;p&gt;Second, you need to respond to the OPTIONS method with a 200. In order to do that, I added a simple rule with the same end-point but with OPTIONS.&lt;/p&gt;
 
@@ -57,12 +59,12 @@
 
 func preflight(c *gin.Context) {
     c.Header(&amp;quot;Access-Control-Allow-Origin&amp;quot;, &amp;quot;*&amp;quot;)
-    c.Header(&amp;quot;Access-Control-Allow-Headers&amp;quot;, &amp;quot;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&amp;quot;)
+    c.Header(&amp;quot;Access-Control-Allow-Headers&amp;quot;, &amp;quot;access-control-allow-origin, access-control-allow-headers&amp;quot;)
     c.JSON(http.StatusOK, struct{}{})
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;You can see that the preflight method is there for two end-points. I added it to those end-points which will reach over the domain. The others are all local, thus they don&amp;rsquo;t need that. This leads to a little duplication, but that is fine. I have a very fine control over what actually is allowed to go over. If there would be a CORS request for any other end-point, it would still be caught.&lt;/p&gt;
+&lt;p&gt;You can see that the preflight method is there for two end-points. I added it to those end-points which will reach over the domain. The others are all local, thus they don&amp;rsquo;t need that. This leads to a little duplication, but that is fine. I have a very fine control over what actually is allowed to go outside of the domain.&lt;/p&gt;
 
 &lt;p&gt;So, how do we call this?&lt;/p&gt;
 
@@ -74,9 +76,8 @@ func preflight(c *gin.Context) {
                     url: &#39;http://localhost:8989/api/1/inspect/&#39;+data.agentid+&#39;/&#39;+data.id,
                     type: &#39;GET&#39;,
                     dataType:&amp;quot;json&amp;quot;,
-                    headers: {&amp;quot;Access-Control-Allow-Origin&amp;quot;: &amp;quot;*&amp;quot;, &amp;quot;Access-Control-Allow-Headers&amp;quot;: &amp;quot;access-control-allow-origin, access-control-allow-headers, Authorization, Content-Type&amp;quot;},
+                    headers: {&amp;quot;Access-Control-Allow-Origin&amp;quot;: &amp;quot;*&amp;quot;, &amp;quot;Access-Control-Allow-Headers&amp;quot;: &amp;quot;access-control-allow-origin, access-control-allow-headers&amp;quot;},
                     processData: false,
-                    crossDomain: true,
                     success: function(data) {
                         var json = JSON.stringify(data, null, 4)
                         independentPopup.html(&amp;quot;&amp;lt;pre &amp;gt;&amp;quot;+json+&amp;quot;&amp;lt;/pre&amp;gt;&amp;quot;);
@@ -89,7 +90,7 @@ func preflight(c *gin.Context) {
 
 &lt;h2 id=&#34;y-u-no-middleware:2debf7d5538355b3343d354786c24e4a&#34;&gt;Y U No Middleware?&lt;/h2&gt;
 
-&lt;p&gt;And now you could say that, why not just have a middleware which will always accept OPTIONS for every end-point. Because that would defeat the purpose of CORS. I only allow end-points which I know are to be safe or are shielded othervise. I will NOT allow EVERY request to be able to go over the domain. I think that is a bad design decision.&lt;/p&gt;
+&lt;p&gt;And now you could say that, why not just have a middleware which will always accept OPTIONS for every end-point. Because I like it better this way. Some would argue that this is too granular, but fact is, that in my opinion, this is more readable and immediatly visible.&lt;/p&gt;
 
 &lt;h2 id=&#34;summary:2debf7d5538355b3343d354786c24e4a&#34;&gt;Summary&lt;/h2&gt;
 
