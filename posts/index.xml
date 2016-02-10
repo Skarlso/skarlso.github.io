@@ -5,8 +5,22 @@
     <link>https://skarlso.github.io/posts/</link>
     <description>Recent content in Posts on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Tue, 02 Feb 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 10 Feb 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Wercker Test</title>
+      <link>https://skarlso.github.io/2016/02/10/wercker-test</link>
+      <pubDate>Wed, 10 Feb 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/02/10/wercker-test</guid>
+      <description>
+
+&lt;h2 id=&#34;basics:94c3bb57ac4992da2673b905da613eb3&#34;&gt;Basics&lt;/h2&gt;
+
+&lt;p&gt;This is a wercker Test.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Doing CORS in Go with Gin and JSON</title>
@@ -28,8 +42,7 @@
 
 &lt;p&gt;Now, suppose you have an architecture like this.&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/architecture.png&#34; alt=&#34;Architecture&#34; /&gt;
-&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/architecture.png&#34; alt=&#34;Architecture&#34; /&gt;&lt;/p&gt;
 
 &lt;p&gt;You have multiple agents sitting on multiple nodes. You have one central server, and you have multiple front-ends. Everybody can only talk to the Server but the server does talk to everyone. You would like to have a dynamic front-end and would like to display data with ajax calls. Since your front-end sits on a different server, you will have to do something about CORS. This is how I solved it&amp;hellip;&lt;/p&gt;
 
@@ -200,8 +213,7 @@ passwd[i] += &#39;a&#39;
 
 &lt;p&gt;I like using structs. They are a very lightweight way of defining objects, structures which stick together. For example in the &lt;a href=&#34;http://adventofcode.com/day/6&#34;&gt;Day 6&lt;/a&gt; Light puzzle, or even &lt;a href=&#34;http://adventofcode.com/day/3&#34;&gt;Day 3&lt;/a&gt; Traveling santa example, a struct which stuck x,y locations together and made it a map key, it was trivial to make my gif out of it with SVG -&amp;gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://raw.githubusercontent.com/Skarlso/goprojects/master/advent/day3/day1.gif&#34; alt=&#34;Traveling Santa&#34; /&gt;
-&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://raw.githubusercontent.com/Skarlso/goprojects/master/advent/day3/day1.gif&#34; alt=&#34;Traveling Santa&#34; /&gt;&lt;/p&gt;
 
 &lt;h2 id=&#34;go-is-simple-to-read:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Go is Simple to Read&lt;/h2&gt;
 
@@ -728,6 +740,123 @@ func generateNewPassword(out chan&amp;lt;- [PASSWD]byte) {
 &lt;p&gt;Conclusion is, that use conversion rather than string types and be aware that using slices in channels is dangerous.&lt;/p&gt;
 
 &lt;p&gt;Thanks for reading!
+Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Use Byte Array Instead of Strings</title>
+      <link>https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings/</link>
+      <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings/</guid>
+      <description>&lt;p&gt;Hello Folks.&lt;/p&gt;
+
+&lt;p&gt;This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.&lt;/p&gt;
+
+&lt;p&gt;[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.&lt;/p&gt;
+
+&lt;p&gt;Sample code:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package solutions
+
+import &amp;quot;fmt&amp;quot;
+
+const (
+    //INPUT input
+    INPUT = &amp;quot;1321131112&amp;quot;
+    //LIMIT limit
+    LIMIT = 50
+)
+
+//LookAndSay translates numbers according to Look and Say algo
+func LookAndSay(s string, c chan string) {
+    charCount := 1
+    look := &amp;quot;&amp;quot;
+    for i := range s {
+        if i+1 &amp;lt; len(s) {
+            if s[i] == s[i+1] {
+                charCount++
+            } else {
+                look += fmt.Sprintf(&amp;quot;%d%s&amp;quot;, charCount, string(s[i]))
+                charCount = 1
+            }
+        } else {
+            look += fmt.Sprintf(&amp;quot;%d%s&amp;quot;, charCount, string(s[i]))
+        }
+    }
+    c &amp;lt;- look
+}
+
+//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+func GetLengthOfLookAndSay() {
+    c := make(chan string, 0)
+    go LookAndSay(INPUT, c)
+    finalString := &amp;lt;-c
+    for i := 0; i &amp;lt;= LIMIT-2; i++ {
+        go LookAndSay(finalString, c)
+        finalString = &amp;lt;-c
+        // fmt.Println(finalString)
+    }
+    fmt.Println(&amp;quot;Lenght of final String:&amp;quot;, len(finalString))
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This, with the limit raised to 50 run for ~1 hour. Even with the routines although they were just for show since they had to wait for each others input.&lt;/p&gt;
+
+&lt;p&gt;Now change this to []byte and the run time was almost under 2 seconds on my machine.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package solutions
+
+import (
+    &amp;quot;fmt&amp;quot;
+    &amp;quot;strconv&amp;quot;
+)
+
+const (
+    //LIMIT limit
+    LIMIT = 50
+)
+
+//INPUT puzzle input
+//This used to be a string until I was reminded that BYTE ARRAY IS ALWAYS FASTER!
+var INPUT = []byte(&amp;quot;1321131112&amp;quot;)
+
+//LookAndSay translates numbers according to Look and Say algo
+func LookAndSay(s []byte) (look []byte) {
+    charCount := 1
+    for i := range s {
+        if i+1 &amp;lt; len(s) {
+            if s[i] == s[i+1] {
+                charCount++
+            } else {
+                b := []byte(strconv.FormatInt(int64(charCount), 10))
+                look = append(look, b[0], s[i])
+                charCount = 1
+            }
+        } else {
+            b := []byte(strconv.FormatInt(int64(charCount), 10))
+            look = append(look, b[0], s[i])
+        }
+    }
+    return
+}
+
+//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+func GetLengthOfLookAndSay() {
+    finalString := INPUT
+    for i := 0; i &amp;lt;= LIMIT-1; i++ {
+        finalString = LookAndSay(finalString)
+    }
+    fmt.Println(&amp;quot;Lenght of final String:&amp;quot;, len(finalString))
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is the solution for Day 10 on &lt;a href=&#34;http://adventofcode.com/&#34;&gt;AdventOfCode&lt;/a&gt; by the way.&lt;/p&gt;
+
+&lt;p&gt;Thanks for readin&amp;rsquo;.
 Gergely.&lt;/p&gt;
 </description>
     </item>
@@ -1431,273 +1560,6 @@ log &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;Wifi name: &lt;span style=&
 &lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//String for a string representation of Buffer&lt;/span&gt;
 &lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;b &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;Buffer&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; String&lt;span style=&#34;color: #339933;&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
     &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; fmt&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Sprintf&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;Buffer: %d, %d, %d, %d&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;buffer&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;s&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;e&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;size&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Jenkins Job DSL and Groovy goodness</title>
-      <link>https://skarlso.github.io/2015/10/15/jenkins-job-dsl-and-groovy-goodness/</link>
-      <pubDate>Thu, 15 Oct 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/10/15/jenkins-job-dsl-and-groovy-goodness/</guid>
-      <description>&lt;p&gt;Hi Folks.&lt;/p&gt;
-
-&lt;p&gt;Ever used &lt;a href=&#34;https://wiki.jenkins-ci.org/display/JENKINS/Job+DSL+Plugin&#34; target=&#34;_blank&#34;&gt;Job DSL plugin&lt;/a&gt; for Jenkins? What is that you say? Well, it&amp;#8217;s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.&lt;/p&gt;
-
-&lt;p&gt;Today, however, I&amp;#8217;m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.&lt;/p&gt;
-
-&lt;p&gt;Today, I would like to write about a part of it which is even more interesting. And that is, extracting re-occurring parts in your job configurations.&lt;/p&gt;
-
-&lt;p&gt;If you have jobs, which have a common part that is repeated everywhere, you usually have an urge to extracted that into one place, lest it changes and you have to go an apply the change everywhere. That&amp;#8217;s not very efficient. But how do you do that in something which looks like a JSON descriptor?&lt;/p&gt;
-
-&lt;p&gt;Fret not, it is just Groovy. And being just groovy, you can use Groovy to implement parts of the job description and then apply that implementation to the job in the DSL.&lt;/p&gt;
-
-&lt;p&gt;Suppose you have an email which you send after every job for which the DSL looks like this:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;groovy&#34; style=&#34;font-family:monospace;&#34;&gt;job&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;MyTestJob&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-    description &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;&amp;lt;strong&amp;gt;GENERATED - do not modify&amp;lt;/strong&amp;gt;&#39;&lt;/span&gt;
-    label&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;machine_label&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    logRotator&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;30&lt;/span&gt;, &lt;span style=&#34;color: #66cc66;&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #66cc66;&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #cc66cc;&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    parameters &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        stringParam&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;somestringparam&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;default_valye&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Description&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    wrappers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        timeout &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-            noActivity&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;600&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-            abortBuild&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-            failBuild&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-            writeDescription&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Build failed due to timeout after {0} minutes&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-        &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    deliveryPipelineConfiguration&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;Main&#34;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;MyTestJob&#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    wrappers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        preBuildCleanup &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-            deleteDirectories&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-        &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-        timestamps&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    triggers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        cron&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;H 12 * * 1,2&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    steps &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        batchFile&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;readFileFromWorkspace&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;relative/path/to/file&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-            publishers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-                wsCleanup&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-                extendedEmail&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;email@address.com&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-                    configure &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt; node &lt;span style=&#34;color: #66cc66;&#34;&gt;-&amp;gt;&lt;/span&gt;
-                        node / presendScript &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; readFileFromWorkspace&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;email_templates/emailtemplate.groovy&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-                        node / replyTo &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;
-                        node / contentType &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;default&#39;&lt;/span&gt;
-                    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;StillUnstable&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Fixed&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Failure&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-                &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-&amp;nbsp;
-            &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Now, that big chunk of email setting is copied into a bunch of files, which is pretty ugly. And once you try to change it, you&amp;#8217;ll have to change it everywhere. Also, the interesting bits here are those readFileFromWorkspace parts. Those allow us to export even larger chunks of the script into external files. Now, because the slave might be located somewhere else, you should not use new File(&amp;#8216;file&amp;#8217;).text in your job DSL. readFileFromWorkspace in the background does that, but applies correct way to the PATH it looks on for the file specified.&lt;/p&gt;
-
-&lt;p&gt;Let&amp;#8217;s put this into a groovy script, shall we? Create a utilities folder where the DSL is and create a groovy file in it like this one:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;groovy&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color: #a1a100;&#34;&gt;utilities&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;class&lt;/span&gt; JobCommonTemplate &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-    &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #993333;&#34;&gt;void&lt;/span&gt; addEmailTemplate&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;def&lt;/span&gt; job, &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;def&lt;/span&gt; dslFactory&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        &lt;span style=&#34;color: #aaaadd; font-weight: bold;&#34;&gt;String&lt;/span&gt; emailScript &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; dslFactory.&lt;span style=&#34;color: #006600;&#34;&gt;readFileFromWorkspace&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;email_template/EmailTemplate.groovy&#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-        job.&lt;span style=&#34;color: #006600;&#34;&gt;with&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-            publishers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-                wsCleanup&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-                extendedEmail&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;email@address.com&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-                    configure &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt; node &lt;span style=&#34;color: #66cc66;&#34;&gt;-&amp;gt;&lt;/span&gt;
-                        node / presendScript &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; emailScript
-                        node / replyTo &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;
-                        node / contentType &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;default&#39;&lt;/span&gt;
-                    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;StillUnstable&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Fixed&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-                    trigger&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;triggerName: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Failure&#39;&lt;/span&gt;, subject: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_SUBJECT&#39;&lt;/span&gt;, body: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_CONTENT&#39;&lt;/span&gt;, replyTo: &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;$DEFAULT_REPLYTO&#39;&lt;/span&gt;, sendToDevelopers: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;, sendToRecipientList: &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-                &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-&amp;nbsp;
-            &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-        &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;The function addEmailTemplate gets two parameters. A job, which is an implementation of a Job, and a dslFactory which is a DslFactory. That factory is an interface which defines our readFileFromWorkspace. Where do we get the implementation from then? That will be from the Job. Let&amp;#8217;s alter our job to apply this Groovy script.&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;groovy&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #a1a100;&#34;&gt;utilities.JobCommonTemplate&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;def&lt;/span&gt; myJob &lt;span style=&#34;color: #66cc66;&#34;&gt;=&lt;/span&gt; job&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;MyTestJob&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-    description &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;&amp;lt;strong&amp;gt;GENERATED - do not modify&amp;lt;/strong&amp;gt;&#39;&lt;/span&gt;
-    label&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;machine_label&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    logRotator&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;30&lt;/span&gt;, &lt;span style=&#34;color: #66cc66;&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #66cc66;&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #cc66cc;&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    parameters &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        stringParam&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;somestringparam&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;default_valye&#39;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Description&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    wrappers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        timeout &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-            noActivity&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;600&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-            abortBuild&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-            failBuild&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-            writeDescription&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;Build failed due to timeout after {0} minutes&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-        &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    deliveryPipelineConfiguration&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;Main&#34;&lt;/span&gt;, &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;MyTestJob&#34;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    wrappers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        preBuildCleanup &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-            deleteDirectories&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-        &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-        timestamps&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    triggers &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        cron&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;H 12 * * 1,2&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-    steps &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#123;&lt;/span&gt;
-        batchFile&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;readFileFromWorkspace&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color: #ff0000;&#34;&gt;&#39;relative/path/to/file&#39;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;
-    &lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#125;&lt;/span&gt;
-&amp;nbsp;
-JobCommonTemplate.&lt;span style=&#34;color: #006600;&#34;&gt;addEmailTemplate&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#40;&lt;/span&gt;myJob, &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;this&lt;/span&gt;&lt;span style=&#34;color: #66cc66;&#34;&gt;&amp;#41;&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Notice three things here.&lt;/p&gt;
-
-&lt;p&gt;#1 =&amp;gt; &lt;strong&gt;import&lt;/strong&gt;. We import the script from utilities folder which we created and placed the script into it.&lt;/p&gt;
-
-&lt;p&gt;#2 =&amp;gt; &lt;strong&gt;def myJob&lt;/strong&gt;. We create a variable which will contain our job&amp;#8217;s description.&lt;/p&gt;
-
-&lt;p&gt;#3 =&amp;gt; &lt;strong&gt;this&lt;/strong&gt;. &amp;#8216;this&amp;#8217; will be the DslFactory. That&amp;#8217;s where we get our readFileFromWorkspace implementation.&lt;/p&gt;
-
-&lt;p&gt;And that&amp;#8217;s it. We have extracted a part of our job which is re-occurring and we found our implementation for our readFileFromWorkspace. DslFactory has most of the things which you need in a job description, would you want to expand on this and extract other bits and pieces.&lt;/p&gt;
-
-&lt;p&gt;Have fun, and happy coding!&lt;/p&gt;
-
-&lt;p&gt;As always,&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading!&lt;/p&gt;
-
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>DataMunger Kata with Go</title>
-      <link>https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/</link>
-      <pubDate>Sun, 04 Oct 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/</guid>
-      <description>&lt;p&gt;Quickly wrote up the Data Munger code kata in Go.&lt;/p&gt;
-
-&lt;p&gt;Next time, I want better abstractions. And a way to select columns based on their header data. For now, this is not bad.&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;go&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;package&lt;/span&gt; main
-&amp;nbsp;
-&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;bufio&#34;&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;fmt&#34;&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;log&#34;&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;math&#34;&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;os&#34;&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;regexp&#34;&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;strconv&#34;&lt;/span&gt;
-    &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;strings&#34;&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//Data which is Data&lt;/span&gt;
-&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;type&lt;/span&gt; Data &lt;span style=&#34;color: #993333;&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    columnName &lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt;
-    compareOne &lt;span style=&#34;color: #993333;&#34;&gt;float64&lt;/span&gt;
-    compareTwo &lt;span style=&#34;color: #993333;&#34;&gt;float64&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; main&lt;span style=&#34;color: #339933;&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;// datas := []Data{WeatherData{}, FootballData{}}&lt;/span&gt;
-    fmt&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;Minimum weather data:&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; GetDataMinimumDiff&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;weather.dat&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;))&lt;/span&gt;
-    fmt&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Println&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;Minimum football data:&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; GetDataMinimumDiff&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;football.dat&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;6&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;7&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;))&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//GetDataMinimumDiff gathers data from file to fill up Columns.&lt;/span&gt;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; GetDataMinimumDiff&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;filename &lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; nameColumn &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; compareColOne &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; compareColTwo &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; Data &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    data &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; Data&lt;span style=&#34;color: #339933;&#34;&gt;{}&lt;/span&gt;
-    minimum &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; math&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;MaxFloat64
-    readLines &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; ReadFile&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;for&lt;/span&gt; _&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; value &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;range&lt;/span&gt; readLines &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        valueArrays &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; strings&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Split&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;value&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;,&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-        name &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; valueArrays&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;nameColumn&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt;
-        trimmedFirst&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; _ &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; strconv&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;ParseFloat&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;valueArrays&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;compareColOne&lt;span style=&#34;color: #339933;&#34;&gt;],&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;64&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-        trimmedSecond&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; _ &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; strconv&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;ParseFloat&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;valueArrays&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;compareColTwo&lt;span style=&#34;color: #339933;&#34;&gt;],&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;64&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-        diff &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; trimmedFirst &lt;span style=&#34;color: #339933;&#34;&gt;-&lt;/span&gt; trimmedSecond
-        diff &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; math&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Abs&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;diff&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-        &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; diff &amp;lt;&lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; minimum &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-            minimum &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; diff
-            data&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;columnName &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; name
-            data&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;compareOne &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; trimmedFirst
-            data&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;compareTwo &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; trimmedSecond
-        &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; data
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//ReadFile reads lines from a file and gives back a string array which contains the lines.&lt;/span&gt;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; ReadFile&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;fileName &lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;fileLines &lt;span style=&#34;color: #339933;&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    file&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; err &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; os&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Open&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;fileName&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; err &lt;span style=&#34;color: #339933;&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        log&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Fatal&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;err&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;defer&lt;/span&gt; file&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Close&lt;span style=&#34;color: #339933;&#34;&gt;()&lt;/span&gt;
-&amp;nbsp;
-    scanner &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; bufio&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;NewScanner&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;file&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//Skipping the first line which is the header.&lt;/span&gt;
-    scanner&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Scan&lt;span style=&#34;color: #339933;&#34;&gt;()&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;for&lt;/span&gt; scanner&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Scan&lt;span style=&#34;color: #339933;&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        line &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; scanner&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Text&lt;span style=&#34;color: #339933;&#34;&gt;()&lt;/span&gt;
-        re &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; regexp&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;MustCompile&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;&lt;span style=&#34;color: #000099; font-weight: bold;&#34;&gt;\\&lt;/span&gt;w+&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-        lines &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; re&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;FindAllString&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;line&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-        &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;len&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;lines&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &amp;gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-            fileLines &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; append&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;fileLines&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; strings&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Join&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;lines&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;,&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;))&lt;/span&gt;
-        &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; err &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; scanner&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Err&lt;span style=&#34;color: #339933;&#34;&gt;();&lt;/span&gt; err &lt;span style=&#34;color: #339933;&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        log&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Fatal&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;err&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt;
 &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;&lt;/pre&gt;
       &lt;/td&gt;
     &lt;/tr&gt;
