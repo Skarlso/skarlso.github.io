@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Minecraft on Ramblings of a build engineer</title>
+    <link>https://skarlso.github.io/categories/minecraft/</link>
+    <description>Recent content in Minecraft on Ramblings of a build engineer</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 29 Mar 2016 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/categories/minecraft/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Minecraft Server with Docker on OSX &#43; Mods</title>
+      <link>https://skarlso.github.io/2016/03/29/minecraft-server-with-docker-and-osx</link>
+      <pubDate>Tue, 29 Mar 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/03/29/minecraft-server-with-docker-and-osx</guid>
+      <description>
+
+&lt;p&gt;Hi Folks.&lt;/p&gt;
+
+&lt;h1 id=&#34;intro:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Intro&lt;/h1&gt;
+
+&lt;p&gt;Today, I wanted to write about how to create a secure server in a container. Ideally, you don&amp;rsquo;t want to run your server on your own machine. Running it in a container gives you a much needed control and an extra layer of security.&lt;/p&gt;
+
+&lt;h1 id=&#34;docker-on-osx:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Docker On OSX&lt;/h1&gt;
+
+&lt;p&gt;While on a mac, you have a couple of options to run docker.&lt;/p&gt;
+
+&lt;h2 id=&#34;docker-machine:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Docker-Machine&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://docs.docker.com/machine/&#34;&gt;Docker-Machine&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Docker machine is very simple. It just creates a Linux vm in the background on the given driver, for us it will be &lt;a href=&#34;https://www.virtualbox.org/&#34;&gt;VirtualBox&lt;/a&gt;. Network, Memory and port-forwarding can all be managed through the VM directly. Then running and starting it is trivial through &lt;code&gt;docker-machine start&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;boot2docker:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Boot2Docker&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://boot2docker.io/&#34;&gt;Boot2Docker&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Runs a tiny linux in which you can use Docker freely. This adds the benefit of not having to mess around with VirtualBox.&lt;/p&gt;
+
+&lt;h2 id=&#34;dlite:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;DLite&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/nlf/dlite&#34;&gt;DLite&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;DLite is the newest addition in the Game. Since docker uses /var/run/docker.sock file to communicate with the daemon, and this file is not there on OSX, DLite takes care of that. After DLite is running, you just simply use Docker. That&amp;rsquo;s it. No VM, no fuss, just use Docker.&lt;/p&gt;
+
+&lt;p&gt;I recommend to use DLite, however, it&amp;rsquo;s not an official tool, so for the sake of this guide, I&amp;rsquo;ll be writing up a docker-machine oriented solution.&lt;/p&gt;
+
+&lt;h1 id=&#34;docker-container-a-vanilla-server:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Docker container - A Vanilla Server&lt;/h1&gt;
+
+&lt;p&gt;First, you&amp;rsquo;ll need a Dockerfile. &lt;a href=&#34;https://github.com/Skarlso/devops/blob/master/minecraft/Dockerfile&#34;&gt;Dockerfile&lt;/a&gt;. The steps on how to setup this file are written down in the README file, located here: &lt;a href=&#34;https://github.com/Skarlso/devops/tree/master/minecraft&#34;&gt;Container Setup&lt;/a&gt;. The &lt;code&gt;pwd&lt;/code&gt; command will use your current directory as a shared volume to copy stuff into the container from your host operating system.&lt;/p&gt;
+
+&lt;p&gt;This will download the Minecraft server version 1.9 (or whichever you define) and install java and vim. It uses /data as a shared folder. Data will also be the working directory which means we will run the server from there. This server will be a vanilla server, meaning, no modding. If you have a single player world which you would like to use, simply copy that to /data and rename it to &lt;em&gt;world&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;The tricky part is to make this available on the internet. Because the container is in a VM we need to do a chain forwarding. Forward from the container to the vm, and from the vm to your host machine. If you are using a dns service like dyna or no-ip, you probably have a software which refreshes an IP for you to link to. And you&amp;rsquo;ll also have port forwarding setup on your router. I won&amp;rsquo;t be going into detail on that part. That&amp;rsquo;s a whole different post.&lt;/p&gt;
+
+&lt;p&gt;Forwarding from virtualbox can be done through the UI or through command line. The UI is like this: &lt;em&gt;Settings =&amp;gt; Network =&amp;gt; Adapter 1 =&amp;gt; Advanced =&amp;gt; PortForwarding&lt;/em&gt;. Here, setup something like this:
+Name: Minecraft; Protocol: TCP; Host IP: 192.168.0.X(x=your local machine); Host Port: 25565; Guest IP: Leave Blank; Guest Port: 25565.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/network.png&#34; alt=&#34;Network&#34; /&gt;
+Where the cursor is blinking, you&amp;rsquo;ll have to define your own local IP which you are using for your domain address.&lt;/p&gt;
+
+&lt;p&gt;This should forward any ports coming from your VM to your local IP. In the container we have an expose and as the README states it&amp;rsquo;s started using -p 25565:25565 which will make sure that from the container, 25565 is exposed to the VM. And from the VM 25565 is exposed to your local. Chain forwarding.&lt;/p&gt;
+
+&lt;p&gt;After that, once you start your server, it should all click together and you should have a running vanilla Minecraft server available under &lt;a href=&#34;http://yourdomain:25565&#34;&gt;http://yourdomain:25565&lt;/a&gt;. You won&amp;rsquo;t be able to check this by default on your own network. Check if the port is open with a different service like: &lt;a href=&#34;http://www.yougetsignal.com/tools/open-ports/&#34;&gt;Check If Port is Open&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h1 id=&#34;docker-container-modding:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Docker container - Modding&lt;/h1&gt;
+
+&lt;p&gt;If you are not looking for anything, just a simple server, the above will be enough. You can still do /tp 1 1 1 to teleport, or can still use bans and op commands, and distribute items. However, if you would like to use mods, and as far as kids are concerned, they will want it, you&amp;rsquo;ll have to be a bit more clever.&lt;/p&gt;
+
+&lt;p&gt;I dug far and deep and found that you have two options. Either go with a Forge server, or a Bukkit server. What does that mean? The vanilla server of Minecraft does not support modding. Modding, is modifying the implementation of Minecraft. It injects code and runs a pre-server in front of the original Minecraft server in order to append functionality. But fret not, this is all taken care of for you by either solutions.&lt;/p&gt;
+
+&lt;p&gt;In order to jump into our container with the CMD omitted, we&amp;rsquo;ll have to run the following command instead of the one in the README.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;docker run -it -v `pwd`:/data -p 25565:25565 --name mc_server minecraft:v1.9 bash
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This will give you an interactive prompt in which now we can operate.&lt;/p&gt;
+
+&lt;h2 id=&#34;forge:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Forge&lt;/h2&gt;
+
+&lt;p&gt;Download the latest forge version from here =&amp;gt; &lt;a href=&#34;http://files.minecraftforge.net/&#34;&gt;Minecraft Forge&lt;/a&gt;. They are usually up-to-date. I&amp;rsquo;m using 1.9 so I downloaded the appropriate installer version. After I obtained it, it was a matter of running this piece of command line code from my container:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;java -jar forge-1.9-12.16.0.1813-1.9-installer.jar --extract --installServer
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This will unpack a bunch of things you don&amp;rsquo;t have to worry about in your current directory, which is /data. Now run the universal.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;java -jar forge-1.9-12.16.0.1813-1.9-universal.jar
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Everything under the &lt;strong&gt;mods&lt;/strong&gt; folder will be loaded as a mod. Forge is very restrictive and can only use Forge based mods. It will usually warn you if you have a none forge mod in your mods folder. You can find these on Forge&amp;rsquo;s forum here: &lt;a href=&#34;http://www.minecraftforge.net/forum/index.php/board,30.0.html&#34;&gt;Forge Forum&lt;/a&gt;. Simply download a jar and put it into /data/mods.&lt;/p&gt;
+
+&lt;h2 id=&#34;bukkit:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Bukkit&lt;/h2&gt;
+
+&lt;p&gt;I found Bukkit to be the winner for me. Most of the mods the kid wanted worked with Bukkit and did not work with Forge. Others will swear on Forge, but it&amp;rsquo;s really up to you. Using Bukkit is similarly easy. Again, you&amp;rsquo;ll have to find and get the wrapper for your Minecraft version, which can be located here: &lt;a href=&#34;http://getspigot.org/&#34;&gt;GetSpigot&lt;/a&gt;. You can use Spigot as well, though I have no experience with that.&lt;/p&gt;
+
+&lt;p&gt;Once, you got the wrapper, which is called &lt;code&gt;craftbukkit-1.9.jar&lt;/code&gt; for me, you run it the same way you would run Forge or Minecraft.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;java -jar craftbukkit-1.9.jar
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This will load mods from the &lt;strong&gt;plugins&lt;/strong&gt; folder. Plugins can be found here: &lt;a href=&#34;http://mods.curse.com/bukkit-plugins/minecraft/new&#34;&gt;Latest Bukkit Plugins&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;In the container, you can use wget or curl to get the mods, or simply use the shared volume which is setup for you.&lt;/p&gt;
+
+&lt;h1 id=&#34;last-words:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Last Words&lt;/h1&gt;
+
+&lt;p&gt;All in all this sounds complicated, but it&amp;rsquo;s actually not, once you&amp;rsquo;ll get the hang out of it. You never kill the container once it&amp;rsquo;s setup, you just do &lt;code&gt;docker stop mc_server&lt;/code&gt; and then &lt;code&gt;docker-machine stop&lt;/code&gt; if you want to stop the VM as well. To start it up simply do these steps:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;docker_machine start
+eval $(docker-machine env)
+docker start mc_server
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We named the container mc_server on a previous step. If you named it something different, use that name.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s it. Hope this was clear. Any feedback is appreciated. If you think you have an easier way, or if I wrote something incorrectly, feel free to tell me in the comment sections below.&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading.&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
