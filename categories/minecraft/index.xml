@@ -5,8 +5,84 @@
     <link>https://skarlso.github.io/categories/minecraft/</link>
     <description>Recent content in Minecraft on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Tue, 29 Mar 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 16 Apr 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/categories/minecraft/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Minecraft world automatic backup to AWS S3 bucket</title>
+      <link>https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup</link>
+      <pubDate>Sat, 16 Apr 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup</guid>
+      <description>&lt;p&gt;Hi Folks.&lt;/p&gt;
+
+&lt;p&gt;Previously we created a Minecraft server using Docker. After my server got popular in the family and a lot of stuff started to pile up on it, as a good IT person, I&amp;rsquo;m backing up the world one in a while.&lt;/p&gt;
+
+&lt;p&gt;For that, I&amp;rsquo;m using AWS S3 with the CLI and a little bash command which I added to a cron job which runs every week or so.&lt;/p&gt;
+
+&lt;p&gt;The script is really straightforward. I&amp;rsquo;m doing manual versioning, although S3 does provide one out of the box. However, amazon&amp;rsquo;s S3 versioning doesn&amp;rsquo;t allow limiting the number of versions being kept. And since I&amp;rsquo;m doing that anyways, I&amp;rsquo;m taking care of limiting the uploaded number of archives.&lt;/p&gt;
+
+&lt;p&gt;Without further ado, here is the script:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#!/bin/bash
+
+if [[ -t 1 ]]; then
+    colors=$(tput colors)
+    if [[ $colors ]]; then
+        RED=&#39;\033[0;31m&#39;
+        LIGHT_GREEN=&#39;\033[1;32m&#39;
+        NC=&#39;\033[0m&#39;
+    fi
+fi
+
+if [[ -z ${MINECRAFT_BUCKET} ]]; then
+	printf &amp;quot;Please set the env variable ${RED}MINECRAFT_BUCKET${NC} to the s3 archive bucket name.\n&amp;quot;
+	exit 0
+fi
+
+if [[ -z ${MINECRAFT_ARCHIVE_LIMIT} ]]; then
+	printf &amp;quot;Please set the env variable ${RED}MINECRAFT_ARCHIVE_LIMIT${NC} to limit the number of archives to keep.\n&amp;quot;
+	exit 0
+fi
+
+backup_bucket=${MINECRAFT_BUCKET}
+backup_limit=${MINECRAFT_ARCHIVE_LIMIT}
+world=$1
+printf &amp;quot;Creating archive of ${RED}${world}${NC}\n&amp;quot;
+archive_name=&amp;quot;${world}-$(date +&amp;quot;%H-%M-%S-%m-%d-%Y&amp;quot;).zip&amp;quot;
+zip -r $archive_name $world
+
+printf &amp;quot;Checking if bucket has more than ${RED}${backup_limit}${NC} files already.\n&amp;quot;
+content=( $(aws s3 ls s3://$backup_bucket | awk &#39;{print $4}&#39;) )
+
+if [[ ${#content[@]} -eq $backup_limit || ${#content[@]} -gt $backup_limit  ]]; then
+    echo &amp;quot;There are too many archives. Deleting oldest one.&amp;quot;
+    # We can assume here that the list is in cronological order
+	printf &amp;quot;${RED}s3://${backup_bucket}/${content[0]}\n&amp;quot;
+    aws s3 rm s3://$backup_bucket/${content[0]}
+fi
+
+printf &amp;quot;Uploading ${RED}${archive_name}${NC} to s3 archive bucket.\n&amp;quot;
+state=$(aws s3 cp $archive_name s3://$backup_bucket)
+
+if [[ &amp;quot;$state&amp;quot; =~ &amp;quot;upload:&amp;quot; ]]; then
+    printf &amp;quot;File upload ${LIGHT_GREEN}successful${NC}.\n&amp;quot;
+else
+    printf &amp;quot;${RED}Error${NC} occured while uploading archive. Please investigate.\n&amp;quot;
+fi
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It uses environment properties to define where to upload your world and how many versions to keep.&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;m calling this from a cron job. And it&amp;rsquo;s sitting next to where the Minecraft world is.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s it folks.&lt;/p&gt;
+
+&lt;p&gt;Happy backing up.&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Minecraft Server with Docker on OSX &#43; Mods</title>
