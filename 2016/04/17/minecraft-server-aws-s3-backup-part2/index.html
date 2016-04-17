@@ -20,7 +20,7 @@
 <meta property="og:description" content="" />
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="en_US" />
-<meta property="og:url" content="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup" />
+<meta property="og:url" content="https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2" />
 
 
   
@@ -115,14 +115,14 @@
 	    
   		<section class="post">
             <h1 class="post-title">
-              <a href="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup">Minecraft world automatic backup to AWS S3 bucket</a>
+              <a href="https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2">Minecraft world automatic backup to AWS S3 bucket</a>
             </h1>
             <h3 class="post-subtitle">
             	
             </h3>
             
             	<span class="post-date">
-                	<span class="post-date-day"><sup>16</sup></span><span class="post-date-separator">/</span><span class="post-date-month">Apr</span> <span class="post-date-year">2016</span>
+                	<span class="post-date-day"><sup>17</sup></span><span class="post-date-separator">/</span><span class="post-date-month">Apr</span> <span class="post-date-year">2016</span>
             	</span>
             	
             
@@ -153,15 +153,11 @@
 
 			
 
-            <p>Hi Folks.</p>
+            <p>Hi folks.</p>
 
-<p>Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&rsquo;m backing up the world once in a while.</p>
+<p>Got an update for the backup script. This time, you&rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.</p>
 
-<p>For that, I&rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.</p>
-
-<p>The script is really straightforward. I&rsquo;m doing manual versioning, although S3 does provide one out of the box. However, amazon&rsquo;s S3 versioning doesn&rsquo;t allow limiting the number of versions being kept. And since I&rsquo;m doing that anyways, might as well take care of the rest.</p>
-
-<p>Without further ado, here is the script:</p>
+<p>Here is the script again, now modified and a bit cleaned up.</p>
 
 <pre><code class="language-bash">#!/bin/bash
 
@@ -175,51 +171,136 @@ if [[ -t 1 ]]; then
 fi
 
 if [[ -z ${MINECRAFT_BUCKET} ]]; then
-	printf &quot;Please set the env variable ${RED}MINECRAFT_BUCKET${NC} to the s3 archive bucket name.\n&quot;
-	exit 0
+    printf &quot;Please set the env variable %bMINECRAFT_BUCKET%b to the s3 archive bucket name.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+    exit 1
 fi
 
 if [[ -z ${MINECRAFT_ARCHIVE_LIMIT} ]]; then
-	printf &quot;Please set the env variable ${RED}MINECRAFT_ARCHIVE_LIMIT${NC} to limit the number of archives to keep.\n&quot;
-	exit 0
+    printf &quot;Please set the env variable %bMINECRAFT_ARCHIVE_LIMIT%b to limit the number of archives to keep.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+    exit 1
 fi
 
+if [[ -z ${MINECRAFT_WORLD} ]]; then
+    printf &quot;Please set the env variable %bMINECRAFT_WORLD%b to specify what world to back-up.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+    exit 1
+fi
+
+backup_world=${MINECRAFT_WORLD}
 backup_bucket=${MINECRAFT_BUCKET}
 backup_limit=${MINECRAFT_ARCHIVE_LIMIT}
-world=$1
-printf &quot;Creating archive of ${RED}${world}${NC}\n&quot;
-archive_name=&quot;${world}-$(date +&quot;%H-%M-%S-%m-%d-%Y&quot;).zip&quot;
-zip -r $archive_name $world
+archive_name=&quot;${backup_world}-$(date +&quot;%H-%M-%S-%m-%d-%Y&quot;).zip&quot;
 
-printf &quot;Checking if bucket has more than ${RED}${backup_limit}${NC} files already.\n&quot;
-content=( $(aws s3 ls s3://$backup_bucket | awk '{print $4}') )
+function create_archive {
+    printf &quot;Creating archive of %b${backup_world}%b\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+    zip -r $archive_name $backup_world
+}
 
-if [[ ${#content[@]} -eq $backup_limit || ${#content[@]} -gt $backup_limit  ]]; then
-    echo &quot;There are too many archives. Deleting oldest one.&quot;
-    # We can assume here that the list is in cronological order
-	printf &quot;${RED}s3://${backup_bucket}/${content[0]}\n&quot;
-    aws s3 rm s3://$backup_bucket/${content[0]}
-fi
+function amazon_bak {
 
-printf &quot;Uploading ${RED}${archive_name}${NC} to s3 archive bucket.\n&quot;
-state=$(aws s3 cp $archive_name s3://$backup_bucket)
+    create_archive
 
-if [[ &quot;$state&quot; =~ &quot;upload:&quot; ]]; then
-    printf &quot;File upload ${LIGHT_GREEN}successful${NC}.\n&quot;
-else
-    printf &quot;${RED}Error${NC} occured while uploading archive. Please investigate.\n&quot;
-fi
+    printf &quot;Checking if bucket has more than %b${backup_limit}%b files already.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+    content=( $(aws s3 ls s3://$backup_bucket | awk '{print $4}') )
+
+    if [[ ${#content[@]} -eq $backup_limit || ${#content[@]} -gt $backup_limit  ]]; then
+        echo &quot;There are too many archives. Deleting oldest one.&quot;
+        # We can assume here that the list is in cronological order
+    	printf &quot;%bs3://${backup_bucket}/${content[0]}\n%b&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+        aws s3 rm s3://$backup_bucket/${content[0]}
+    fi
+
+    printf &quot;Uploading %b${archive_name}%b to s3 archive bucket.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+    state=$(aws s3 cp $archive_name s3://$backup_bucket)
+
+    if [[ &quot;$state&quot; =~ &quot;upload:&quot; ]]; then
+        printf &quot;File upload %bsuccessful%b.\n&quot; &quot;${LIGHT_GREEN}&quot; &quot;${NC}&quot;
+    else
+        printf &quot;%bError%b occured while uploading archive. Please investigate.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+    fi
+}
+
+function custom {
+    if [[ -e custom.sh ]]; then
+        source ./custom.sh
+    else
+        echo &quot;custom.sh script not found. Please implement the apropriate functions.&quot;
+        exit 1
+    fi
+
+    echo &quot;Checking for the number of files. Limit is: $backup_limit.&quot;
+    files=( $(list) )
+    if [[ ${#files[@]} -eq $backup_limit || ${#files[@]} -gt $backup_limit ]]; then
+        echo &quot;Deleting extra file.&quot;
+        delete ${files[0]}
+        if [[ $? != 0 ]]; then
+            printf &quot;%bFailed%b to delete file. Please investigate failure.&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+            exit $?
+        fi
+    fi
+
+    echo &quot;Zipping world.&quot;
+    create_archive
+
+    echo &quot;Uploading world.&quot;
+    upload $archive_name
+
+    if [[ $? != 0 ]]; then
+        printf &quot;%bFailed%b to upload archive. Please investigate the error.&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+        exit $?
+    fi
+
+    printf &quot;Upload %bsuccessful%b&quot; &quot;${LIGHT_GREEN}&quot; &quot;${NC}&quot;
+}
+
+function help {
+    echo &quot;Usage:&quot;
+    echo &quot;./backup_world [METHOD]&quot;
+    echo &quot;Exp.: ./backup_world aws|./backup_world custom|./backup_world dropbox&quot;
+    echo &quot;Each method has it's own environment properties that it requires.&quot;
+    echo &quot;Global: MINECRAFT_WORLD|MINECRAFT_BUCKET|MINECRAFT_ARCHIVE_LIMIT&quot;
+    echo &quot;Custom: Have a file, called 'custom.sh' which is sourced.&quot;
+    echo &quot;Implement these three functions: upload | list | delete.&quot;
+    echo &quot;upload -&gt; should return exit code 0 on success, should return exit code 1 on failure.&quot;
+    echo &quot;list -&gt; should return a list of cronologically ordered items.&quot;
+    echo &quot;delete -&gt; should return exit code 0 on success, should return exit code 1 on failure.&quot;
+}
+
+case $1 in
+    aws )
+        amazon_bak
+        ;;
+    custom )
+        custom
+        ;;
+    * )
+        help
+        ;;
+esac
 </code></pre>
 
-<p>It uses environment properties to define where to upload the given world and how many versions to keep.</p>
+<p>And here is the sample implementation for the custom upload functionality.</p>
 
-<p>I&rsquo;m calling this from a cron job, and it&rsquo;s sitting next to where the Minecraft world is.</p>
+<pre><code class="language-bash">#!/bin/bash
 
-<p>That&rsquo;s it folks.</p>
+function upload {
+    echo &quot;uploading&quot;
+    local result=0
+    return $result
+}
 
-<p>I&rsquo;ll start expanding on this idea and implement various services, like your own server address, or dropbox, or what have you.</p>
+function delete {
+    echo &quot;deleting $1&quot;
+    local result=0
+    return $result
+}
 
-<p>Happy backing up.</p>
+function list {
+    local arr=(&quot;file1&quot; &quot;file2&quot; &quot;file3&quot;)
+    echo &quot;${arr[@]}&quot;
+}
+</code></pre>
+
+<p>Thanks for reading!</p>
 
 <p>Gergely.</p>
 
@@ -232,16 +313,11 @@ fi
 				<div class="paging">
 					<span class="paging-label">More Reading</span>
 					
-					<div class="paging-newer">
-						<span class="dark-red">Newer</span><span class="decorative-marker">//</span>
-						<a class="paging-link" href="https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2">Minecraft world automatic backup to AWS S3 bucket</a>
-		            </div>
-		            
 
 					
 					<div class="paging-older">
 						<span class="dark-red">Older</span><span class="decorative-marker">//</span>
-			            <a class="paging-link" href="https://skarlso.github.io/2016/03/29/minecraft-server-with-docker-and-osx">Minecraft Server with Docker on OSX &#43; Mods</a>
+			            <a class="paging-link" href="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup">Minecraft world automatic backup to AWS S3 bucket</a>
 		            </div>
 		            
 	            </div>
@@ -250,9 +326,9 @@ fi
           	<div id="disqus_thread"></div>
 <script type="text/javascript">
     var disqus_shortname = 'hannibalDisqus';
-    var disqus_identifier = 'https:\/\/skarlso.github.io\/2016\/04\/16\/minecraft-server-aws-s3-backup';
+    var disqus_identifier = 'https:\/\/skarlso.github.io\/2016\/04\/17\/minecraft-server-aws-s3-backup-part2';
     var disqus_title = 'Minecraft world automatic backup to AWS S3 bucket';
-    var disqus_url = 'https:\/\/skarlso.github.io\/2016\/04\/16\/minecraft-server-aws-s3-backup';
+    var disqus_url = 'https:\/\/skarlso.github.io\/2016\/04\/17\/minecraft-server-aws-s3-backup-part2';
 
     (function() {
         var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

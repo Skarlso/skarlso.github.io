@@ -5,8 +5,167 @@
     <link>https://skarlso.github.io/posts/</link>
     <description>Recent content in Posts on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Sat, 16 Apr 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 17 Apr 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Minecraft world automatic backup to AWS S3 bucket</title>
+      <link>https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2</link>
+      <pubDate>Sun, 17 Apr 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2</guid>
+      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
+
+&lt;p&gt;Got an update for the backup script. This time, you&amp;rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.&lt;/p&gt;
+
+&lt;p&gt;Here is the script again, now modified and a bit cleaned up.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#!/bin/bash
+
+if [[ -t 1 ]]; then
+    colors=$(tput colors)
+    if [[ $colors ]]; then
+        RED=&#39;\033[0;31m&#39;
+        LIGHT_GREEN=&#39;\033[1;32m&#39;
+        NC=&#39;\033[0m&#39;
+    fi
+fi
+
+if [[ -z ${MINECRAFT_BUCKET} ]]; then
+    printf &amp;quot;Please set the env variable %bMINECRAFT_BUCKET%b to the s3 archive bucket name.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
+    exit 1
+fi
+
+if [[ -z ${MINECRAFT_ARCHIVE_LIMIT} ]]; then
+    printf &amp;quot;Please set the env variable %bMINECRAFT_ARCHIVE_LIMIT%b to limit the number of archives to keep.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
+    exit 1
+fi
+
+if [[ -z ${MINECRAFT_WORLD} ]]; then
+    printf &amp;quot;Please set the env variable %bMINECRAFT_WORLD%b to specify what world to back-up.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
+    exit 1
+fi
+
+backup_world=${MINECRAFT_WORLD}
+backup_bucket=${MINECRAFT_BUCKET}
+backup_limit=${MINECRAFT_ARCHIVE_LIMIT}
+archive_name=&amp;quot;${backup_world}-$(date +&amp;quot;%H-%M-%S-%m-%d-%Y&amp;quot;).zip&amp;quot;
+
+function create_archive {
+    printf &amp;quot;Creating archive of %b${backup_world}%b\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
+    zip -r $archive_name $backup_world
+}
+
+function amazon_bak {
+
+    create_archive
+
+    printf &amp;quot;Checking if bucket has more than %b${backup_limit}%b files already.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
+    content=( $(aws s3 ls s3://$backup_bucket | awk &#39;{print $4}&#39;) )
+
+    if [[ ${#content[@]} -eq $backup_limit || ${#content[@]} -gt $backup_limit  ]]; then
+        echo &amp;quot;There are too many archives. Deleting oldest one.&amp;quot;
+        # We can assume here that the list is in cronological order
+    	printf &amp;quot;%bs3://${backup_bucket}/${content[0]}\n%b&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
+        aws s3 rm s3://$backup_bucket/${content[0]}
+    fi
+
+    printf &amp;quot;Uploading %b${archive_name}%b to s3 archive bucket.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
+    state=$(aws s3 cp $archive_name s3://$backup_bucket)
+
+    if [[ &amp;quot;$state&amp;quot; =~ &amp;quot;upload:&amp;quot; ]]; then
+        printf &amp;quot;File upload %bsuccessful%b.\n&amp;quot; &amp;quot;${LIGHT_GREEN}&amp;quot; &amp;quot;${NC}&amp;quot;
+    else
+        printf &amp;quot;%bError%b occured while uploading archive. Please investigate.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
+    fi
+}
+
+function custom {
+    if [[ -e custom.sh ]]; then
+        source ./custom.sh
+    else
+        echo &amp;quot;custom.sh script not found. Please implement the apropriate functions.&amp;quot;
+        exit 1
+    fi
+
+    echo &amp;quot;Checking for the number of files. Limit is: $backup_limit.&amp;quot;
+    files=( $(list) )
+    if [[ ${#files[@]} -eq $backup_limit || ${#files[@]} -gt $backup_limit ]]; then
+        echo &amp;quot;Deleting extra file.&amp;quot;
+        delete ${files[0]}
+        if [[ $? != 0 ]]; then
+            printf &amp;quot;%bFailed%b to delete file. Please investigate failure.&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
+            exit $?
+        fi
+    fi
+
+    echo &amp;quot;Zipping world.&amp;quot;
+    create_archive
+
+    echo &amp;quot;Uploading world.&amp;quot;
+    upload $archive_name
+
+    if [[ $? != 0 ]]; then
+        printf &amp;quot;%bFailed%b to upload archive. Please investigate the error.&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
+        exit $?
+    fi
+
+    printf &amp;quot;Upload %bsuccessful%b&amp;quot; &amp;quot;${LIGHT_GREEN}&amp;quot; &amp;quot;${NC}&amp;quot;
+}
+
+function help {
+    echo &amp;quot;Usage:&amp;quot;
+    echo &amp;quot;./backup_world [METHOD]&amp;quot;
+    echo &amp;quot;Exp.: ./backup_world aws|./backup_world custom|./backup_world dropbox&amp;quot;
+    echo &amp;quot;Each method has it&#39;s own environment properties that it requires.&amp;quot;
+    echo &amp;quot;Global: MINECRAFT_WORLD|MINECRAFT_BUCKET|MINECRAFT_ARCHIVE_LIMIT&amp;quot;
+    echo &amp;quot;Custom: Have a file, called &#39;custom.sh&#39; which is sourced.&amp;quot;
+    echo &amp;quot;Implement these three functions: upload | list | delete.&amp;quot;
+    echo &amp;quot;upload -&amp;gt; should return exit code 0 on success, should return exit code 1 on failure.&amp;quot;
+    echo &amp;quot;list -&amp;gt; should return a list of cronologically ordered items.&amp;quot;
+    echo &amp;quot;delete -&amp;gt; should return exit code 0 on success, should return exit code 1 on failure.&amp;quot;
+}
+
+case $1 in
+    aws )
+        amazon_bak
+        ;;
+    custom )
+        custom
+        ;;
+    * )
+        help
+        ;;
+esac
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And here is the sample implementation for the custom upload functionality.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#!/bin/bash
+
+function upload {
+    echo &amp;quot;uploading&amp;quot;
+    local result=0
+    return $result
+}
+
+function delete {
+    echo &amp;quot;deleting $1&amp;quot;
+    local result=0
+    return $result
+}
+
+function list {
+    local arr=(&amp;quot;file1&amp;quot; &amp;quot;file2&amp;quot; &amp;quot;file3&amp;quot;)
+    echo &amp;quot;${arr[@]}&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Thanks for reading!&lt;/p&gt;
+
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Minecraft world automatic backup to AWS S3 bucket</title>
@@ -1341,46 +1500,6 @@ Gergely.&lt;/p&gt;
 &lt;p&gt;Any questions or request, feel free to submit an Issue!&lt;/p&gt;
 
 &lt;p&gt;Thanks for reading!
-Gergely.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Welcome To My New Blog</title>
-      <link>https://skarlso.github.io/2015/12/07/welcome-to-my-new-blog/</link>
-      <pubDate>Mon, 07 Dec 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/12/07/welcome-to-my-new-blog/</guid>
-      <description>
-
-&lt;h1 id=&#34;hello-folks:a50c05b7309340eeb1873281740215f2&#34;&gt;Hello Folks&lt;/h1&gt;
-
-&lt;p&gt;Welcome to my new blog. I decided to move away for a number of reasons, but setting up a static page blog site is very cool if you don&amp;rsquo;t directly use a database. Since posts are just posts and I have a different way of hosting images, this really was just a matter of time.&lt;/p&gt;
-
-&lt;p&gt;And &lt;a href=&#34;https://gohugo.io/&#34;&gt;Hugo&lt;/a&gt; / Github pages provided the tools which made this move possible.&lt;/p&gt;
-
-&lt;p&gt;Also, I love writing this post in Markdown. I always liked the formatting rules of it, so this is quiet the blast.&lt;/p&gt;
-
-&lt;p&gt;Code will look a little more readble now as well:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func main() {
-    handlerChain := alice.New(Logging, PanicHandler)
-    router := mux.NewRouter().StrictSlash(true)
-    router.Handle(&amp;quot;/create&amp;quot;, handlerChain.ThenFunc(createIssue)).Methods(&amp;quot;POST&amp;quot;)
-    router.Handle(&amp;quot;/&amp;quot;, handlerChain.ThenFunc(renderMainPage)).Methods(&amp;quot;GET&amp;quot;)
-    router.PathPrefix(&amp;quot;/css/&amp;quot;).Handler(http.StripPrefix(&amp;quot;/css/&amp;quot;, http.FileServer(http.Dir(&amp;quot;./css&amp;quot;))))
-    log.Printf(&amp;quot;Starting server to listen on port: 8989...&amp;quot;)
-    http.ListenAndServe(&amp;quot;:8989&amp;quot;, router)
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Much easier on the eyes. And linking is a breeze as well.&lt;/p&gt;
-
-&lt;h2 id=&#34;things-to-notice:a50c05b7309340eeb1873281740215f2&#34;&gt;Things to notice&lt;/h2&gt;
-
-&lt;p&gt;There is now a content on the side which will list the sections in a post. And there is an estimated read timer in the post&amp;rsquo;s title. It takes average reading speed and wordcount into account.&lt;/p&gt;
-
-&lt;p&gt;Anyhow, thanks for joining me in the new realm, and happy reading!
 Gergely.&lt;/p&gt;
 </description>
     </item>
