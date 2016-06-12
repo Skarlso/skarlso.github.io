@@ -44,7 +44,7 @@
 
 &lt;p&gt;So, first, let&amp;rsquo;s create a little setup which configures our credentials from the file. This is pretty straightforward.&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;// Credentials which stores google ids.
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// Credentials which stores google ids.
 type Credentials struct {
     Cid string `json:&amp;quot;cid&amp;quot;`
     Csecret string `json:&amp;quot;csecret&amp;quot;`
@@ -67,7 +67,7 @@ func init() {
 
 &lt;p&gt;First, construct the OAuth config.&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;conf := &amp;amp;oauth2.Config{
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;conf := &amp;amp;oauth2.Config{
   ClientID:     c.Cid,
   ClientSecret: c.Csecret,
   RedirectURL:  &amp;quot;http://localhost:9090/auth&amp;quot;, // If the loging is successful, this will be the redirected URL location to with a query param called &#39;code&#39;
@@ -80,14 +80,14 @@ func init() {
 
 &lt;p&gt;This will give you a conf struct which you can then use to Authenticate your user. Once we have this, all we need to do is call &lt;code&gt;AuthCodeURL&lt;/code&gt; on this config. This will give us a URL we need to call which redirects to a Google Sign-In form. Once the user fills that out, it will redirect to the given URL with a callback and provide a TOKEN in form a query parameter called &lt;code&gt;code&lt;/code&gt;. This will look something like this &lt;code&gt;http://127.0.0.1:9090/auth?code=4FLKFskdjflf....&lt;/code&gt;. To get the URL let&amp;rsquo;s extract this into a small function:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;func getLoginURL() string {
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func getLoginURL() string {
     return conf.AuthCodeURL(&amp;quot;&amp;quot;)
 }
 &lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;We can put this URL as a link to a Button forexample.&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;func loginHandler(c *gin.Context) {
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func loginHandler(c *gin.Context) {
     c.Writer.Write([]byte(&amp;quot;&amp;lt;html&amp;gt;&amp;lt;title&amp;gt;Golang Google&amp;lt;/title&amp;gt; &amp;lt;body&amp;gt; &amp;lt;a href=&#39;&amp;quot; + getLoginURL() + &amp;quot;&#39;&amp;gt;&amp;lt;button&amp;gt;Login with Google!&amp;lt;/button&amp;gt; &amp;lt;/a&amp;gt; &amp;lt;/body&amp;gt;&amp;lt;/html&amp;gt;&amp;quot;))
 }
 &lt;/code&gt;&lt;/pre&gt;
@@ -102,7 +102,7 @@ func init() {
 
 &lt;p&gt;To obtain the client, you need to do this:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;  // Handle the exchange code to initiate a transport.
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;  // Handle the exchange code to initiate a transport.
 tok, err := conf.Exchange(oauth2.NoContext, c.Query(&amp;quot;code&amp;quot;))
 if err != nil {
 	c.AbortWithError(http.StatusBadRequest, err)
@@ -117,7 +117,7 @@ client := conf.Client(oauth2.NoContext, tok)
 
 &lt;p&gt;It&amp;rsquo;s their API url that you need to call with the authenticated client. The code for that:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;resp, err := client.Get(&amp;quot;https://www.googleapis.com/oauth2/v3/userinfo&amp;quot;)
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;resp, err := client.Get(&amp;quot;https://www.googleapis.com/oauth2/v3/userinfo&amp;quot;)
   if err != nil {
   c.AbortWithError(http.StatusBadRequest, err)
 }
@@ -147,7 +147,7 @@ log.Println(&amp;quot;Resp body: &amp;quot;, string(data))
 
 &lt;p&gt;How does this all look together? Something like this. Though, I&amp;rsquo;ve built no front-end.&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;package main
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
 
 import (
     &amp;quot;fmt&amp;quot;
@@ -257,7 +257,7 @@ func main() {
 
 &lt;p&gt;After you have the email, you should be able to go on and store it and retrieve it later if you want. With Gin, you can even do authenticated end-points.&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;authorized := r.Group(&amp;quot;/&amp;quot;)
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;authorized := r.Group(&amp;quot;/&amp;quot;)
 // per group middleware! in this case we use the custom created
 // AuthRequired() middleware just in the &amp;quot;authorized&amp;quot; group.
 authorized.Use(AuthRequired)
