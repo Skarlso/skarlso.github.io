@@ -5,8 +5,285 @@
     <link>https://skarlso.github.io/</link>
     <description>Recent content on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Sun, 17 Apr 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 12 Jun 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>How to do Google sign-in with Go</title>
+      <link>https://skarlso.github.io/2016/06/12/google-signin-with-go</link>
+      <pubDate>Sun, 12 Jun 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/06/12/google-signin-with-go</guid>
+      <description>
+
+&lt;p&gt;Hi folks.&lt;/p&gt;
+
+&lt;p&gt;Today, I would like to write up a step - by - step guid with a sample web app on how to do Google assisted sign-in and user handling.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s get started.&lt;/p&gt;
+
+&lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
+
+&lt;h2 id=&#34;google-oauth-token&#34;&gt;Google OAuth token&lt;/h2&gt;
+
+&lt;p&gt;First thing first, what you need is, to register your application with Google, so you&amp;rsquo;ll get a Token that you can use for authentication purposes.&lt;/p&gt;
+
+&lt;p&gt;You can do there here -&amp;gt; &lt;a href=&#34;https://console.developers.google.com/iam-admin/projects&#34;&gt;Google Developer Console&lt;/a&gt;. You&amp;rsquo;ll have to create a new project. Once it&amp;rsquo;s done, click on &lt;code&gt;Credentials&lt;/code&gt; and create an OAuth token. You should see something like this -&amp;gt; &amp;ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&amp;rdquo;. Go through the questions, like, what type your application is, and then you&amp;rsquo;re done. I&amp;rsquo;m selecting Web App for this tutorial. In the next, when you have created your app, in the redirect url write the url you wish to use when authenticating. Do NOT use &lt;code&gt;localhost&lt;/code&gt;. If you are running on your own, use &lt;a href=&#34;http://127.0.0.1:port/whatever&#34;&gt;http://127.0.0.1:port/whatever&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;This will get you a &lt;code&gt;client ID&lt;/code&gt; and a &lt;code&gt;client secret&lt;/code&gt;. I&amp;rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth, but that&amp;rsquo;s not the point of this tutorial right now.&lt;/p&gt;
+
+&lt;p&gt;Now that&amp;rsquo;s done, your application can now be identified, so login can happen using one&amp;rsquo;s Google creds.&lt;/p&gt;
+
+&lt;h1 id=&#34;the-application&#34;&gt;The Application&lt;/h1&gt;
+
+&lt;h2 id=&#34;library&#34;&gt;Library&lt;/h2&gt;
+
+&lt;p&gt;Google has a nice little library to use with OAuth 2.0 which I shall be using as well. The library is available here =&amp;gt; &lt;a href=&#34;https://github.com/golang/oauth2&#34;&gt;Google OAth 2.0&lt;/a&gt;. It&amp;rsquo;s a bit cryptic at first to setup, but not to worry. After a little bit of fiddling you&amp;rsquo;ll understand fast what it does, and how you can use it.&lt;/p&gt;
+
+&lt;h2 id=&#34;setup-creds&#34;&gt;Setup - Creds&lt;/h2&gt;
+
+&lt;p&gt;So, first, let&amp;rsquo;s create a little setup which configures our credentials from the file. This is pretty straightforward.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;// Credentials which stores google ids.
+type Credentials struct {
+    Cid string `json:&amp;quot;cid&amp;quot;`
+    Csecret string `json:&amp;quot;csecret&amp;quot;`
+}
+
+func init() {
+    var c Credentials
+    file, err := ioutil.ReadFile(&amp;quot;./creds.json&amp;quot;)
+    if err != nil {
+        fmt.Printf(&amp;quot;File error: %v\n&amp;quot;, err)
+        os.Exit(1)
+    }
+    json.Unmarshal(file, &amp;amp;c)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Once we have the creds loaded, we can now go on to construct our OAuth client.&lt;/p&gt;
+
+&lt;h2 id=&#34;setup-oauth-client&#34;&gt;Setup - OAuth client&lt;/h2&gt;
+
+&lt;p&gt;First, construct the OAuth config.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;conf := &amp;amp;oauth2.Config{
+  ClientID:     c.Cid,
+  ClientSecret: c.Csecret,
+  RedirectURL:  &amp;quot;http://localhost:9090/auth&amp;quot;, // If the loging is successful, this will be the redirected URL location to with a query param called &#39;code&#39;
+  Scopes: []string{
+    &amp;quot;https://www.googleapis.com/auth/userinfo.email&amp;quot;, // You have to select your own scope from here -&amp;gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+  },
+  Endpoint: google.Endpoint,
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This will give you a conf struct which you can then use to Authenticate your user. Once we have this, all we need to do is call &lt;code&gt;AuthCodeURL&lt;/code&gt; on this config. This will give us a URL we need to call which redirects to a Google Sign-In form. Once the user fills that out, it will redirect to the given URL with a callback and provide a TOKEN in form a query parameter called &lt;code&gt;code&lt;/code&gt;. This will look something like this &lt;code&gt;http://127.0.0.1:9090/auth?code=4FLKFskdjflf....&lt;/code&gt;. To get the URL let&amp;rsquo;s extract this into a small function:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;func getLoginURL() string {
+    return conf.AuthCodeURL(&amp;quot;&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We can put this URL as a link to a Button forexample.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;func loginHandler(c *gin.Context) {
+    c.Writer.Write([]byte(&amp;quot;&amp;lt;html&amp;gt;&amp;lt;title&amp;gt;Golang Google&amp;lt;/title&amp;gt; &amp;lt;body&amp;gt; &amp;lt;a href=&#39;&amp;quot; + getLoginURL() + &amp;quot;&#39;&amp;gt;&amp;lt;button&amp;gt;Login with Google!&amp;lt;/button&amp;gt; &amp;lt;/a&amp;gt; &amp;lt;/body&amp;gt;&amp;lt;/html&amp;gt;&amp;quot;))
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Once the user clicks this, (s)he is redirected to Google Sign-In Form which, when filled out, will yield the above URL with a TOKEN in the code section.&lt;/p&gt;
+
+&lt;h1 id=&#34;registration&#34;&gt;Registration&lt;/h1&gt;
+
+&lt;p&gt;So what now? How do we actually get to the registration / login part of this? How does this all fit together? With Google, after you got the token, you can construct an authenticated Google HTTP Client.&lt;/p&gt;
+
+&lt;h2 id=&#34;getting-the-client&#34;&gt;Getting the Client&lt;/h2&gt;
+
+&lt;p&gt;To obtain the client, you need to do this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;  // Handle the exchange code to initiate a transport.
+tok, err := conf.Exchange(oauth2.NoContext, c.Query(&amp;quot;code&amp;quot;))
+if err != nil {
+	c.AbortWithError(http.StatusBadRequest, err)
+}
+
+client := conf.Client(oauth2.NoContext, tok)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That client will now be a Google Authenticated HTTP client. To get something that you can actually use from this do the following&amp;hellip;&lt;/p&gt;
+
+&lt;h2 id=&#34;obtaining-information-from-the-user&#34;&gt;Obtaining information from the user&lt;/h2&gt;
+
+&lt;p&gt;It&amp;rsquo;s their API url that you need to call with the authenticated client. The code for that:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;resp, err := client.Get(&amp;quot;https://www.googleapis.com/oauth2/v3/userinfo&amp;quot;)
+  if err != nil {
+  c.AbortWithError(http.StatusBadRequest, err)
+}
+defer resp.Body.Close()
+data, _ := ioutil.ReadAll(resp.Body)
+log.Println(&amp;quot;Resp body: &amp;quot;, string(data))
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And this will yield a body like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{
+ &amp;quot;sub&amp;quot;: &amp;quot;1111111111111111111111&amp;quot;,
+ &amp;quot;name&amp;quot;: &amp;quot;Your Name&amp;quot;,
+ &amp;quot;given_name&amp;quot;: &amp;quot;Your&amp;quot;,
+ &amp;quot;family_name&amp;quot;: &amp;quot;Name&amp;quot;,
+ &amp;quot;profile&amp;quot;: &amp;quot;https://plus.google.com/1111111111111111111111&amp;quot;,
+ &amp;quot;picture&amp;quot;: &amp;quot;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&amp;quot;,
+ &amp;quot;email&amp;quot;: &amp;quot;your@gmail.com&amp;quot;,
+ &amp;quot;email_verified&amp;quot;: true,
+ &amp;quot;gender&amp;quot;: &amp;quot;male&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Tadaam. Parse this, and you&amp;rsquo;ve got an email which you can store. Check this against a db record if you already have that email and you have your registration / login.&lt;/p&gt;
+
+&lt;h1 id=&#34;putting-it-all-together&#34;&gt;Putting it all together&lt;/h1&gt;
+
+&lt;p&gt;How does this all look together? Something like this. Though, I&amp;rsquo;ve built no front-end.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;package main
+
+import (
+    &amp;quot;fmt&amp;quot;
+    &amp;quot;encoding/json&amp;quot;
+    &amp;quot;io/ioutil&amp;quot;
+    &amp;quot;log&amp;quot;
+    &amp;quot;os&amp;quot;
+    &amp;quot;net/http&amp;quot;
+
+    &amp;quot;github.com/gin-gonic/gin&amp;quot;
+    &amp;quot;golang.org/x/oauth2&amp;quot;
+    &amp;quot;golang.org/x/oauth2/google&amp;quot;
+)
+
+// Credentials which stores google ids.
+type Credentials struct {
+    Cid     string `json:&amp;quot;cid&amp;quot;`
+    Csecret string `json:&amp;quot;csecret&amp;quot;`
+}
+
+// User is a retrieved and authentiacted user.
+type User struct {
+    Sub string `json:&amp;quot;sub&amp;quot;`
+    Name string `json:&amp;quot;name&amp;quot;`
+    GivenName string `json:&amp;quot;given_name&amp;quot;`
+    FamilyName string `json:&amp;quot;family_name&amp;quot;`
+    Profile string `json:&amp;quot;profile&amp;quot;`
+    Picture string `json:&amp;quot;picture&amp;quot;`
+    Email string `json:&amp;quot;email&amp;quot;`
+    EmailVerified string `json:&amp;quot;email_verified&amp;quot;`
+    Gender string `json:&amp;quot;gender&amp;quot;`
+}
+
+var cred Credentials
+var conf *oauth2.Config
+
+func indexHandler(c *gin.Context) {
+    c.HTML(http.StatusOK, &amp;quot;index.tmpl&amp;quot;, gin.H{})
+}
+
+func battleHandler(c *gin.Context) {
+    c.HTML(http.StatusOK, &amp;quot;battle.tmpl&amp;quot;, gin.H{
+        &amp;quot;user&amp;quot;: &amp;quot;Anyad&amp;quot;,
+    })
+}
+
+func init() {
+    file, err := ioutil.ReadFile(&amp;quot;./creds.json&amp;quot;)
+    if err != nil {
+        log.Printf(&amp;quot;File error: %v\n&amp;quot;, err)
+        os.Exit(1)
+    }
+    json.Unmarshal(file, &amp;amp;cred)
+
+    conf = &amp;amp;oauth2.Config{
+        ClientID:     cred.Cid,
+        ClientSecret: cred.Csecret,
+        RedirectURL:  &amp;quot;http://127.0.0.1:9090/auth&amp;quot;,
+        Scopes: []string{
+        &amp;quot;https://www.googleapis.com/auth/userinfo.email&amp;quot;, // You have to select your own scope from here -&amp;gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+        },
+        Endpoint: google.Endpoint,
+    }
+}
+
+func getLoginURL() string {
+    return conf.AuthCodeURL(&amp;quot;&amp;quot;)
+}
+
+func authHandler(c *gin.Context) {
+    // Handle the exchange code to initiate a transport.
+	tok, err := conf.Exchange(oauth2.NoContext, c.Query(&amp;quot;code&amp;quot;))
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+	}
+
+	client := conf.Client(oauth2.NoContext, tok)
+	email, err := client.Get(&amp;quot;https://www.googleapis.com/oauth2/v3/userinfo&amp;quot;)
+    if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+	}
+    defer email.Body.Close()
+    data, _ := ioutil.ReadAll(email.Body)
+    log.Println(&amp;quot;Email body: &amp;quot;, string(data))
+    c.Status(http.StatusOK)
+}
+
+func loginHandler(c *gin.Context) {
+    c.Writer.Write([]byte(&amp;quot;&amp;lt;html&amp;gt;&amp;lt;title&amp;gt;Golang Google&amp;lt;/title&amp;gt; &amp;lt;body&amp;gt; &amp;lt;a href=&#39;&amp;quot; + getLoginURL() + &amp;quot;&#39;&amp;gt;&amp;lt;button&amp;gt;Login with Google!&amp;lt;/button&amp;gt; &amp;lt;/a&amp;gt; &amp;lt;/body&amp;gt;&amp;lt;/html&amp;gt;&amp;quot;))
+}
+
+func main() {
+    router := gin.Default()
+    router.Static(&amp;quot;/css&amp;quot;, &amp;quot;./static/css&amp;quot;)
+    router.Static(&amp;quot;/img&amp;quot;, &amp;quot;./static/img&amp;quot;)
+    router.LoadHTMLGlob(&amp;quot;templates/*&amp;quot;)
+
+    router.GET(&amp;quot;/&amp;quot;, indexHandler)
+    router.GET(&amp;quot;/login&amp;quot;, loginHandler)
+    router.GET(&amp;quot;/auth&amp;quot;, authHandler)
+
+    router.Run(&amp;quot;127.0.0.1:9090&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is it folks. Notice that there are some more stuff in there. Disregard them, or delete them. Like the index handler and the templates. They are just something that I used.&lt;/p&gt;
+
+&lt;p&gt;After you have the email, you should be able to go on and store it and retrieve it later if you want. With Gin, you can even do authenticated end-points.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Go&#34;&gt;authorized := r.Group(&amp;quot;/&amp;quot;)
+// per group middleware! in this case we use the custom created
+// AuthRequired() middleware just in the &amp;quot;authorized&amp;quot; group.
+authorized.Use(AuthRequired)
+{
+    authorized.POST(&amp;quot;/login&amp;quot;, loginEndpoint)
+    authorized.POST(&amp;quot;/submit&amp;quot;, submitEndpoint)
+    authorized.POST(&amp;quot;/read&amp;quot;, readEndpoint)
+
+    // nested group
+    testing := authorized.Group(&amp;quot;testing&amp;quot;)
+    testing.GET(&amp;quot;/analytics&amp;quot;, analyticsEndpoint)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Once you have your Google Auth, you can access these URLS, or do a c.AbortWithError which will stop the chain and redirect the user to a Login page.&lt;/p&gt;
+
+&lt;p&gt;I hope this helped. Any comments, please feel free to drop a comment.&lt;/p&gt;
+
+&lt;h1 id=&#34;google-api-documentation&#34;&gt;Google API Documentation&lt;/h1&gt;
+
+&lt;p&gt;The documentation to this whole process and MUCH more information can be found here =&amp;gt; &lt;a href=&#34;https://developers.google.com/identity/protocols/OAuth2&#34;&gt;Google API Docs&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading,
+Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</title>
@@ -255,27 +532,27 @@ fi
 
 &lt;p&gt;Hi Folks.&lt;/p&gt;
 
-&lt;h1 id=&#34;intro:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Intro&lt;/h1&gt;
+&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
 
 &lt;p&gt;Today, I wanted to write about how to create a secure server in a container. Ideally, you don&amp;rsquo;t want to run your server on your own machine. Running it in a container gives you a much needed control and an extra layer of security.&lt;/p&gt;
 
-&lt;h1 id=&#34;docker-on-osx:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Docker On OSX&lt;/h1&gt;
+&lt;h1 id=&#34;docker-on-osx&#34;&gt;Docker On OSX&lt;/h1&gt;
 
 &lt;p&gt;While on a mac, you have a couple of options to run docker.&lt;/p&gt;
 
-&lt;h2 id=&#34;docker-machine:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Docker-Machine&lt;/h2&gt;
+&lt;h2 id=&#34;docker-machine&#34;&gt;Docker-Machine&lt;/h2&gt;
 
 &lt;p&gt;&lt;a href=&#34;https://docs.docker.com/machine/&#34;&gt;Docker-Machine&lt;/a&gt;&lt;/p&gt;
 
 &lt;p&gt;Docker machine is very simple. It just creates a Linux vm in the background on the given driver, for us it will be &lt;a href=&#34;https://www.virtualbox.org/&#34;&gt;VirtualBox&lt;/a&gt;. Network, Memory and port-forwarding can all be managed through the VM directly. Then running and starting it is trivial through &lt;code&gt;docker-machine start&lt;/code&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;boot2docker:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Boot2Docker&lt;/h2&gt;
+&lt;h2 id=&#34;boot2docker&#34;&gt;Boot2Docker&lt;/h2&gt;
 
 &lt;p&gt;&lt;a href=&#34;http://boot2docker.io/&#34;&gt;Boot2Docker&lt;/a&gt;&lt;/p&gt;
 
 &lt;p&gt;Runs a tiny linux in which you can use Docker freely. This adds the benefit of not having to mess around with VirtualBox.&lt;/p&gt;
 
-&lt;h2 id=&#34;dlite:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;DLite&lt;/h2&gt;
+&lt;h2 id=&#34;dlite&#34;&gt;DLite&lt;/h2&gt;
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/nlf/dlite&#34;&gt;DLite&lt;/a&gt;&lt;/p&gt;
 
@@ -283,7 +560,7 @@ fi
 
 &lt;p&gt;I recommend to use DLite, however, it&amp;rsquo;s not an official tool, so for the sake of this guide, I&amp;rsquo;ll be writing up a docker-machine oriented solution.&lt;/p&gt;
 
-&lt;h1 id=&#34;docker-container-a-vanilla-server:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Docker container - A Vanilla Server&lt;/h1&gt;
+&lt;h1 id=&#34;docker-container-a-vanilla-server&#34;&gt;Docker container - A Vanilla Server&lt;/h1&gt;
 
 &lt;p&gt;First, you&amp;rsquo;ll need a Dockerfile. &lt;a href=&#34;https://github.com/Skarlso/devops/blob/master/minecraft/Dockerfile&#34;&gt;Dockerfile&lt;/a&gt;. The steps on how to setup this file are written down in the README file, located here: &lt;a href=&#34;https://github.com/Skarlso/devops/tree/master/minecraft&#34;&gt;Container Setup&lt;/a&gt;. The &lt;code&gt;pwd&lt;/code&gt; command will use your current directory as a shared volume to copy stuff into the container from your host operating system.&lt;/p&gt;
 
@@ -301,7 +578,7 @@ Where the number is missing, you&amp;rsquo;ll have to define your own local IP w
 
 &lt;p&gt;After that, once you start your server, it should all click together and you should have a running vanilla Minecraft server available under &lt;a href=&#34;http://yourdomain:25565&#34;&gt;http://yourdomain:25565&lt;/a&gt;. You won&amp;rsquo;t be able to check this by default on your own network. Check if the port is open with a different service like: &lt;a href=&#34;http://www.yougetsignal.com/tools/open-ports/&#34;&gt;Check If Port is Open&lt;/a&gt;.&lt;/p&gt;
 
-&lt;h1 id=&#34;docker-container-modding:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Docker container - Modding&lt;/h1&gt;
+&lt;h1 id=&#34;docker-container-modding&#34;&gt;Docker container - Modding&lt;/h1&gt;
 
 &lt;p&gt;If you are not looking for anything, just a simple server, the above will be enough. You can still do /tp 1 1 1 to teleport, or can still use bans and op commands, and distribute items. However, if you would like to use mods, and as far as kids are concerned, they will want it, you&amp;rsquo;ll have to be a bit more clever.&lt;/p&gt;
 
@@ -314,7 +591,7 @@ Where the number is missing, you&amp;rsquo;ll have to define your own local IP w
 
 &lt;p&gt;This will give you an interactive prompt in which now we can operate.&lt;/p&gt;
 
-&lt;h2 id=&#34;forge:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Forge&lt;/h2&gt;
+&lt;h2 id=&#34;forge&#34;&gt;Forge&lt;/h2&gt;
 
 &lt;p&gt;Download the latest forge version from here =&amp;gt; &lt;a href=&#34;http://files.minecraftforge.net/&#34;&gt;Minecraft Forge&lt;/a&gt;. They are usually up-to-date. I&amp;rsquo;m using 1.9 so I downloaded the appropriate installer version. After I obtained it, it was a matter of running this piece of command line code from my container:&lt;/p&gt;
 
@@ -328,7 +605,7 @@ Where the number is missing, you&amp;rsquo;ll have to define your own local IP w
 
 &lt;p&gt;Everything under the &lt;strong&gt;mods&lt;/strong&gt; folder will be loaded as a mod. Forge is very restrictive and can only use Forge based mods. It will usually warn you if you have a none forge mod in your mods folder. You can find these on Forge&amp;rsquo;s forum here: &lt;a href=&#34;http://www.minecraftforge.net/forum/index.php/board,30.0.html&#34;&gt;Forge Forum&lt;/a&gt;. Simply download a jar and put it into /data/mods.&lt;/p&gt;
 
-&lt;h2 id=&#34;bukkit:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Bukkit&lt;/h2&gt;
+&lt;h2 id=&#34;bukkit&#34;&gt;Bukkit&lt;/h2&gt;
 
 &lt;p&gt;I found Bukkit to be the winner for me. Most of the mods the kid wanted worked with Bukkit and did not work with Forge. Others will swear on Forge, but it&amp;rsquo;s really up to you. Using Bukkit is similarly easy. Again, you&amp;rsquo;ll have to find and get the wrapper for your Minecraft version, which can be located here: &lt;a href=&#34;http://getspigot.org/&#34;&gt;GetSpigot&lt;/a&gt;. You can use Spigot as well, though I have no experience with that.&lt;/p&gt;
 
@@ -341,7 +618,7 @@ Where the number is missing, you&amp;rsquo;ll have to define your own local IP w
 
 &lt;p&gt;In the container, you can use wget or curl to get the mods, or simply use the shared volume which is setup for you.&lt;/p&gt;
 
-&lt;h1 id=&#34;last-words:b7592d2fa0c4eb546a57292605c3e93e&#34;&gt;Last Words&lt;/h1&gt;
+&lt;h1 id=&#34;last-words&#34;&gt;Last Words&lt;/h1&gt;
 
 &lt;p&gt;All in all this sounds complicated, but it&amp;rsquo;s actually not, once you&amp;rsquo;ll get the hang out of it. You never kill the container once it&amp;rsquo;s setup, you just do &lt;code&gt;docker stop mc_server&lt;/code&gt; and then &lt;code&gt;docker-machine stop&lt;/code&gt; if you want to stop the VM as well. To start it up simply do these steps:&lt;/p&gt;
 
@@ -401,7 +678,7 @@ Gergely.&lt;/p&gt;
       <guid>https://skarlso.github.io/2016/03/04/wercker-test-2</guid>
       <description>
 
-&lt;h2 id=&#34;basics:1b89102ee34dea3d3b4f55ad2fb3846b&#34;&gt;Basics&lt;/h2&gt;
+&lt;h2 id=&#34;basics&#34;&gt;Basics&lt;/h2&gt;
 
 &lt;p&gt;This is a wercker Test.&lt;/p&gt;
 </description>
@@ -455,7 +732,7 @@ deploy:
       <guid>https://skarlso.github.io/2016/02/10/wercker-test</guid>
       <description>
 
-&lt;h2 id=&#34;basics:94c3bb57ac4992da2673b905da613eb3&#34;&gt;Basics&lt;/h2&gt;
+&lt;h2 id=&#34;basics&#34;&gt;Basics&lt;/h2&gt;
 
 &lt;p&gt;This is a wercker Test.&lt;/p&gt;
 </description>
@@ -469,7 +746,7 @@ deploy:
       <guid>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json</guid>
       <description>
 
-&lt;h2 id=&#34;basics:2debf7d5538355b3343d354786c24e4a&#34;&gt;Basics&lt;/h2&gt;
+&lt;h2 id=&#34;basics&#34;&gt;Basics&lt;/h2&gt;
 
 &lt;p&gt;Hello folks.&lt;/p&gt;
 
@@ -487,7 +764,7 @@ deploy:
 
 &lt;p&gt;I&amp;rsquo;m using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt; for my REST service for &lt;a href=&#34;https://github.com/Skarlso/dockmaster2&#34;&gt;Dockmaster&lt;/a&gt;. For this two work, you need to adjust two component.&lt;/p&gt;
 
-&lt;h2 id=&#34;server:2debf7d5538355b3343d354786c24e4a&#34;&gt;Server&lt;/h2&gt;
+&lt;h2 id=&#34;server&#34;&gt;Server&lt;/h2&gt;
 
 &lt;p&gt;There is thing called a Preflight-Check. In essence, the preflight check is sent BEFORE the actual request to check if the next request is allowed to go out of the domain. The preflight check is sent to the same URI just with OPTIONS method. In order to tell the caller that the next one will be safe, you need three things.&lt;/p&gt;
 
@@ -525,7 +802,7 @@ func preflight(c *gin.Context) {
 
 &lt;p&gt;So, how do we call this?&lt;/p&gt;
 
-&lt;h2 id=&#34;frontend:2debf7d5538355b3343d354786c24e4a&#34;&gt;Frontend&lt;/h2&gt;
+&lt;h2 id=&#34;frontend&#34;&gt;Frontend&lt;/h2&gt;
 
 &lt;p&gt;In the front-end&amp;rsquo;s web layout, I&amp;rsquo;m doing an Ajax GET, which looks like this:&lt;/p&gt;
 
@@ -545,13 +822,13 @@ func preflight(c *gin.Context) {
 
 &lt;p&gt;After the headers are set, the request will work nicely.&lt;/p&gt;
 
-&lt;h2 id=&#34;y-u-no-middleware:2debf7d5538355b3343d354786c24e4a&#34;&gt;Y U No Middleware?&lt;/h2&gt;
+&lt;h2 id=&#34;y-u-no-middleware&#34;&gt;Y U No Middleware?&lt;/h2&gt;
 
 &lt;p&gt;And now you could say that, why not just have a middleware which will always accept OPTIONS for every end-point. Because I like it better this way. Some would argue that this is too granular, but fact is, that in my opinion, this is more readable and immediatly visible. However, if you DO want to do that, you have several options to your disposal.&lt;/p&gt;
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/itsjamie/gin-cors&#34;&gt;Cors Basic Http Middleware&lt;/a&gt; and for Gin &lt;a href=&#34;https://github.com/itsjamie/gin-cors&#34;&gt;Gin CORS Middleware&lt;/a&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;summary:2debf7d5538355b3343d354786c24e4a&#34;&gt;Summary&lt;/h2&gt;
+&lt;h2 id=&#34;summary&#34;&gt;Summary&lt;/h2&gt;
 
 &lt;p&gt;This is it. You can see the code in its entirety on Github. Have a better idea on how to do it? Please! Do not hesitate to share. I always like to learn.&lt;/p&gt;
 
@@ -578,7 +855,7 @@ Have a nice day!&lt;/p&gt;
 
 &lt;p&gt;It is a nice tale and there are a few things I learned from it, especially in Go, since I used that solve all of the problems. So, let&amp;rsquo;s get started.&lt;/p&gt;
 
-&lt;h1 id=&#34;solving-the-problems:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Solving the problems&lt;/h1&gt;
+&lt;h1 id=&#34;solving-the-problems&#34;&gt;Solving the problems&lt;/h1&gt;
 
 &lt;p&gt;The most important lesson I learned while doing these exercises was, how to solve these problems. A couple of them were simple enough to not have to over think it, but most of them got very tricky. I could have gone with a brute force attempt, but as we see later, that wasn&amp;rsquo;t always a very good solution. And people who used that, actually just got lucky finding their solutions.&lt;/p&gt;
 
@@ -595,23 +872,23 @@ Have a nice day!&lt;/p&gt;
 &lt;li&gt;Don&amp;rsquo;t get frustrated&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;have-a-plan-and-understanding-your-goal:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Have a plan and understanding your goal&lt;/h2&gt;
+&lt;h2 id=&#34;have-a-plan-and-understanding-your-goal&#34;&gt;Have a plan and understanding your goal&lt;/h2&gt;
 
 &lt;p&gt;This is simple. Always have a plan of what you would like to do, and how to start. This will help you massively along the way to not to loose sight of what your goal is actually. For example, look at &lt;a href=&#34;http://adventofcode.com/day/24&#34;&gt;Day 24&lt;/a&gt;. At first, it looks like a permutational puzzle, but if you understand the solution we are looking for, you realize that there is an easier way of finding it. Since you only want the packages which consists of the fewest item counts, you would only care about the largest numbers because those will be the fewest which still give you the desired package weight. Suddenly the problem gets easier because you don&amp;rsquo;t have to worry about the other groups any longer.&lt;/p&gt;
 
-&lt;h2 id=&#34;rephrase:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Rephrase&lt;/h2&gt;
+&lt;h2 id=&#34;rephrase&#34;&gt;Rephrase&lt;/h2&gt;
 
 &lt;p&gt;Rephrasing the problem with your own words can help in understanding it better. Or even better, try explaining it to somebody else. If you cannot rephrase it, you didn&amp;rsquo;t understand it in the first place.&lt;/p&gt;
 
-&lt;h2 id=&#34;divide:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Divide&lt;/h2&gt;
+&lt;h2 id=&#34;divide&#34;&gt;Divide&lt;/h2&gt;
 
 &lt;p&gt;If the problem seems daunting because it&amp;rsquo;s massive, just divide it into smaller chunks. This is something that we usually do with large problems, but it&amp;rsquo;s more subtle than that. If you face a problem which seems complex, just factor out parts of it until you got a problem which you do understand. Even if you have to butcher the original puzzle problem. It doesn&amp;rsquo;t matter. Adding complexity later is easier than adding complexity in its infancy.&lt;/p&gt;
 
-&lt;h2 id=&#34;start-with-what-you-know-finding-analogies:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Start with what you know &amp;amp;&amp;amp; Finding analogies&lt;/h2&gt;
+&lt;h2 id=&#34;start-with-what-you-know-finding-analogies&#34;&gt;Start with what you know &amp;amp;&amp;amp; Finding analogies&lt;/h2&gt;
 
 &lt;p&gt;This one speaks for itself. If you know parts of the problem, because you know analogy for it, or you faced something similar before, or exactly that, start with that.&lt;/p&gt;
 
-&lt;h2 id=&#34;reduce:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Reduce&lt;/h2&gt;
+&lt;h2 id=&#34;reduce&#34;&gt;Reduce&lt;/h2&gt;
 
 &lt;p&gt;If the problem seems too complex, remove complexity. Start with a smaller set. Preferably something testable (I&amp;rsquo;ll come back to that later). Remove constraints, or add them as desired. A constraint makes it harder to solve the puzzle? Remove it, and try solving it without. After that, the solution will give you insight into the problem and you can add that constraint back in.&lt;/p&gt;
 
@@ -624,41 +901,41 @@ passwd[i] += &#39;a&#39;
 
 &lt;p&gt;The -,+ &amp;lsquo;a&amp;rsquo; is needed so that it&amp;rsquo;s dealing with ascii code from 0 - &amp;lsquo;z&amp;rsquo;. This basically makes it so that when I reach the end of the alphabet it will wrap around and start from &amp;lsquo;a&amp;rsquo; again.&lt;/p&gt;
 
-&lt;h2 id=&#34;experiment:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Experiment&lt;/h2&gt;
+&lt;h2 id=&#34;experiment&#34;&gt;Experiment&lt;/h2&gt;
 
 &lt;p&gt;This led to more solutions than I care to admit. Basically just start experimenting with solutions which are in your head. There is a chance, that what you come up with, will be the solution. This goes very well with the principle of &lt;em&gt;Make it work&lt;/em&gt;, &lt;em&gt;Make it right&lt;/em&gt;, &lt;em&gt;Make it fast&lt;/em&gt;. Just have something working first, and than you can make it work properly after. It&amp;rsquo;s always better to have &lt;em&gt;something&lt;/em&gt; rather than nothing.&lt;/p&gt;
 
 &lt;p&gt;And last but not least&amp;hellip;&lt;/p&gt;
 
-&lt;h2 id=&#34;don-t-get-frustrated:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Don&amp;rsquo;t get frustrated&lt;/h2&gt;
+&lt;h2 id=&#34;don-t-get-frustrated&#34;&gt;Don&amp;rsquo;t get frustrated&lt;/h2&gt;
 
 &lt;p&gt;This is something I cannot say strongly enough. Seriously. &lt;strong&gt;DO NOT GET FRUSTRATED&lt;/strong&gt;. Most of the problems were designed to be harder. Unless you work as a programmer professionally for several years now, or this is a field of interest for you, you will spend a day hacking around on a problem and trying to find a solution which is adequate. In these times, you will get frustrated and think you are too stupid for this, this couldn&amp;rsquo;t be more far from the truth! You might need some inspiration, you might need some time away from the screen, it helps if you draw out the problem in a piece of paper, or just think about it without seeing it for a while. Just take a break, eat something, watch a comedy and get back to it later with a fresh view.&lt;/p&gt;
 
-&lt;h1 id=&#34;technical-gotchas:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Technical Gotchas&lt;/h1&gt;
+&lt;h1 id=&#34;technical-gotchas&#34;&gt;Technical Gotchas&lt;/h1&gt;
 
 &lt;p&gt;So after the general problem solving side of things, I learned many things about Go, and about the tidbits of this language.&lt;/p&gt;
 
-&lt;h2 id=&#34;byte-slices:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Byte Slices&lt;/h2&gt;
+&lt;h2 id=&#34;byte-slices&#34;&gt;Byte Slices&lt;/h2&gt;
 
 &lt;p&gt;I already knew that []byte is more performant and that Go optimizes on them more, but not to this extent. As in my previous blog posts I discovered that using them can really make a huge difference. Go even has a library called &lt;code&gt;bytes&lt;/code&gt; which has helper functions similar to that of &lt;code&gt;strings&lt;/code&gt; to help you out in these situations. Go optimizes on map recalls as well when you cast to string from []byte and use that as a map key like this: myMap[string(data)].&lt;/p&gt;
 
-&lt;h2 id=&#34;brute-force-or-looping:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Brute Force or Looping&lt;/h2&gt;
+&lt;h2 id=&#34;brute-force-or-looping&#34;&gt;Brute Force or Looping&lt;/h2&gt;
 
 &lt;p&gt;Most of the times you could get away with looping or trying to brute force out a solution. But there were times, where you really had to huddle down and think the problem through. Because simply looping, either took too long, or didn&amp;rsquo;t come up with a good answer. That&amp;rsquo;s why I rather always start with: &amp;lsquo;How could I solve this without looping?&amp;rsquo;. This will get you into the right mindset. Or thinking: &amp;lsquo;How could I solve this without taking each and every combination into account?&amp;rsquo;. These questions will help you to think about the problem without loops. Or only if you REALLY must use one.&lt;/p&gt;
 
 &lt;p&gt;Doing this will get you into the right way of thinking. I know that in advent of code there is a Leaderboard and you could get on it if you were fast. But most of the times having a fast solution is far from having the right solution.&lt;/p&gt;
 
-&lt;h2 id=&#34;structs-are-awesome:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Structs are Awesome&lt;/h2&gt;
+&lt;h2 id=&#34;structs-are-awesome&#34;&gt;Structs are Awesome&lt;/h2&gt;
 
 &lt;p&gt;I like using structs. They are a very lightweight way of defining objects, structures which stick together. For example in the &lt;a href=&#34;http://adventofcode.com/day/6&#34;&gt;Day 6&lt;/a&gt; Light puzzle, or even &lt;a href=&#34;http://adventofcode.com/day/3&#34;&gt;Day 3&lt;/a&gt; Traveling santa example, a struct which stuck x,y locations together and made it a map key, it was trivial to make my gif out of it with SVG -&amp;gt;&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&#34;https://raw.githubusercontent.com/Skarlso/goprojects/master/advent/day3/day1.gif&#34; alt=&#34;Traveling Santa&#34; /&gt;&lt;/p&gt;
 
-&lt;h2 id=&#34;go-is-simple-to-read:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Go is Simple to Read&lt;/h2&gt;
+&lt;h2 id=&#34;go-is-simple-to-read&#34;&gt;Go is Simple to Read&lt;/h2&gt;
 
 &lt;p&gt;[opinion] I like Go because of its simplicity. You don&amp;rsquo;t see stuff in Go most of the times, where you need to look three times to understand what the heck is going on. I like filter, reduce, map and syntactic sugar, but they make for a very poor reading experience. Go, in that way, choose not to incorporate these paradigms and I find that refreshing. [/opinion]&lt;/p&gt;
 
-&lt;h2 id=&#34;testing:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Testing&lt;/h2&gt;
+&lt;h2 id=&#34;testing&#34;&gt;Testing&lt;/h2&gt;
 
 &lt;p&gt;TDD is something we all should know by now and care about. When I&amp;rsquo;m doing puzzles, or finger exercises, I tend to not write tests. But on a more complex puzzle, or a task, I always start with a test. Especially if you are given samples for a puzzle which work. That&amp;rsquo;s a gold mine. You can tweak your algorithm using those samples until they work and then simply apply a larger sample size.&lt;/p&gt;
 
@@ -668,7 +945,7 @@ passwd[i] += &#39;a&#39;
 
 &lt;p&gt;Tests will also help you to be able to move on after you found your solution. When I was done with the first iteration of passwords which was still using strings, I went on to optimize it, to use []byte. The tests helped me to know that the code was still working as expected after the refactoring.&lt;/p&gt;
 
-&lt;h1 id=&#34;closing-words:6cd374f9da84942d68bc6821a2ecbf45&#34;&gt;Closing words&lt;/h1&gt;
+&lt;h1 id=&#34;closing-words&#34;&gt;Closing words&lt;/h1&gt;
 
 &lt;p&gt;All in all it was a massive amount of fun doing these exercises and I&amp;rsquo;m thankful to the creator for making it. And I did enjoy the story behind the exercises as well. I think this site stood out because it had a fun factor. For simple exercises there are a lot of other sites -like Project Euler, or Sphere Judge Online-, which just plainly present you a problem and that&amp;rsquo;s it. It&amp;rsquo;s still fun, but it can also became boring very fast. Don&amp;rsquo;t forget the fun factor which makes you plow on and go into a blind frenzy that you cannot quit until it&amp;rsquo;s done. That&amp;rsquo;s the fun part.&lt;/p&gt;
 
@@ -1464,40 +1741,6 @@ BenchmarkRecursiveFrequencyCount       20000         61780 ns/op
 &lt;p&gt;And, as expected, recursing is less performant than looping. Also, I think my machine would die from a larger data size&amp;hellip;&lt;/p&gt;
 
 &lt;p&gt;But the recursive looks so much cooler though.&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading!
-Gergely.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Go Development Environment</title>
-      <link>https://skarlso.github.io/2015/12/08/go-development-environment/</link>
-      <pubDate>Tue, 08 Dec 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/12/08/go-development-environment/</guid>
-      <description>&lt;p&gt;Hello folks.&lt;/p&gt;
-
-&lt;p&gt;Here is a little something I&amp;rsquo;ve put together, since I&amp;rsquo;m doing it a lot.&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&#34;https://github.com/Skarlso/godevelopment&#34;&gt;Go Development Environment&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;If I have a project I&amp;rsquo;d like to contribute, like &lt;a href=&#34;https://gohugo.io&#34;&gt;GoHugo&lt;/a&gt;, I have to setup a development environment, because most of the times, I&amp;rsquo;m on a Mac. And on OSX things work differently. I like to work in a Linux environment since that&amp;rsquo;s what most of the projects are built on.&lt;/p&gt;
-
-&lt;p&gt;So here you go. Just download the files, and say &lt;strong&gt;vagrant up&lt;/strong&gt; which will do the magic.&lt;/p&gt;
-
-&lt;p&gt;This sets up &lt;a href=&#34;https://github.com/fatih/vim-go&#34;&gt;vim-go&lt;/a&gt; with code completion given by YouCompleteMe and some go features like, fmt on save and build error highlighting.&lt;/p&gt;
-
-&lt;p&gt;Also sets up ctags which will give you tags and the ability to do GoTo Declaration.&lt;/p&gt;
-
-&lt;p&gt;Installs a bunch of utilities, and configures Go. There is an option to install docker as well. But it&amp;rsquo;s ignored at the moment.&lt;/p&gt;
-
-&lt;p&gt;Just uncomment this line:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;#config.vm.provision &amp;quot;shell&amp;quot;, path: &amp;quot;install_docker.sh&amp;quot;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Any questions or request, feel free to submit an Issue!&lt;/p&gt;
 
 &lt;p&gt;Thanks for reading!
 Gergely.&lt;/p&gt;
