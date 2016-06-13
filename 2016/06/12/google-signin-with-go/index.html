@@ -190,13 +190,13 @@
 
 <h2 id="google-oauth-token">Google OAuth token</h2>
 
-<p>First thing first, what you need is, to register your application with Google, so you&rsquo;ll get a Token that you can use for authentication purposes.</p>
+<p>First things first, what you need is, to register your application with Google, so you&rsquo;ll get a Token that you can use for authentication purposes.</p>
 
-<p>You can do there here -&gt; <a href="https://console.developers.google.com/iam-admin/projects">Google Developer Console</a>. You&rsquo;ll have to create a new project. Once it&rsquo;s done, click on <code>Credentials</code> and create an OAuth token. You should see something like this -&gt; &ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&rdquo;. Go through the questions, like, what type your application is, and then you&rsquo;re done. I&rsquo;m selecting Web App for this tutorial. In the next, when you have created your app, in the redirect url write the url you wish to use when authenticating. Do NOT use <code>localhost</code>. If you are running on your own, use <a href="http://127.0.0.1:port/whatever">http://127.0.0.1:port/whatever</a>.</p>
+<p>You can do there here -&gt; <a href="https://console.developers.google.com/iam-admin/projects">Google Developer Console</a>. You&rsquo;ll have to create a new project. Once it&rsquo;s done, click on <code>Credentials</code> and create an OAuth token. You should see something like this -&gt; &ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&rdquo;. Go through the questions, like, what type your application is, and then you&rsquo;re done. I&rsquo;m selecting Web App for this tutorial. In the questions there is a section asking for redirect URL, there, write the url you wish to use when authenticating. Do NOT use <code>localhost</code>. If you are running on your own, use <a href="http://127.0.0.1:port/whatever">http://127.0.0.1:port/whatever</a>.</p>
 
 <p>This will get you a <code>client ID</code> and a <code>client secret</code>. I&rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth, but that&rsquo;s not the point of this tutorial right now.</p>
 
-<p>Now that&rsquo;s done, your application can now be identified, so login can happen using one&rsquo;s Google creds.</p>
+<p>Your application can now be identified, so login can happen using one&rsquo;s Google creds.</p>
 
 <h1 id="the-application">The Application</h1>
 
@@ -206,7 +206,7 @@
 
 <h2 id="setup-creds">Setup - Creds</h2>
 
-<p>So, first, let&rsquo;s create a little setup which configures our credentials from the file. This is pretty straightforward.</p>
+<p>Let&rsquo;s create a little setup which configures our credentials from the file. This is pretty straightforward.</p>
 
 <pre><code class="language-go">// Credentials which stores google ids.
 type Credentials struct {
@@ -229,7 +229,7 @@ func init() {
 
 <h2 id="setup-oauth-client">Setup - OAuth client</h2>
 
-<p>First, construct the OAuth config.</p>
+<p>Construct the OAuth config like this:</p>
 
 <pre><code class="language-go">conf := &amp;oauth2.Config{
   ClientID:     c.Cid,
@@ -242,21 +242,21 @@ func init() {
 }
 </code></pre>
 
-<p>This will give you a conf struct which you can then use to Authenticate your user. Once we have this, all we need to do is call <code>AuthCodeURL</code> on this config. This will give us a URL we need to call which redirects to a Google Sign-In form. Once the user fills that out, it will redirect to the given URL with a callback and provide a TOKEN in form a query parameter called <code>code</code>. This will look something like this <code>http://127.0.0.1:9090/auth?code=4FLKFskdjflf....</code>. To get the URL let&rsquo;s extract this into a small function:</p>
+<p>It will give you a conf struct which you can then use to Authenticate your user. Next, all we need to do is call <code>AuthCodeURL</code> on this config. It will give us a URL we need to call which redirects to a Google Sign-In form. Once the user fills that out, it will redirect to the given URL with a callback and provide a TOKEN in the form of a query parameter called <code>code</code>. This will look something like this <code>http://127.0.0.1:9090/auth?code=4FLKFskdjflf3343d4f/*</code>. To get the URL let&rsquo;s extract this into a small function:</p>
 
 <pre><code class="language-go">func getLoginURL() string {
     return conf.AuthCodeURL(&quot;&quot;)
 }
 </code></pre>
 
-<p>We can put this URL as a link to a Button forexample.</p>
+<p>We can put this URL as a link to a Button. For example:</p>
 
 <pre><code class="language-go">func loginHandler(c *gin.Context) {
     c.Writer.Write([]byte(&quot;&lt;html&gt;&lt;title&gt;Golang Google&lt;/title&gt; &lt;body&gt; &lt;a href='&quot; + getLoginURL() + &quot;'&gt;&lt;button&gt;Login with Google!&lt;/button&gt; &lt;/a&gt; &lt;/body&gt;&lt;/html&gt;&quot;))
 }
 </code></pre>
 
-<p>Once the user clicks this, (s)he is redirected to Google Sign-In Form which, when filled out, will yield the above URL with a TOKEN in the code section.</p>
+<p>The link provided here, will be the Sign-In form redirection URL.</p>
 
 <h1 id="registration">Registration</h1>
 
@@ -275,7 +275,7 @@ if err != nil {
 client := conf.Client(oauth2.NoContext, tok)
 </code></pre>
 
-<p>That client will now be a Google Authenticated HTTP client. To get something that you can actually use from this do the following&hellip;</p>
+<p>To get something that you can actually use from this do the following&hellip;</p>
 
 <h2 id="obtaining-information-from-the-user">Obtaining information from the user</h2>
 
@@ -305,7 +305,7 @@ log.Println(&quot;Resp body: &quot;, string(data))
 }
 </code></pre>
 
-<p>Tadaam. Parse this, and you&rsquo;ve got an email which you can store. Check this against a db record if you already have that email and you have your registration / login.</p>
+<p>Tadaam. Parse this, and you&rsquo;ve got an email which you can store somewhere for registration purposes.</p>
 
 <h1 id="putting-it-all-together">Putting it all together</h1>
 
@@ -350,12 +350,6 @@ var conf *oauth2.Config
 
 func indexHandler(c *gin.Context) {
     c.HTML(http.StatusOK, &quot;index.tmpl&quot;, gin.H{})
-}
-
-func battleHandler(c *gin.Context) {
-    c.HTML(http.StatusOK, &quot;battle.tmpl&quot;, gin.H{
-        &quot;user&quot;: &quot;Anyad&quot;,
-    })
 }
 
 func init() {
@@ -436,9 +430,9 @@ authorized.Use(AuthRequired)
 }
 </code></pre>
 
-<p>Once you have your Google Auth, you can access these URLS, or do a c.AbortWithError which will stop the chain and redirect the user to a Login page.</p>
+<p>Once you have your Google Auth, you can access these URLS, or do a c.AbortWithError which will stop the chain and redirect the user back to a Login page.</p>
 
-<p>I hope this helped. Any comments, please feel free to drop a comment.</p>
+<p>I hope this helped. Any comments or advice are welcomed.</p>
 
 <h1 id="google-api-documentation">Google API Documentation</h1>
 

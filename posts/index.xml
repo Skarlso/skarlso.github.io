@@ -26,13 +26,13 @@
 
 &lt;h2 id=&#34;google-oauth-token&#34;&gt;Google OAuth token&lt;/h2&gt;
 
-&lt;p&gt;First thing first, what you need is, to register your application with Google, so you&amp;rsquo;ll get a Token that you can use for authentication purposes.&lt;/p&gt;
+&lt;p&gt;First things first, what you need is, to register your application with Google, so you&amp;rsquo;ll get a Token that you can use for authentication purposes.&lt;/p&gt;
 
-&lt;p&gt;You can do there here -&amp;gt; &lt;a href=&#34;https://console.developers.google.com/iam-admin/projects&#34;&gt;Google Developer Console&lt;/a&gt;. You&amp;rsquo;ll have to create a new project. Once it&amp;rsquo;s done, click on &lt;code&gt;Credentials&lt;/code&gt; and create an OAuth token. You should see something like this -&amp;gt; &amp;ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&amp;rdquo;. Go through the questions, like, what type your application is, and then you&amp;rsquo;re done. I&amp;rsquo;m selecting Web App for this tutorial. In the next, when you have created your app, in the redirect url write the url you wish to use when authenticating. Do NOT use &lt;code&gt;localhost&lt;/code&gt;. If you are running on your own, use &lt;a href=&#34;http://127.0.0.1:port/whatever&#34;&gt;http://127.0.0.1:port/whatever&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;You can do there here -&amp;gt; &lt;a href=&#34;https://console.developers.google.com/iam-admin/projects&#34;&gt;Google Developer Console&lt;/a&gt;. You&amp;rsquo;ll have to create a new project. Once it&amp;rsquo;s done, click on &lt;code&gt;Credentials&lt;/code&gt; and create an OAuth token. You should see something like this -&amp;gt; &amp;ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&amp;rdquo;. Go through the questions, like, what type your application is, and then you&amp;rsquo;re done. I&amp;rsquo;m selecting Web App for this tutorial. In the questions there is a section asking for redirect URL, there, write the url you wish to use when authenticating. Do NOT use &lt;code&gt;localhost&lt;/code&gt;. If you are running on your own, use &lt;a href=&#34;http://127.0.0.1:port/whatever&#34;&gt;http://127.0.0.1:port/whatever&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;This will get you a &lt;code&gt;client ID&lt;/code&gt; and a &lt;code&gt;client secret&lt;/code&gt;. I&amp;rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth, but that&amp;rsquo;s not the point of this tutorial right now.&lt;/p&gt;
 
-&lt;p&gt;Now that&amp;rsquo;s done, your application can now be identified, so login can happen using one&amp;rsquo;s Google creds.&lt;/p&gt;
+&lt;p&gt;Your application can now be identified, so login can happen using one&amp;rsquo;s Google creds.&lt;/p&gt;
 
 &lt;h1 id=&#34;the-application&#34;&gt;The Application&lt;/h1&gt;
 
@@ -42,7 +42,7 @@
 
 &lt;h2 id=&#34;setup-creds&#34;&gt;Setup - Creds&lt;/h2&gt;
 
-&lt;p&gt;So, first, let&amp;rsquo;s create a little setup which configures our credentials from the file. This is pretty straightforward.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s create a little setup which configures our credentials from the file. This is pretty straightforward.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// Credentials which stores google ids.
 type Credentials struct {
@@ -65,7 +65,7 @@ func init() {
 
 &lt;h2 id=&#34;setup-oauth-client&#34;&gt;Setup - OAuth client&lt;/h2&gt;
 
-&lt;p&gt;First, construct the OAuth config.&lt;/p&gt;
+&lt;p&gt;Construct the OAuth config like this:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;conf := &amp;amp;oauth2.Config{
   ClientID:     c.Cid,
@@ -78,21 +78,21 @@ func init() {
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;This will give you a conf struct which you can then use to Authenticate your user. Once we have this, all we need to do is call &lt;code&gt;AuthCodeURL&lt;/code&gt; on this config. This will give us a URL we need to call which redirects to a Google Sign-In form. Once the user fills that out, it will redirect to the given URL with a callback and provide a TOKEN in form a query parameter called &lt;code&gt;code&lt;/code&gt;. This will look something like this &lt;code&gt;http://127.0.0.1:9090/auth?code=4FLKFskdjflf....&lt;/code&gt;. To get the URL let&amp;rsquo;s extract this into a small function:&lt;/p&gt;
+&lt;p&gt;It will give you a conf struct which you can then use to Authenticate your user. Next, all we need to do is call &lt;code&gt;AuthCodeURL&lt;/code&gt; on this config. It will give us a URL we need to call which redirects to a Google Sign-In form. Once the user fills that out, it will redirect to the given URL with a callback and provide a TOKEN in the form of a query parameter called &lt;code&gt;code&lt;/code&gt;. This will look something like this &lt;code&gt;http://127.0.0.1:9090/auth?code=4FLKFskdjflf3343d4f/*&lt;/code&gt;. To get the URL let&amp;rsquo;s extract this into a small function:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func getLoginURL() string {
     return conf.AuthCodeURL(&amp;quot;&amp;quot;)
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;We can put this URL as a link to a Button forexample.&lt;/p&gt;
+&lt;p&gt;We can put this URL as a link to a Button. For example:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func loginHandler(c *gin.Context) {
     c.Writer.Write([]byte(&amp;quot;&amp;lt;html&amp;gt;&amp;lt;title&amp;gt;Golang Google&amp;lt;/title&amp;gt; &amp;lt;body&amp;gt; &amp;lt;a href=&#39;&amp;quot; + getLoginURL() + &amp;quot;&#39;&amp;gt;&amp;lt;button&amp;gt;Login with Google!&amp;lt;/button&amp;gt; &amp;lt;/a&amp;gt; &amp;lt;/body&amp;gt;&amp;lt;/html&amp;gt;&amp;quot;))
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Once the user clicks this, (s)he is redirected to Google Sign-In Form which, when filled out, will yield the above URL with a TOKEN in the code section.&lt;/p&gt;
+&lt;p&gt;The link provided here, will be the Sign-In form redirection URL.&lt;/p&gt;
 
 &lt;h1 id=&#34;registration&#34;&gt;Registration&lt;/h1&gt;
 
@@ -111,7 +111,7 @@ if err != nil {
 client := conf.Client(oauth2.NoContext, tok)
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;That client will now be a Google Authenticated HTTP client. To get something that you can actually use from this do the following&amp;hellip;&lt;/p&gt;
+&lt;p&gt;To get something that you can actually use from this do the following&amp;hellip;&lt;/p&gt;
 
 &lt;h2 id=&#34;obtaining-information-from-the-user&#34;&gt;Obtaining information from the user&lt;/h2&gt;
 
@@ -141,7 +141,7 @@ log.Println(&amp;quot;Resp body: &amp;quot;, string(data))
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Tadaam. Parse this, and you&amp;rsquo;ve got an email which you can store. Check this against a db record if you already have that email and you have your registration / login.&lt;/p&gt;
+&lt;p&gt;Tadaam. Parse this, and you&amp;rsquo;ve got an email which you can store somewhere for registration purposes.&lt;/p&gt;
 
 &lt;h1 id=&#34;putting-it-all-together&#34;&gt;Putting it all together&lt;/h1&gt;
 
@@ -186,12 +186,6 @@ var conf *oauth2.Config
 
 func indexHandler(c *gin.Context) {
     c.HTML(http.StatusOK, &amp;quot;index.tmpl&amp;quot;, gin.H{})
-}
-
-func battleHandler(c *gin.Context) {
-    c.HTML(http.StatusOK, &amp;quot;battle.tmpl&amp;quot;, gin.H{
-        &amp;quot;user&amp;quot;: &amp;quot;Anyad&amp;quot;,
-    })
 }
 
 func init() {
@@ -272,9 +266,9 @@ authorized.Use(AuthRequired)
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Once you have your Google Auth, you can access these URLS, or do a c.AbortWithError which will stop the chain and redirect the user to a Login page.&lt;/p&gt;
+&lt;p&gt;Once you have your Google Auth, you can access these URLS, or do a c.AbortWithError which will stop the chain and redirect the user back to a Login page.&lt;/p&gt;
 
-&lt;p&gt;I hope this helped. Any comments, please feel free to drop a comment.&lt;/p&gt;
+&lt;p&gt;I hope this helped. Any comments or advice are welcomed.&lt;/p&gt;
 
 &lt;h1 id=&#34;google-api-documentation&#34;&gt;Google API Documentation&lt;/h1&gt;
 
