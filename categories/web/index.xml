@@ -18,7 +18,7 @@
 
 &lt;p&gt;Hi folks.&lt;/p&gt;
 
-&lt;p&gt;Today, I would like to write up a step - by - step guide with a sample web app on how to do Google assisted sign-in and user handling.&lt;/p&gt;
+&lt;p&gt;Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s get started.&lt;/p&gt;
 
@@ -26,23 +26,23 @@
 
 &lt;h2 id=&#34;google-oauth-token&#34;&gt;Google OAuth token&lt;/h2&gt;
 
-&lt;p&gt;First things first, what you need is, to register your application with Google, so you&amp;rsquo;ll get a Token that you can use for authentication purposes.&lt;/p&gt;
+&lt;p&gt;First what you need is, to register your application with Google, so you&amp;rsquo;ll get a Token that you can use to authorize later calls to Google services.&lt;/p&gt;
 
-&lt;p&gt;You can do there here -&amp;gt; &lt;a href=&#34;https://console.developers.google.com/iam-admin/projects&#34;&gt;Google Developer Console&lt;/a&gt;. You&amp;rsquo;ll have to create a new project. Once it&amp;rsquo;s done, click on &lt;code&gt;Credentials&lt;/code&gt; and create an OAuth token. You should see something like this -&amp;gt; &amp;ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&amp;rdquo;. Go through the questions, like, what type your application is, and once you arrive at stage where it&amp;rsquo;s asking for your application&amp;rsquo;s name &amp;ndash; there is a section asking for redirect URL; there, write the url you wish to use when authenticating your user. If you don&amp;rsquo;t know this yet, don&amp;rsquo;t fret, we can come back and change it later. Do NOT use &lt;code&gt;localhost&lt;/code&gt;. If you are running on your own, use &lt;a href=&#34;http://127.0.0.1:port/whatever&#34;&gt;http://127.0.0.1:port/whatever&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;You can do that here: &lt;a href=&#34;https://console.developers.google.com/iam-admin/projects&#34;&gt;Google Developer Console&lt;/a&gt;. You&amp;rsquo;ll have to create a new project. Once it&amp;rsquo;s done, click on &lt;code&gt;Credentials&lt;/code&gt; and create an OAuth token. You should see something like this: &amp;ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&amp;rdquo;. Go through the questions, like, what type your application is, and once you arrive at stage where it&amp;rsquo;s asking for your application&amp;rsquo;s name &amp;ndash; there is a section asking for redirect URLs; there, write the url you wish to use when authorising your user. If you don&amp;rsquo;t know this yet, don&amp;rsquo;t fret, you can come back and change it later. Do NOT use &lt;code&gt;localhost&lt;/code&gt;. If you are running on your own, use &lt;a href=&#34;http://127.0.0.1:port/whatever&#34;&gt;http://127.0.0.1:port/whatever&lt;/a&gt;.&lt;/p&gt;
 
-&lt;p&gt;This will get you a &lt;code&gt;client ID&lt;/code&gt; and a &lt;code&gt;client secret&lt;/code&gt;. I&amp;rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth, but that&amp;rsquo;s not the point of this tutorial.&lt;/p&gt;
+&lt;p&gt;This will get you a &lt;code&gt;client ID&lt;/code&gt; and a &lt;code&gt;client secret&lt;/code&gt;. I&amp;rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth.&lt;/p&gt;
 
-&lt;p&gt;Your application can now be identified, so login can happen using one&amp;rsquo;s Google credentials.&lt;/p&gt;
+&lt;p&gt;Your application can now be identified through Google services.&lt;/p&gt;
 
 &lt;h1 id=&#34;the-application&#34;&gt;The Application&lt;/h1&gt;
 
 &lt;h2 id=&#34;library&#34;&gt;Library&lt;/h2&gt;
 
-&lt;p&gt;Google has a nice library to use with OAuth 2.0. The library is available here =&amp;gt; &lt;a href=&#34;https://github.com/golang/oauth2&#34;&gt;Google OAth 2.0&lt;/a&gt;. It&amp;rsquo;s a bit cryptic at first to setup, but not to worry. After a bit of fiddling you&amp;rsquo;ll understand fast what it does.&lt;/p&gt;
+&lt;p&gt;Google has a nice library to use with OAuth 2.0. The library is available here: &lt;a href=&#34;https://github.com/golang/oauth2&#34;&gt;Google OAth 2.0&lt;/a&gt;. It&amp;rsquo;s a bit cryptic at first, but not to worry. After a bit of fiddling you&amp;rsquo;ll understand fast what it does.&lt;/p&gt;
 
 &lt;h2 id=&#34;setup-credentials&#34;&gt;Setup - Credentials&lt;/h2&gt;
 
-&lt;p&gt;Let&amp;rsquo;s create a setup which configures our credentials from the file we saved earlier. This is pretty straightforward.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s create a setup which configures you&amp;rsquo;re credentials from the file you saved earlier. This is pretty straightforward.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// Credentials which stores google ids.
 type Credentials struct {
@@ -61,7 +61,7 @@ func init() {
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Once we have the creds loaded, we can now go on to construct our OAuth client.&lt;/p&gt;
+&lt;p&gt;Once you have the creds loaded, you can now go on to construct the OAuth client.&lt;/p&gt;
 
 &lt;h2 id=&#34;setup-oauth-client&#34;&gt;Setup - OAuth client&lt;/h2&gt;
 
@@ -70,8 +70,7 @@ func init() {
 &lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;conf := &amp;amp;oauth2.Config{
   ClientID:     c.Cid,
   ClientSecret: c.Csecret,
-  RedirectURL:  &amp;quot;http://localhost:9090/auth&amp;quot;, // If the login is successful, this will be the redirected URL location to with a query param called &#39;code&#39;.
-                                              // This is the URL we configured earlier during the account creation.
+  RedirectURL:  &amp;quot;http://localhost:9090/auth&amp;quot;,
   Scopes: []string{
     &amp;quot;https://www.googleapis.com/auth/userinfo.email&amp;quot;, // You have to select your own scope from here -&amp;gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
   },
@@ -79,25 +78,27 @@ func init() {
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;It will give you a conf struct which you can then use to Authenticate your user. Next, all we need to do is call &lt;code&gt;AuthCodeURL&lt;/code&gt; on this config. It will give us a URL we need to call which redirects to a Google Sign-In form. Once the user fills that out and clicks &amp;lsquo;Allow&amp;rsquo;, we&amp;rsquo;ll get back a TOKEN in the &lt;code&gt;code&lt;/code&gt; query parameter. This will look something like this &lt;code&gt;http://127.0.0.1:9090/auth?code=4FLKFskdjflf3343d4f/*&lt;/code&gt;. To get the URL let&amp;rsquo;s extract this into a small function:&lt;/p&gt;
+&lt;p&gt;It will give you a conf struct which you can then use to Authorize your user in the google domain. Next, all you need to do is call &lt;code&gt;AuthCodeURL&lt;/code&gt; on this config. It will give you a URL you need to call which redirects to a Google Sign-In form. Once the user fills that out and clicks &amp;lsquo;Allow&amp;rsquo;, you&amp;rsquo;ll get back a TOKEN in the &lt;code&gt;code&lt;/code&gt; query parameter and a &lt;code&gt;state&lt;/code&gt; which helps protect against CSRF attacks. Always check if the provided state is the same which you provided with AuthCodeURL. This will look something like this &lt;code&gt;http://127.0.0.1:9090/auth?code=4FLKFskdjflf3343d4f&amp;amp;state=state&lt;/code&gt;. To get the URL let&amp;rsquo;s extract this into a small function:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func getLoginURL() string {
-    return conf.AuthCodeURL(&amp;quot;&amp;quot;)
+    // State can be some kind of random generated hash string.
+    // See relevant RFC: http://tools.ietf.org/html/rfc6749#section-10.12
+    return conf.AuthCodeURL(&amp;quot;&amp;quot;, &amp;quot;myapplicationsnonguessablestatecode&amp;quot;)
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;We can put this URL as a link to a Button. For example:&lt;/p&gt;
+&lt;p&gt;You can put the return URL as a link to a Button. For example:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func loginHandler(c *gin.Context) {
     c.Writer.Write([]byte(&amp;quot;&amp;lt;html&amp;gt;&amp;lt;title&amp;gt;Golang Google&amp;lt;/title&amp;gt; &amp;lt;body&amp;gt; &amp;lt;a href=&#39;&amp;quot; + getLoginURL() + &amp;quot;&#39;&amp;gt;&amp;lt;button&amp;gt;Login with Google!&amp;lt;/button&amp;gt; &amp;lt;/a&amp;gt; &amp;lt;/body&amp;gt;&amp;lt;/html&amp;gt;&amp;quot;))
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;The link provided here, will be the Sign-In form redirection URL. Note, that I&amp;rsquo;m using Gin here as my router services this is an http.Handler by default.&lt;/p&gt;
+&lt;p&gt;The link provided here, will be the Sign-In form redirection URL.&lt;/p&gt;
 
 &lt;h1 id=&#34;registration&#34;&gt;Registration&lt;/h1&gt;
 
-&lt;p&gt;So what now? How do we actually get to the registration / login part of this? How does this all fit together? With Google, after you got the token, you can construct an authenticated Google HTTP Client.&lt;/p&gt;
+&lt;p&gt;With Google, after you got the token, you can construct an authorised Google HTTP Client which let&amp;rsquo;s you call Google related services and retrieve information about the user.&lt;/p&gt;
 
 &lt;h2 id=&#34;getting-the-client&#34;&gt;Getting the Client&lt;/h2&gt;
 
@@ -116,7 +117,7 @@ client := conf.Client(oauth2.NoContext, tok)
 
 &lt;h2 id=&#34;obtaining-information-from-the-user&#34;&gt;Obtaining information from the user&lt;/h2&gt;
 
-&lt;p&gt;It&amp;rsquo;s their API url that you need to call with the authenticated client. The code for that is:&lt;/p&gt;
+&lt;p&gt;It&amp;rsquo;s their API url that you need to call with the authorised client. The code for that is:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;resp, err := client.Get(&amp;quot;https://www.googleapis.com/oauth2/v3/userinfo&amp;quot;)
   if err != nil {
@@ -142,7 +143,7 @@ log.Println(&amp;quot;Resp body: &amp;quot;, string(data))
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Tadaam. Parse this, and you&amp;rsquo;ve got an email which you can store somewhere for registration purposes.&lt;/p&gt;
+&lt;p&gt;Parse this, and you&amp;rsquo;ve got an email which you can store somewhere for registration purposes. Note, that this does &lt;code&gt;not&lt;/code&gt; mean yet that your user at this point is authenticated. That will depend on your application&amp;rsquo;s structure of handling said user. Like, creating a token to track the user&amp;rsquo;s state with JWT, and retrieving the user&amp;rsquo;s information from a database. I&amp;rsquo;m going to post a second part of that happening.&lt;/p&gt;
 
 &lt;h1 id=&#34;putting-it-all-together&#34;&gt;Putting it all together&lt;/h1&gt;
 
@@ -184,6 +185,7 @@ type User struct {
 
 var cred Credentials
 var conf *oauth2.Config
+var superawesomestatecode string
 
 func indexHandler(c *gin.Context) {
     c.HTML(http.StatusOK, &amp;quot;index.tmpl&amp;quot;, gin.H{})
@@ -206,28 +208,36 @@ func init() {
         },
         Endpoint: google.Endpoint,
     }
+
+    superawesomestatecode = &amp;quot;InitializeItToSomethingAwesome.&amp;quot;
 }
 
 func getLoginURL() string {
-    return conf.AuthCodeURL(&amp;quot;&amp;quot;)
+    return conf.AuthCodeURL(superawesomestatecode)
 }
 
 func authHandler(c *gin.Context) {
-    // Handle the exchange code to initiate a transport.
-	tok, err := conf.Exchange(oauth2.NoContext, c.Query(&amp;quot;code&amp;quot;))
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-	}
 
-	client := conf.Client(oauth2.NoContext, tok)
-	email, err := client.Get(&amp;quot;https://www.googleapis.com/oauth2/v3/userinfo&amp;quot;)
+    // Check here if state is the same as provided
+    if c.Query(&amp;quot;state&amp;quot;) != superawesomestatecode {
+      c.AbortWithError(http.StatusBadRequest, fmt.Error(&amp;quot;Invalid state.&amp;quot;))
+    }
+
+    // Handle the exchange code to initiate a transport.
+    tok, err := conf.Exchange(oauth2.NoContext, c.Query(&amp;quot;code&amp;quot;))
     if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-	}
-    defer email.Body.Close()
-    data, _ := ioutil.ReadAll(email.Body)
-    log.Println(&amp;quot;Email body: &amp;quot;, string(data))
-    c.Status(http.StatusOK)
+    	c.AbortWithError(http.StatusBadRequest, err)
+    }
+
+    client := conf.Client(oauth2.NoContext, tok)
+    email, err := client.Get(&amp;quot;https://www.googleapis.com/oauth2/v3/userinfo&amp;quot;)
+      if err != nil {
+    	c.AbortWithError(http.StatusBadRequest, err)
+    }
+      defer email.Body.Close()
+      data, _ := ioutil.ReadAll(email.Body)
+      log.Println(&amp;quot;Email body: &amp;quot;, string(data))
+      c.Status(http.StatusOK)
 }
 
 func loginHandler(c *gin.Context) {
@@ -250,19 +260,19 @@ func main() {
 
 &lt;p&gt;This is it folks. I&amp;rsquo;m doing some extra in there, like loading static handling for css and img. You can ignore those.&lt;/p&gt;
 
-&lt;p&gt;After you have the email, you should be able to go on and store it and retrieve it later if you want. With Gin, you can even do authenticated end-points.&lt;/p&gt;
+&lt;p&gt;After you have the email, you should be able to go on and store it and retrieve it later if you want. With Gin, you can even do authorised end-points.&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;authorized := r.Group(&amp;quot;/&amp;quot;)
-// per group middleware! in this case we use the custom created
-// AuthRequired() middleware just in the &amp;quot;authorized&amp;quot; group.
-authorized.Use(AuthRequired)
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;authorised := r.Group(&amp;quot;/&amp;quot;)
+// Per group middleware! in this case we use the custom created
+// AuthRequired() middleware just in the &amp;quot;authorised&amp;quot; group.
+authorised.Use(AuthRequired)
 {
-    authorized.POST(&amp;quot;/login&amp;quot;, loginEndpoint)
-    authorized.POST(&amp;quot;/submit&amp;quot;, submitEndpoint)
-    authorized.POST(&amp;quot;/read&amp;quot;, readEndpoint)
+    authorised.POST(&amp;quot;/login&amp;quot;, loginEndpoint)
+    authorised.POST(&amp;quot;/submit&amp;quot;, submitEndpoint)
+    authorised.POST(&amp;quot;/read&amp;quot;, readEndpoint)
 
     // nested group
-    testing := authorized.Group(&amp;quot;testing&amp;quot;)
+    testing := authorised.Group(&amp;quot;testing&amp;quot;)
     testing.GET(&amp;quot;/analytics&amp;quot;, analyticsEndpoint)
 }
 &lt;/code&gt;&lt;/pre&gt;
@@ -273,7 +283,7 @@ authorized.Use(AuthRequired)
 
 &lt;h1 id=&#34;google-api-documentation&#34;&gt;Google API Documentation&lt;/h1&gt;
 
-&lt;p&gt;The documentation to this whole process and MUCH more information can be found here =&amp;gt; &lt;a href=&#34;https://developers.google.com/identity/protocols/OAuth2&#34;&gt;Google API Docs&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The documentation to this whole process and MUCH more information can be found here: &lt;a href=&#34;https://developers.google.com/identity/protocols/OAuth2&#34;&gt;Google API Docs&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;Thanks for reading,
 Gergely.&lt;/p&gt;
