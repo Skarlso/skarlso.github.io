@@ -5,8 +5,49 @@
     <link>https://skarlso.github.io/posts/</link>
     <description>Recent content in Posts on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Sun, 12 Jun 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 12 Jul 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Simple hook to rid of trouble</title>
+      <link>https://skarlso.github.io/2016/07/12/simple-hook-to-rid-of-trouble</link>
+      <pubDate>Tue, 12 Jul 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/07/12/simple-hook-to-rid-of-trouble</guid>
+      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
+
+&lt;p&gt;This is but a simple git hook to run a test in order to ensure you can push. It also ignores the vendor folder if you happen to have on in your directory.&lt;/p&gt;
+
+&lt;p&gt;Edit the file under &lt;code&gt;.git/hooks/pre-push.sample&lt;/code&gt; and add this at the end before the &lt;code&gt;exit 0&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;go test $(go list ./... |grep -v vendor)
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+    echo &amp;quot;Failed test run. Disallowing push.&amp;quot;
+    exit 1
+fi
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;After this, rename the file to &lt;code&gt;pre-push&lt;/code&gt; removing the .sample from it.&lt;/p&gt;
+
+&lt;p&gt;If you now, mess something up, you should see something like this before your push:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# github.com/Skarlso/goprogressquest
+./create.go:40: undefined: sha1 in sha1.Sum
+./create.go:41: undefined: fmt in fmt.Sprintf
+./create.go:115: undefined: json in json.Unmarshal
+./create.go:130: undefined: json in json.Unmarshal
+FAIL	github.com/Skarlso/goprogressquest [build failed]
+Failed test run. Disallowing push.
+error: failed to push some refs to &#39;git@github.com:Skarlso/goprogressquest.git&#39;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That is all.&lt;/p&gt;
+
+&lt;p&gt;Cheers,
+Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>How to do Google sign-in with Go</title>
@@ -1717,59 +1758,6 @@ func GetLengthOfLookAndSay() {
 &lt;p&gt;This is the solution for Day 10 on &lt;a href=&#34;http://adventofcode.com/&#34;&gt;AdventOfCode&lt;/a&gt; by the way.&lt;/p&gt;
 
 &lt;p&gt;Thanks for readin&amp;rsquo;.
-Gergely.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Recursive Letter Frequency Count</title>
-      <link>https://skarlso.github.io/2015/12/23/recursive-freq-count/</link>
-      <pubDate>Wed, 23 Dec 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/12/23/recursive-freq-count/</guid>
-      <description>&lt;p&gt;Hello everybody!&lt;/p&gt;
-
-&lt;p&gt;I wanted to do a sort post about word frequency count. I did it many times now and I was curious as how a recursive solution would perform as opposed to looping.&lt;/p&gt;
-
-&lt;p&gt;So I wrote it up quickly and added a few benchmarks with different sized data.&lt;/p&gt;
-
-&lt;p&gt;First&amp;hellip;. The code:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;var freqMap = make(map[string]int, 0)
-
-func countLettersRecursive(s string) string {
-    if len(s) == 0 {
-        return s
-    }
-    freqMap[string(s[0])]++
-    return countLettersRecursive(s[1:])
-}
-
-func countLettersLoop(s string) {
-    for _, v := range s {
-        freqMap[string(v)]++
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Very simple. The first run with a small sample: &amp;ldquo;asdfasdfasdfasdfasdf&amp;rdquo;&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkLoopFrequencyCount  5000000           377 ns/op
-BenchmarkRecursiveFrequencyCount     5000000           380 ns/op
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;They almost equal but Recursive seems to be lagging behind. So I increased the sample size to a text which was 496 long.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;PASS
-BenchmarkLoopFrequencyCount    30000         53336 ns/op
-BenchmarkRecursiveFrequencyCount       20000         61780 ns/op
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And, as expected, recursing is less performant than looping. Also, I think my machine would die from a larger data size&amp;hellip;&lt;/p&gt;
-
-&lt;p&gt;But the recursive looks so much cooler though.&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading!
 Gergely.&lt;/p&gt;
 </description>
     </item>
