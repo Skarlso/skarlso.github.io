@@ -5,8 +5,48 @@
     <link>https://skarlso.github.io/posts/</link>
     <description>Recent content in Posts on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Thu, 28 Jul 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 13 Aug 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Drupal missing ToolBar and settings not saving</title>
+      <link>https://skarlso.github.io/2016/08/13/drupal-missing-toolbar-and-settings-not-saving</link>
+      <pubDate>Sat, 13 Aug 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/08/13/drupal-missing-toolbar-and-settings-not-saving</guid>
+      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
+
+&lt;p&gt;Quick gotcha, when working with Drupal. If you just freshly installed it, and everything seems to work fine, and yet you are experiencing things like, the admin toolbar is randomly disappearing, or configuration is not saved; than you might not have modrewrite enabled on your apache server.&lt;/p&gt;
+
+&lt;p&gt;Because, by default, Drupal has clean url enabled, that needs URL rewriting on apache.&lt;/p&gt;
+
+&lt;p&gt;So, step one.&lt;/p&gt;
+
+&lt;p&gt;Have this in your .htaccess file:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;&amp;lt;IfModule mod_rewrite.c&amp;gt;
+  RewriteEngine on
+  ... # and than a bunch of rewrite rules according to your leisure
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Than look up this line in your httpd.conf file and remove the prefix &amp;lsquo;#&amp;rsquo;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#LoadModule rewrite_module libexec/apache2/mod_rewrite.so
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That is all. From there on, everything should work. If, you don&amp;rsquo;t want the clean url setting, yet you can&amp;rsquo;t disable it, and don&amp;rsquo;t want to restart the server and edit the settings.php file; use drush like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;drush vset clean_url 0 --yes
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This should disable it and bust the cache in the process so it&amp;rsquo;s immediately visible.&lt;/p&gt;
+
+&lt;p&gt;That is all folks.&lt;/p&gt;
+
+&lt;p&gt;Cheers,
+Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Jenkins Best Practices Talk</title>
@@ -1395,197 +1435,6 @@ func getLikeForTargetConnect(name int, neighbour int) int {
 &lt;p&gt;Have a nice day!&lt;/p&gt;
 
 &lt;p&gt;Gergely.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Byte arrays and Channels</title>
-      <link>https://skarlso.github.io/2016/01/01/byte-arrays-and-channels</link>
-      <pubDate>Fri, 01 Jan 2016 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2016/01/01/byte-arrays-and-channels</guid>
-      <description>&lt;p&gt;Hi folks and a Happy new Year!&lt;/p&gt;
-
-&lt;p&gt;Today, I would like to show you some interesting things you can do with channels. Consider the following simple example.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import &amp;quot;fmt&amp;quot;
-
-func main() {
-	generatedPassword := make(chan int, 100)
-	correctPassword := make(chan int)
-	defer close(generatedPassword)
-	defer close(correctPassword)
-	go passwordIncrement(generatedPassword)
-	go checkPassword(generatedPassword, correctPassword)
-	pass := &amp;lt;-correctPassword
-	fmt.Println(pass)
-}
-
-func checkPassword(input &amp;lt;-chan int, output chan&amp;lt;- int) {
-	for {
-		p := &amp;lt;-input
-		//Introduce lengthy operation here
-		// time.Sleep(time.Second)
-		fmt.Println(&amp;quot;Checking p:&amp;quot;, p)
-		if p &amp;gt; 100000 {
-			output &amp;lt;- p
-		}
-	}
-}
-
-func passwordIncrement(out chan&amp;lt;- int) {
-	p := 0
-	for {
-		p++
-		out &amp;lt;- p
-	}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The premise is as follows. It launches two go routines. One, which generates passwords, and an other which checks for validity. The two routines talk to each other through the channel &lt;code&gt;generatedPassword&lt;/code&gt;. That&amp;rsquo;s the providing connections between them. The channel &lt;code&gt;correctPassword&lt;/code&gt; provides output for the &lt;code&gt;checkPassword&lt;/code&gt; routine.&lt;/p&gt;
-
-&lt;p&gt;If there is data received from &lt;code&gt;correctPassword&lt;/code&gt; channel, we found our first password and there is no need to look further so we, print the password and quit. The channels will close with defer. This works. But the password is usually either a []byte or a string. With string, it still works.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import &amp;quot;fmt&amp;quot;
-
-func main() {
-	generatedPassword := make(chan string, 100)
-	correctPassword := make(chan string)
-	defer close(generatedPassword)
-	defer close(correctPassword)
-	go passwordIncrement(generatedPassword)
-	go checkPassword(generatedPassword, correctPassword)
-	pass := &amp;lt;-correctPassword
-	fmt.Println(pass)
-}
-
-func checkPassword(input &amp;lt;-chan string, output chan&amp;lt;- string) {
-	for {
-		p := &amp;lt;-input
-		//Introduce lengthy operation here
-		// time.Sleep(time.Second)
-		fmt.Println(&amp;quot;Checking p:&amp;quot;, p)
-		if performSomeCheckingOperation(p) {
-			output &amp;lt;- p
-		}
-	}
-}
-
-func generateNewPassword(out chan&amp;lt;- string) {
-	var p string
-	for {
-		p = generate(p)
-		out &amp;lt;- p
-	}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The generating happens based on the previously generated password. For example, we increment, or permeate. aaaa, aaab, aaac&amp;hellip;&lt;/p&gt;
-
-&lt;p&gt;So &lt;code&gt;generatedPassword&lt;/code&gt; is a buffered channel, it gathers a 100 passwords from which checking retrieves passwords one by one and works on them in a slower process.&lt;/p&gt;
-
-&lt;p&gt;Now, this is fine, but using []byte arrays will always be more powerful and faster. So we would like to use []byte. Like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import &amp;quot;fmt&amp;quot;
-
-func main() {
-	generatedPassword := make(chan []byte, 100)
-	correctPassword := make(chan []byte)
-	defer close(generatedPassword)
-	defer close(correctPassword)
-	go passwordIncrement(generatedPassword)
-	go checkPassword(generatedPassword, correctPassword)
-	pass := &amp;lt;-correctPassword
-	fmt.Println(string(pass))
-}
-
-func checkPassword(input &amp;lt;-chan []byte, output chan&amp;lt;- []byte) {
-	for {
-		p := &amp;lt;-input
-		//Introduce lengthy operation here
-		// time.Sleep(time.Second)
-		fmt.Println(&amp;quot;Checking p:&amp;quot;, string(p))
-		if performSomeCheckingOperation(p) {
-			output &amp;lt;- p
-		}
-	}
-}
-
-func generateNewPassword(out chan&amp;lt;- []byte) {
-	var p []byte
-	for {
-		p = generate(p)
-		out &amp;lt;- p
-	}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This will not work. Why? Because []byte is a slice and thus will be constantly overwritten. The checking go routine will always only check the last data and many generated passwords will be lost. This is also noted in go&amp;rsquo;s scanner here =&amp;gt; &lt;a href=&#34;https://golang.org/pkg/bufio/#Scanner.Bytes&#34;&gt;Scanner.Bytes&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;We have a couple of options here.&lt;/p&gt;
-
-&lt;p&gt;We could use &lt;code&gt;string&lt;/code&gt; channels and convert to []byte after. This is still okay, because the conversion isn&amp;rsquo;t very CPU intensive.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
-generatedPassword := make(chan string, 100)
-correctPassword := make(chan string)
-...
-p := []byte(&amp;lt;-input) //This will work very nicely.
-...
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Options two would be If you have a fixed password to handle, fix data, for example MD5 hash, you can use a byte array. Like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import &amp;quot;fmt&amp;quot;
-
-const PASSWD=13
-
-func main() {
-	generatedPassword := make(chan [PASSWD]byte, 100)
-	correctPassword := make(chan [PASSWD]byte)
-	defer close(generatedPassword)
-	defer close(correctPassword)
-	go passwordIncrement(generatedPassword)
-	go checkPassword(generatedPassword, correctPassword)
-	pass := &amp;lt;-correctPassword
-	fmt.Println(string(pass))
-}
-
-func checkPassword(input &amp;lt;-chan [PASSWD]byte, output chan&amp;lt;- [PASSWD]byte) {
-	for {
-		p := &amp;lt;-input
-		//Introduce lengthy operation here
-		// time.Sleep(time.Second)
-		fmt.Println(&amp;quot;Checking p:&amp;quot;, string(p))
-		if performSomeCheckingOperation(p) {
-			output &amp;lt;- p
-		}
-	}
-}
-
-func generateNewPassword(out chan&amp;lt;- [PASSWD]byte) {
-	var p [PASSWD]byte
-	for {
-		p = generate(p)
-		out &amp;lt;- p
-	}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This is also one solution. If you have to convert between the two, could go with &lt;code&gt;p := byte[:]&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;Conclusion is, that use conversion rather than string types and be aware that using slices in channels is dangerous.&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading!
-Gergely.&lt;/p&gt;
 </description>
     </item>
     
