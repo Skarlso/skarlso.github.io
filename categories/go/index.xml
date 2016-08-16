@@ -5,8 +5,42 @@
     <link>https://skarlso.github.io/categories/go/</link>
     <description>Recent content in Go on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Sun, 12 Jun 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 16 Aug 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/categories/go/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Global variable for never changing regex</title>
+      <link>https://skarlso.github.io/2016/08/16/never-changing-regex</link>
+      <pubDate>Tue, 16 Aug 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/08/16/never-changing-regex</guid>
+      <description>&lt;p&gt;Quick reminder. If you have a never changing regex in Go, do NOT put it into a frequently called function. ALWAYS put it into a global variable. I&amp;rsquo;ll show you why.&lt;/p&gt;
+
+&lt;p&gt;Benchmark for code with a variable in a frequently called function:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkNumber-8     	   30000	     41633 ns/op
+BenchmarkAreaCode-8   	   50000	     27736 ns/op
+BenchmarkFormat-8     	   50000	     29263 ns/op
+PASS
+ok  	_/phone-number	5.110s
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Benchmark for code with the same variable outside in a global scope:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkNumber-8     	  300000	      5618 ns/op
+BenchmarkAreaCode-8   	  500000	      3884 ns/op
+BenchmarkFormat-8     	  300000	      4696 ns/op
+PASS
+ok  	_/phone-number	5.197s
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Notice the magnitude change in ns/op! That&amp;rsquo;s something to keep an eye out for.&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading!
+Cheers,
+Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>How to do Google sign-in with Go</title>
@@ -1628,82 +1662,6 @@ Gergely.&lt;/p&gt;
 &lt;p&gt;Thank you for reading!&lt;/p&gt;
 
 &lt;p&gt;Gergely.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Circular buffer in Go</title>
-      <link>https://skarlso.github.io/2015/10/15/circular-buffer-in-go/</link>
-      <pubDate>Thu, 15 Oct 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/10/15/circular-buffer-in-go/</guid>
-      <description>&lt;p&gt;I&amp;#8217;m proud of this one too. No peaking. I like how go let&amp;#8217;s you do this kind of stuff in a very nice way.&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;go&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;package&lt;/span&gt; circular
-&amp;nbsp;
-&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;fmt&#34;&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//TestVersion testVersion&lt;/span&gt;
-&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;const&lt;/span&gt; TestVersion &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//Buffer buffer type&lt;/span&gt;
-&lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;type&lt;/span&gt; Buffer &lt;span style=&#34;color: #993333;&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    buffer &lt;span style=&#34;color: #339933;&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;byte&lt;/span&gt;
-    full   &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;
-    size   &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;
-    s&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; e   &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//NewBuffer creates a new Buffer&lt;/span&gt;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; NewBuffer&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;size &lt;span style=&#34;color: #993333;&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;Buffer &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; &amp;Buffer&lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;buffer&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000066;&#34;&gt;make&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;([]&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; size&lt;span style=&#34;color: #339933;&#34;&gt;),&lt;/span&gt; s&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; e&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; size&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; size&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; full&lt;span style=&#34;color: #339933;&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//ReadByte reads a byte from b Buffer&lt;/span&gt;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;b &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;Buffer&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; ReadByte&lt;span style=&#34;color: #339933;&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #993333;&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; error&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;full &lt;span style=&#34;color: #339933;&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; fmt&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Errorf&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;Danger Will Robinson: %s&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    readByte &lt;span style=&#34;color: #339933;&#34;&gt;:=&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;buffer&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;s&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt;
-    b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;s &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;s &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;%&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;size
-    b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;full&lt;span style=&#34;color: #339933;&#34;&gt;--&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; readByte&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;nil&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//WriteByte writes c byte to the buffer&lt;/span&gt;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;b &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;Buffer&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; WriteByte&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;c &lt;span style=&#34;color: #993333;&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; error &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;if&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;full&lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt; &amp;gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;size &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-        &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; fmt&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Errorf&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;Danger Will Robinson: %s&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-    b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;buffer&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;e&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; c
-    b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;e &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;e &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;%&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;size
-    b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;full&lt;span style=&#34;color: #339933;&#34;&gt;++&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;nil&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//Overwrite overwrites the oldest byte in Buffer&lt;/span&gt;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;b &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;Buffer&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; Overwrite&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;c &lt;span style=&#34;color: #993333;&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;buffer&lt;span style=&#34;color: #339933;&#34;&gt;[&lt;/span&gt;b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;s&lt;span style=&#34;color: #339933;&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; c
-    b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;s &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;s &lt;span style=&#34;color: #339933;&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #cc66cc;&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;%&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;size
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//Reset resets the buffer&lt;/span&gt;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;b &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;Buffer&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; Reset&lt;span style=&#34;color: #339933;&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;b &lt;span style=&#34;color: #339933;&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;NewBuffer&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;size&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;//String for a string representation of Buffer&lt;/span&gt;
-&lt;span style=&#34;color: #993333;&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;b &lt;span style=&#34;color: #339933;&#34;&gt;*&lt;/span&gt;Buffer&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt; String&lt;span style=&#34;color: #339933;&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #993333;&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #339933;&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color: #b1b100; font-weight: bold;&#34;&gt;return&lt;/span&gt; fmt&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;Sprintf&lt;span style=&#34;color: #339933;&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #cc66cc;&#34;&gt;&#34;Buffer: %d, %d, %d, %d&#34;&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;buffer&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;s&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;e&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;,&lt;/span&gt; b&lt;span style=&#34;color: #339933;&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;&#34;&gt;size&lt;/span&gt;&lt;span style=&#34;color: #339933;&#34;&gt;)&lt;/span&gt;
-&lt;span style=&#34;color: #339933;&#34;&gt;}&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
 </description>
     </item>
     
