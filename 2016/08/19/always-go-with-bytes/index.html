@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
 <head>
   <title>
-    Global variable for never changing regex // Ramblings of a build engineer
+    Always Go with []byte // Ramblings of a build engineer
   </title>
 
   <link href="http://gmpg.org/xfn/11" rel="profile">
@@ -16,11 +16,11 @@
 <meta name="author" content="hannibal">
 <meta name="generator" content="Hugo 0.16" />
 
-  <meta property="og:title" content="Global variable for never changing regex" />
+  <meta property="og:title" content="Always Go with []byte" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="en_US" />
-<meta property="og:url" content="https://skarlso.github.io/2016/08/16/never-changing-regex" />
+<meta property="og:url" content="https://skarlso.github.io/2016/08/19/always-go-with-bytes" />
 
 
   
@@ -115,14 +115,14 @@
 	    
   		<section class="post">
             <h1 class="post-title">
-              <a href="https://skarlso.github.io/2016/08/16/never-changing-regex">Global variable for never changing regex</a>
+              <a href="https://skarlso.github.io/2016/08/19/always-go-with-bytes">Always Go with []byte</a>
             </h1>
             <h3 class="post-subtitle">
             	
             </h3>
             
             	<span class="post-date">
-                	<span class="post-date-day"><sup>16</sup></span><span class="post-date-separator">/</span><span class="post-date-month">Aug</span> <span class="post-date-year">2016</span>
+                	<span class="post-date-day"><sup>19</sup></span><span class="post-date-separator">/</span><span class="post-date-month">Aug</span> <span class="post-date-year">2016</span>
             	</span>
             	
             
@@ -149,30 +149,120 @@
 
 			
 
-            <p>Quick reminder. If you have a never changing regex in Go, do NOT put it into a frequently called function. ALWAYS put it into a global variable. I&rsquo;ll show you why.</p>
+            <p>Another quick reminder&hellip; Always go with []byte if possible. I said it before, and I&rsquo;m going to say it over and over again. It&rsquo;s crucial.</p>
 
-<p>Benchmark for code with a variable in a frequently called function:</p>
+<p>Here is a little code from exercism.io. First, with strings:</p>
 
-<pre><code class="language-bash">BenchmarkNumber-8     	   30000	     41633 ns/op
-BenchmarkAreaCode-8   	   50000	     27736 ns/op
-BenchmarkFormat-8     	   50000	     29263 ns/op
-PASS
-ok  	_/phone-number	5.110s
+<pre><code class="language-go">package igpay
+
+import (
+    &quot;strings&quot;
+)
+
+// PigLatin translates reguler old English into awesome pig-latin.
+func PigLatin(in string) (ret string) {
+    for _, v := range strings.Fields(in) {
+        ret += pigLatin(v) + &quot; &quot;
+    }
+
+    return strings.Trim(ret, &quot; &quot;)
+}
+
+func pigLatin(in string) (ret string) {
+    if strings.IndexAny(in, &quot;aeiou&quot;) == 0 {
+        ret += in + &quot;ay&quot;
+        return
+    }
+
+    for i := 0; i &lt; len(in); i++ {
+        vowelPos := strings.IndexAny(in, &quot;aeiou&quot;)
+
+        if (in[0] == 'y' || in[0] == 'x') &amp;&amp; vowelPos &gt; 1 {
+            vowelPos = 0
+            ret = in
+        }
+        if vowelPos != 0 {
+            adjustPosition := vowelPos
+
+            if in[adjustPosition] == 'u' &amp;&amp; in[adjustPosition - 1] == 'q' {
+                adjustPosition++
+            }
+
+            ret = in[adjustPosition:] + in[:adjustPosition]
+        }
+    }
+    ret += &quot;ay&quot;
+    return
+}
 </code></pre>
 
-<p>Benchmark for code with the same variable outside in a global scope:</p>
+<p>Than with []byte:</p>
 
-<pre><code class="language-bash">BenchmarkNumber-8     	  300000	      5618 ns/op
-BenchmarkAreaCode-8   	  500000	      3884 ns/op
-BenchmarkFormat-8     	  300000	      4696 ns/op
-PASS
-ok  	_/phone-number	5.197s
+<pre><code class="language-go">package igpay
+
+import (
+    // &quot;fmt&quot;
+    &quot;bytes&quot;
+)
+
+// PigLatin translates reguler old English into awesome pig-latin.
+func PigLatin(in string) (ret string) {
+    inBytes := []byte(in)
+    var retBytes [][]byte
+    for _, v := range bytes.Fields(inBytes) {
+        v2 := make([]byte, len(v))
+        copy(v2, v)
+        retBytes = append(retBytes, pigLatin(v2))
+    }
+
+    ret = string(bytes.Join(retBytes, []byte(&quot; &quot;)))
+    return
+}
+
+func pigLatin(in []byte) (ret []byte) {
+    if bytes.IndexAny(in, &quot;aeiou&quot;) == 0 {
+        ret = append(in, []byte(&quot;ay&quot;)...)
+        return
+    }
+
+    for i := 0; i &lt; len(in); i++ {
+        vowelPos := bytes.IndexAny(in, &quot;aeiou&quot;)
+
+        if (in[0] == 'y' || in[0] == 'x') &amp;&amp; vowelPos &gt; 1 {
+            vowelPos = 0
+            ret = in
+        }
+        if vowelPos != 0 {
+            adjustPosition := vowelPos
+
+            if in[adjustPosition] == 'u' &amp;&amp; in[adjustPosition - 1] == 'q' {
+                adjustPosition++
+            }
+
+            in = append(in[adjustPosition:], in[:adjustPosition]...)
+            ret = in
+            // fmt.Printf(&quot;%s\n&quot;, ret)
+        }
+    }
+    ret = append(ret, []byte(&quot;ay&quot;)...)
+    return
+}
 </code></pre>
 
-<p>Notice the magnitude change in ns/op! That&rsquo;s something to keep an eye out for.</p>
+<p>And than,the benchmarks of course:</p>
 
-<p>Thanks for reading!
-Cheers,
+<pre><code class="language-bash">BenchmarkPigLatin-8          	  200000	     10688 ns/op
+BenchmarkPigLatinStrings-8   	  100000	     15211 ns/op
+PASS
+</code></pre>
+
+<p>The improvement is not massive in this case, but it&rsquo;s more than enough to matter. And in a bigger, more complicated program, string concatenation will take a LOT of time away.</p>
+
+<p>In Go, the <code>bytes</code> package has a 1-1 map compared to the <code>strings</code> packages, so chances are, if you are doing strings concatenations you will be able to port that piece of code easily to []byte.</p>
+
+<p>That&rsquo;s all folks.</p>
+
+<p>Happy coding,
 Gergely.</p>
 
 	
@@ -184,16 +274,11 @@ Gergely.</p>
 				<div class="paging">
 					<span class="paging-label">More Reading</span>
 					
-					<div class="paging-newer">
-						<span class="dark-red">Newer</span><span class="decorative-marker">//</span>
-						<a class="paging-link" href="https://skarlso.github.io/2016/08/19/always-go-with-bytes">Always Go with []byte</a>
-		            </div>
-		            
 
 					
 					<div class="paging-older">
 						<span class="dark-red">Older</span><span class="decorative-marker">//</span>
-			            <a class="paging-link" href="https://skarlso.github.io/2016/08/13/drupal-missing-toolbar-and-settings-not-saving">Drupal missing ToolBar and settings not saving</a>
+			            <a class="paging-link" href="https://skarlso.github.io/2016/08/16/never-changing-regex">Global variable for never changing regex</a>
 		            </div>
 		            
 	            </div>
@@ -202,9 +287,9 @@ Gergely.</p>
           	<div id="disqus_thread"></div>
 <script type="text/javascript">
     var disqus_shortname = 'hannibalDisqus';
-    var disqus_identifier = 'https:\/\/skarlso.github.io\/2016\/08\/16\/never-changing-regex';
-    var disqus_title = 'Global variable for never changing regex';
-    var disqus_url = 'https:\/\/skarlso.github.io\/2016\/08\/16\/never-changing-regex';
+    var disqus_identifier = 'https:\/\/skarlso.github.io\/2016\/08\/19\/always-go-with-bytes';
+    var disqus_title = 'Always Go with []byte';
+    var disqus_url = 'https:\/\/skarlso.github.io\/2016\/08\/19\/always-go-with-bytes';
 
     (function() {
         var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

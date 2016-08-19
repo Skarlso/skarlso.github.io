@@ -5,8 +5,132 @@
     <link>https://skarlso.github.io/categories/go/</link>
     <description>Recent content in Go on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Tue, 16 Aug 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 19 Aug 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/categories/go/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Always Go with []byte</title>
+      <link>https://skarlso.github.io/2016/08/19/always-go-with-bytes</link>
+      <pubDate>Fri, 19 Aug 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/08/19/always-go-with-bytes</guid>
+      <description>&lt;p&gt;Another quick reminder&amp;hellip; Always go with []byte if possible. I said it before, and I&amp;rsquo;m going to say it over and over again. It&amp;rsquo;s crucial.&lt;/p&gt;
+
+&lt;p&gt;Here is a little code from exercism.io. First, with strings:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package igpay
+
+import (
+    &amp;quot;strings&amp;quot;
+)
+
+// PigLatin translates reguler old English into awesome pig-latin.
+func PigLatin(in string) (ret string) {
+    for _, v := range strings.Fields(in) {
+        ret += pigLatin(v) + &amp;quot; &amp;quot;
+    }
+
+    return strings.Trim(ret, &amp;quot; &amp;quot;)
+}
+
+func pigLatin(in string) (ret string) {
+    if strings.IndexAny(in, &amp;quot;aeiou&amp;quot;) == 0 {
+        ret += in + &amp;quot;ay&amp;quot;
+        return
+    }
+
+    for i := 0; i &amp;lt; len(in); i++ {
+        vowelPos := strings.IndexAny(in, &amp;quot;aeiou&amp;quot;)
+
+        if (in[0] == &#39;y&#39; || in[0] == &#39;x&#39;) &amp;amp;&amp;amp; vowelPos &amp;gt; 1 {
+            vowelPos = 0
+            ret = in
+        }
+        if vowelPos != 0 {
+            adjustPosition := vowelPos
+
+            if in[adjustPosition] == &#39;u&#39; &amp;amp;&amp;amp; in[adjustPosition - 1] == &#39;q&#39; {
+                adjustPosition++
+            }
+
+            ret = in[adjustPosition:] + in[:adjustPosition]
+        }
+    }
+    ret += &amp;quot;ay&amp;quot;
+    return
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Than with []byte:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package igpay
+
+import (
+    // &amp;quot;fmt&amp;quot;
+    &amp;quot;bytes&amp;quot;
+)
+
+// PigLatin translates reguler old English into awesome pig-latin.
+func PigLatin(in string) (ret string) {
+    inBytes := []byte(in)
+    var retBytes [][]byte
+    for _, v := range bytes.Fields(inBytes) {
+        v2 := make([]byte, len(v))
+        copy(v2, v)
+        retBytes = append(retBytes, pigLatin(v2))
+    }
+
+    ret = string(bytes.Join(retBytes, []byte(&amp;quot; &amp;quot;)))
+    return
+}
+
+func pigLatin(in []byte) (ret []byte) {
+    if bytes.IndexAny(in, &amp;quot;aeiou&amp;quot;) == 0 {
+        ret = append(in, []byte(&amp;quot;ay&amp;quot;)...)
+        return
+    }
+
+    for i := 0; i &amp;lt; len(in); i++ {
+        vowelPos := bytes.IndexAny(in, &amp;quot;aeiou&amp;quot;)
+
+        if (in[0] == &#39;y&#39; || in[0] == &#39;x&#39;) &amp;amp;&amp;amp; vowelPos &amp;gt; 1 {
+            vowelPos = 0
+            ret = in
+        }
+        if vowelPos != 0 {
+            adjustPosition := vowelPos
+
+            if in[adjustPosition] == &#39;u&#39; &amp;amp;&amp;amp; in[adjustPosition - 1] == &#39;q&#39; {
+                adjustPosition++
+            }
+
+            in = append(in[adjustPosition:], in[:adjustPosition]...)
+            ret = in
+            // fmt.Printf(&amp;quot;%s\n&amp;quot;, ret)
+        }
+    }
+    ret = append(ret, []byte(&amp;quot;ay&amp;quot;)...)
+    return
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And than,the benchmarks of course:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkPigLatin-8          	  200000	     10688 ns/op
+BenchmarkPigLatinStrings-8   	  100000	     15211 ns/op
+PASS
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The improvement is not massive in this case, but it&amp;rsquo;s more than enough to matter. And in a bigger, more complicated program, string concatenation will take a LOT of time away.&lt;/p&gt;
+
+&lt;p&gt;In Go, the &lt;code&gt;bytes&lt;/code&gt; package has a 1-1 map compared to the &lt;code&gt;strings&lt;/code&gt; packages, so chances are, if you are doing strings concatenations you will be able to port that piece of code easily to []byte.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all folks.&lt;/p&gt;
+
+&lt;p&gt;Happy coding,
+Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Global variable for never changing regex</title>
@@ -1640,26 +1764,6 @@ Gergely.&lt;/p&gt;
 &lt;p&gt;Feel free to open up issues if you would like to use it and need some features which you would find interesting. Currently the username and password for the API are stored in a local config file in your home folder. Later on, I&amp;#8217;ll add the ability to have a token rather than a username:password combination.&lt;/p&gt;
 
 &lt;p&gt;Thanks for reading!&lt;/p&gt;
-
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Go Progress Quest</title>
-      <link>https://skarlso.github.io/2015/11/09/go-progress-quest/</link>
-      <pubDate>Mon, 09 Nov 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2015/11/09/go-progress-quest/</guid>
-      <description>&lt;p&gt;Hi Folks.&lt;/p&gt;
-
-&lt;p&gt;I started to build a Progress Quest type of web app in Go.&lt;/p&gt;
-
-&lt;p&gt;If you&amp;#8217;d like to join, or just tag along, please drop by here =&amp;gt; &lt;a href=&#34;https://github.com/Skarlso/goprogressquest&#34; target=&#34;_blank&#34;&gt;Go Progress Quest&lt;/a&gt; and feel free to submit an issue if you have an idea, or would like to contribute!&lt;/p&gt;
-
-&lt;p&gt;I will try and document the Progress&amp;#8230;&lt;/p&gt;
-
-&lt;p&gt;Thank you for reading!&lt;/p&gt;
 
 &lt;p&gt;Gergely.&lt;/p&gt;
 </description>
