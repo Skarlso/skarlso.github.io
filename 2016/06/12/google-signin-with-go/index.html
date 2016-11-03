@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <title>
+    How to do Google sign-in with Go // Ramblings of a build engineer
+  </title>
+
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+<meta name="description" content="">
+<meta name="keywords" content="">
+<meta name="author" content="hannibal">
+<meta name="generator" content="Hugo 0.17" />
+
+  <meta property="og:title" content="How to do Google sign-in with Go" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:url" content="https://skarlso.github.io/2016/06/12/google-signin-with-go" />
+
+
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/base-min.css">
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/pure-min.css">
+  
+  
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/grids-responsive-min.css">
+  
+  
+
+  <link rel="stylesheet" href="https://skarlso.github.io//css/redlounge.css">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet">
+  <link href='//fonts.googleapis.com/css?family=Raleway:400,200,100,700,300,500,600,800' rel='stylesheet' type='text/css'>
+  <link href='//fonts.googleapis.com/css?family=Libre+Baskerville:400,700,400italic' rel='stylesheet' type='text/css'>
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://skarlso.github.io/touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" type="image/x-icon" href="https://skarlso.github.io/img/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Ramblings of a build engineer" />
+
+    
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.7/styles/true.min.css">
+  
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.7/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+
+  
+
+  
+
+  
+
+  
+</head>
+
+<body>
+	
+
+	<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+  <div class="header">
+    
+
+	
+
+    <h1 class="brand-title">Ramblings...</h1>
+    <h2 class="brand-tagline">...of a build engineer.</h2>
+
+    <nav class="nav">
+      <ul class="nav-list">
+        <li class="nav-item"><span class="nav-item-separator">//</span><a href="https://skarlso.github.io/">Home</a></li>
+        
+      </ul>
+    </nav>
+
+    
+    <div class="social-buttons">
+      
+        
+        <a href="http://skarlso.com" target="_blank"><i class='fa fa-fort-awesome fa-3x'></i></a>
+        
+      
+      
+    </div>
+    
+
+  </div>
+</div>
+
+	
+	
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+		<a name="top"></a>
+		
+
+		
+			
+		    <div id="toc" class="pure-u-1 pure-u-md-1-4">
+				<small class="toc-label">Contents</small>
+		   	 	<nav id="TableOfContents">
+<ul>
+<li><a href="#setup">Setup</a>
+<ul>
+<li><a href="#google-oauth-token">Google OAuth token</a></li>
+</ul></li>
+<li><a href="#the-application">The Application</a>
+<ul>
+<li><a href="#libraries">Libraries</a></li>
+<li><a href="#setup-credentials">Setup - Credentials</a></li>
+<li><a href="#setup-oauth-client">Setup - OAuth client</a></li>
+<li><a href="#random-state-and-button-construction">Random State and Button construction</a></li>
+</ul></li>
+<li><a href="#user-information">User Information</a>
+<ul>
+<li><a href="#getting-the-client">Getting the Client</a></li>
+<li><a href="#obtaining-information">Obtaining information</a></li>
+</ul></li>
+<li><a href="#putting-it-all-together">Putting it all together</a></li>
+<li><a href="#google-api-documentation">Google API Documentation</a></li>
+</ul>
+</nav>
+		    </div>
+		    
+	    
+  		<section class="post">
+            <h1 class="post-title">
+              <a href="https://skarlso.github.io/2016/06/12/google-signin-with-go">How to do Google sign-in with Go</a>
+            </h1>
+            <h3 class="post-subtitle">
+            	
+            </h3>
+            
+            	<span class="post-date">
+                	<span class="post-date-day"><sup>12</sup></span><span class="post-date-separator">/</span><span class="post-date-month">Jun</span> <span class="post-date-year">2016</span>
+            	</span>
+            	
+            
+            	
+            		<span class="post-author-single">By <a class="post-author"  target="">hannibal</a></span>
+            		
+
+
+
+
+            	
+            
+
+			
+			
+				<div class="post-categories">
+				
+					<a class="post-category post-category-go" href="https://skarlso.github.io//categories/go">Go</a>
+				
+					<a class="post-category post-category-golang" href="https://skarlso.github.io//categories/golang">Golang</a>
+				
+					<a class="post-category post-category-web" href="https://skarlso.github.io//categories/web">Web</a>
+				
+				</div>
+			
+
+			
+
+			
+
+            <p>Hi folks.</p>
+
+<p>Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.</p>
+
+<p></p>
+
+<p>Let&rsquo;s get started.</p>
+
+<h1 id="setup">Setup</h1>
+
+<h2 id="google-oauth-token">Google OAuth token</h2>
+
+<p>First what you need is, to register your application with Google, so you&rsquo;ll get a Token that you can use to authorize later calls to Google services.</p>
+
+<p>You can do that here: <a href="https://console.developers.google.com/iam-admin/projects">Google Developer Console</a>. You&rsquo;ll have to create a new project. Once it&rsquo;s done, click on <code>Credentials</code> and create an OAuth token. You should see something like this: &ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&rdquo;. Go through the questions, like, what type your application is, and once you arrive at stage where it&rsquo;s asking for your application&rsquo;s name &ndash; there is a section asking for redirect URLs; there, write the url you wish to use when authorising your user. If you don&rsquo;t know this yet, don&rsquo;t fret, you can come back and change it later. Do NOT use <code>localhost</code>. If you are running on your own, use <a href="http://127.0.0.1:port/whatever">http://127.0.0.1:port/whatever</a>.</p>
+
+<p>This will get you a <code>client ID</code> and a <code>client secret</code>. I&rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth.</p>
+
+<p>Your application can now be identified through Google services.</p>
+
+<h1 id="the-application">The Application</h1>
+
+<h2 id="libraries">Libraries</h2>
+
+<p>Google has a nice library to use with OAuth 2.0. The library is available here: <a href="https://github.com/golang/oauth2">Google OAth 2.0</a>. It&rsquo;s a bit cryptic at first, but not to worry. After a bit of fiddling you&rsquo;ll understand fast what it does. I&rsquo;m also using <a href="https://github.com/gin-gonic/gin">Gin</a>, and Gin&rsquo;s session handling middleware <a href="https://github.com/gin-gonic/contrib/tree/master/sessions">Gin-Session</a>.</p>
+
+<h2 id="setup-credentials">Setup - Credentials</h2>
+
+<p>Let&rsquo;s create a setup which configures your credentials from the file you saved earlier. This is pretty straightforward.</p>
+
+<pre><code class="language-go">// Credentials which stores google ids.
+type Credentials struct {
+    Cid string `json:&quot;cid&quot;`
+    Csecret string `json:&quot;csecret&quot;`
+}
+
+func init() {
+    var c Credentials
+    file, err := ioutil.ReadFile(&quot;./creds.json&quot;)
+    if err != nil {
+        fmt.Printf(&quot;File error: %v\n&quot;, err)
+        os.Exit(1)
+    }
+    json.Unmarshal(file, &amp;c)
+}
+</code></pre>
+
+<p>Once you have the creds loaded, you can now go on to construct the OAuth client.</p>
+
+<h2 id="setup-oauth-client">Setup - OAuth client</h2>
+
+<p>Construct the OAuth config like this:</p>
+
+<pre><code class="language-go">conf := &amp;oauth2.Config{
+  ClientID:     c.Cid,
+  ClientSecret: c.Csecret,
+  RedirectURL:  &quot;http://localhost:9090/auth&quot;,
+  Scopes: []string{
+    &quot;https://www.googleapis.com/auth/userinfo.email&quot;, // You have to select your own scope from here -&gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+  },
+  Endpoint: google.Endpoint,
+}
+</code></pre>
+
+<p>It will give you a struct which you can then use to Authorize the user in the google domain. Next, all you need to do is call <code>AuthCodeURL</code> on this config. It will give you a URL which redirects to a Google Sign-In form. Once the user fills that out and clicks &lsquo;Allow&rsquo;, you&rsquo;ll get back a TOKEN in the <code>code</code> query parameter and a <code>state</code> which helps protect against CSRF attacks. Always check if the provided state is the same which you provided with AuthCodeURL. This will look something like this <code>http://127.0.0.1:9090/auth?code=4FLKFskdjflf3343d4f&amp;state=lhfu3f983j;asdf</code>. Small function for this:</p>
+
+<pre><code class="language-go">func getLoginURL(state string) string {
+    // State can be some kind of random generated hash string.
+    // See relevant RFC: http://tools.ietf.org/html/rfc6749#section-10.12
+    return conf.AuthCodeURL(state)
+}
+</code></pre>
+
+<p>Construct a button which the user can click and be redirected to the Google Sign-In form. When constructing the url, we must do one more thing. Create a secure state token and save it in the form of a cookie for the current user.</p>
+
+<h2 id="random-state-and-button-construction">Random State and Button construction</h2>
+
+<p>Small piece of code random token:</p>
+
+<pre><code class="language-go">func randToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
+}
+</code></pre>
+
+<p>Storing it in a session and constructing the button:</p>
+
+<pre><code class="language-go">func loginHandler(c *gin.Context) {
+    state = randToken()
+    session := sessions.Default(c)
+    session.Set(&quot;state&quot;, state)
+    session.Save()
+    c.Writer.Write([]byte(&quot;&lt;html&gt;&lt;title&gt;Golang Google&lt;/title&gt; &lt;body&gt; &lt;a href='&quot; + getLoginURL() + &quot;'&gt;&lt;button&gt;Login with Google!&lt;/button&gt; &lt;/a&gt; &lt;/body&gt;&lt;/html&gt;&quot;))
+}
+</code></pre>
+
+<p>It&rsquo;s not the nicest button I ever come up with, but it will have to do.</p>
+
+<h1 id="user-information">User Information</h1>
+
+<p>After you got the token, you can construct an authorised Google HTTP Client, which let&rsquo;s you call Google related services and retrieve information about the user.</p>
+
+<h2 id="getting-the-client">Getting the Client</h2>
+
+<p>Before we construct a client, we must check if the retrieved state is still the same compared to the one we provided. I&rsquo;m doing this before constructing the client. Together this looks like this:</p>
+
+<pre><code class="language-go">func authHandler(c *gin.Context) {
+    // Check state validity.
+    session := sessions.Default(c)
+    retrievedState := session.Get(&quot;state&quot;)
+    if retrievedState != c.Query(&quot;state&quot;) {
+        c.AbortWithError(http.StatusUnauthorized, fmt.Errorf(&quot;Invalid session state: %s&quot;, retrievedState))
+        return
+    }
+    // Handle the exchange code to initiate a transport.
+  	tok, err := conf.Exchange(oauth2.NoContext, c.Query(&quot;code&quot;))
+  	if err != nil {
+  		c.AbortWithError(http.StatusBadRequest, err)
+          return
+  	}
+    // Construct the client.
+    client := conf.Client(oauth2.NoContext, tok)
+    ...
+</code></pre>
+
+<h2 id="obtaining-information">Obtaining information</h2>
+
+<p>Our next step is to retrieve information about the user. To achieve this, call Google&rsquo;s API with the authorised client. The code for that is:</p>
+
+<pre><code class="language-go">...
+resp, err := client.Get(&quot;https://www.googleapis.com/oauth2/v3/userinfo&quot;)
+if err != nil {
+    c.AbortWithError(http.StatusBadRequest, err)
+    return
+}
+defer resp.Body.Close()
+data, _ := ioutil.ReadAll(resp.Body)
+log.Println(&quot;Resp body: &quot;, string(data))
+...
+</code></pre>
+
+<p>And this will yield a body like this:</p>
+
+<pre><code class="language-json">{
+  &quot;sub&quot;: &quot;1111111111111111111111&quot;,
+  &quot;name&quot;: &quot;Your Name&quot;,
+  &quot;given_name&quot;: &quot;Your&quot;,
+  &quot;family_name&quot;: &quot;Name&quot;,
+  &quot;profile&quot;: &quot;https://plus.google.com/1111111111111111111111&quot;,
+  &quot;picture&quot;: &quot;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&quot;,
+  &quot;email&quot;: &quot;your@gmail.com&quot;,
+  &quot;email_verified&quot;: true,
+  &quot;gender&quot;: &quot;male&quot;
+}
+</code></pre>
+
+<p>Parse it, and you&rsquo;ve got an email which you can store somewhere for registration purposes. At this point, your user is not yet Authenticated. For that, I&rsquo;m going to post a second post, which describes how to go on. Retrieving the stored email address, and user session handling with Gin and MongoDB.</p>
+
+<h1 id="putting-it-all-together">Putting it all together</h1>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;crypto/rand&quot;
+    &quot;encoding/base64&quot;
+    &quot;encoding/json&quot;
+    &quot;io/ioutil&quot;
+    &quot;fmt&quot;
+    &quot;log&quot;
+    &quot;os&quot;
+    &quot;net/http&quot;
+
+    &quot;github.com/gin-gonic/contrib/sessions&quot;
+    &quot;github.com/gin-gonic/gin&quot;
+    &quot;golang.org/x/oauth2&quot;
+    &quot;golang.org/x/oauth2/google&quot;
+)
+
+// Credentials which stores google ids.
+type Credentials struct {
+    Cid     string `json:&quot;cid&quot;`
+    Csecret string `json:&quot;csecret&quot;`
+}
+
+// User is a retrieved and authentiacted user.
+type User struct {
+    Sub string `json:&quot;sub&quot;`
+    Name string `json:&quot;name&quot;`
+    GivenName string `json:&quot;given_name&quot;`
+    FamilyName string `json:&quot;family_name&quot;`
+    Profile string `json:&quot;profile&quot;`
+    Picture string `json:&quot;picture&quot;`
+    Email string `json:&quot;email&quot;`
+    EmailVerified string `json:&quot;email_verified&quot;`
+    Gender string `json:&quot;gender&quot;`
+}
+
+var cred Credentials
+var conf *oauth2.Config
+var state string
+var store = sessions.NewCookieStore([]byte(&quot;secret&quot;))
+
+func randToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
+}
+
+func init() {
+    file, err := ioutil.ReadFile(&quot;./creds.json&quot;)
+    if err != nil {
+        log.Printf(&quot;File error: %v\n&quot;, err)
+        os.Exit(1)
+    }
+    json.Unmarshal(file, &amp;cred)
+
+    conf = &amp;oauth2.Config{
+        ClientID:     cred.Cid,
+        ClientSecret: cred.Csecret,
+        RedirectURL:  &quot;http://127.0.0.1:9090/auth&quot;,
+        Scopes: []string{
+            &quot;https://www.googleapis.com/auth/userinfo.email&quot;, // You have to select your own scope from here -&gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+        },
+        Endpoint: google.Endpoint,
+    }
+}
+
+func indexHandler(c *gin.Context) {
+    c.HTML(http.StatusOK, &quot;index.tmpl&quot;, gin.H{})
+}
+
+func getLoginURL(state string) string {
+    return conf.AuthCodeURL(state)
+}
+
+func authHandler(c *gin.Context) {
+    // Handle the exchange code to initiate a transport.
+    session := sessions.Default(c)
+    retrievedState := session.Get(&quot;state&quot;)
+    if retrievedState != c.Query(&quot;state&quot;) {
+        c.AbortWithError(http.StatusUnauthorized, fmt.Errorf(&quot;Invalid session state: %s&quot;, retrievedState))
+        return
+    }
+
+	tok, err := conf.Exchange(oauth2.NoContext, c.Query(&quot;code&quot;))
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+        return
+	}
+
+	client := conf.Client(oauth2.NoContext, tok)
+	email, err := client.Get(&quot;https://www.googleapis.com/oauth2/v3/userinfo&quot;)
+    if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+        return
+	}
+    defer email.Body.Close()
+    data, _ := ioutil.ReadAll(email.Body)
+    log.Println(&quot;Email body: &quot;, string(data))
+    c.Status(http.StatusOK)
+}
+
+func loginHandler(c *gin.Context) {
+    state = randToken()
+    session := sessions.Default(c)
+    session.Set(&quot;state&quot;, state)
+    session.Save()
+    c.Writer.Write([]byte(&quot;&lt;html&gt;&lt;title&gt;Golang Google&lt;/title&gt; &lt;body&gt; &lt;a href='&quot; + getLoginURL(state) + &quot;'&gt;&lt;button&gt;Login with Google!&lt;/button&gt; &lt;/a&gt; &lt;/body&gt;&lt;/html&gt;&quot;))
+}
+
+func main() {
+    router := gin.Default()
+    router.Use(sessions.Sessions(&quot;goquestsession&quot;, store))
+    router.Static(&quot;/css&quot;, &quot;./static/css&quot;)
+    router.Static(&quot;/img&quot;, &quot;./static/img&quot;)
+    router.LoadHTMLGlob(&quot;templates/*&quot;)
+
+    router.GET(&quot;/&quot;, indexHandler)
+    router.GET(&quot;/login&quot;, loginHandler)
+    router.GET(&quot;/auth&quot;, authHandler)
+
+    router.Run(&quot;127.0.0.1:9090&quot;)
+}
+}
+</code></pre>
+
+<p>This is it folks. I hope this helped. Any comments or advices are welcomed.</p>
+
+<h1 id="google-api-documentation">Google API Documentation</h1>
+
+<p>The documentation to this whole process, and MUCH more information can be found here: <a href="https://developers.google.com/identity/protocols/OAuth2">Google API Docs</a>.</p>
+
+<p>Thanks for reading,
+Gergely.</p>
+	
+			
+
+			
+
+			
+				<div class="paging">
+					<span class="paging-label">More Reading</span>
+					
+					<div class="paging-newer">
+						<span class="dark-red">Newer</span><span class="decorative-marker">//</span>
+						<a class="paging-link" href="https://skarlso.github.io/2016/07/12/simple-hook-to-rid-of-trouble">Simple hook to rid of trouble</a>
+		            </div>
+		            
+
+					
+					<div class="paging-older">
+						<span class="dark-red">Older</span><span class="decorative-marker">//</span>
+			            <a class="paging-link" href="https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2">Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</a>
+		            </div>
+		            
+	            </div>
+            
+          </section>
+          
+          	<div id="disqus_thread"></div>
+<script type="text/javascript">
+    var disqus_shortname = 'hannibalDisqus';
+    var disqus_identifier = 'https:\/\/skarlso.github.io\/2016\/06\/12\/google-signin-with-go';
+    var disqus_title = 'How to do Google sign-in with Go';
+    var disqus_url = 'https:\/\/skarlso.github.io\/2016\/06\/12\/google-signin-with-go';
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+          
+        
+      <div class="footer">
+	<hr class="thin" />
+	<div class="pure-menu pure-menu-horizontal pure-menu-open">
+		<ul class="footer-menu">
+		
+		</ul>
+	</div>
+
+	<p>&copy; 2016. All rights reserved.</p>
+</div>
+    </div>
+  </div>
+	
+
+	
+
+  
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <title>
+    Always Go with []byte // Ramblings of a build engineer
+  </title>
+
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+<meta name="description" content="">
+<meta name="keywords" content="">
+<meta name="author" content="hannibal">
+<meta name="generator" content="Hugo 0.17" />
+
+  <meta property="og:title" content="Always Go with []byte" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:url" content="https://skarlso.github.io/2016/08/19/always-go-with-bytes" />
+
+
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/base-min.css">
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/pure-min.css">
+  
+  
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.5.0/grids-responsive-min.css">
+  
+  
+
+  <link rel="stylesheet" href="https://skarlso.github.io//css/redlounge.css">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet">
+  <link href='//fonts.googleapis.com/css?family=Raleway:400,200,100,700,300,500,600,800' rel='stylesheet' type='text/css'>
+  <link href='//fonts.googleapis.com/css?family=Libre+Baskerville:400,700,400italic' rel='stylesheet' type='text/css'>
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://skarlso.github.io/touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" type="image/x-icon" href="https://skarlso.github.io/img/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="Ramblings of a build engineer" />
+
+    
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.7/styles/true.min.css">
+  
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.7/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+
+  
+
+  
+
+  
+
+  
+</head>
+
+<body>
+	
+
+	<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+  <div class="header">
+    
+
+	
+
+    <h1 class="brand-title">Ramblings...</h1>
+    <h2 class="brand-tagline">...of a build engineer.</h2>
+
+    <nav class="nav">
+      <ul class="nav-list">
+        <li class="nav-item"><span class="nav-item-separator">//</span><a href="https://skarlso.github.io/">Home</a></li>
+        
+      </ul>
+    </nav>
+
+    
+    <div class="social-buttons">
+      
+        
+        <a href="http://skarlso.com" target="_blank"><i class='fa fa-fort-awesome fa-3x'></i></a>
+        
+      
+      
+    </div>
+    
+
+  </div>
+</div>
+
+	
+	
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+		<a name="top"></a>
+		
+
+		
+			
+	    
+  		<section class="post">
+            <h1 class="post-title">
+              <a href="https://skarlso.github.io/2016/08/19/always-go-with-bytes">Always Go with []byte</a>
+            </h1>
+            <h3 class="post-subtitle">
+            	
+            </h3>
+            
+            	<span class="post-date">
+                	<span class="post-date-day"><sup>19</sup></span><span class="post-date-separator">/</span><span class="post-date-month">Aug</span> <span class="post-date-year">2016</span>
+            	</span>
+            	
+            
+            	
+            		<span class="post-author-single">By <a class="post-author"  target="">hannibal</a></span>
+            		
+
+
+
+
+            	
+            
+
+			
+			
+				<div class="post-categories">
+				
+					<a class="post-category post-category-go" href="https://skarlso.github.io//categories/go">Go</a>
+				
+				</div>
+			
+
+			
+
+			
+
+            <p>Another quick reminder&hellip; Always go with []byte if possible. I said it before, and I&rsquo;m going to say it over and over again. It&rsquo;s crucial.</p>
+
+<p>Here is a little code from exercism.io. First, with strings:</p>
+
+<pre><code class="language-go">package igpay
+
+import (
+    &quot;strings&quot;
+)
+
+// PigLatin translates reguler old English into awesome pig-latin.
+func PigLatin(in string) (ret string) {
+    for _, v := range strings.Fields(in) {
+        ret += pigLatin(v) + &quot; &quot;
+    }
+
+    return strings.Trim(ret, &quot; &quot;)
+}
+
+func pigLatin(in string) (ret string) {
+    if strings.IndexAny(in, &quot;aeiou&quot;) == 0 {
+        ret += in + &quot;ay&quot;
+        return
+    }
+
+    for i := 0; i &lt; len(in); i++ {
+        vowelPos := strings.IndexAny(in, &quot;aeiou&quot;)
+
+        if (in[0] == 'y' || in[0] == 'x') &amp;&amp; vowelPos &gt; 1 {
+            vowelPos = 0
+            ret = in
+        }
+        if vowelPos != 0 {
+            adjustPosition := vowelPos
+
+            if in[adjustPosition] == 'u' &amp;&amp; in[adjustPosition - 1] == 'q' {
+                adjustPosition++
+            }
+
+            ret = in[adjustPosition:] + in[:adjustPosition]
+        }
+    }
+    ret += &quot;ay&quot;
+    return
+}
+</code></pre>
+
+<p>Than with []byte:</p>
+
+<pre><code class="language-go">package igpay
+
+import (
+    // &quot;fmt&quot;
+    &quot;bytes&quot;
+)
+
+// PigLatin translates reguler old English into awesome pig-latin.
+func PigLatin(in string) (ret string) {
+    inBytes := []byte(in)
+    var retBytes [][]byte
+    for _, v := range bytes.Fields(inBytes) {
+        v2 := make([]byte, len(v))
+        copy(v2, v)
+        retBytes = append(retBytes, pigLatin(v2))
+    }
+
+    ret = string(bytes.Join(retBytes, []byte(&quot; &quot;)))
+    return
+}
+
+func pigLatin(in []byte) (ret []byte) {
+    if bytes.IndexAny(in, &quot;aeiou&quot;) == 0 {
+        ret = append(in, []byte(&quot;ay&quot;)...)
+        return
+    }
+
+    for i := 0; i &lt; len(in); i++ {
+        vowelPos := bytes.IndexAny(in, &quot;aeiou&quot;)
+
+        if (in[0] == 'y' || in[0] == 'x') &amp;&amp; vowelPos &gt; 1 {
+            vowelPos = 0
+            ret = in
+        }
+        if vowelPos != 0 {
+            adjustPosition := vowelPos
+
+            if in[adjustPosition] == 'u' &amp;&amp; in[adjustPosition - 1] == 'q' {
+                adjustPosition++
+            }
+
+            in = append(in[adjustPosition:], in[:adjustPosition]...)
+            ret = in
+            // fmt.Printf(&quot;%s\n&quot;, ret)
+        }
+    }
+    ret = append(ret, []byte(&quot;ay&quot;)...)
+    return
+}
+</code></pre>
+
+<p>And than,the benchmarks of course:</p>
+
+<pre><code class="language-bash">BenchmarkPigLatin-8          	  200000	     10688 ns/op
+BenchmarkPigLatinStrings-8   	  100000	     15211 ns/op
+PASS
+</code></pre>
+
+<p>The improvement is not massive in this case, but it&rsquo;s more than enough to matter. And in a bigger, more complicated program, string concatenation will take a LOT of time away.</p>
+
+<p>In Go, the <code>bytes</code> package has a 1-1 map compared to the <code>strings</code> packages, so chances are, if you are doing strings concatenations you will be able to port that piece of code easily to []byte.</p>
+
+<p>That&rsquo;s all folks.</p>
+
+<p>Happy coding,
+Gergely.</p>
+
+	
+			
+
+			
+
+			
+				<div class="paging">
+					<span class="paging-label">More Reading</span>
+					
+					<div class="paging-newer">
+						<span class="dark-red">Newer</span><span class="decorative-marker">//</span>
+						<a class="paging-link" href="https://skarlso.github.io/2016/09/17/simple-hometheater-with-remote-and-flirc">Budget Home Theather with a Headless Raspberry Pi and Flirc for Remote Controlling</a>
+		            </div>
+		            
+
+					
+					<div class="paging-older">
+						<span class="dark-red">Older</span><span class="decorative-marker">//</span>
+			            <a class="paging-link" href="https://skarlso.github.io/2016/08/16/never-changing-regex">Global variable for never changing regex</a>
+		            </div>
+		            
+	            </div>
+            
+          </section>
+          
+          	<div id="disqus_thread"></div>
+<script type="text/javascript">
+    var disqus_shortname = 'hannibalDisqus';
+    var disqus_identifier = 'https:\/\/skarlso.github.io\/2016\/08\/19\/always-go-with-bytes';
+    var disqus_title = 'Always Go with []byte';
+    var disqus_url = 'https:\/\/skarlso.github.io\/2016\/08\/19\/always-go-with-bytes';
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+          
+        
+      <div class="footer">
+	<hr class="thin" />
+	<div class="pure-menu pure-menu-horizontal pure-menu-open">
+		<ul class="footer-menu">
+		
+		</ul>
+	</div>
+
+	<p>&copy; 2016. All rights reserved.</p>
+</div>
+    </div>
+  </div>
+	
+
+	
+
+  
+</body>
+</html>
