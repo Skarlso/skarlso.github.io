@@ -1,12 +1,190 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Web on Ramblings of a build engineer</title>
-    <link>https://skarlso.github.io/categories/web/</link>
-    <description>Recent content in Web on Ramblings of a build engineer</description>
+    <title>Ramblings of a build engineer</title>
+    <link>https://skarlso.github.io/categories/web/index.xml</link>
+    <description>Recent content on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Sun, 12 Jun 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://skarlso.github.io/categories/web/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>How to do Google Sign-In with Go - Part 2</title>
+      <link>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2</link>
+      <pubDate>Wed, 02 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2</guid>
+      <description>
+
+&lt;p&gt;Hi Folks.&lt;/p&gt;
+
+&lt;p&gt;This is a follow up on my previous post about Google Sign-In. In this post we will discover what to do with the information retrieved in the first encounter, which you can find here: &lt;a href=&#34;http://skarlso.github.io/2016/06/12/google-signin-with-go/&#34;&gt;Google Sign-In Part 1&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h1 id=&#34;the-project&#34;&gt;The Project&lt;/h1&gt;
+
+&lt;p&gt;Everything I did in the first example, and that I&amp;rsquo;m going to do in this example, can be found in this project: &lt;a href=&#34;https://github.com/Skarlso/goquestwebapp&#34;&gt;GoProgressQuestWebApp&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;# Previously on this blog&amp;hellip;&lt;/p&gt;
+
+&lt;p&gt;Just to recap, we left off previously on the point where we successfully obtained information about the user, with a secure token and a session initiated with them. Google nicely enough provided us with some details which we can use. This information was in JSON format and looked something like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{
+  &amp;quot;sub&amp;quot;: &amp;quot;1111111111111111111111&amp;quot;,
+  &amp;quot;name&amp;quot;: &amp;quot;Your Name&amp;quot;,
+  &amp;quot;given_name&amp;quot;: &amp;quot;Your&amp;quot;,
+  &amp;quot;family_name&amp;quot;: &amp;quot;Name&amp;quot;,
+  &amp;quot;profile&amp;quot;: &amp;quot;https://plus.google.com/1111111111111111111111&amp;quot;,
+  &amp;quot;picture&amp;quot;: &amp;quot;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&amp;quot;,
+  &amp;quot;email&amp;quot;: &amp;quot;your@gmail.com&amp;quot;,
+  &amp;quot;email_verified&amp;quot;: true,
+  &amp;quot;gender&amp;quot;: &amp;quot;male&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In my example, to keep things simple, I will use the email address since that has to be unique in the land of Google. You could assign an ID to the user, and you could complicate things even further, but my goal is not to write an academic paper about cryptography here. :)&lt;/p&gt;
+
+&lt;p&gt;# Making something useful out of the data&lt;/p&gt;
+
+&lt;p&gt;In order for the app to recognise a user it must save some data about the user. I&amp;rsquo;m doing that in MongoDB right now, but that could be any form of persistence layer, like, SQLite3, BoltDB, PostgresDB, etc.&lt;/p&gt;
+
+&lt;h2 id=&#34;after-successful-user-authorization&#34;&gt;After successful user authorization&lt;/h2&gt;
+
+&lt;p&gt;Once the user used google to provide us with sufficient information about him/herself, we can retrieve data about that user from our records. The data could be anything that is linked to our unique identifier like: Character Profile, Player Information, Status, Last Logged-In, etcetc. For this, there are two things that need to happen after authorization: Save/Load user information and initiate a session.&lt;/p&gt;
+
+&lt;p&gt;The session can be in the form of a cookie, or a Redis storage, or URL re-writing. I&amp;rsquo;m choosing a cookie here.&lt;/p&gt;
+
+&lt;p&gt;### Save / Load user information&lt;/p&gt;
+
+&lt;p&gt;All I&amp;rsquo;m doing is a simple, &lt;em&gt;returning / new&lt;/em&gt; user handling. The concept is simple. If the email isn&amp;rsquo;t saved, we save it. If it&amp;rsquo;s saved, we set a logic to our page render to greet the returning user.&lt;/p&gt;
+
+&lt;p&gt;In the &lt;code&gt;AuthHandler&lt;/code&gt; I&amp;rsquo;m doing the following:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
+seen := false
+db := database.MongoDBConnection{}
+if _, mongoErr := db.LoadUser(u.Email); mongoErr == nil {
+    seen = true
+} else {
+    err = db.SaveUser(&amp;amp;u)
+    if err != nil {
+        log.Println(err)
+        c.HTML(http.StatusBadRequest, &amp;quot;error.tmpl&amp;quot;, gin.H{&amp;quot;message&amp;quot;: &amp;quot;Error while saving user. Please try again.&amp;quot;})
+        return
+    }
+}
+c.HTML(http.StatusOK, &amp;quot;battle.tmpl&amp;quot;, gin.H{&amp;quot;email&amp;quot;: u.Email, &amp;quot;seen&amp;quot;: seen})
+...
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s break this down a bit. There is a db connection here, which calls a function that either returns an error, or it doesn&amp;rsquo;t. If it doesn&amp;rsquo;t, that means we have our user. If it does, it means we have to save the user. This is a very simple case (disregard for now, that the error could be something else as well (If you can&amp;rsquo;t get passed that, you could type check the error or check if the returned record contains the requested user information instead of checking for an error.)).&lt;/p&gt;
+
+&lt;p&gt;The template is than rendered depending on the &lt;code&gt;seen&lt;/code&gt; boolean like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-html&#34;&gt;&amp;lt;!DOCTYPE html&amp;gt;
+&amp;lt;link rel=&amp;quot;icon&amp;quot;
+      type=&amp;quot;image/png&amp;quot;
+      href=&amp;quot;/img/favicon.ico&amp;quot; /&amp;gt;
+&amp;lt;html&amp;gt;
+  &amp;lt;head&amp;gt;
+    &amp;lt;link rel=&amp;quot;stylesheet&amp;quot; href=&amp;quot;/css/main.css&amp;quot;&amp;gt;
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body&amp;gt;
+    {{if .seen}}
+        &amp;lt;h1&amp;gt;Welcome back to the battlefield &#39;{{ .email }}&#39;.&amp;lt;/h1&amp;gt;
+    {{else}}
+        &amp;lt;h1&amp;gt;Welcome to the battlefield &#39;{{ .email }}&#39;.&amp;lt;/h1&amp;gt;
+    {{end}}
+  &amp;lt;/body&amp;gt;
+&amp;lt;/html&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You can see here, that if &lt;code&gt;seen&lt;/code&gt; is &lt;em&gt;true&lt;/em&gt; the header message will say: &amp;ldquo;Welcome &lt;em&gt;back&lt;/em&gt;&amp;hellip;&amp;ldquo;.&lt;/p&gt;
+
+&lt;p&gt;### Initiating a session&lt;/p&gt;
+
+&lt;p&gt;When the user is successfully authenticated, we activate a session so that the user can access pages that require authorization. Here, I have to mention that I&amp;rsquo;m using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt;, so restricted end-points are made with groups which require a middleware.&lt;/p&gt;
+
+&lt;p&gt;As I mentioned earlier, I&amp;rsquo;m using cookies as session handlers. For this, a new session store has to be created with some secure token. This is achieved with the following code fragments ( note that I&amp;rsquo;m using a Gin session middleware which uses gorilla&amp;rsquo;s session handler located here: &lt;a href=&#34;https://github.com/gin-gonic/contrib&#34;&gt;Gin-Gonic(Sessions)&lt;/a&gt;):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// RandToken in handlers.go:
+// RandToken generates a random @l length token.
+func RandToken(l int) string {
+	b := make([]byte, l)
+	rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
+}
+
+// quest.go:
+// Create the cookie store in main.go.
+store := sessions.NewCookieStore([]byte(handlers.RandToken(64)))
+store.Options(sessions.Options{
+    Path:   &amp;quot;/&amp;quot;,
+    MaxAge: 86400 * 7,
+})
+
+// using the cookie store:
+router.Use(sessions.Sessions(&amp;quot;goquestsession&amp;quot;, store))
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;After this &lt;code&gt;gin.Context&lt;/code&gt; lets us access this session store by doing &lt;code&gt;session := sessions.Default(c)&lt;/code&gt;. Now, create a session variable called &lt;code&gt;user-id&lt;/code&gt; like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;session.Set(&amp;quot;user-id&amp;quot;, u.Email)
+err = session.Save()
+if err != nil {
+    log.Println(err)
+    c.HTML(http.StatusBadRequest, &amp;quot;error.tmpl&amp;quot;, gin.H{&amp;quot;message&amp;quot;: &amp;quot;Error while saving session. Please try again.&amp;quot;})
+    return
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Don&amp;rsquo;t forget to &lt;code&gt;save&lt;/code&gt; the session. ;) That is it. If I restart the server, the cookie won&amp;rsquo;t be usable any longer, since it will generate a new token for the cookie store. The user will have to log in again. &lt;strong&gt;Note&lt;/strong&gt;: It might be that you&amp;rsquo;ll see something like this, from &lt;code&gt;session&lt;/code&gt;: &lt;code&gt;[sessions] ERROR! securecookie: the value is not valid&lt;/code&gt;. You can ignore this error.&lt;/p&gt;
+
+&lt;h2 id=&#34;restricting-access-to-certain-end-points-with-the-auth-middleware&#34;&gt;Restricting access to certain end-points with the auth Middleware™&lt;/h2&gt;
+
+&lt;p&gt;Now, that our session is alive, we can use it to restrict access to some part of the application. With Gin, it looks like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;authorized := router.Group(&amp;quot;/battle&amp;quot;)
+authorized.Use(middleware.AuthorizeRequest())
+{
+    authorized.GET(&amp;quot;/field&amp;quot;, handlers.FieldHandler)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This creates a grouping of end-points under &lt;code&gt;/battle&lt;/code&gt;. Which means, everything under &lt;code&gt;/battle&lt;/code&gt; will only be accessible if the middleware passed to the &lt;code&gt;Use&lt;/code&gt; function calls the next handler in the chain. If it aborts the call chain, the end-point will not be accessible. My middleware is pretty simple, but it gets the job done:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// AuthorizeRequest is used to authorize a request for a certain end-point group.
+func AuthorizeRequest() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		v := session.Get(&amp;quot;user-id&amp;quot;)
+		if v == nil {
+			c.HTML(http.StatusUnauthorized, &amp;quot;error.tmpl&amp;quot;, gin.H{&amp;quot;message&amp;quot;: &amp;quot;Please log in.&amp;quot;})
+			c.Abort()
+		}
+		c.Next()
+	}
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Note, that this only check if &lt;code&gt;user-id&lt;/code&gt; is set or not. That&amp;rsquo;s certainly not enough for a secure application. Its only supposed to be a simple example of the mechanics of the auth middleware. Also, the session usually contains more than one parameter. It&amp;rsquo;s more likely that it contains several variables, which describe the user including a state for CORS protection. For CORS I&amp;rsquo;d recommend using &lt;a href=&#34;https://github.com/rs/cors&#34;&gt;rs/cors&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;If you would try to access &lt;a href=&#34;http://127.0.0.1:9090/battle/field&#34;&gt;http://127.0.0.1:9090/battle/field&lt;/a&gt; without logging in, you&amp;rsquo;d be redirected to an &lt;code&gt;error.tmpl&lt;/code&gt; with the message: &lt;strong&gt;Please log in.&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;h1 id=&#34;final-words&#34;&gt;Final Words&lt;/h1&gt;
+
+&lt;p&gt;That&amp;rsquo;s pretty much it. Important parts are:
+* Saving the right information
+* Secure cookie store
+* CORS for sessions
+* Checks of the users details in the cookie
+* Authorised end-points
+* Session handling&lt;/p&gt;
+
+&lt;p&gt;Any questions, remarks, ideas, are very welcomed in the comment section. There are plenty of very nice Go frameworks which do Google OAuth2 out of the box. I recommend using them, as they save you a lot of legwork.&lt;/p&gt;
+
+&lt;p&gt;Thank you for reading!
+Gergely.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>How to do Google sign-in with Go</title>
@@ -14,11 +192,11 @@
       <pubDate>Sun, 12 Jun 2016 00:00:00 +0000</pubDate>
       
       <guid>https://skarlso.github.io/2016/06/12/google-signin-with-go</guid>
-      <description>
-
-&lt;p&gt;Hi folks.&lt;/p&gt;
+      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
 
 &lt;p&gt;Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s get started.&lt;/p&gt;
 
@@ -308,8 +486,7 @@ func main() {
 &lt;p&gt;The documentation to this whole process, and MUCH more information can be found here: &lt;a href=&#34;https://developers.google.com/identity/protocols/OAuth2&#34;&gt;Google API Docs&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;Thanks for reading,
-Gergely.&lt;/p&gt;
-</description>
+Gergely.&lt;/p&gt;</description>
     </item>
     
   </channel>
