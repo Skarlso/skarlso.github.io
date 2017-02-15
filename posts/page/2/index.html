@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.17" />
+    <meta name="generator" content="Hugo 0.18.1" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Posts &middot; Ramblings of a build engineer">
@@ -62,6 +62,323 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">12 Jun 2016, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2016/06/12/google-signin-with-go" class="post-title">How to do Google sign-in with Go</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a><a class="post-category post-category-Golang" href="https://skarlso.github.io//categories/golang">Golang</a><a class="post-category post-category-Web" href="https://skarlso.github.io//categories/web">Web</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Hi folks.</p>
+
+<p>Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.</p>
+
+<p></p>
+
+<p>Let&rsquo;s get started.</p>
+
+<h1 id="setup">Setup</h1>
+
+<h2 id="google-oauth-token">Google OAuth token</h2>
+
+<p>First what you need is, to register your application with Google, so you&rsquo;ll get a Token that you can use to authorize later calls to Google services.</p>
+
+<p>You can do that here: <a href="https://console.developers.google.com/iam-admin/projects">Google Developer Console</a>. You&rsquo;ll have to create a new project. Once it&rsquo;s done, click on <code>Credentials</code> and create an OAuth token. You should see something like this: &ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&rdquo;. Go through the questions, like, what type your application is, and once you arrive at stage where it&rsquo;s asking for your application&rsquo;s name &ndash; there is a section asking for redirect URLs; there, write the url you wish to use when authorising your user. If you don&rsquo;t know this yet, don&rsquo;t fret, you can come back and change it later. Do NOT use <code>localhost</code>. If you are running on your own, use <a href="http://127.0.0.1:port/whatever">http://127.0.0.1:port/whatever</a>.</p>
+
+<p>This will get you a <code>client ID</code> and a <code>client secret</code>. I&rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth.</p>
+
+<p>Your application can now be identified through Google services.</p>
+
+<h1 id="the-application">The Application</h1>
+
+<h2 id="libraries">Libraries</h2>
+
+<p>Google has a nice library to use with OAuth 2.0. The library is available here: <a href="https://github.com/golang/oauth2">Google OAth 2.0</a>. It&rsquo;s a bit cryptic at first, but not to worry. After a bit of fiddling you&rsquo;ll understand fast what it does. I&rsquo;m also using <a href="https://github.com/gin-gonic/gin">Gin</a>, and Gin&rsquo;s session handling middleware <a href="https://github.com/gin-gonic/contrib/tree/master/sessions">Gin-Session</a>.</p>
+
+<h2 id="setup-credentials">Setup - Credentials</h2>
+
+<p>Let&rsquo;s create a setup which configures your credentials from the file you saved earlier. This is pretty straightforward.</p>
+
+<pre><code class="language-go">// Credentials which stores google ids.
+type Credentials struct {
+    Cid string `json:&quot;cid&quot;`
+    Csecret string `json:&quot;csecret&quot;`
+}
+
+func init() {
+    var c Credentials
+    file, err := ioutil.ReadFile(&quot;./creds.json&quot;)
+    if err != nil {
+        fmt.Printf(&quot;File error: %v\n&quot;, err)
+        os.Exit(1)
+    }
+    json.Unmarshal(file, &amp;c)
+}
+</code></pre>
+
+<p>Once you have the creds loaded, you can now go on to construct the OAuth client.</p>
+
+<h2 id="setup-oauth-client">Setup - OAuth client</h2>
+
+<p>Construct the OAuth config like this:</p>
+
+<pre><code class="language-go">conf := &amp;oauth2.Config{
+  ClientID:     c.Cid,
+  ClientSecret: c.Csecret,
+  RedirectURL:  &quot;http://localhost:9090/auth&quot;,
+  Scopes: []string{
+    &quot;https://www.googleapis.com/auth/userinfo.email&quot;, // You have to select your own scope from here -&gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+  },
+  Endpoint: google.Endpoint,
+}
+</code></pre>
+
+<p>It will give you a struct which you can then use to Authorize the user in the google domain. Next, all you need to do is call <code>AuthCodeURL</code> on this config. It will give you a URL which redirects to a Google Sign-In form. Once the user fills that out and clicks &lsquo;Allow&rsquo;, you&rsquo;ll get back a TOKEN in the <code>code</code> query parameter and a <code>state</code> which helps protect against CSRF attacks. Always check if the provided state is the same which you provided with AuthCodeURL. This will look something like this <code>http://127.0.0.1:9090/auth?code=4FLKFskdjflf3343d4f&amp;state=lhfu3f983j;asdf</code>. Small function for this:</p>
+
+<pre><code class="language-go">func getLoginURL(state string) string {
+    // State can be some kind of random generated hash string.
+    // See relevant RFC: http://tools.ietf.org/html/rfc6749#section-10.12
+    return conf.AuthCodeURL(state)
+}
+</code></pre>
+
+<p>Construct a button which the user can click and be redirected to the Google Sign-In form. When constructing the url, we must do one more thing. Create a secure state token and save it in the form of a cookie for the current user.</p>
+
+<h2 id="random-state-and-button-construction">Random State and Button construction</h2>
+
+<p>Small piece of code random token:</p>
+
+<pre><code class="language-go">func randToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
+}
+</code></pre>
+
+<p>Storing it in a session and constructing the button:</p>
+
+<pre><code class="language-go">func loginHandler(c *gin.Context) {
+    state = randToken()
+    session := sessions.Default(c)
+    session.Set(&quot;state&quot;, state)
+    session.Save()
+    c.Writer.Write([]byte(&quot;&lt;html&gt;&lt;title&gt;Golang Google&lt;/title&gt; &lt;body&gt; &lt;a href='&quot; + getLoginURL() + &quot;'&gt;&lt;button&gt;Login with Google!&lt;/button&gt; &lt;/a&gt; &lt;/body&gt;&lt;/html&gt;&quot;))
+}
+</code></pre>
+
+<p>It&rsquo;s not the nicest button I ever come up with, but it will have to do.</p>
+
+<h1 id="user-information">User Information</h1>
+
+<p>After you got the token, you can construct an authorised Google HTTP Client, which let&rsquo;s you call Google related services and retrieve information about the user.</p>
+
+<h2 id="getting-the-client">Getting the Client</h2>
+
+<p>Before we construct a client, we must check if the retrieved state is still the same compared to the one we provided. I&rsquo;m doing this before constructing the client. Together this looks like this:</p>
+
+<pre><code class="language-go">func authHandler(c *gin.Context) {
+    // Check state validity.
+    session := sessions.Default(c)
+    retrievedState := session.Get(&quot;state&quot;)
+    if retrievedState != c.Query(&quot;state&quot;) {
+        c.AbortWithError(http.StatusUnauthorized, fmt.Errorf(&quot;Invalid session state: %s&quot;, retrievedState))
+        return
+    }
+    // Handle the exchange code to initiate a transport.
+  	tok, err := conf.Exchange(oauth2.NoContext, c.Query(&quot;code&quot;))
+  	if err != nil {
+  		c.AbortWithError(http.StatusBadRequest, err)
+          return
+  	}
+    // Construct the client.
+    client := conf.Client(oauth2.NoContext, tok)
+    ...
+</code></pre>
+
+<h2 id="obtaining-information">Obtaining information</h2>
+
+<p>Our next step is to retrieve information about the user. To achieve this, call Google&rsquo;s API with the authorised client. The code for that is:</p>
+
+<pre><code class="language-go">...
+resp, err := client.Get(&quot;https://www.googleapis.com/oauth2/v3/userinfo&quot;)
+if err != nil {
+    c.AbortWithError(http.StatusBadRequest, err)
+    return
+}
+defer resp.Body.Close()
+data, _ := ioutil.ReadAll(resp.Body)
+log.Println(&quot;Resp body: &quot;, string(data))
+...
+</code></pre>
+
+<p>And this will yield a body like this:</p>
+
+<pre><code class="language-json">{
+  &quot;sub&quot;: &quot;1111111111111111111111&quot;,
+  &quot;name&quot;: &quot;Your Name&quot;,
+  &quot;given_name&quot;: &quot;Your&quot;,
+  &quot;family_name&quot;: &quot;Name&quot;,
+  &quot;profile&quot;: &quot;https://plus.google.com/1111111111111111111111&quot;,
+  &quot;picture&quot;: &quot;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&quot;,
+  &quot;email&quot;: &quot;your@gmail.com&quot;,
+  &quot;email_verified&quot;: true,
+  &quot;gender&quot;: &quot;male&quot;
+}
+</code></pre>
+
+<p>Parse it, and you&rsquo;ve got an email which you can store somewhere for registration purposes. At this point, your user is not yet Authenticated. For that, I&rsquo;m going to post a second post, which describes how to go on. Retrieving the stored email address, and user session handling with Gin and MongoDB.</p>
+
+<h1 id="putting-it-all-together">Putting it all together</h1>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;crypto/rand&quot;
+    &quot;encoding/base64&quot;
+    &quot;encoding/json&quot;
+    &quot;io/ioutil&quot;
+    &quot;fmt&quot;
+    &quot;log&quot;
+    &quot;os&quot;
+    &quot;net/http&quot;
+
+    &quot;github.com/gin-gonic/contrib/sessions&quot;
+    &quot;github.com/gin-gonic/gin&quot;
+    &quot;golang.org/x/oauth2&quot;
+    &quot;golang.org/x/oauth2/google&quot;
+)
+
+// Credentials which stores google ids.
+type Credentials struct {
+    Cid     string `json:&quot;cid&quot;`
+    Csecret string `json:&quot;csecret&quot;`
+}
+
+// User is a retrieved and authentiacted user.
+type User struct {
+    Sub string `json:&quot;sub&quot;`
+    Name string `json:&quot;name&quot;`
+    GivenName string `json:&quot;given_name&quot;`
+    FamilyName string `json:&quot;family_name&quot;`
+    Profile string `json:&quot;profile&quot;`
+    Picture string `json:&quot;picture&quot;`
+    Email string `json:&quot;email&quot;`
+    EmailVerified string `json:&quot;email_verified&quot;`
+    Gender string `json:&quot;gender&quot;`
+}
+
+var cred Credentials
+var conf *oauth2.Config
+var state string
+var store = sessions.NewCookieStore([]byte(&quot;secret&quot;))
+
+func randToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
+}
+
+func init() {
+    file, err := ioutil.ReadFile(&quot;./creds.json&quot;)
+    if err != nil {
+        log.Printf(&quot;File error: %v\n&quot;, err)
+        os.Exit(1)
+    }
+    json.Unmarshal(file, &amp;cred)
+
+    conf = &amp;oauth2.Config{
+        ClientID:     cred.Cid,
+        ClientSecret: cred.Csecret,
+        RedirectURL:  &quot;http://127.0.0.1:9090/auth&quot;,
+        Scopes: []string{
+            &quot;https://www.googleapis.com/auth/userinfo.email&quot;, // You have to select your own scope from here -&gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+        },
+        Endpoint: google.Endpoint,
+    }
+}
+
+func indexHandler(c *gin.Context) {
+    c.HTML(http.StatusOK, &quot;index.tmpl&quot;, gin.H{})
+}
+
+func getLoginURL(state string) string {
+    return conf.AuthCodeURL(state)
+}
+
+func authHandler(c *gin.Context) {
+    // Handle the exchange code to initiate a transport.
+    session := sessions.Default(c)
+    retrievedState := session.Get(&quot;state&quot;)
+    if retrievedState != c.Query(&quot;state&quot;) {
+        c.AbortWithError(http.StatusUnauthorized, fmt.Errorf(&quot;Invalid session state: %s&quot;, retrievedState))
+        return
+    }
+
+	tok, err := conf.Exchange(oauth2.NoContext, c.Query(&quot;code&quot;))
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+        return
+	}
+
+	client := conf.Client(oauth2.NoContext, tok)
+	email, err := client.Get(&quot;https://www.googleapis.com/oauth2/v3/userinfo&quot;)
+    if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+        return
+	}
+    defer email.Body.Close()
+    data, _ := ioutil.ReadAll(email.Body)
+    log.Println(&quot;Email body: &quot;, string(data))
+    c.Status(http.StatusOK)
+}
+
+func loginHandler(c *gin.Context) {
+    state = randToken()
+    session := sessions.Default(c)
+    session.Set(&quot;state&quot;, state)
+    session.Save()
+    c.Writer.Write([]byte(&quot;&lt;html&gt;&lt;title&gt;Golang Google&lt;/title&gt; &lt;body&gt; &lt;a href='&quot; + getLoginURL(state) + &quot;'&gt;&lt;button&gt;Login with Google!&lt;/button&gt; &lt;/a&gt; &lt;/body&gt;&lt;/html&gt;&quot;))
+}
+
+func main() {
+    router := gin.Default()
+    router.Use(sessions.Sessions(&quot;goquestsession&quot;, store))
+    router.Static(&quot;/css&quot;, &quot;./static/css&quot;)
+    router.Static(&quot;/img&quot;, &quot;./static/img&quot;)
+    router.LoadHTMLGlob(&quot;templates/*&quot;)
+
+    router.GET(&quot;/&quot;, indexHandler)
+    router.GET(&quot;/login&quot;, loginHandler)
+    router.GET(&quot;/auth&quot;, authHandler)
+
+    router.Run(&quot;127.0.0.1:9090&quot;)
+}
+}
+</code></pre>
+
+<p>This is it folks. I hope this helped. Any comments or advices are welcomed.</p>
+
+<h1 id="google-api-documentation">Google API Documentation</h1>
+
+<p>The documentation to this whole process, and MUCH more information can be found here: <a href="https://developers.google.com/identity/protocols/OAuth2">Google API Docs</a>.</p>
+
+<p>Thanks for reading,
+Gergely.</p>
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">17 Apr 2016, 00:00</h1>
                 <section class="post">
@@ -856,334 +1173,6 @@ passwd[i] += 'a'
 <p>Thank you for reading!
 Have a nice day.
 Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">05 Jan 2016, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2016/01/05/improving-performance-with-byte-slice-and-int-map" class="post-title">Improving performance with byte slice and int map</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a><a class="post-category post-category-Programming" href="https://skarlso.github.io//categories/programming">Programming</a><a class="post-category post-category-Performance" href="https://skarlso.github.io//categories/performance">Performance</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Hello Folks.</p>
-
-<p>Today I would like to share with you my little tale of refactoring my solution to <a href="http://adventofcode.com/day/13">Advent Of Code Day 13</a>.</p>
-
-<p>It&rsquo;s a lovely tale of action, adventure, drama, and comedy.</p>
-
-<p>Let&rsquo;s being with my first iteration of the problem.</p>
-
-<pre><code class="language-go">package main
-
-import (
-	&quot;bufio&quot;
-	&quot;fmt&quot;
-	&quot;math&quot;
-	&quot;os&quot;
-	&quot;strconv&quot;
-	&quot;strings&quot;
-
-	&quot;github.com/skarlso/goutils/arrayutils&quot;
-)
-
-var seatingCombinations = make([][]string, 0)
-var table = make(map[string][]map[string]int)
-var keys = make([]string, 0)
-
-//Person a person
-type Person struct {
-	// neighbour *Person
-	name string
-	like int
-}
-
-func main() {
-	file, _ := os.Open(&quot;input.txt&quot;)
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		split := strings.Split(line, &quot; &quot;)
-		like, _ := strconv.Atoi(split[3]) //If lose -&gt; * -1
-		if split[2] == &quot;lose&quot; {
-			like *= -1
-		}
-		table[split[0]] = append(table[split[0]], map[string]int{strings.Trim(split[10], &quot;.&quot;): like})
-		if !arrayutils.ContainsString(keys, split[0]) {
-			keys = append(keys, split[0])
-		}
-	}
-	generatePermutation(keys, len(keys))
-	fmt.Println(&quot;Best seating efficiency:&quot;, calculateSeatingEfficiancy())
-}
-
-func generatePermutation(s []string, n int) {
-	if n == 1 {
-		news := make([]string, len(s))
-		copy(news, s)
-		seatingCombinations = append(seatingCombinations, news)
-	}
-	for i := 0; i &lt; n; i++ {
-		s[i], s[n-1] = s[n-1], s[i]
-		generatePermutation(s, n-1)
-		s[i], s[n-1] = s[n-1], s[i]
-	}
-}
-
-func calculateSeatingEfficiancy() int {
-	bestSeating := math.MinInt64
-	for _, v := range seatingCombinations {
-		calculatedOrder := 0
-
-		for i := range v {
-			left := (i - 1) % len(v)
-			//This is to work around the fact that in Go
-			//modulo of a negative number will not return a positive number.
-			//So -1 % 4 will not return 3 but -1. In that case we add length.
-			if left &lt; 0 {
-				left += len(v)
-			}
-			right := (i + 1) % len(v)
-			// fmt.Printf(&quot;Left: %d; Right: %d\n&quot;, left, right)
-			leftLike := getLikeForTargetConnect(v[i], v[left])
-			rightLike := getLikeForTargetConnect(v[i], v[right])
-			// fmt.Printf(&quot;Name: %s; Left:%d; Right:%d\n&quot;, v[i], leftLike, rightLike)
-			calculatedOrder += leftLike + rightLike
-		}
-		// fmt.Printf(&quot;Order for: %v; Calc:%d\n&quot;, v, calculatedOrder)
-		if calculatedOrder &gt; bestSeating {
-			bestSeating = calculatedOrder
-		}
-	}
-
-	return bestSeating
-}
-
-func getLikeForTargetConnect(name string, neighbour string) int {
-	neighbours := table[name]
-	for _, t := range neighbours {
-		if v, ok := t[neighbour]; ok {
-			return v
-		}
-	}
-	return 0
-}
-</code></pre>
-
-<p>This is quiet large. And takes a bit of explaining. So what is happening here? We are putting the names which correspond with numbers and neighbours into a map which has a map as a value. The map contains seating information for a person. For example, next to Alice, a bunch of people can sit, and they have a certain relationship to Alice, represented by a number.</p>
-
-<p>We could, at this point, represent it with a graph, but that would be overkill.</p>
-
-<p>Permutation is simple because I choose to represent a Table with a Circular Slice. This means that a slice like this =&gt; Alice, Bob, Tom; means that Alice is sitting next to Bob and Tom. So Alice&rsquo;s neighbour of -1 (left) is in fact i-1 % 3. And Bob is i + 1. For Tom, Alice is i + 1 % 3. After we got this, we just permutate the possible combinations into slices of slices and iterate over them.</p>
-
-<p>The benchmark for this is terrible.</p>
-
-<pre><code class="language-bash">
-================With Strings================
-20	 589571259 ns/op
-ok  	github.com/skarlso/goprojects/advent/day13/part1	11.873s
-</code></pre>
-
-<p>So, my first thought was, convert everything I can to []byte. But because slices cannot be map keys, because map keys need to be comparable, we are still stuck with the same ns/ops.</p>
-
-<pre><code class="language-go">//var seatingCombinations = make([][]string, 0)
-//var keys = make([]string, 0)
-var seatingCombinations = make([][][]byte, 0)
-var keys = make([][]byte, 0)
-</code></pre>
-
-<p>And I adjusted the code to work with []byte instead. What can we do to fix the map though? One obvious gain is, not to use string as a key. Because strings are immutable, working with them always means copy-ing and that&rsquo;s why they get to be very slow. So removing them from Keys and using Numbers instead will mean a huge gain for us.</p>
-
-<p>To do this, I created a map which maps names with numbers. I could hardcode them with iota, but that is a very bad thing to do. It would mean, that when I add a new name, I would have to go, and re-compile my code, because data changed. That&rsquo;s not what we want.</p>
-
-<p>So, I added this little tid-bit into the for cycle when I&rsquo;m reading in the file lines =&gt;</p>
-
-<pre><code class="language-go">...
-if _, ok := nameMapping[split[0]]; !ok {
-    nameMapping[split[0]] = id
-    id++
-}
-if _, ok := nameMapping[trimmedNeighbour]; !ok {
-    nameMapping[trimmedNeighbour] = id
-    id++
-}
-...
-</code></pre>
-
-<p>Id starts as Zero. And nameMapping is a simple map[string]int. After this, we fix all the map calls, from <code>table[split[0]]</code> to <code>table[nameMapping[split[0]]]</code>. Table&rsquo;s map will now work with int, but we can still work with strings otherwise.</p>
-
-<pre><code class="language-go">table[nameMapping[split[0]]] = append(table[nameMapping[split[0]]], map[int]int{nameMapping[trimmedNeighbour]: like})
-</code></pre>
-
-<p>This has now a marginally better performance as before:</p>
-
-<pre><code class="language-bash">BenchmarkCalculateSeating	      50	  32637879 ns/op
-ok  	github.com/skarlso/goprojects/advent/day13/part1	1.698s
-</code></pre>
-
-<p>But, we can still do a HUGE one better. Can you notice the other bottleneck? See, how keys are still []byte? That&rsquo;s, now completely unnecessary. We can use int, since our keys are ints! <em>Permutation</em> changes, and the retrieve.</p>
-
-<pre><code class="language-go">...
-func generatePermutation(s []int, n int) {
-...
-
-...
-func getLikeForTargetConnect(name int, neighbour int) int {
-	neighbours := table[name]
-	for _, t := range neighbours {
-		if v, ok := t[neighbour]; ok {
-			return v
-		}
-	}
-	return 0
-}
-...
-</code></pre>
-
-<p>Permutation was the Other huge performance consumption. Now, our run time is&hellip;. drum rolls&hellip;</p>
-
-<pre><code class="language-bash">BenchmarkCalculateSeating	   10000	    166431 ns/op
-ok  	github.com/skarlso/goprojects/advent/day13/part1	1.695s
-</code></pre>
-
-<p>Down to 166431 ns/op!!! From 32637879 ns/op!! And notice how suddenly, go&rsquo;s benchmark jumped up in sample count. Our code is now blazing fast. It&rsquo;s 0.05% of the previous run! It&rsquo;s almost <strong>200 times faster</strong>!</p>
-
-<p>We could still improve it here and there. I&rsquo;m sure I&rsquo;m doing some extra stuff which is not needed or could be made easier somehow. But I&rsquo;m actually quiet happy with this solution right now.</p>
-
-<p>The full code:</p>
-
-<pre><code class="language-go">package main
-
-import (
-	&quot;bufio&quot;
-	&quot;math&quot;
-	&quot;os&quot;
-	&quot;strconv&quot;
-	&quot;strings&quot;
-
-	&quot;github.com/skarlso/goutils/arrayutils&quot;
-)
-
-var seatingCombinations = make([][]int, 0)
-var table = make(map[int][]map[int]int)
-var keys = make([]int, 0)
-var nameMapping = make(map[string]int)
-
-//Person a person
-type Person struct {
-	// neighbour *Person
-	name string
-	like int
-}
-
-func main() {
-	CalculatePerfectSeating()
-}
-
-//CalculatePerfectSeating returns the perfect seating order based on Love/Hate relations
-func CalculatePerfectSeating() {
-	file, _ := os.Open(&quot;input.txt&quot;)
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	id := 0
-	for scanner.Scan() {
-		line := scanner.Text()
-		split := strings.Split(line, &quot; &quot;)
-		trimmedNeighbour := strings.Trim(split[10], &quot;.&quot;)
-		like, _ := strconv.Atoi(split[3]) //If lose -&gt; * -1
-		if _, ok := nameMapping[split[0]]; !ok {
-			nameMapping[split[0]] = id
-			id++
-		}
-		if _, ok := nameMapping[trimmedNeighbour]; !ok {
-			nameMapping[trimmedNeighbour] = id
-			id++
-		}
-		if split[2] == &quot;lose&quot; {
-			like *= -1
-		}
-		table[nameMapping[split[0]]] = append(table[nameMapping[split[0]]], map[int]int{nameMapping[trimmedNeighbour]: like})
-		if !arrayutils.ContainsInt(keys, nameMapping[split[0]]) {
-			keys = append(keys, nameMapping[split[0]])
-		}
-	}
-	generatePermutation(keys, len(keys))
-	// fmt.Println(&quot;Best seating efficiency:&quot;, calculateSeatingEfficiancy())
-}
-
-func generatePermutation(s []int, n int) {
-	if n == 1 {
-		news := make([]int, len(s))
-		copy(news, s)
-		seatingCombinations = append(seatingCombinations, news)
-	}
-	for i := 0; i &lt; n; i++ {
-		s[i], s[n-1] = s[n-1], s[i]
-		generatePermutation(s, n-1)
-		s[i], s[n-1] = s[n-1], s[i]
-	}
-}
-
-func calculateSeatingEfficiancy() int {
-	bestSeating := math.MinInt64
-	for _, v := range seatingCombinations {
-		calculatedOrder := 0
-
-		for i := range v {
-			left := (i - 1) % len(v)
-			//This is to work around the fact that in Go
-			//modulo of a negative number will not return a positive number.
-			//So -1 % 4 will not return 3 but -1. In that case we add length.
-			if left &lt; 0 {
-				left += len(v)
-			}
-			right := (i + 1) % len(v)
-			calculatedOrder += getLikeForTargetConnect(v[i], v[left]) + getLikeForTargetConnect(v[i], v[right])
-		}
-		if calculatedOrder &gt; bestSeating {
-			bestSeating = calculatedOrder
-		}
-	}
-
-	return bestSeating
-}
-
-func getLikeForTargetConnect(name int, neighbour int) int {
-	neighbours := table[name]
-	for _, t := range neighbours {
-		if v, ok := t[neighbour]; ok {
-			return v
-		}
-	}
-	return 0
-}
-</code></pre>
-
-<p>Also, on github =&gt; <a href="https://github.com/Skarlso/goprojects/tree/master/advent/day13">Advent Of Code Day 13</a>.</p>
-
-<p>Thank you very much for reading, this has been a massive fun to write and to refactor.</p>
-
-<p>Have something to say? Please don&rsquo;t hesitate.</p>
-
-<p>And as always,</p>
-
-<p>Have a nice day!</p>
-
-<p>Gergely.</p>
 
                     </div>
                 </section>

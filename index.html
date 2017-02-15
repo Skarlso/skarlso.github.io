@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.17" />
+    <meta name="generator" content="Hugo 0.18.1" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Ramblings of a build engineer &middot; Ramblings of a build engineer">
@@ -62,6 +62,304 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">15 Feb 2017, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2017/02/15/how-to-https-with-hugo-letsencrypt-haproxy" class="post-title">How to HTTPS with Hugo LetsEncrypt and HAProxy</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-Hugo" href="https://skarlso.github.io//categories/hugo">Hugo</a><a class="post-category post-category-DevOps" href="https://skarlso.github.io//categories/devops">DevOps</a><a class="post-category post-category-Haproxy" href="https://skarlso.github.io//categories/haproxy">Haproxy</a><a class="post-category post-category-LetsEncrypt" href="https://skarlso.github.io//categories/letsencrypt">LetsEncrypt</a><a class="post-category post-category-HTTPS" href="https://skarlso.github.io//categories/https">HTTPS</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h1 id="intro">Intro</h1>
+
+<p>Hi folks.</p>
+
+<p>Today, I would like to write about how to do HTTPS for a website, without the need to buy a certificate and set it up via your DNS provider. Let&rsquo;s begin.</p>
+
+<p>## Abstract</p>
+
+<p>What you will achieve by the end of this post:
+- Every call to HTTP will be redirected to HTTPS via <a href="https://www.haproxy.com">haproxy</a>.
+- HTTPS will be served with Haproxy and <a href="https://letsencrypt.org">LetsEncrypt</a> as the Certificate provider.
+- Automatically update the certificate before its expiration.
+- No need for IPTable rules to route 8080 to 80.
+- Traffic to and from your page will be encrypted.
+- This all will cost you nothing.</p>
+
+<p>I will use a static website generator for this called <a href="https://gohugo.io">Hugo</a> which, if you know me, is my favorite generator tool. These instructions
+are for haproxy and hugo, if you wish to use apache and nginx for example, you&rsquo;ll have to dig for the corresponding settings for letsencrypt and certbot.</p>
+
+<h1 id="what-you-will-need">What You Will Need</h1>
+
+<p>## Hugo</p>
+
+<p>You will need hugo, which can be downloaded from here: <a href="https://gohugo.io">Hugo</a>. A simple website will be enough. For themes, you can take a look
+at the humongus list located here: <a href="http://themes.gohugo.io/">HugoThemes</a>.</p>
+
+<h2 id="haproxy">Haproxy</h2>
+
+<p>Haproxy can be found here: <a href="https://www.haproxy.com">Haproxy</a>. There are a number of options to install haproxy. I chose a simple
+<code>apt-get install haproxy</code>.</p>
+
+<h2 id="let-s-encrypt">Let&rsquo;s Encrypt</h2>
+
+<p>Information about Let&rsquo;s Encrypt can be found on their website here: <a href="https://letsencrypt.org">Let&rsquo;s Encrypt</a>.
+Let&rsquo;s Encrypt&rsquo;s client is now called <a href="https://certbot.eff.org/">Certbot</a> which is used to generate the certificates. To get the latest code
+you either clone the repository <a href="https://github.com/certbot/certbot">Certbot</a>, or use an autodownloader:</p>
+
+<pre><code class="language-bash">user@webserver:~$ wget https://dl.eff.org/certbot-auto
+user@webserver:~$ chmod a+x ./certbot-auto
+user@webserver:~$ ./certbot-auto --help
+</code></pre>
+
+<p>Either way, I&rsquo;m using the current latest version: <em>v0.11.1</em>.</p>
+
+<h2 id="sudo">Sudo</h2>
+
+<p>This goes without saying, but that these operations will require you to have sudo priviliges. I suggest staying in sudo for ease of use.
+This means that the commands, I&rsquo;ll write here, will assume you are in <code>sudo su</code> mode thus no <code>sudo</code> prefix will be used.</p>
+
+<h2 id="portforwarding">Portforwarding</h2>
+
+<p>In order for your website to work under https this guide assumes that you have port <em>80</em> and <em>443</em> open on your router / network security group.</p>
+
+<h1 id="setup">Setup</h1>
+
+<h2 id="single-server-environment">Single Server Environment</h2>
+
+<p>It is possible for haproxy, certbot and your website to run on designated servers. Haproxy&rsquo;s abilities allows to define multiple server sources.
+In this guied, my haproxy, website and certbot will all run on the same server; thus redirecting to 127.0.0.1 and local ips. This is more
+convinient, because otherwise the haproxy IP would have to be a permanent local/remote ip. Or an automated script would have to be setup which is
+notified upon IP change and updates the ip records.</p>
+
+<h2 id="creating-a-certificate">Creating a Certificate</h2>
+
+<p>Diving in, the first thing you will require is a certificate. A certificate will allow for encrypted traffic and an authenticated website.
+Let&rsquo;s Encrypt which is baseically functioning as an indipendent, free, automated CA (Certificate Authority). Usually,
+the process would be to pay a CA to give you a signed, generated certificate for your website, and you would have to set that up with your DNS
+provider. Let&rsquo;s Encrypt has that all automated, and free of any charge. Neat.</p>
+
+<p>### Certbot</p>
+
+<p>So let&rsquo;s get started. Clone the repository into <code>/opt/letsencrypt</code> for further usage.</p>
+
+<pre><code class="language-bash">git clone https://github.com/certbot/certbot /opt/letsencrypt
+</code></pre>
+
+<h3 id="generating-the-certificate">Generating the certificate</h3>
+
+<p>Make sure that there is nothing listening on ports: 80, 443. To list usage:</p>
+
+<pre><code class="language-bash">netstat -na | grep ':80.*LISTEN'
+netstat -na | grep ':443.*LISTEN'
+</code></pre>
+
+<p>Kill everything that might be on these ports, like apache2 and httpd. These will be used by haproxy and certbot for challenges
+and redirecting traffic.</p>
+
+<p>You will be creating a <a href="https://certbot.eff.org/docs/using.html#standalone">standalone</a> certificate. This is the reason we need port 80 and 443 open.
+Run certbot by defining the <code>certonly</code> and <code>--standalone</code> flags. For domain validation you are going to use port 443, tls-sni-01 challenge.
+The whole command looks like this:</p>
+
+<pre><code class="language-bash">cd /opt/letsencrypt
+./certbot-auto certonly --standalon -d example.com -d www.example.com
+</code></pre>
+
+<p>If this displays something like, &ldquo;couldn&rsquo;t connect&rdquo; you probably still have something running on a port it tries to use. The
+generated certificate will be located under <code>/etc/letsencrypt/archive</code> and <code>/etc/letsencrypt/keys</code> while <code>/etc/letsencrypt/live</code> is
+a symlink to the latest version of the cert. It&rsquo;s wise to not copy these away from here, since the live link is always updated to the latest version.
+Our script will handle haproxy, which requires one cert file made from privkey + fullchain|.pem files.</p>
+
+<p>### Setup Auto-Renewal</p>
+
+<p>Let&rsquo;s Encrypt issues short lived certificates (90 days). In order to not have to do this procedure every 89 days, certbot provides a nifty
+command called <code>renew</code>. However, for the cert to be generated, the port 443 has to be open. This means, haproxy needs to be stopped before
+doing the renew. Now, you COULD write a script which stops it, and after the certificate has been renewed, starts it again, but certbot has
+you covered again in that department. It provides hooks called <code>pre-hook</code> and <code>post-hook</code>. Thus, all you have to write is the following:</p>
+
+<pre><code class="language-bash">#!/bin/bash
+
+cd /opt/letsencrypt
+./certbot-auto renew --pre-hook &quot;service haproxy stop&quot; --post-hook &quot;service haproxy start&quot;
+DOMAIN='example.com' sudo -E bash -c 'cat /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/letsencrypt/live/$DOMAIN/privkey.pem &gt; /etc/haproxy/certs/$DOMAIN.pem'
+</code></pre>
+
+<p>If you would like to test it first, just include the switch <code>--dry-run</code>.</p>
+
+<p>In case of success you should see something like this:</p>
+
+<pre><code class="language-bash">root@raspberrypi:/opt/letsencrypt# ./certbot-auto renew --pre-hook &quot;service haproxy stop&quot; --post-hook &quot;service haproxy start&quot; --dry-run
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+-------------------------------------------------------------------------------
+Processing /etc/letsencrypt/renewal/example.com.conf
+-------------------------------------------------------------------------------
+Cert not due for renewal, but simulating renewal for dry run
+Running pre-hook command: service haproxy stop
+Renewing an existing certificate
+Performing the following challenges:
+tls-sni-01 challenge for example.com
+Waiting for verification...
+Cleaning up challenges
+Generating key (2048 bits): /etc/letsencrypt/keys/0002_key-certbot.pem
+Creating CSR: /etc/letsencrypt/csr/0002_csr-certbot.pem
+** DRY RUN: simulating 'certbot renew' close to cert expiry
+**          (The test certificates below have not been saved.)
+
+Congratulations, all renewals succeeded. The following certs have been renewed:
+  /etc/letsencrypt/live/example.com/fullchain.pem (success)
+** DRY RUN: simulating 'certbot renew' close to cert expiry
+**          (The test certificates above have not been saved.)
+Running post-hook command: service haproxy start
+</code></pre>
+
+<p>Put this script into a crontab to run every 89 days like this:</p>
+
+<pre><code class="language-bash">crontab -e
+# Open crontab for edit and paste in this line
+* * */89 * * /root/renew-cert.sh
+</code></pre>
+
+<p>And you should be all set. Now we move on the configure haproxy to redirect and to use our newly generated certificate.</p>
+
+<h2 id="haproxy-1">Haproxy</h2>
+
+<p>Like I said, haproxy requires a single file certificate in order to encrypt traffic to and from the website. To do this, we need to combine
+<code>privkey.pem</code> and <code>fullchain.pem</code>. As of this writing, there are a couple of solutions to automate this via a post hook on renewal. And also,
+there is an open ticket with certbot to implement a simpler solution located here: <a href="https://github.com/certbot/certbot/issues/1201">https://github.com/certbot/certbot/issues/1201</a>. I, for now,
+have chosen to simply concatenate the two files together with <code>cat</code> like this:</p>
+
+<pre><code class="language-bash">DOMAIN='example.com' sudo -E bash -c 'cat /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/letsencrypt/live/$DOMAIN/privkey.pem &gt; /etc/haproxy/certs/$DOMAIN.pem'
+</code></pre>
+
+<p>It will create a combined cert under <code>/etc/haproxy/certs/example.com.pem</code>.</p>
+
+<p>### Haproxy configuration</p>
+
+<p>If haproxy happens to be running, stop it with <code>service haproxy stop</code>.</p>
+
+<p>First, save the default configuration file: <code>cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.old</code>. Now, overwrite the old one with this
+new one (comments about what each setting does, are in-lined; they are safe to copy):</p>
+
+<pre><code class="language-bash">global
+    daemon
+    # Set this to your desired maximum connection count.
+    maxconn 2048
+    # https://cbonte.github.io/haproxy-dconv/configuration-1.5.html#3.2-tune.ssl.default-dh-param
+    # bit setting for Diffie - Hellman key size.
+    tune.ssl.default-dh-param 2048
+
+defaults
+    option forwardfor
+    option http-server-close
+
+    log     global
+    mode    http
+    option  httplog
+    option  dontlognull
+    timeout connect 5000
+    timeout client  50000
+    timeout server  50000
+    errorfile 400 /etc/haproxy/errors/400.http
+    errorfile 403 /etc/haproxy/errors/403.http
+    errorfile 408 /etc/haproxy/errors/408.http
+    errorfile 500 /etc/haproxy/errors/500.http
+    errorfile 502 /etc/haproxy/errors/502.http
+    errorfile 503 /etc/haproxy/errors/503.http
+    errorfile 504 /etc/haproxy/errors/504.http
+
+# In case it's a simple http call, we redirect to the basic backend server
+# which in turn, if it isn't an SSL call, will redirect to HTTPS that is
+# handled by the frontend setting called 'www-https'.
+frontend www-http
+    # Redirect HTTP to HTTPS
+    bind *:80
+    # Adds http header to end of end of the HTTP request
+    reqadd X-Forwarded-Proto:\ http
+    # Sets the default backend to use which is defined below with name 'www-backend'
+    default_backend www-backend
+
+# If the call is HTTPS we set a challenge to letsencrypt backend which
+# verifies our certificate and than direct traffic to the backend server
+# which is the running hugo site that is served under https if the challenge succeeds.
+frontend www-https
+    # Bind 443 with the generated letsencrypt cert.
+    bind *:443 ssl crt /etc/haproxy/certs/skarlso.com.pem
+    # set x-forward to https
+    reqadd X-Forwarded-Proto:\ https
+    # set X-SSL in case of ssl_fc &lt;- explained below
+    http-request set-header X-SSL %[ssl_fc]
+    # Select a Challenge
+    acl letsencrypt-acl path_beg /.well-known/acme-challenge/
+    # Use the challenge backend if the challenge is set
+    use_backend letsencrypt-backend if letsencrypt-acl
+    default_backend www-backend
+
+backend www-backend
+   # Redirect with code 301 so the browser understands it is a redirect. If it's not SSL_FC.
+   # ssl_fc: Returns true when the front connection was made via an SSL/TLS transport
+   # layer and is locally deciphered. This means it has matched a socket declared
+   # with a &quot;bind&quot; line having the &quot;ssl&quot; option.
+   redirect scheme https code 301 if !{ ssl_fc }
+   # Server for the running hugo site.
+   server www-1 192.168.0.17:8080 check
+
+backend letsencrypt-backend
+   # Lets encrypt backend server
+   server letsencrypt 127.0.0.1:54321
+</code></pre>
+
+<p>Save this, and start haproxy with <code>services haproxy start</code>. If you did everything right, it should say nothing.
+If, however, there went something wrong with starting the proxy, it usually displays something like this:</p>
+
+<pre><code class="language-bash">Job for haproxy.service failed. See 'systemctl status haproxy.service' and 'journalctl -xn' for details.
+</code></pre>
+
+<p>You can also gather some more information on what went wrong from <code>less /var/log/haproxy.log</code>.</p>
+
+<h1 id="starting-the-server">Starting the Server</h1>
+
+<p>Everything should be ready to go. Hugo has the concept of a baseUrl. Everything that it loads, and tries to access
+will be prefixed with it. You can either set it through it&rsquo;s <code>config.yaml</code> file, or from the command line.</p>
+
+<p>To start the server, call this from the site&rsquo;s root folder:</p>
+
+<pre><code class="language-bash">hugo server --bind=192.168.x.x --port=8080 --baseUrl=https://example.com --appendPort=false
+</code></pre>
+
+<p>Interesting thing here to note is <code>https</code> and the port. The IP could be 127.0.0.1 as well. I experienced problems though
+with not binding to network IP when I was debugging the site from a different laptop on the same network.</p>
+
+<p>Once the server is started, you should be able to open up your website from a different browser, not on your local network,
+and see that it has a valid certificate installed. In Chrome you should see a green icon telling you that the cert is valid.</p>
+
+<h1 id="last-words">Last Words</h1>
+
+<p>And that is all. The site should be up and running and the proxy should auto-renew your site&rsquo;s certificate. If you happened to
+change DNS or change the server, you&rsquo;ll have to reissue the certificate.</p>
+
+<p>Thanks for reading!
+Any questions or trouble setting something up, please feel free to leave a comment.</p>
+
+<p>Cheers,
+Gergely.</p>
+
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">02 Nov 2016, 00:00</h1>
                 <section class="post">
@@ -844,323 +1142,6 @@ error: failed to push some refs to 'git@github.com:Skarlso/goprogressquest.git'
 <p>Cheers,
 Gergely.</p>
 
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">12 Jun 2016, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2016/06/12/google-signin-with-go" class="post-title">How to do Google sign-in with Go</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a><a class="post-category post-category-Golang" href="https://skarlso.github.io//categories/golang">Golang</a><a class="post-category post-category-Web" href="https://skarlso.github.io//categories/web">Web</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Hi folks.</p>
-
-<p>Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.</p>
-
-<p></p>
-
-<p>Let&rsquo;s get started.</p>
-
-<h1 id="setup">Setup</h1>
-
-<h2 id="google-oauth-token">Google OAuth token</h2>
-
-<p>First what you need is, to register your application with Google, so you&rsquo;ll get a Token that you can use to authorize later calls to Google services.</p>
-
-<p>You can do that here: <a href="https://console.developers.google.com/iam-admin/projects">Google Developer Console</a>. You&rsquo;ll have to create a new project. Once it&rsquo;s done, click on <code>Credentials</code> and create an OAuth token. You should see something like this: &ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&rdquo;. Go through the questions, like, what type your application is, and once you arrive at stage where it&rsquo;s asking for your application&rsquo;s name &ndash; there is a section asking for redirect URLs; there, write the url you wish to use when authorising your user. If you don&rsquo;t know this yet, don&rsquo;t fret, you can come back and change it later. Do NOT use <code>localhost</code>. If you are running on your own, use <a href="http://127.0.0.1:port/whatever">http://127.0.0.1:port/whatever</a>.</p>
-
-<p>This will get you a <code>client ID</code> and a <code>client secret</code>. I&rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth.</p>
-
-<p>Your application can now be identified through Google services.</p>
-
-<h1 id="the-application">The Application</h1>
-
-<h2 id="libraries">Libraries</h2>
-
-<p>Google has a nice library to use with OAuth 2.0. The library is available here: <a href="https://github.com/golang/oauth2">Google OAth 2.0</a>. It&rsquo;s a bit cryptic at first, but not to worry. After a bit of fiddling you&rsquo;ll understand fast what it does. I&rsquo;m also using <a href="https://github.com/gin-gonic/gin">Gin</a>, and Gin&rsquo;s session handling middleware <a href="https://github.com/gin-gonic/contrib/tree/master/sessions">Gin-Session</a>.</p>
-
-<h2 id="setup-credentials">Setup - Credentials</h2>
-
-<p>Let&rsquo;s create a setup which configures your credentials from the file you saved earlier. This is pretty straightforward.</p>
-
-<pre><code class="language-go">// Credentials which stores google ids.
-type Credentials struct {
-    Cid string `json:&quot;cid&quot;`
-    Csecret string `json:&quot;csecret&quot;`
-}
-
-func init() {
-    var c Credentials
-    file, err := ioutil.ReadFile(&quot;./creds.json&quot;)
-    if err != nil {
-        fmt.Printf(&quot;File error: %v\n&quot;, err)
-        os.Exit(1)
-    }
-    json.Unmarshal(file, &amp;c)
-}
-</code></pre>
-
-<p>Once you have the creds loaded, you can now go on to construct the OAuth client.</p>
-
-<h2 id="setup-oauth-client">Setup - OAuth client</h2>
-
-<p>Construct the OAuth config like this:</p>
-
-<pre><code class="language-go">conf := &amp;oauth2.Config{
-  ClientID:     c.Cid,
-  ClientSecret: c.Csecret,
-  RedirectURL:  &quot;http://localhost:9090/auth&quot;,
-  Scopes: []string{
-    &quot;https://www.googleapis.com/auth/userinfo.email&quot;, // You have to select your own scope from here -&gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
-  },
-  Endpoint: google.Endpoint,
-}
-</code></pre>
-
-<p>It will give you a struct which you can then use to Authorize the user in the google domain. Next, all you need to do is call <code>AuthCodeURL</code> on this config. It will give you a URL which redirects to a Google Sign-In form. Once the user fills that out and clicks &lsquo;Allow&rsquo;, you&rsquo;ll get back a TOKEN in the <code>code</code> query parameter and a <code>state</code> which helps protect against CSRF attacks. Always check if the provided state is the same which you provided with AuthCodeURL. This will look something like this <code>http://127.0.0.1:9090/auth?code=4FLKFskdjflf3343d4f&amp;state=lhfu3f983j;asdf</code>. Small function for this:</p>
-
-<pre><code class="language-go">func getLoginURL(state string) string {
-    // State can be some kind of random generated hash string.
-    // See relevant RFC: http://tools.ietf.org/html/rfc6749#section-10.12
-    return conf.AuthCodeURL(state)
-}
-</code></pre>
-
-<p>Construct a button which the user can click and be redirected to the Google Sign-In form. When constructing the url, we must do one more thing. Create a secure state token and save it in the form of a cookie for the current user.</p>
-
-<h2 id="random-state-and-button-construction">Random State and Button construction</h2>
-
-<p>Small piece of code random token:</p>
-
-<pre><code class="language-go">func randToken() string {
-	b := make([]byte, 32)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
-}
-</code></pre>
-
-<p>Storing it in a session and constructing the button:</p>
-
-<pre><code class="language-go">func loginHandler(c *gin.Context) {
-    state = randToken()
-    session := sessions.Default(c)
-    session.Set(&quot;state&quot;, state)
-    session.Save()
-    c.Writer.Write([]byte(&quot;&lt;html&gt;&lt;title&gt;Golang Google&lt;/title&gt; &lt;body&gt; &lt;a href='&quot; + getLoginURL() + &quot;'&gt;&lt;button&gt;Login with Google!&lt;/button&gt; &lt;/a&gt; &lt;/body&gt;&lt;/html&gt;&quot;))
-}
-</code></pre>
-
-<p>It&rsquo;s not the nicest button I ever come up with, but it will have to do.</p>
-
-<h1 id="user-information">User Information</h1>
-
-<p>After you got the token, you can construct an authorised Google HTTP Client, which let&rsquo;s you call Google related services and retrieve information about the user.</p>
-
-<h2 id="getting-the-client">Getting the Client</h2>
-
-<p>Before we construct a client, we must check if the retrieved state is still the same compared to the one we provided. I&rsquo;m doing this before constructing the client. Together this looks like this:</p>
-
-<pre><code class="language-go">func authHandler(c *gin.Context) {
-    // Check state validity.
-    session := sessions.Default(c)
-    retrievedState := session.Get(&quot;state&quot;)
-    if retrievedState != c.Query(&quot;state&quot;) {
-        c.AbortWithError(http.StatusUnauthorized, fmt.Errorf(&quot;Invalid session state: %s&quot;, retrievedState))
-        return
-    }
-    // Handle the exchange code to initiate a transport.
-  	tok, err := conf.Exchange(oauth2.NoContext, c.Query(&quot;code&quot;))
-  	if err != nil {
-  		c.AbortWithError(http.StatusBadRequest, err)
-          return
-  	}
-    // Construct the client.
-    client := conf.Client(oauth2.NoContext, tok)
-    ...
-</code></pre>
-
-<h2 id="obtaining-information">Obtaining information</h2>
-
-<p>Our next step is to retrieve information about the user. To achieve this, call Google&rsquo;s API with the authorised client. The code for that is:</p>
-
-<pre><code class="language-go">...
-resp, err := client.Get(&quot;https://www.googleapis.com/oauth2/v3/userinfo&quot;)
-if err != nil {
-    c.AbortWithError(http.StatusBadRequest, err)
-    return
-}
-defer resp.Body.Close()
-data, _ := ioutil.ReadAll(resp.Body)
-log.Println(&quot;Resp body: &quot;, string(data))
-...
-</code></pre>
-
-<p>And this will yield a body like this:</p>
-
-<pre><code class="language-json">{
-  &quot;sub&quot;: &quot;1111111111111111111111&quot;,
-  &quot;name&quot;: &quot;Your Name&quot;,
-  &quot;given_name&quot;: &quot;Your&quot;,
-  &quot;family_name&quot;: &quot;Name&quot;,
-  &quot;profile&quot;: &quot;https://plus.google.com/1111111111111111111111&quot;,
-  &quot;picture&quot;: &quot;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&quot;,
-  &quot;email&quot;: &quot;your@gmail.com&quot;,
-  &quot;email_verified&quot;: true,
-  &quot;gender&quot;: &quot;male&quot;
-}
-</code></pre>
-
-<p>Parse it, and you&rsquo;ve got an email which you can store somewhere for registration purposes. At this point, your user is not yet Authenticated. For that, I&rsquo;m going to post a second post, which describes how to go on. Retrieving the stored email address, and user session handling with Gin and MongoDB.</p>
-
-<h1 id="putting-it-all-together">Putting it all together</h1>
-
-<pre><code class="language-go">package main
-
-import (
-    &quot;crypto/rand&quot;
-    &quot;encoding/base64&quot;
-    &quot;encoding/json&quot;
-    &quot;io/ioutil&quot;
-    &quot;fmt&quot;
-    &quot;log&quot;
-    &quot;os&quot;
-    &quot;net/http&quot;
-
-    &quot;github.com/gin-gonic/contrib/sessions&quot;
-    &quot;github.com/gin-gonic/gin&quot;
-    &quot;golang.org/x/oauth2&quot;
-    &quot;golang.org/x/oauth2/google&quot;
-)
-
-// Credentials which stores google ids.
-type Credentials struct {
-    Cid     string `json:&quot;cid&quot;`
-    Csecret string `json:&quot;csecret&quot;`
-}
-
-// User is a retrieved and authentiacted user.
-type User struct {
-    Sub string `json:&quot;sub&quot;`
-    Name string `json:&quot;name&quot;`
-    GivenName string `json:&quot;given_name&quot;`
-    FamilyName string `json:&quot;family_name&quot;`
-    Profile string `json:&quot;profile&quot;`
-    Picture string `json:&quot;picture&quot;`
-    Email string `json:&quot;email&quot;`
-    EmailVerified string `json:&quot;email_verified&quot;`
-    Gender string `json:&quot;gender&quot;`
-}
-
-var cred Credentials
-var conf *oauth2.Config
-var state string
-var store = sessions.NewCookieStore([]byte(&quot;secret&quot;))
-
-func randToken() string {
-	b := make([]byte, 32)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
-}
-
-func init() {
-    file, err := ioutil.ReadFile(&quot;./creds.json&quot;)
-    if err != nil {
-        log.Printf(&quot;File error: %v\n&quot;, err)
-        os.Exit(1)
-    }
-    json.Unmarshal(file, &amp;cred)
-
-    conf = &amp;oauth2.Config{
-        ClientID:     cred.Cid,
-        ClientSecret: cred.Csecret,
-        RedirectURL:  &quot;http://127.0.0.1:9090/auth&quot;,
-        Scopes: []string{
-            &quot;https://www.googleapis.com/auth/userinfo.email&quot;, // You have to select your own scope from here -&gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
-        },
-        Endpoint: google.Endpoint,
-    }
-}
-
-func indexHandler(c *gin.Context) {
-    c.HTML(http.StatusOK, &quot;index.tmpl&quot;, gin.H{})
-}
-
-func getLoginURL(state string) string {
-    return conf.AuthCodeURL(state)
-}
-
-func authHandler(c *gin.Context) {
-    // Handle the exchange code to initiate a transport.
-    session := sessions.Default(c)
-    retrievedState := session.Get(&quot;state&quot;)
-    if retrievedState != c.Query(&quot;state&quot;) {
-        c.AbortWithError(http.StatusUnauthorized, fmt.Errorf(&quot;Invalid session state: %s&quot;, retrievedState))
-        return
-    }
-
-	tok, err := conf.Exchange(oauth2.NoContext, c.Query(&quot;code&quot;))
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-        return
-	}
-
-	client := conf.Client(oauth2.NoContext, tok)
-	email, err := client.Get(&quot;https://www.googleapis.com/oauth2/v3/userinfo&quot;)
-    if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-        return
-	}
-    defer email.Body.Close()
-    data, _ := ioutil.ReadAll(email.Body)
-    log.Println(&quot;Email body: &quot;, string(data))
-    c.Status(http.StatusOK)
-}
-
-func loginHandler(c *gin.Context) {
-    state = randToken()
-    session := sessions.Default(c)
-    session.Set(&quot;state&quot;, state)
-    session.Save()
-    c.Writer.Write([]byte(&quot;&lt;html&gt;&lt;title&gt;Golang Google&lt;/title&gt; &lt;body&gt; &lt;a href='&quot; + getLoginURL(state) + &quot;'&gt;&lt;button&gt;Login with Google!&lt;/button&gt; &lt;/a&gt; &lt;/body&gt;&lt;/html&gt;&quot;))
-}
-
-func main() {
-    router := gin.Default()
-    router.Use(sessions.Sessions(&quot;goquestsession&quot;, store))
-    router.Static(&quot;/css&quot;, &quot;./static/css&quot;)
-    router.Static(&quot;/img&quot;, &quot;./static/img&quot;)
-    router.LoadHTMLGlob(&quot;templates/*&quot;)
-
-    router.GET(&quot;/&quot;, indexHandler)
-    router.GET(&quot;/login&quot;, loginHandler)
-    router.GET(&quot;/auth&quot;, authHandler)
-
-    router.Run(&quot;127.0.0.1:9090&quot;)
-}
-}
-</code></pre>
-
-<p>This is it folks. I hope this helped. Any comments or advices are welcomed.</p>
-
-<h1 id="google-api-documentation">Google API Documentation</h1>
-
-<p>The documentation to this whole process, and MUCH more information can be found here: <a href="https://developers.google.com/identity/protocols/OAuth2">Google API Docs</a>.</p>
-
-<p>Thanks for reading,
-Gergely.</p>
                     </div>
                 </section>
                 
