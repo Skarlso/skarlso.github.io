@@ -63,6 +63,123 @@
             
             <div class="posts">
                 
+                <h1 class="content-subhead">02 Feb 2016, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json" class="post-title">Doing CORS in Go with Gin and JSON</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a><a class="post-category post-category-Programming" href="https://skarlso.github.io//categories/programming">Programming</a><a class="post-category post-category-Performance" href="https://skarlso.github.io//categories/performance">Performance</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h2 id="basics">Basics</h2>
+
+<p>Hello folks.</p>
+
+<p>This will be a quick post about how to do CORS with jQuery, Gin in Go with a very simple ajax GET and Json.</p>
+
+<p>I&rsquo;m choosing JSON here because basically I don&rsquo;t really like JSONP. And actually, it&rsquo;s not very complicated to do CORS, it&rsquo;s just hidden enough so that it doesn&rsquo;t become transparent.</p>
+
+<p>First, what is CORS? It&rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization in the header of a request, Javascript can&rsquo;t reach outside of your domain and be potentially harmful to your visitors.</p>
+
+<p>Now, suppose you have an architecture like this.</p>
+
+<p><img src="https://skarlso.github.io/img/architecture.png" alt="Architecture" /></p>
+
+<p>You have multiple agents sitting on multiple nodes. You have one central server, and you have multiple front-ends. Everybody can only talk to the Server but the server does talk to everyone. You would like to have a dynamic front-end and would like to display data with ajax calls. Since your front-end sits on a different server, you will have to do something about CORS. This is how I solved it&hellip;</p>
+
+<p>I&rsquo;m using <a href="https://github.com/gin-gonic/gin">Gin</a> for my REST service for <a href="https://github.com/Skarlso/dockmaster2">Dockmaster</a>. For this two work, you need to adjust two component.</p>
+
+<h2 id="server">Server</h2>
+
+<p>There is thing called a Preflight-Check. In essence, the preflight check is sent BEFORE the actual request to check if the next request is allowed to go out of the domain. The preflight check is sent to the same URI just with OPTIONS method. In order to tell the caller that the next one will be safe, you need three things.</p>
+
+<p>First, you need to set two Headers.
+#1 -&gt; Access-Control-Allow-Origin to &ldquo;*&ldquo;.
+#2 -&gt; Access-Control-Allow-Headers to &ldquo;access-control-allow-origin, access-control-allow-headers&rdquo;.</p>
+
+<p>These are the minimum headers you can set. If you allow Access-Control-Allow-Origin you also have to allow it in the headers section because the next request will expect it to be there. Also, note here that setting Origin to * is only recommended in development environment. Otherwise it should be set to whatever your domain is.</p>
+
+<p>Second, you need to respond to the OPTIONS method with a 200. In order to do that, I added a simple rule with the same end-point but with OPTIONS.</p>
+
+<pre><code class="language-go">func main() {
+    router := gin.Default()
+    v1 := router.Group(APIBASE)
+    {
+        v1.GET(&quot;/list&quot;, listContainers)
+        v1.POST(&quot;/add&quot;, addContainers)
+        v1.POST(&quot;/delete&quot;, deleteContainers)
+        v1.GET(&quot;/inspect/:agentID/:containerID&quot;, inspectContainer)
+        v1.OPTIONS(&quot;/inspect/:agentID/:containerID&quot;, preflight)
+        v1.POST(&quot;/stopAll&quot;, stopAll)
+        v1.OPTIONS(&quot;/stopAll&quot;, preflight)
+    }
+    router.Run(&quot;:8989&quot;)
+}
+
+func preflight(c *gin.Context) {
+    c.Header(&quot;Access-Control-Allow-Origin&quot;, &quot;*&quot;)
+    c.Header(&quot;Access-Control-Allow-Headers&quot;, &quot;access-control-allow-origin, access-control-allow-headers&quot;)
+    c.JSON(http.StatusOK, struct{}{})
+}
+</code></pre>
+
+<p>You can see that the preflight method is there for two end-points. I added it to those end-points which will reach over the domain. The others are all local, thus they don&rsquo;t need that. This leads to a little duplication, but that is fine. I have a very fine control over what actually is allowed to go outside of the domain.</p>
+
+<p>So, how do we call this?</p>
+
+<h2 id="frontend">Frontend</h2>
+
+<p>In the front-end&rsquo;s web layout, I&rsquo;m doing an Ajax GET, which looks like this:</p>
+
+<pre><code class="language-javascript">                $.ajax({
+                    url: 'http://localhost:8989/api/1/inspect/'+data.agentid+'/'+data.id,
+                    type: 'GET',
+                    dataType:&quot;json&quot;,
+                    headers: {&quot;Access-Control-Allow-Origin&quot;: &quot;*&quot;, &quot;Access-Control-Allow-Headers&quot;: &quot;access-control-allow-origin, access-control-allow-headers&quot;},
+                    processData: false,
+                    success: function(data) {
+                        var json = JSON.stringify(data, null, 4)
+                        independentPopup.html(&quot;&lt;pre &gt;&quot;+json+&quot;&lt;/pre&gt;&quot;);
+                        $(link).after(independentPopup);
+                    }
+                });
+</code></pre>
+
+<p>After the headers are set, the request will work nicely.</p>
+
+<h2 id="y-u-no-middleware">Y U No Middleware?</h2>
+
+<p>And now you could say that, why not just have a middleware which will always accept OPTIONS for every end-point. Because I like it better this way. Some would argue that this is too granular, but fact is, that in my opinion, this is more readable and immediatly visible. However, if you DO want to do that, you have several options to your disposal.</p>
+
+<p><a href="https://github.com/itsjamie/gin-cors">Cors Basic Http Middleware</a> and for Gin <a href="https://github.com/itsjamie/gin-cors">Gin CORS Middleware</a>.</p>
+
+<h2 id="summary">Summary</h2>
+
+<p>This is it. You can see the code in its entirety on Github. Have a better idea on how to do it? Please! Do not hesitate to share. I always like to learn.</p>
+
+<p>Thank you for reading!</p>
+
+<p>And as always,
+Have a nice day!</p>
+
+<p>Gergely.</p>
+
+                    </div>
+                </section>
+                
                 <h1 class="content-subhead">22 Jan 2016, 00:00</h1>
                 <section class="post">
                     <header class="post-header">
@@ -1358,57 +1475,6 @@ Gergely.</p>
 <p>Feel free to open up issues if you would like to use it and need some features which you would find interesting. Currently the username and password for the API are stored in a local config file in your home folder. Later on, I&#8217;ll add the ability to have a token rather than a username:password combination.</p>
 
 <p>Thanks for reading!</p>
-
-<p>Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">15 Nov 2015, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2015/11/15/the-one-hundred-day-github-challenge/" class="post-title">The One Hundred Day GitHub Challenge</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-programming" href="https://skarlso.github.io//categories/programming">programming</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Hello folks.</p>
-
-<p>Today, I present to you the One Hundred Day Github Challenge.</p>
-
-<p>The rules are simple:</p>
-
-<ol>
-<li>Minimum of <strong>One</strong> commit every day for a <strong>Hundred days</strong>.</li>
-<li>Commit has to be <strong>meaningful</strong> but can be as little as a fix in a Readme.md.</li>
-<li>Doesn&#8217;t matter if you are on vacation, there are no exceptions.</li>
-<li><strong>There. Are. No. Exceptions.</strong></li>
-<li>If you <strong>fail</strong> a day, you have to <strong>start over</strong>.</li>
-<li><strong>No cheating.</strong> You only cheat yourself, so this is really up to you.</li>
-</ol>
-
-<p>Let me be more clear here, because it seems I wasn&#8217;t clear enough. What you make out of this challenge, it&#8217;s up to you. If you just update a readme.md for hundred days, that&#8217;s fine. Just do it every day. It&#8217;s a commitment. At least you&#8217;ll have a nice Readme.</p>
-
-<p>Also, let me be clear on another thing. THERE ARE NO EXCEPTIONS. Even on holidays. No. Exceptions.</p>
-
-<p>So there you have it. It&#8217;s easy, but then again, it&#8217;s not.</p>
-
-<p>Mine starts today! 100&#8230;</p>
-
-<p>Thanks for reading.</p>
-
-<p>And happy coding.</p>
 
 <p>Gergely.</p>
 
