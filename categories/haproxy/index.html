@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.14" />
+    <meta name="generator" content="Hugo 0.19" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Haproxy &middot; Ramblings of a build engineer">
@@ -84,13 +84,13 @@
                     <div class="post-description">
                         
 
-<h1 id="intro:5fc8e74d786c21e7ada0d2e2bd6f8802">Intro</h1>
+<h1 id="intro">Intro</h1>
 
 <p>Hi folks.</p>
 
 <p>Today, I would like to write about how to do HTTPS for a website, without the need to buy a certificate and set it up via your DNS provider. Let&rsquo;s begin.</p>
 
-<h2 id="abstract:5fc8e74d786c21e7ada0d2e2bd6f8802">Abstract</h2>
+<h2 id="abstract">Abstract</h2>
 
 <p>What you will achieve by the end of this post:
 - Every call to HTTP will be redirected to HTTPS via <a href="https://www.haproxy.com">haproxy</a>.
@@ -103,19 +103,19 @@
 <p>I will use a static website generator for this called <a href="https://gohugo.io">Hugo</a> which, if you know me, is my favorite generator tool. These instructions
 are for haproxy and hugo, if you wish to use apache and nginx for example, you&rsquo;ll have to dig for the corresponding settings for letsencrypt and certbot.</p>
 
-<h1 id="what-you-will-need:5fc8e74d786c21e7ada0d2e2bd6f8802">What You Will Need</h1>
+<h1 id="what-you-will-need">What You Will Need</h1>
 
-<h2 id="hugo:5fc8e74d786c21e7ada0d2e2bd6f8802">Hugo</h2>
+<h2 id="hugo">Hugo</h2>
 
 <p>You will need hugo, which can be downloaded from here: <a href="https://gohugo.io">Hugo</a>. A simple website will be enough. For themes, you can take a look
 at the humongous list located here: <a href="http://themes.gohugo.io/">HugoThemes</a>.</p>
 
-<h2 id="haproxy:5fc8e74d786c21e7ada0d2e2bd6f8802">Haproxy</h2>
+<h2 id="haproxy">Haproxy</h2>
 
 <p>Haproxy can be found here: <a href="https://www.haproxy.com">Haproxy</a>. There are a number of options to install haproxy. I chose a simple
 <code>apt-get install haproxy</code>.</p>
 
-<h2 id="let-s-encrypt:5fc8e74d786c21e7ada0d2e2bd6f8802">Let&rsquo;s Encrypt</h2>
+<h2 id="let-s-encrypt">Let&rsquo;s Encrypt</h2>
 
 <p>Information about Let&rsquo;s Encrypt can be found on their website here: <a href="https://letsencrypt.org">Let&rsquo;s Encrypt</a>.
 Let&rsquo;s Encrypt&rsquo;s client is now called <a href="https://certbot.eff.org/">Certbot</a> which is used to generate the certificates. To get the latest code
@@ -128,39 +128,39 @@ user@webserver:~$ ./certbot-auto --help
 
 <p>Either way, I&rsquo;m using the current latest version: <em>v0.11.1</em>.</p>
 
-<h2 id="sudo:5fc8e74d786c21e7ada0d2e2bd6f8802">Sudo</h2>
+<h2 id="sudo">Sudo</h2>
 
 <p>This goes without saying, but that these operations will require you to have sudo privileges. I suggest staying in sudo for ease of use.
 This means that the commands, I&rsquo;ll write here, will assume you are in <code>sudo su</code> mode thus no <code>sudo</code> prefix will be used.</p>
 
-<h2 id="portforwarding:5fc8e74d786c21e7ada0d2e2bd6f8802">Portforwarding</h2>
+<h2 id="portforwarding">Portforwarding</h2>
 
 <p>In order for your website to work under https this guide assumes that you have port <em>80</em> and <em>443</em> open on your router / network security group.</p>
 
-<h1 id="setup:5fc8e74d786c21e7ada0d2e2bd6f8802">Setup</h1>
+<h1 id="setup">Setup</h1>
 
-<h2 id="single-server-environment:5fc8e74d786c21e7ada0d2e2bd6f8802">Single Server Environment</h2>
+<h2 id="single-server-environment">Single Server Environment</h2>
 
 <p>It is possible for haproxy, certbot and your website to run on designated servers. Haproxy&rsquo;s abilities allows to define multiple server sources.
 In this guide, my haproxy, website and certbot will all run on the same server; thus redirecting to 127.0.0.1 and local ips. This is more
 convenient, because otherwise the haproxy IP would have to be a permanent local/remote ip. Or an automated script would have to be setup which is
 notified upon IP change and updates the ip records.</p>
 
-<h2 id="creating-a-certificate:5fc8e74d786c21e7ada0d2e2bd6f8802">Creating a Certificate</h2>
+<h2 id="creating-a-certificate">Creating a Certificate</h2>
 
 <p>Diving in, the first thing you will require is a certificate. A certificate will allow for encrypted traffic and an authenticated website.
 Let&rsquo;s Encrypt which is basically functioning as an independent, free, automated CA (Certificate Authority). Usually,
 the process would be to pay a CA to give you a signed, generated certificate for your website, and you would have to set that up with your DNS
 provider. Let&rsquo;s Encrypt has that all automated, and free of any charge. Neat.</p>
 
-<h3 id="certbot:5fc8e74d786c21e7ada0d2e2bd6f8802">Certbot</h3>
+<h3 id="certbot">Certbot</h3>
 
 <p>So let&rsquo;s get started. Clone the repository into <code>/opt/letsencrypt</code> for further usage.</p>
 
 <pre><code class="language-bash">git clone https://github.com/certbot/certbot /opt/letsencrypt
 </code></pre>
 
-<h3 id="generating-the-certificate:5fc8e74d786c21e7ada0d2e2bd6f8802">Generating the certificate</h3>
+<h3 id="generating-the-certificate">Generating the certificate</h3>
 
 <p>Make sure that there is nothing listening on ports: 80, 443. To list usage:</p>
 
@@ -184,7 +184,7 @@ generated certificate will be located under <code>/etc/letsencrypt/archive</code
 a symlink to the latest version of the cert. It&rsquo;s wise to not copy these away from here, since the live link is always updated to the latest version.
 Our script will handle haproxy, which requires one cert file made from privkey + fullchain|.pem files.</p>
 
-<h3 id="setup-auto-renewal:5fc8e74d786c21e7ada0d2e2bd6f8802">Setup Auto-Renewal</h3>
+<h3 id="setup-auto-renewal">Setup Auto-Renewal</h3>
 
 <p>Let&rsquo;s Encrypt issues short lived certificates (90 days). In order to not have to do this procedure every 89 days, certbot provides a nifty
 command called <code>renew</code>. However, for the cert to be generated, the port 443 has to be open. This means, haproxy needs to be stopped before
@@ -236,7 +236,7 @@ Running post-hook command: service haproxy start
 
 <p>And you should be all set. Now we move on the configure haproxy to redirect and to use our newly generated certificate.</p>
 
-<h2 id="haproxy-1:5fc8e74d786c21e7ada0d2e2bd6f8802">Haproxy</h2>
+<h2 id="haproxy-1">Haproxy</h2>
 
 <p>Like I said, haproxy requires a single file certificate in order to encrypt traffic to and from the website. To do this, we need to combine
 <code>privkey.pem</code> and <code>fullchain.pem</code>. As of this writing, there are a couple of solutions to automate this via a post hook on renewal. And also,
@@ -248,7 +248,7 @@ have chosen to simply concatenate the two files together with <code>cat</code> l
 
 <p>It will create a combined cert under <code>/etc/haproxy/certs/example.com.pem</code>.</p>
 
-<h3 id="haproxy-configuration:5fc8e74d786c21e7ada0d2e2bd6f8802">Haproxy configuration</h3>
+<h3 id="haproxy-configuration">Haproxy configuration</h3>
 
 <p>If haproxy happens to be running, stop it with <code>service haproxy stop</code>.</p>
 
@@ -331,7 +331,7 @@ If, however, there went something wrong with starting the proxy, it usually disp
 
 <p>You can also gather some more information on what went wrong from <code>less /var/log/haproxy.log</code>.</p>
 
-<h1 id="starting-the-server:5fc8e74d786c21e7ada0d2e2bd6f8802">Starting the Server</h1>
+<h1 id="starting-the-server">Starting the Server</h1>
 
 <p>Everything should be ready to go. Hugo has the concept of a baseUrl. Everything that it loads, and tries to access
 will be prefixed with it. You can either set it through it&rsquo;s <code>config.yaml</code> file, or from the command line.</p>
@@ -347,7 +347,7 @@ with not binding to network IP when I was debugging the site from a different la
 <p>Once the server is started, you should be able to open up your website from a different browser, not on your local network,
 and see that it has a valid certificate installed. In Chrome you should see a green icon telling you that the cert is valid.</p>
 
-<h1 id="last-words:5fc8e74d786c21e7ada0d2e2bd6f8802">Last Words</h1>
+<h1 id="last-words">Last Words</h1>
 
 <p>And that is all. The site should be up and running and the proxy should auto-renew your site&rsquo;s certificate. If you happened to
 change DNS or change the server, you&rsquo;ll have to reissue the certificate.</p>

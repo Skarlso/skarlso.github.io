@@ -2,10 +2,9 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Haproxy on Ramblings of a build engineer</title>
-    <link>https://skarlso.github.io/categories/haproxy/</link>
+    <link>https://skarlso.github.io/categories/haproxy/index.xml</link>
     <description>Recent content in Haproxy on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Wed, 15 Feb 2017 19:20:00 +0100</lastBuildDate>
     <atom:link href="https://skarlso.github.io/categories/haproxy/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -16,13 +15,13 @@
       <guid>https://skarlso.github.io/2017/02/15/how-to-https-with-hugo-letsencrypt-haproxy</guid>
       <description>
 
-&lt;h1 id=&#34;intro:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Intro&lt;/h1&gt;
+&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
 
 &lt;p&gt;Hi folks.&lt;/p&gt;
 
 &lt;p&gt;Today, I would like to write about how to do HTTPS for a website, without the need to buy a certificate and set it up via your DNS provider. Let&amp;rsquo;s begin.&lt;/p&gt;
 
-&lt;h2 id=&#34;abstract:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Abstract&lt;/h2&gt;
+&lt;h2 id=&#34;abstract&#34;&gt;Abstract&lt;/h2&gt;
 
 &lt;p&gt;What you will achieve by the end of this post:
 - Every call to HTTP will be redirected to HTTPS via &lt;a href=&#34;https://www.haproxy.com&#34;&gt;haproxy&lt;/a&gt;.
@@ -35,19 +34,19 @@
 &lt;p&gt;I will use a static website generator for this called &lt;a href=&#34;https://gohugo.io&#34;&gt;Hugo&lt;/a&gt; which, if you know me, is my favorite generator tool. These instructions
 are for haproxy and hugo, if you wish to use apache and nginx for example, you&amp;rsquo;ll have to dig for the corresponding settings for letsencrypt and certbot.&lt;/p&gt;
 
-&lt;h1 id=&#34;what-you-will-need:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;What You Will Need&lt;/h1&gt;
+&lt;h1 id=&#34;what-you-will-need&#34;&gt;What You Will Need&lt;/h1&gt;
 
-&lt;h2 id=&#34;hugo:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Hugo&lt;/h2&gt;
+&lt;h2 id=&#34;hugo&#34;&gt;Hugo&lt;/h2&gt;
 
 &lt;p&gt;You will need hugo, which can be downloaded from here: &lt;a href=&#34;https://gohugo.io&#34;&gt;Hugo&lt;/a&gt;. A simple website will be enough. For themes, you can take a look
 at the humongous list located here: &lt;a href=&#34;http://themes.gohugo.io/&#34;&gt;HugoThemes&lt;/a&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;haproxy:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Haproxy&lt;/h2&gt;
+&lt;h2 id=&#34;haproxy&#34;&gt;Haproxy&lt;/h2&gt;
 
 &lt;p&gt;Haproxy can be found here: &lt;a href=&#34;https://www.haproxy.com&#34;&gt;Haproxy&lt;/a&gt;. There are a number of options to install haproxy. I chose a simple
 &lt;code&gt;apt-get install haproxy&lt;/code&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;let-s-encrypt:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Let&amp;rsquo;s Encrypt&lt;/h2&gt;
+&lt;h2 id=&#34;let-s-encrypt&#34;&gt;Let&amp;rsquo;s Encrypt&lt;/h2&gt;
 
 &lt;p&gt;Information about Let&amp;rsquo;s Encrypt can be found on their website here: &lt;a href=&#34;https://letsencrypt.org&#34;&gt;Let&amp;rsquo;s Encrypt&lt;/a&gt;.
 Let&amp;rsquo;s Encrypt&amp;rsquo;s client is now called &lt;a href=&#34;https://certbot.eff.org/&#34;&gt;Certbot&lt;/a&gt; which is used to generate the certificates. To get the latest code
@@ -60,39 +59,39 @@ user@webserver:~$ ./certbot-auto --help
 
 &lt;p&gt;Either way, I&amp;rsquo;m using the current latest version: &lt;em&gt;v0.11.1&lt;/em&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;sudo:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Sudo&lt;/h2&gt;
+&lt;h2 id=&#34;sudo&#34;&gt;Sudo&lt;/h2&gt;
 
 &lt;p&gt;This goes without saying, but that these operations will require you to have sudo privileges. I suggest staying in sudo for ease of use.
 This means that the commands, I&amp;rsquo;ll write here, will assume you are in &lt;code&gt;sudo su&lt;/code&gt; mode thus no &lt;code&gt;sudo&lt;/code&gt; prefix will be used.&lt;/p&gt;
 
-&lt;h2 id=&#34;portforwarding:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Portforwarding&lt;/h2&gt;
+&lt;h2 id=&#34;portforwarding&#34;&gt;Portforwarding&lt;/h2&gt;
 
 &lt;p&gt;In order for your website to work under https this guide assumes that you have port &lt;em&gt;80&lt;/em&gt; and &lt;em&gt;443&lt;/em&gt; open on your router / network security group.&lt;/p&gt;
 
-&lt;h1 id=&#34;setup:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Setup&lt;/h1&gt;
+&lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
 
-&lt;h2 id=&#34;single-server-environment:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Single Server Environment&lt;/h2&gt;
+&lt;h2 id=&#34;single-server-environment&#34;&gt;Single Server Environment&lt;/h2&gt;
 
 &lt;p&gt;It is possible for haproxy, certbot and your website to run on designated servers. Haproxy&amp;rsquo;s abilities allows to define multiple server sources.
 In this guide, my haproxy, website and certbot will all run on the same server; thus redirecting to 127.0.0.1 and local ips. This is more
 convenient, because otherwise the haproxy IP would have to be a permanent local/remote ip. Or an automated script would have to be setup which is
 notified upon IP change and updates the ip records.&lt;/p&gt;
 
-&lt;h2 id=&#34;creating-a-certificate:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Creating a Certificate&lt;/h2&gt;
+&lt;h2 id=&#34;creating-a-certificate&#34;&gt;Creating a Certificate&lt;/h2&gt;
 
 &lt;p&gt;Diving in, the first thing you will require is a certificate. A certificate will allow for encrypted traffic and an authenticated website.
 Let&amp;rsquo;s Encrypt which is basically functioning as an independent, free, automated CA (Certificate Authority). Usually,
 the process would be to pay a CA to give you a signed, generated certificate for your website, and you would have to set that up with your DNS
 provider. Let&amp;rsquo;s Encrypt has that all automated, and free of any charge. Neat.&lt;/p&gt;
 
-&lt;h3 id=&#34;certbot:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Certbot&lt;/h3&gt;
+&lt;h3 id=&#34;certbot&#34;&gt;Certbot&lt;/h3&gt;
 
 &lt;p&gt;So let&amp;rsquo;s get started. Clone the repository into &lt;code&gt;/opt/letsencrypt&lt;/code&gt; for further usage.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;git clone https://github.com/certbot/certbot /opt/letsencrypt
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;generating-the-certificate:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Generating the certificate&lt;/h3&gt;
+&lt;h3 id=&#34;generating-the-certificate&#34;&gt;Generating the certificate&lt;/h3&gt;
 
 &lt;p&gt;Make sure that there is nothing listening on ports: 80, 443. To list usage:&lt;/p&gt;
 
@@ -116,7 +115,7 @@ generated certificate will be located under &lt;code&gt;/etc/letsencrypt/archive
 a symlink to the latest version of the cert. It&amp;rsquo;s wise to not copy these away from here, since the live link is always updated to the latest version.
 Our script will handle haproxy, which requires one cert file made from privkey + fullchain|.pem files.&lt;/p&gt;
 
-&lt;h3 id=&#34;setup-auto-renewal:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Setup Auto-Renewal&lt;/h3&gt;
+&lt;h3 id=&#34;setup-auto-renewal&#34;&gt;Setup Auto-Renewal&lt;/h3&gt;
 
 &lt;p&gt;Let&amp;rsquo;s Encrypt issues short lived certificates (90 days). In order to not have to do this procedure every 89 days, certbot provides a nifty
 command called &lt;code&gt;renew&lt;/code&gt;. However, for the cert to be generated, the port 443 has to be open. This means, haproxy needs to be stopped before
@@ -168,7 +167,7 @@ Running post-hook command: service haproxy start
 
 &lt;p&gt;And you should be all set. Now we move on the configure haproxy to redirect and to use our newly generated certificate.&lt;/p&gt;
 
-&lt;h2 id=&#34;haproxy-1:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Haproxy&lt;/h2&gt;
+&lt;h2 id=&#34;haproxy-1&#34;&gt;Haproxy&lt;/h2&gt;
 
 &lt;p&gt;Like I said, haproxy requires a single file certificate in order to encrypt traffic to and from the website. To do this, we need to combine
 &lt;code&gt;privkey.pem&lt;/code&gt; and &lt;code&gt;fullchain.pem&lt;/code&gt;. As of this writing, there are a couple of solutions to automate this via a post hook on renewal. And also,
@@ -180,7 +179,7 @@ have chosen to simply concatenate the two files together with &lt;code&gt;cat&lt
 
 &lt;p&gt;It will create a combined cert under &lt;code&gt;/etc/haproxy/certs/example.com.pem&lt;/code&gt;.&lt;/p&gt;
 
-&lt;h3 id=&#34;haproxy-configuration:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Haproxy configuration&lt;/h3&gt;
+&lt;h3 id=&#34;haproxy-configuration&#34;&gt;Haproxy configuration&lt;/h3&gt;
 
 &lt;p&gt;If haproxy happens to be running, stop it with &lt;code&gt;service haproxy stop&lt;/code&gt;.&lt;/p&gt;
 
@@ -263,7 +262,7 @@ If, however, there went something wrong with starting the proxy, it usually disp
 
 &lt;p&gt;You can also gather some more information on what went wrong from &lt;code&gt;less /var/log/haproxy.log&lt;/code&gt;.&lt;/p&gt;
 
-&lt;h1 id=&#34;starting-the-server:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Starting the Server&lt;/h1&gt;
+&lt;h1 id=&#34;starting-the-server&#34;&gt;Starting the Server&lt;/h1&gt;
 
 &lt;p&gt;Everything should be ready to go. Hugo has the concept of a baseUrl. Everything that it loads, and tries to access
 will be prefixed with it. You can either set it through it&amp;rsquo;s &lt;code&gt;config.yaml&lt;/code&gt; file, or from the command line.&lt;/p&gt;
@@ -279,7 +278,7 @@ with not binding to network IP when I was debugging the site from a different la
 &lt;p&gt;Once the server is started, you should be able to open up your website from a different browser, not on your local network,
 and see that it has a valid certificate installed. In Chrome you should see a green icon telling you that the cert is valid.&lt;/p&gt;
 
-&lt;h1 id=&#34;last-words:5fc8e74d786c21e7ada0d2e2bd6f8802&#34;&gt;Last Words&lt;/h1&gt;
+&lt;h1 id=&#34;last-words&#34;&gt;Last Words&lt;/h1&gt;
 
 &lt;p&gt;And that is all. The site should be up and running and the proxy should auto-renew your site&amp;rsquo;s certificate. If you happened to
 change DNS or change the server, you&amp;rsquo;ll have to reissue the certificate.&lt;/p&gt;

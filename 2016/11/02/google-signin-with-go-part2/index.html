@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.14" />
+    <meta name="generator" content="Hugo 0.19" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="How to do Google Sign-In with Go - Part 2 &middot; Ramblings of a build engineer">
@@ -83,15 +83,15 @@
                     <div class="post-description">
                         
 
-<h1 id="intro:7e8bd68702abc21a05d48f308da8e649">Intro</h1>
+<h1 id="intro">Intro</h1>
 
 <p>Hi Folks.</p>
 
 <p>This is a follow up on my previous post about Google Sign-In. In this post we will discover what to do with the information retrieved in the first encounter, which you can find here: <a href="http://skarlso.github.io/2016/06/12/google-signin-with-go/">Google Sign-In Part 1</a>.</p>
 
-<h1 id="forewords:7e8bd68702abc21a05d48f308da8e649">Forewords</h1>
+<h1 id="forewords">Forewords</h1>
 
-<h2 id="the-project:7e8bd68702abc21a05d48f308da8e649">The Project</h2>
+<h2 id="the-project">The Project</h2>
 
 <p>Everything I did in the first post, and that I&rsquo;m going to do in this example, can be found in this project: <a href="https://github.com/Skarlso/google-oauth-go-sample">Google-OAuth-Go-Sample</a>.</p>
 
@@ -112,19 +112,19 @@
 
 <p>In my example, to keep things simple, I will use the email address since that has to be unique in the land of Google. You could assign an ID to the user, and you could complicate things even further, but my goal is not to write an academic paper about cryptography here.</p>
 
-<h1 id="implementation:7e8bd68702abc21a05d48f308da8e649">Implementation</h1>
+<h1 id="implementation">Implementation</h1>
 
-<h2 id="making-something-useful-out-of-the-data:7e8bd68702abc21a05d48f308da8e649">Making something useful out of the data</h2>
+<h2 id="making-something-useful-out-of-the-data">Making something useful out of the data</h2>
 
 <p>In order for the app to recognise a user it must save some data about the user. I&rsquo;m doing that in MongoDB right now, but that could be any form of persistence layer, like, SQLite3, BoltDB, PostgresDB, etc.</p>
 
-<h3 id="after-successful-user-authorization:7e8bd68702abc21a05d48f308da8e649">After successful user authorization</h3>
+<h3 id="after-successful-user-authorization">After successful user authorization</h3>
 
 <p>Once the user used google to provide us with sufficient information about him/herself, we can retrieve data about that user from our records. The data could be anything that is linked to our unique identifier like: Character Profile, Player Information, Status, Last Logged-In, etcetc. For this, there are two things that need to happen after authorization: Save/Load user information and initiate a session.</p>
 
 <p>The session can be in the form of a cookie, or a Redis storage, or URL re-writing. I&rsquo;m choosing a cookie here.</p>
 
-<h3 id="save-load-user-information:7e8bd68702abc21a05d48f308da8e649">Save / Load user information</h3>
+<h3 id="save-load-user-information">Save / Load user information</h3>
 
 <p>All I&rsquo;m doing is a simple, <em>returning / new</em> user handling. The concept is simple. If the email isn&rsquo;t saved, we save it. If it&rsquo;s saved, we set a logic to our page render to greet the returning user.</p>
 
@@ -171,7 +171,7 @@ c.HTML(http.StatusOK, &quot;battle.tmpl&quot;, gin.H{&quot;email&quot;: u.Email,
 
 <p>You can see here, that if <code>seen</code> is <em>true</em> the header message will say: &ldquo;Welcome <em>back</em>&hellip;&ldquo;.</p>
 
-<h3 id="initiating-a-session:7e8bd68702abc21a05d48f308da8e649">Initiating a session</h3>
+<h3 id="initiating-a-session">Initiating a session</h3>
 
 <p>When the user is successfully authenticated, we activate a session so that the user can access pages that require authorization. Here, I have to mention that I&rsquo;m using <a href="https://github.com/gin-gonic/gin">Gin</a>, so restricted end-points are made with groups which require a middleware.</p>
 
@@ -210,7 +210,7 @@ if err != nil {
 
 <p>Don&rsquo;t forget to <code>save</code> the session. ;) That is it. If I restart the server, the cookie won&rsquo;t be usable any longer, since it will generate a new token for the cookie store. The user will have to log in again. <strong>Note</strong>: It might be that you&rsquo;ll see something like this, from <code>session</code>: <code>[sessions] ERROR! securecookie: the value is not valid</code>. You can ignore this error.</p>
 
-<h2 id="restricting-access-to-certain-end-points-with-the-auth-middleware:7e8bd68702abc21a05d48f308da8e649">Restricting access to certain end-points with the auth Middleware™</h2>
+<h2 id="restricting-access-to-certain-end-points-with-the-auth-middleware">Restricting access to certain end-points with the auth Middleware™</h2>
 
 <p>Now, that our session is alive, we can use it to restrict access to some part of the application. With Gin, it looks like this:</p>
 
@@ -241,7 +241,7 @@ func AuthorizeRequest() gin.HandlerFunc {
 
 <p>If you would try to access <a href="http://127.0.0.1:9090/battle/field">http://127.0.0.1:9090/battle/field</a> without logging in, you&rsquo;d be redirected to an <code>error.tmpl</code> with the message: <strong>Please log in.</strong>.</p>
 
-<h1 id="final-words:7e8bd68702abc21a05d48f308da8e649">Final Words</h1>
+<h1 id="final-words">Final Words</h1>
 
 <p>That&rsquo;s pretty much it. Important parts are:</p>
 
