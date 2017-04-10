@@ -63,6 +63,123 @@
             
             <div class="posts">
                 
+                <h1 class="content-subhead">22 Mar 2017, 12:03</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2017/03/22/building-furnace-part-3" class="post-title">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 3</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-Golang" href="https://skarlso.github.io//categories/golang">Golang</a><a class="post-category post-category-AWS" href="https://skarlso.github.io//categories/aws">AWS</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h1 id="intro">Intro</h1>
+
+<p>Hi folks.</p>
+
+<p>Previously on this blog: <a href="http://skarlso.github.io/2017/03/16/building-furnace-part-1/">Part 1</a>. <a href="http://skarlso.github.io/2017/03/16/building-furnace-part-2/">Part 2</a>.</p>
+
+<p>In this part, I&rsquo;m going to talk about the experimental plugin system of Furnace.</p>
+
+<h1 id="go-experimental-plugins">Go Experimental Plugins</h1>
+
+<p>Since Go 1.8 was released, an exciting and new feature was introduced called a Plug-in system. This system works with dynamic
+libraries built with a special switch to <code>go build</code>. These libraries, <code>.so</code> or <code>.dylib</code> (later), are than loaded and once that
+succeeds, specific functions can be called from them (symbol resolution).</p>
+
+<p>We will see how this works. For package information, visit the plugin packages Go doc page
+<a href="https://tip.golang.org/pkg/plugin/">here</a>.</p>
+
+<h1 id="furnace-plugins">Furnace Plugins</h1>
+
+<p>So, what does furnace use plugins for? Furnace uses plugins to execute arbitery code in, currently, four given locations / events.</p>
+
+<p>These are: <code>pre_create, post_create, pre_delete, post_delete</code>. These events are called, as their name suggests, before and after
+the creation and deletion of the CloudFormation stack. It allows the user to execute some code without having to rebuild the whole
+project. It does that by defining a single entry point for the custom code called <code>RunPlugin</code>. Any number of functions can be
+implemented, but the plugin MUST provide this single, exported function. Otherwise it will fail and ignore that plugin.</p>
+
+<h2 id="using-plugins">Using Plugins</h2>
+
+<p>It&rsquo;s really easy to implement, and use these plugins. I&rsquo;m not going into the detail of how to load them, because that is done by
+Furnace, but only how to write and use them.</p>
+
+<p>To use a plugin, create a go file called: <code>0001_mailer.go</code>. The <code>0001</code> before it will define WHEN it&rsquo;s executed.
+Having multiple plugins is completely okay. Execution of order however, depends on the names of the files.</p>
+
+<p>Now, in 0001_mailer.post_create we would have something like this:</p>
+
+<pre><code class="language-go">package main
+
+import &quot;log&quot;
+
+// RunPlugin runs the plugin.
+func RunPlugin() {
+	log.Println(&quot;My Awesome Pre Create Plugin.&quot;)
+}
+</code></pre>
+
+<p>Next step is the build this file to be a plugin library. Note: Right now, this only works on Linux!</p>
+
+<p>To build this file run the following:</p>
+
+<pre><code>go build -buildmode=plugin -o 0001_mailer.pre_create 0001_mailer.go
+</code></pre>
+
+<p>The important part here is the extension of the file specified with <code>-o</code>. It&rsquo;s important because that&rsquo;s how Furnace identifies
+what plugins it has to run.</p>
+
+<p>Finally, copy this file to <code>~/.config/go-furnace/plugins</code> and you are all set.</p>
+
+<h2 id="slack-notification-plugin">Slack notification Plugin</h2>
+
+<p>To demonstrate how a plugin could be used is if you need some kind of notification once a Stack is completed. For example, you
+might want to send a message to a Slack room. To do this, your plugin would look something like this:</p>
+
+<pre><code class="language-go">package main
+
+import (
+	&quot;fmt&quot;
+	&quot;os&quot;
+
+	&quot;github.com/nlopes/slack&quot;
+)
+
+func RunPlugin() {
+	stackname := os.Getenv(&quot;FURNACE_STACKNAME&quot;)
+	api := slack.New(&quot;YOUR_TOKEN_HERE&quot;)
+	params := slack.PostMessageParameters{}
+	channelID, timestamp, err := api.PostMessage(&quot;#general&quot;, fmt.Sprintf(&quot;Stack with name '%s' is Done.&quot;, stackname), params)
+	if err != nil {
+		fmt.Printf(&quot;%s\n&quot;, err)
+		return
+	}
+	fmt.Printf(&quot;Message successfully sent to channel %s at %s&quot;, channelID, timestamp)
+}
+</code></pre>
+
+<p>Currently, Furnace has no ability to share information of the stack with an outside plugin. Thus &lsquo;Done&rsquo; could be anything from
+Rollback to Failed to CreateComplete.</p>
+
+<h1 id="closing-words">Closing Words</h1>
+
+<p>That&rsquo;s it for plugins. Thanks very much for reading!
+Gergely.</p>
+
+                    </div>
+                </section>
+                
                 <h1 class="content-subhead">19 Mar 2017, 12:03</h1>
                 <section class="post">
                     <header class="post-header">
@@ -134,7 +251,7 @@ constructing Input structs and make for poor aesthetics.</p>
 
 <p>This doesn&rsquo;t look so appealing, but one gets used to it quickly.</p>
 
-<p>## Error handling</p>
+<h2 id="error-handling">Error handling</h2>
 
 <p>Errors also have their own types. An AWS error looks like this:</p>
 
@@ -164,7 +281,7 @@ look something like this:</p>
 on to the caller to a potential fatal. Here, I&rsquo;m ignoring the AlreadyExistsException because, if it does, we just go on to a next
 action.</p>
 
-<p>## Examples</p>
+<h2 id="examples">Examples</h2>
 
 <p>Luckily the API doc is very mature. In most of the cases, they provide an example to an API call. These examples, however, from
 time to time provide more confusion than clarity. Take CloudFormation. For me, when I first glanced upon the
@@ -178,7 +295,7 @@ template where extracted for me by <code>ValidateTemplate</code> API call which 
 <code>[]*cloudformation.Parameter</code> slice. These things are not described in the document or visible from the examples. I mainly found
 them through playing with the API and focused experimentation.</p>
 
-<p>## Waiters</p>
+<h2 id="waiters">Waiters</h2>
 
 <p>From other SDK implementations, we got used to Waiters. These handy methods wait for a service to become available or for certain
 situations to take in effect, like a Stage being <code>CREATE_COMPLETE</code>. The Go waiters, however, don&rsquo;t allow for callback to be fired,
@@ -248,7 +365,7 @@ func WaitForFunctionWithStatusOutput(state string, freq int, f func()) {
 
 <p>Furnace is divided into three main packages.</p>
 
-<p>### commands</p>
+<h3 id="commands">commands</h3>
 
 <p>Commands package is where the gist of Furnace lies. These commands represent the commands which are used through the CLI. Each
 file has the implementation for one command. The structure is devised by this library: <a href="https://github.com/Yitsushi/go-commander">Yitsushi&rsquo;s Command Library</a>.
@@ -287,7 +404,7 @@ Examples:
 <p>Further more, config loads the CloudFormation template and checks if some necessary settings are present in the environment, exp:
 the configuration folder under <code>~/.config/go-furnace</code>.</p>
 
-<p>### utils</p>
+<h3 id="utils">utils</h3>
 
 <p>These are some helper functions which are used throughout the project. To list them:
 - error_handler - Is a simple error handler. I&rsquo;m thinking of refactoring this one to some saner version.
@@ -323,7 +440,7 @@ them.</li>
 
 <h2 id="general-practices-applied-to-the-project">General Practices Applied to the Project</h2>
 
-<p>### Commands</p>
+<h3 id="commands-1">Commands</h3>
 
 <p>For each command the main entry point is the <code>execute</code> function. These functions are usually calling out the small chunks of
 distributed methods. Logic was kept to a bare minimum ( probably could be simplified even further ) in the execute functions
@@ -335,11 +452,11 @@ mostly for testability and the likes. We will see that in a followup post.</p>
 versions this might become more granular. I.e. don&rsquo;t immediately stop the world, maybe try to recover, or create a Poller or
 Re-Tryer, which tries a call again for a configured amount of times.</p>
 
-<p>### Output colors</p>
+<h3 id="output-colors">Output colors</h3>
 
 <p>Not that important, but still&hellip; Aesthetics. Displaying data to the console in a nice way gives it some extra flare.</p>
 
-<p>### Makefile</p>
+<h3 id="makefile">Makefile</h3>
 
 <p>This project works with a Makefile for various reasons. Later on, once the project might become more complex, a Makefile makes it
 really easy to handle different ways of packaging the application. Currently, for example, it provides a <code>linux</code> target which will
@@ -1542,54 +1659,6 @@ PASS
 <p>That&rsquo;s all folks.</p>
 
 <p>Happy coding,
-Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">16 Aug 2016, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2016/08/16/never-changing-regex" class="post-title">Global variable for never changing regex</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Quick reminder. If you have a never changing regex in Go, do NOT put it into a frequently called function. ALWAYS put it into a global variable. I&rsquo;ll show you why.</p>
-
-<p>Benchmark for code with a variable in a frequently called function:</p>
-
-<pre><code class="language-bash">BenchmarkNumber-8     	   30000	     41633 ns/op
-BenchmarkAreaCode-8   	   50000	     27736 ns/op
-BenchmarkFormat-8     	   50000	     29263 ns/op
-PASS
-ok  	_/phone-number	5.110s
-</code></pre>
-
-<p>Benchmark for code with the same variable outside in a global scope:</p>
-
-<pre><code class="language-bash">BenchmarkNumber-8     	  300000	      5618 ns/op
-BenchmarkAreaCode-8   	  500000	      3884 ns/op
-BenchmarkFormat-8     	  300000	      4696 ns/op
-PASS
-ok  	_/phone-number	5.197s
-</code></pre>
-
-<p>Notice the magnitude change in ns/op! That&rsquo;s something to keep an eye out for.</p>
-
-<p>Thanks for reading!
-Cheers,
 Gergely.</p>
 
                     </div>

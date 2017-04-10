@@ -8,6 +8,109 @@
     <atom:link href="https://skarlso.github.io/categories/aws/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 3</title>
+      <link>https://skarlso.github.io/2017/03/22/building-furnace-part-3</link>
+      <pubDate>Wed, 22 Mar 2017 12:03:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2017/03/22/building-furnace-part-3</guid>
+      <description>
+
+&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
+
+&lt;p&gt;Hi folks.&lt;/p&gt;
+
+&lt;p&gt;Previously on this blog: &lt;a href=&#34;http://skarlso.github.io/2017/03/16/building-furnace-part-1/&#34;&gt;Part 1&lt;/a&gt;. &lt;a href=&#34;http://skarlso.github.io/2017/03/16/building-furnace-part-2/&#34;&gt;Part 2&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;In this part, I&amp;rsquo;m going to talk about the experimental plugin system of Furnace.&lt;/p&gt;
+
+&lt;h1 id=&#34;go-experimental-plugins&#34;&gt;Go Experimental Plugins&lt;/h1&gt;
+
+&lt;p&gt;Since Go 1.8 was released, an exciting and new feature was introduced called a Plug-in system. This system works with dynamic
+libraries built with a special switch to &lt;code&gt;go build&lt;/code&gt;. These libraries, &lt;code&gt;.so&lt;/code&gt; or &lt;code&gt;.dylib&lt;/code&gt; (later), are than loaded and once that
+succeeds, specific functions can be called from them (symbol resolution).&lt;/p&gt;
+
+&lt;p&gt;We will see how this works. For package information, visit the plugin packages Go doc page
+&lt;a href=&#34;https://tip.golang.org/pkg/plugin/&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h1 id=&#34;furnace-plugins&#34;&gt;Furnace Plugins&lt;/h1&gt;
+
+&lt;p&gt;So, what does furnace use plugins for? Furnace uses plugins to execute arbitery code in, currently, four given locations / events.&lt;/p&gt;
+
+&lt;p&gt;These are: &lt;code&gt;pre_create, post_create, pre_delete, post_delete&lt;/code&gt;. These events are called, as their name suggests, before and after
+the creation and deletion of the CloudFormation stack. It allows the user to execute some code without having to rebuild the whole
+project. It does that by defining a single entry point for the custom code called &lt;code&gt;RunPlugin&lt;/code&gt;. Any number of functions can be
+implemented, but the plugin MUST provide this single, exported function. Otherwise it will fail and ignore that plugin.&lt;/p&gt;
+
+&lt;h2 id=&#34;using-plugins&#34;&gt;Using Plugins&lt;/h2&gt;
+
+&lt;p&gt;It&amp;rsquo;s really easy to implement, and use these plugins. I&amp;rsquo;m not going into the detail of how to load them, because that is done by
+Furnace, but only how to write and use them.&lt;/p&gt;
+
+&lt;p&gt;To use a plugin, create a go file called: &lt;code&gt;0001_mailer.go&lt;/code&gt;. The &lt;code&gt;0001&lt;/code&gt; before it will define WHEN it&amp;rsquo;s executed.
+Having multiple plugins is completely okay. Execution of order however, depends on the names of the files.&lt;/p&gt;
+
+&lt;p&gt;Now, in 0001_mailer.post_create we would have something like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
+
+import &amp;quot;log&amp;quot;
+
+// RunPlugin runs the plugin.
+func RunPlugin() {
+	log.Println(&amp;quot;My Awesome Pre Create Plugin.&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Next step is the build this file to be a plugin library. Note: Right now, this only works on Linux!&lt;/p&gt;
+
+&lt;p&gt;To build this file run the following:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;go build -buildmode=plugin -o 0001_mailer.pre_create 0001_mailer.go
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The important part here is the extension of the file specified with &lt;code&gt;-o&lt;/code&gt;. It&amp;rsquo;s important because that&amp;rsquo;s how Furnace identifies
+what plugins it has to run.&lt;/p&gt;
+
+&lt;p&gt;Finally, copy this file to &lt;code&gt;~/.config/go-furnace/plugins&lt;/code&gt; and you are all set.&lt;/p&gt;
+
+&lt;h2 id=&#34;slack-notification-plugin&#34;&gt;Slack notification Plugin&lt;/h2&gt;
+
+&lt;p&gt;To demonstrate how a plugin could be used is if you need some kind of notification once a Stack is completed. For example, you
+might want to send a message to a Slack room. To do this, your plugin would look something like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
+
+import (
+	&amp;quot;fmt&amp;quot;
+	&amp;quot;os&amp;quot;
+
+	&amp;quot;github.com/nlopes/slack&amp;quot;
+)
+
+func RunPlugin() {
+	stackname := os.Getenv(&amp;quot;FURNACE_STACKNAME&amp;quot;)
+	api := slack.New(&amp;quot;YOUR_TOKEN_HERE&amp;quot;)
+	params := slack.PostMessageParameters{}
+	channelID, timestamp, err := api.PostMessage(&amp;quot;#general&amp;quot;, fmt.Sprintf(&amp;quot;Stack with name &#39;%s&#39; is Done.&amp;quot;, stackname), params)
+	if err != nil {
+		fmt.Printf(&amp;quot;%s\n&amp;quot;, err)
+		return
+	}
+	fmt.Printf(&amp;quot;Message successfully sent to channel %s at %s&amp;quot;, channelID, timestamp)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Currently, Furnace has no ability to share information of the stack with an outside plugin. Thus &amp;lsquo;Done&amp;rsquo; could be anything from
+Rollback to Failed to CreateComplete.&lt;/p&gt;
+
+&lt;h1 id=&#34;closing-words&#34;&gt;Closing Words&lt;/h1&gt;
+
+&lt;p&gt;That&amp;rsquo;s it for plugins. Thanks very much for reading!
+Gergely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2</title>
       <link>https://skarlso.github.io/2017/03/19/building-furnace-part-2</link>
       <pubDate>Sun, 19 Mar 2017 12:03:00 +0100</pubDate>
@@ -65,7 +168,7 @@ constructing Input structs and make for poor aesthetics.&lt;/p&gt;
 
 &lt;p&gt;This doesn&amp;rsquo;t look so appealing, but one gets used to it quickly.&lt;/p&gt;
 
-&lt;p&gt;## Error handling&lt;/p&gt;
+&lt;h2 id=&#34;error-handling&#34;&gt;Error handling&lt;/h2&gt;
 
 &lt;p&gt;Errors also have their own types. An AWS error looks like this:&lt;/p&gt;
 
@@ -95,7 +198,7 @@ look something like this:&lt;/p&gt;
 on to the caller to a potential fatal. Here, I&amp;rsquo;m ignoring the AlreadyExistsException because, if it does, we just go on to a next
 action.&lt;/p&gt;
 
-&lt;p&gt;## Examples&lt;/p&gt;
+&lt;h2 id=&#34;examples&#34;&gt;Examples&lt;/h2&gt;
 
 &lt;p&gt;Luckily the API doc is very mature. In most of the cases, they provide an example to an API call. These examples, however, from
 time to time provide more confusion than clarity. Take CloudFormation. For me, when I first glanced upon the
@@ -109,7 +212,7 @@ template where extracted for me by &lt;code&gt;ValidateTemplate&lt;/code&gt; API
 &lt;code&gt;[]*cloudformation.Parameter&lt;/code&gt; slice. These things are not described in the document or visible from the examples. I mainly found
 them through playing with the API and focused experimentation.&lt;/p&gt;
 
-&lt;p&gt;## Waiters&lt;/p&gt;
+&lt;h2 id=&#34;waiters&#34;&gt;Waiters&lt;/h2&gt;
 
 &lt;p&gt;From other SDK implementations, we got used to Waiters. These handy methods wait for a service to become available or for certain
 situations to take in effect, like a Stage being &lt;code&gt;CREATE_COMPLETE&lt;/code&gt;. The Go waiters, however, don&amp;rsquo;t allow for callback to be fired,
@@ -179,7 +282,7 @@ func WaitForFunctionWithStatusOutput(state string, freq int, f func()) {
 
 &lt;p&gt;Furnace is divided into three main packages.&lt;/p&gt;
 
-&lt;p&gt;### commands&lt;/p&gt;
+&lt;h3 id=&#34;commands&#34;&gt;commands&lt;/h3&gt;
 
 &lt;p&gt;Commands package is where the gist of Furnace lies. These commands represent the commands which are used through the CLI. Each
 file has the implementation for one command. The structure is devised by this library: &lt;a href=&#34;https://github.com/Yitsushi/go-commander&#34;&gt;Yitsushi&amp;rsquo;s Command Library&lt;/a&gt;.
@@ -218,7 +321,7 @@ Examples:
 &lt;p&gt;Further more, config loads the CloudFormation template and checks if some necessary settings are present in the environment, exp:
 the configuration folder under &lt;code&gt;~/.config/go-furnace&lt;/code&gt;.&lt;/p&gt;
 
-&lt;p&gt;### utils&lt;/p&gt;
+&lt;h3 id=&#34;utils&#34;&gt;utils&lt;/h3&gt;
 
 &lt;p&gt;These are some helper functions which are used throughout the project. To list them:
 - error_handler - Is a simple error handler. I&amp;rsquo;m thinking of refactoring this one to some saner version.
@@ -254,7 +357,7 @@ them.&lt;/li&gt;
 
 &lt;h2 id=&#34;general-practices-applied-to-the-project&#34;&gt;General Practices Applied to the Project&lt;/h2&gt;
 
-&lt;p&gt;### Commands&lt;/p&gt;
+&lt;h3 id=&#34;commands-1&#34;&gt;Commands&lt;/h3&gt;
 
 &lt;p&gt;For each command the main entry point is the &lt;code&gt;execute&lt;/code&gt; function. These functions are usually calling out the small chunks of
 distributed methods. Logic was kept to a bare minimum ( probably could be simplified even further ) in the execute functions
@@ -266,11 +369,11 @@ mostly for testability and the likes. We will see that in a followup post.&lt;/p
 versions this might become more granular. I.e. don&amp;rsquo;t immediately stop the world, maybe try to recover, or create a Poller or
 Re-Tryer, which tries a call again for a configured amount of times.&lt;/p&gt;
 
-&lt;p&gt;### Output colors&lt;/p&gt;
+&lt;h3 id=&#34;output-colors&#34;&gt;Output colors&lt;/h3&gt;
 
 &lt;p&gt;Not that important, but still&amp;hellip; Aesthetics. Displaying data to the console in a nice way gives it some extra flare.&lt;/p&gt;
 
-&lt;p&gt;### Makefile&lt;/p&gt;
+&lt;h3 id=&#34;makefile&#34;&gt;Makefile&lt;/h3&gt;
 
 &lt;p&gt;This project works with a Makefile for various reasons. Later on, once the project might become more complex, a Makefile makes it
 really easy to handle different ways of packaging the application. Currently, for example, it provides a &lt;code&gt;linux&lt;/code&gt; target which will
