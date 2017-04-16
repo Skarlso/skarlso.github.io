@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.19" />
+    <meta name="generator" content="Hugo 0.20" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Posts &middot; Ramblings of a build engineer">
@@ -62,6 +62,212 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">06 Jun 2015, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/" class="post-title">Docker &#43; Java &#43; Vagrant&#43; GO.CD</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-devops" href="https://skarlso.github.io//categories/devops">devops</a><a class="post-category post-category-java" href="https://skarlso.github.io//categories/java">java</a><a class="post-category post-category-Linux" href="https://skarlso.github.io//categories/linux">Linux</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Hello folks.</p>
+
+<p>Today, I would like to write about something interesting and close to me at the moment. I&#8217;m going to setup Go.cd with Docker, and I&#8217;m going to get a Ruby Lotus app running. Let&#8217;s get started.</p>
+
+<p></p>
+
+<h1 id="fluff">Fluff</h1>
+
+<p>Now, obviously, you don&#8217;t really need Go.Cd or Docker to setup a Java Gradle application, since it&#8217;s dead easy. But I&#8217;m going to do it just for the heck of it.</p>
+
+<h1 id="setup">Setup</h1>
+
+<p>Okay, lets start with Vagrant. Docker&#8217;s strength is coming from Linux&#8217;s process isolation capabilities it&#8217;s not yet properly working on OSX or Windows. You have a couple of options if you&#8217;d like to try never the less, like boot2docker, or a Tiny Linux kernel, but at that point, I think it&#8217;s easier to use a VM.</p>
+
+<h4 id="vagrant">Vagrant</h4>
+
+<p>So, let&#8217;s start with my small Vagrantfile.</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="ruby" style="font-family:monospace;"><span style="color:#008000; font-style:italic;"># -*- mode: ruby -*-</span>
+<span style="color:#008000; font-style:italic;"># vi: set ft=ruby :</span>
+&nbsp;
+<span style="color:#008000; font-style:italic;"># All Vagrant configuration is done below. The "2" in Vagrant.configure</span>
+<span style="color:#008000; font-style:italic;"># configures the configuration version (we support older styles for</span>
+<span style="color:#008000; font-style:italic;"># backwards compatibility). Please don't change it unless you know what</span>
+<span style="color:#008000; font-style:italic;"># you're doing.</span>
+Vagrant.<span style="color:#9900CC;">configure</span><span style="color:#006600; font-weight:bold;">&#40;</span><span style="color:#006666;">2</span><span style="color:#006600; font-weight:bold;">&#41;</span> <span style="color:#9966CC; font-weight:bold;">do</span> <span style="color:#006600; font-weight:bold;">|</span>config<span style="color:#006600; font-weight:bold;">|</span>
+  <span style="color:#008000; font-style:italic;"># The most common configuration options are documented and commented below.</span>
+  <span style="color:#008000; font-style:italic;"># For a complete reference, please see the online documentation at</span>
+  <span style="color:#008000; font-style:italic;"># https://docs.vagrantup.com.</span>
+&nbsp;
+  <span style="color:#008000; font-style:italic;"># Every Vagrant development environment requires a box. You can search for</span>
+  <span style="color:#008000; font-style:italic;"># boxes at https://atlas.hashicorp.com/search.</span>
+  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">box</span> = <span style="color:#996600;">"trusty"</span>
+  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">box_url</span> = <span style="color:#996600;">"https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"</span>
+  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">network</span> <span style="color:#996600;">"forwarded_port"</span>, guest: <span style="color:#006666;">2300</span>, host: <span style="color:#006666;">2300</span>
+  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">network</span> <span style="color:#996600;">"forwarded_port"</span>, guest: <span style="color:#006666;">8153</span>, host: <span style="color:#006666;">8153</span>
+  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">provision</span> <span style="color:#996600;">"shell"</span>, path: <span style="color:#996600;">"setup.sh"</span>
+  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">provider</span> <span style="color:#996600;">"virtualbox"</span> <span style="color:#9966CC; font-weight:bold;">do</span> <span style="color:#006600; font-weight:bold;">|</span>v<span style="color:#006600; font-weight:bold;">|</span>
+    v.<span style="color:#9900CC;">memory</span> = <span style="color:#006666;">8192</span>
+    v.<span style="color:#9900CC;">cpus</span> = <span style="color:#006666;">2</span>
+  <span style="color:#9966CC; font-weight:bold;">end</span>
+<span style="color:#9966CC; font-weight:bold;">end</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Very simple. I&#8217;m setting up a trusty64(because docker requires 3.10 &lt;= x) box and then doing a simple shell provision. Also, I gave it a bit juice, since go-server requires a raw power. Here is the shell script:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="bash" style="font-family:monospace;"><span style="color: #000000; font-weight: bold;">!</span><span style="color: #666666; font-style: italic;">#/bin/bash</span>
+<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
+<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> software-properties-common python-software-properties
+<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
+<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> <span style="color: #c20cb9; font-weight: bold;">vim</span>
+<span style="color: #c20cb9; font-weight: bold;">sudo</span> add-apt-repository <span style="color: #660033;">-y</span> <span style="color: #ff0000;">"ppa:webupd8team/java"</span>
+<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
+<span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #c20cb9; font-weight: bold;">debconf</span> shared<span style="color: #000000; font-weight: bold;">/</span>accepted-oracle-license-v1-<span style="color: #000000;">1</span> <span style="color: #000000; font-weight: bold;">select</span> <span style="color: #c20cb9; font-weight: bold;">true</span> <span style="color: #000000; font-weight: bold;">|</span> <span style="color: #c20cb9; font-weight: bold;">sudo</span> debconf-set-selections <span style="color: #000000; font-weight: bold;">&</span>amp;<span style="color: #000000; font-weight: bold;">&</span>amp; <span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #c20cb9; font-weight: bold;">debconf</span> shared<span style="color: #000000; font-weight: bold;">/</span>accepted-oracle-license-v1-<span style="color: #000000;">1</span> seen <span style="color: #c20cb9; font-weight: bold;">true</span> <span style="color: #000000; font-weight: bold;">|</span> <span style="color: #c20cb9; font-weight: bold;">sudo</span> debconf-set-selections
+<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> oracle-java8-installer
+<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
+<span style="color: #c20cb9; font-weight: bold;">wget</span> <span style="color: #660033;">-qO-</span> https:<span style="color: #000000; font-weight: bold;">//</span>get.docker.com<span style="color: #000000; font-weight: bold;">/</span> <span style="color: #000000; font-weight: bold;">|</span> <span style="color: #c20cb9; font-weight: bold;">sh</span>
+route add <span style="color: #660033;">-net</span> 172.17.0.0 netmask 255.255.255.0 gw 172.17.42.1</pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>The debconf at the end accepts java8&#8217;s terms and conditions. And the last line installs docker in my box. This runs for a little while&#8230;</p>
+
+<p>The routing on the end routes every traffic from 172.17.*.* to my vagrant box, which in turn I&#8217;ll be able to use from my mac local, like 127.0.0.1:8153/go/home.</p>
+
+<p>After a vagrant up, my box is ready to be used.</p>
+
+<h4 id="docker">Docker</h4>
+
+<p>When that&#8217;s finished, we can move on to the next part, which is writing a little Dockerfile for our image. Go.cd will require java and a couple of other things, so let&#8217;s automate the installation of that so we don&#8217;t have to do it by hand.</p>
+
+<p>Here is a Dockerfile I came up with:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="bash" style="font-family:monospace;">FROM ubuntu
+MAINTAINER Skarlso
+&nbsp;
+<span style="color: #666666; font-style: italic;">############ SETUP #############</span>
+RUN <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
+RUN <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> software-properties-common python-software-properties
+RUN add-apt-repository <span style="color: #660033;">-y</span> <span style="color: #ff0000;">"ppa:webupd8team/java"</span>
+RUN <span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #c20cb9; font-weight: bold;">debconf</span> shared<span style="color: #000000; font-weight: bold;">/</span>accepted-oracle-license-v1-<span style="color: #000000;">1</span> <span style="color: #000000; font-weight: bold;">select</span> <span style="color: #c20cb9; font-weight: bold;">true</span> <span style="color: #000000; font-weight: bold;">|</span> <span style="color: #c20cb9; font-weight: bold;">sudo</span> debconf-set-selections <span style="color: #000000; font-weight: bold;">&</span>amp;<span style="color: #000000; font-weight: bold;">&</span>amp; <span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #c20cb9; font-weight: bold;">debconf</span> shared<span style="color: #000000; font-weight: bold;">/</span>accepted-oracle-license-v1-<span style="color: #000000;">1</span> seen <span style="color: #c20cb9; font-weight: bold;">true</span> <span style="color: #000000; font-weight: bold;">|</span> <span style="color: #c20cb9; font-weight: bold;">sudo</span> debconf-set-selections
+RUN <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
+RUN <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> oracle-java8-installer
+RUN <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> <span style="color: #c20cb9; font-weight: bold;">vim</span>
+RUN <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> <span style="color: #c20cb9; font-weight: bold;">unzip</span>
+RUN <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> <span style="color: #c20cb9; font-weight: bold;">git</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>So, our docker images have to be setup with Java as well for go.cd which I&#8217;m taking care of here, and a little bit extra, to add vim, and unzip, which is required for dpkg later.</p>
+
+<p>At this point run: <strong>docker build -t ubuntu:go .</strong> -&gt; This will use the dockerfile and create the ubuntu:go image. Note the <strong>. </strong>at the end.</p>
+
+<h4 id="go-cd">Go.cd</h4>
+
+<p>Now, I&#8217;m creating two containers. One, go-server, will be the go server, and the other, go-agent, will be the go agent.</p>
+
+<p>First, go-server:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="bash" style="font-family:monospace;">docker run <span style="color: #660033;">-i</span> <span style="color: #660033;">-t</span> <span style="color: #660033;">--name</span> go-server <span style="color: #660033;">--hostname</span>=go-server <span style="color: #660033;">-p</span> <span style="color: #000000;">8153</span>:<span style="color: #000000;">8153</span> ubuntu:go <span style="color: #000000; font-weight: bold;">/</span>bin<span style="color: #000000; font-weight: bold;">/</span><span style="color: #c20cb9; font-weight: bold;">bash</span>
+<span style="color: #c20cb9; font-weight: bold;">wget</span> http:<span style="color: #000000; font-weight: bold;">//</span>download.go.cd<span style="color: #000000; font-weight: bold;">/</span>gocd-deb<span style="color: #000000; font-weight: bold;">/</span>go-server-15.1.0-<span style="color: #000000;">1863</span>.deb
+<span style="color: #c20cb9; font-weight: bold;">dpkg</span> <span style="color: #660033;">-i</span> go-server-15.1.0-<span style="color: #000000;">1863</span>.deb</pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Pretty straight forward, no? We forward 8153 to vagrant (which forwards it to my mac), so after we start go-server service we should be able to visit: <a href="http://127.0.0.1:8153/go/home">http://127.0.0.1:8153/go/home</a>.</p>
+
+<p>Lo&#8217;, and behold, go server. Let&#8217;s add an agent too.</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="bash" style="font-family:monospace;">docker run <span style="color: #660033;">-i</span> <span style="color: #660033;">-t</span> <span style="color: #660033;">--name</span> go-agent <span style="color: #660033;">--hostname</span>=go-agent ubuntu:go <span style="color: #000000; font-weight: bold;">/</span>bin<span style="color: #000000; font-weight: bold;">/</span><span style="color: #c20cb9; font-weight: bold;">bash</span>
+<span style="color: #c20cb9; font-weight: bold;">wget</span> http:<span style="color: #000000; font-weight: bold;">//</span>download.go.cd<span style="color: #000000; font-weight: bold;">/</span>gocd-deb<span style="color: #000000; font-weight: bold;">/</span>go-agent-15.1.0-<span style="color: #000000;">1863</span>.deb
+<span style="color: #c20cb9; font-weight: bold;">dpkg</span> <span style="color: #660033;">-i</span> go-agent-15.1.0-<span style="color: #000000;">1863</span>.deb
+<span style="color: #c20cb9; font-weight: bold;">vim</span> <span style="color: #000000; font-weight: bold;">/</span>etc<span style="color: #000000; font-weight: bold;">/</span>default<span style="color: #000000; font-weight: bold;">/</span>go-agent
+<span style="color: #007800;">GO_SERVER</span>=172.17.0.1
+service go-agent start</pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>No need to forward anything here. And as you can see, my agent was added successfully.</p>
+
+<p>All nice, and dandy. The agent is there, and I enabled it, so it&#8217;s ready to work. Let&#8217;s give it something to do, shall we?</p>
+
+<h1 id="the-app">The App</h1>
+
+<p>I&#8217;m going to use my gradle project which is on github. This one =&gt; <a href="https://github.com/Skarlso/DataMung.git">https://github.com/Skarlso/DataMung.git</a>.</p>
+
+<p>Very basic setup. Just check it out and then build &amp; run tests. Easy, right?</p>
+
+<p>First step in this process, define the pipeline. I&#8217;m going to keep it simple. Name the pipeline DataMunger. Group is Linux. Now, in go.cd you have to define something called, an <strong>environment</strong>. Environment can be anything you want, I&#8217;m going to go with Linux. You have to assign <strong>agents</strong> to this environment who fulfil it and the pipeline which will use that environment. More on that you can read in the go.cd documentation. This is how you would handle a pipeline which uses linux, and a windows environment at the same time.</p>
+
+<p>In step one you have to define something called the <strong>Material</strong>. That will be the source on which the agent will work. This can be multiple, in different folders within the confines of the pipeline, or singular.</p>
+
+<p>I defined my git project and tested the connection OK. Next up is the first <strong>Stage </strong>and the initial <strong>Job </strong>to perform. This, for me, will be a compile or an assemble, and later on a test run.</p>
+
+<p>Now, Go is awesome in parallelising jobs. If my project would be large enough, I could have multiple jobs here. But for now, I&#8217;ll use stages because they run subsequently. So, first stage, compile. Next stage, testing and archiving the results.</p>
+
+<p>I added the next stage and defined the artefact. Go supports test-reports. If you define the path to a test artefact than go will parse it and create a nice report out of it.</p>
+
+<p>Now, let&#8217;s run it. It will probably fail on something. 😉</p>
+
+<p>Well, I&#8217;ll be&#8230; It worked on the first run.</p>
+
+<p>And here are the test results.</p>
+
+<h1 id="wrap-up">Wrap-up</h1>
+
+<p>Well, that&#8217;s it folks. Gradle project, with vagrant, docker, and go.cd. I hope you all enjoyed reading about it as much as I did doing it.</p>
+
+<p>Any questions, please feel free to ask it in the comment section below.</p>
+
+<p>Cheers,
+Have a nice weekend,
+Gergely.</p>
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">21 May 2015, 00:00</h1>
                 <section class="post">
@@ -1265,69 +1471,6 @@ Builder.<span style="color: black;">load_string</span><span style="color: black;
 
 <p>Thanks for reading!
 Gergely.</p>
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">08 Feb 2015, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2015/02/08/why-lock-picking-is-like-testing/" class="post-title">Why Lock Picking is like Testing</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-knowledge" href="https://skarlso.github.io//categories/knowledge">knowledge</a><a class="post-category post-category-problem solving" href="https://skarlso.github.io//categories/problem-solving">problem solving</a><a class="post-category post-category-testing" href="https://skarlso.github.io//categories/testing">testing</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>&nbsp;</p>
-
-<p>Not a great many people know that I&#8217;m actually into Lock Picking as a hobby. This will not be a tutorial on how to do it, or I won&#8217;t really talk about how I do it; I would like to write about something completely different. So if you came here for that, here are a few very good resources:</p>
-
-<p><a href="http://www.lockpicking101.com/%20" target="_blank"><a href="http://www.lockpicking101.com/">http://www.lockpicking101.com/</a> </a>&#8211; Tutorials</p>
-
-<p><a href="http://www.ukbumpkeys.com/collections/lock-picking" target="_blank"><a href="http://www.ukbumpkeys.com/collections/lock-picking">http://www.ukbumpkeys.com/collections/lock-picking</a></a> &#8211; Tools ( UK )</p>
-
-<p><a href="http://www.reddit.com/r/lockpicking/" target="_blank"><a href="http://www.reddit.com/r/lockpicking/">http://www.reddit.com/r/lockpicking/</a></a> &#8211; Reddit</p>
-
-<p>For my post, click on&#8230;</p>
-
-<p></p>
-
-<p>So, why is lock picking like testing? I saw a great many posts which where trying to compare software testing to some activity. I even knew somebody who compared it to dancing. Because&#8230;? I don&#8217;t know, maybe he was trying out a talk material maybe? And he said &#8211; &#8220;I was in this club and watched a couple dance, and I was thinking, wow, this is like software testing.&#8221; &#8211; I couldn&#8217;t really react to that. But hey, kudos for out of the box thinking I guess.</p>
-
-<p>But let&#8217;s see some of the similarities in picking and testing:</p>
-
-<h4 id="thinking">Thinking</h4>
-
-<p>It requires logical, critical thinking. It&#8217;s a puzzle that you have to solve. A puzzle which you basically solve by testing out solutions and see if they work. You can achieve this by trial and error, something testers face on a daily basis. After awhile you acquire something called finesse. Which will help you identify breaking points more easily. Since you have experience with a certain lock type, you already have a wast knowledge to rely on when you are trying to solve a new lock with the same build. You did your research you know its weaknesses hence you immediately have an attack vector on your hand.</p>
-
-<h4 id="tools">Tools</h4>
-
-<p>Lock picking has a wast number of tools. Each tool is design for a specific purpose. You can reuse tools but they are rarely a fit for other locks. Unless it&#8217;s a similar one. There are delicate tools and then there are brute force tools, which are very hard to use at first but after you get used to it and know how to handle it, it becomes massively helpful. You can build your own tools or use tools that are built for you by tool experts.</p>
-
-<h4 id="solving-process">Solving Process</h4>
-
-<p>When can you test an application to its fullest extend and capabilities? How can you achieve the most and best testing ever possible? You have to know how the application works. You have to know its components, its abilities, its capabilities and <strong>limits. </strong>For Lock Picking to be the best at what you do and to be able to move to a completely new lock and try to pick it, you have to know its flaws. You have to know when, and how it was built. You have to know what makes it tick, how it works, what it uses, how the inside mechanics look like in order to try to exploit them.</p>
-
-<p>After you acquire this knowledge you will be able to build, or purchase a tool which will help you in solving the puzzle. But you were only able to do that because after you researched its manufacturing procedure you know that the last pin is hard to get to and that it has an anti drilling shield, so drilling is out of the question, and that it has a safety spring which locks the lock permanently upon tampering. If you would not be in the possession of this information you could have made a fatal error and could have made the client lost money ( since at that point they pretty much need to break down the door, unless the key is found again ( assuming the picking took place because the key was lost ) ).</p>
-
-<h4 id="last-words">Last Words</h4>
-
-<p>There you have it folks. That&#8217;s why Lock Picking is like software testing. Knowing structure, inside workings and the proper tools will help to achieve your goal. Just like in testing when you know your field, you know what to use, when, and how. <strong>Knowledge</strong> makes you the Best.</p>
-
-<p>Good luck,</p>
-
-<p>Happy Picking,</p>
-
-<p>Gergely.</p>
                     </div>
                 </section>
                 

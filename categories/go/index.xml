@@ -2,1442 +2,137 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Go on Ramblings of a build engineer</title>
-    <link>https://skarlso.github.io/categories/go/index.xml</link>
+    <link>https://skarlso.github.io/categories/go/</link>
     <description>Recent content in Go on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <atom:link href="https://skarlso.github.io/categories/go/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 02 Nov 2016 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://skarlso.github.io/categories/go/index.xml" rel="self" type="application/rss+xml" />
+    
     
     <item>
       <title>How to do Google Sign-In with Go - Part 2</title>
-      <link>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2</link>
+      <link>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2/</link>
       <pubDate>Wed, 02 Nov 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2</guid>
-      <description>
-
-&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-
-&lt;p&gt;Hi Folks.&lt;/p&gt;
-
-&lt;p&gt;This is a follow up on my previous post about Google Sign-In. In this post we will discover what to do with the information retrieved in the first encounter, which you can find here: &lt;a href=&#34;http://skarlso.github.io/2016/06/12/google-signin-with-go/&#34;&gt;Google Sign-In Part 1&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h1 id=&#34;forewords&#34;&gt;Forewords&lt;/h1&gt;
-
-&lt;h2 id=&#34;the-project&#34;&gt;The Project&lt;/h2&gt;
-
-&lt;p&gt;Everything I did in the first post, and that I&amp;rsquo;m going to do in this example, can be found in this project: &lt;a href=&#34;https://github.com/Skarlso/google-oauth-go-sample&#34;&gt;Google-OAuth-Go-Sample&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Just to recap, we left off previously on the point where we successfully obtained information about the user, with a secure token and a session initiated with them. Google nicely enough provided us with some details which we can use. This information was in JSON format and looked something like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{
-  &amp;quot;sub&amp;quot;: &amp;quot;1111111111111111111111&amp;quot;,
-  &amp;quot;name&amp;quot;: &amp;quot;Your Name&amp;quot;,
-  &amp;quot;given_name&amp;quot;: &amp;quot;Your&amp;quot;,
-  &amp;quot;family_name&amp;quot;: &amp;quot;Name&amp;quot;,
-  &amp;quot;profile&amp;quot;: &amp;quot;https://plus.google.com/1111111111111111111111&amp;quot;,
-  &amp;quot;picture&amp;quot;: &amp;quot;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&amp;quot;,
-  &amp;quot;email&amp;quot;: &amp;quot;your@gmail.com&amp;quot;,
-  &amp;quot;email_verified&amp;quot;: true,
-  &amp;quot;gender&amp;quot;: &amp;quot;male&amp;quot;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;In my example, to keep things simple, I will use the email address since that has to be unique in the land of Google. You could assign an ID to the user, and you could complicate things even further, but my goal is not to write an academic paper about cryptography here.&lt;/p&gt;
-
-&lt;h1 id=&#34;implementation&#34;&gt;Implementation&lt;/h1&gt;
-
-&lt;h2 id=&#34;making-something-useful-out-of-the-data&#34;&gt;Making something useful out of the data&lt;/h2&gt;
-
-&lt;p&gt;In order for the app to recognise a user it must save some data about the user. I&amp;rsquo;m doing that in MongoDB right now, but that could be any form of persistence layer, like, SQLite3, BoltDB, PostgresDB, etc.&lt;/p&gt;
-
-&lt;h3 id=&#34;after-successful-user-authorization&#34;&gt;After successful user authorization&lt;/h3&gt;
-
-&lt;p&gt;Once the user used google to provide us with sufficient information about him/herself, we can retrieve data about that user from our records. The data could be anything that is linked to our unique identifier like: Character Profile, Player Information, Status, Last Logged-In, etcetc. For this, there are two things that need to happen after authorization: Save/Load user information and initiate a session.&lt;/p&gt;
-
-&lt;p&gt;The session can be in the form of a cookie, or a Redis storage, or URL re-writing. I&amp;rsquo;m choosing a cookie here.&lt;/p&gt;
-
-&lt;h3 id=&#34;save-load-user-information&#34;&gt;Save / Load user information&lt;/h3&gt;
-
-&lt;p&gt;All I&amp;rsquo;m doing is a simple, &lt;em&gt;returning / new&lt;/em&gt; user handling. The concept is simple. If the email isn&amp;rsquo;t saved, we save it. If it&amp;rsquo;s saved, we set a logic to our page render to greet the returning user.&lt;/p&gt;
-
-&lt;p&gt;In the &lt;code&gt;AuthHandler&lt;/code&gt; I&amp;rsquo;m doing the following:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
-seen := false
-db := database.MongoDBConnection{}
-if _, mongoErr := db.LoadUser(u.Email); mongoErr == nil {
-    seen = true
-} else {
-    err = db.SaveUser(&amp;amp;u)
-    if err != nil {
-        log.Println(err)
-        c.HTML(http.StatusBadRequest, &amp;quot;error.tmpl&amp;quot;, gin.H{&amp;quot;message&amp;quot;: &amp;quot;Error while saving user. Please try again.&amp;quot;})
-        return
-    }
-}
-c.HTML(http.StatusOK, &amp;quot;battle.tmpl&amp;quot;, gin.H{&amp;quot;email&amp;quot;: u.Email, &amp;quot;seen&amp;quot;: seen})
-...
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Let&amp;rsquo;s break this down a bit. There is a db connection here, which calls a function that either returns an error, or it doesn&amp;rsquo;t. If it doesn&amp;rsquo;t, that means we have our user. If it does, it means we have to save the user. This is a very simple case (disregard for now, that the error could be something else as well (If you can&amp;rsquo;t get passed that, you could type check the error or check if the returned record contains the requested user information instead of checking for an error.)).&lt;/p&gt;
-
-&lt;p&gt;The template is than rendered depending on the &lt;code&gt;seen&lt;/code&gt; boolean like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-html&#34;&gt;&amp;lt;!DOCTYPE html&amp;gt;
-&amp;lt;link rel=&amp;quot;icon&amp;quot;
-      type=&amp;quot;image/png&amp;quot;
-      href=&amp;quot;/img/favicon.ico&amp;quot; /&amp;gt;
-&amp;lt;html&amp;gt;
-  &amp;lt;head&amp;gt;
-    &amp;lt;link rel=&amp;quot;stylesheet&amp;quot; href=&amp;quot;/css/main.css&amp;quot;&amp;gt;
-  &amp;lt;/head&amp;gt;
-  &amp;lt;body&amp;gt;
-    {{if .seen}}
-        &amp;lt;h1&amp;gt;Welcome back to the battlefield &#39;{{ .email }}&#39;.&amp;lt;/h1&amp;gt;
-    {{else}}
-        &amp;lt;h1&amp;gt;Welcome to the battlefield &#39;{{ .email }}&#39;.&amp;lt;/h1&amp;gt;
-    {{end}}
-  &amp;lt;/body&amp;gt;
-&amp;lt;/html&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;You can see here, that if &lt;code&gt;seen&lt;/code&gt; is &lt;em&gt;true&lt;/em&gt; the header message will say: &amp;ldquo;Welcome &lt;em&gt;back&lt;/em&gt;&amp;hellip;&amp;ldquo;.&lt;/p&gt;
-
-&lt;h3 id=&#34;initiating-a-session&#34;&gt;Initiating a session&lt;/h3&gt;
-
-&lt;p&gt;When the user is successfully authenticated, we activate a session so that the user can access pages that require authorization. Here, I have to mention that I&amp;rsquo;m using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt;, so restricted end-points are made with groups which require a middleware.&lt;/p&gt;
-
-&lt;p&gt;As I mentioned earlier, I&amp;rsquo;m using cookies as session handlers. For this, a new session store has to be created with some secure token. This is achieved with the following code fragments ( note that I&amp;rsquo;m using a Gin session middleware which uses gorilla&amp;rsquo;s session handler located here: &lt;a href=&#34;https://github.com/gin-gonic/contrib&#34;&gt;Gin-Gonic(Sessions)&lt;/a&gt;):&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// RandToken in handlers.go:
-// RandToken generates a random @l length token.
-func RandToken(l int) string {
-	b := make([]byte, l)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
-}
-
-// quest.go:
-// Create the cookie store in main.go.
-store := sessions.NewCookieStore([]byte(handlers.RandToken(64)))
-store.Options(sessions.Options{
-    Path:   &amp;quot;/&amp;quot;,
-    MaxAge: 86400 * 7,
-})
-
-// using the cookie store:
-router.Use(sessions.Sessions(&amp;quot;goquestsession&amp;quot;, store))
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;After this &lt;code&gt;gin.Context&lt;/code&gt; lets us access this session store by doing &lt;code&gt;session := sessions.Default(c)&lt;/code&gt;. Now, create a session variable called &lt;code&gt;user-id&lt;/code&gt; like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;session.Set(&amp;quot;user-id&amp;quot;, u.Email)
-err = session.Save()
-if err != nil {
-    log.Println(err)
-    c.HTML(http.StatusBadRequest, &amp;quot;error.tmpl&amp;quot;, gin.H{&amp;quot;message&amp;quot;: &amp;quot;Error while saving session. Please try again.&amp;quot;})
-    return
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Don&amp;rsquo;t forget to &lt;code&gt;save&lt;/code&gt; the session. ;) That is it. If I restart the server, the cookie won&amp;rsquo;t be usable any longer, since it will generate a new token for the cookie store. The user will have to log in again. &lt;strong&gt;Note&lt;/strong&gt;: It might be that you&amp;rsquo;ll see something like this, from &lt;code&gt;session&lt;/code&gt;: &lt;code&gt;[sessions] ERROR! securecookie: the value is not valid&lt;/code&gt;. You can ignore this error.&lt;/p&gt;
-
-&lt;h2 id=&#34;restricting-access-to-certain-end-points-with-the-auth-middleware&#34;&gt;Restricting access to certain end-points with the auth Middleware™&lt;/h2&gt;
-
-&lt;p&gt;Now, that our session is alive, we can use it to restrict access to some part of the application. With Gin, it looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;authorized := router.Group(&amp;quot;/battle&amp;quot;)
-authorized.Use(middleware.AuthorizeRequest())
-{
-    authorized.GET(&amp;quot;/field&amp;quot;, handlers.FieldHandler)
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This creates a grouping of end-points under &lt;code&gt;/battle&lt;/code&gt;. Which means, everything under &lt;code&gt;/battle&lt;/code&gt; will only be accessible if the middleware passed to the &lt;code&gt;Use&lt;/code&gt; function calls the next handler in the chain. If it aborts the call chain, the end-point will not be accessible. My middleware is pretty simple, but it gets the job done:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// AuthorizeRequest is used to authorize a request for a certain end-point group.
-func AuthorizeRequest() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		session := sessions.Default(c)
-		v := session.Get(&amp;quot;user-id&amp;quot;)
-		if v == nil {
-			c.HTML(http.StatusUnauthorized, &amp;quot;error.tmpl&amp;quot;, gin.H{&amp;quot;message&amp;quot;: &amp;quot;Please log in.&amp;quot;})
-			c.Abort()
-		}
-		c.Next()
-	}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Note, that this only check if &lt;code&gt;user-id&lt;/code&gt; is set or not. That&amp;rsquo;s certainly not enough for a secure application. Its only supposed to be a simple example of the mechanics of the auth middleware. Also, the session usually contains more than one parameter. It&amp;rsquo;s more likely that it contains several variables, which describe the user including a state for CORS protection. For CORS I&amp;rsquo;d recommend using &lt;a href=&#34;https://github.com/rs/cors&#34;&gt;rs/cors&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;If you would try to access &lt;a href=&#34;http://127.0.0.1:9090/battle/field&#34;&gt;http://127.0.0.1:9090/battle/field&lt;/a&gt; without logging in, you&amp;rsquo;d be redirected to an &lt;code&gt;error.tmpl&lt;/code&gt; with the message: &lt;strong&gt;Please log in.&lt;/strong&gt;.&lt;/p&gt;
-
-&lt;h1 id=&#34;final-words&#34;&gt;Final Words&lt;/h1&gt;
-
-&lt;p&gt;That&amp;rsquo;s pretty much it. Important parts are:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Saving the right information&lt;/li&gt;
-&lt;li&gt;Secure cookie store&lt;/li&gt;
-&lt;li&gt;CORS for sessions&lt;/li&gt;
-&lt;li&gt;Checks of the users details in the cookie&lt;/li&gt;
-&lt;li&gt;Authorised end-points&lt;/li&gt;
-&lt;li&gt;Session handling&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Any questions, remarks, ideas, are very welcomed in the comment section. There are plenty of very nice Go frameworks which do Google OAuth2 out of the box. I recommend using them, as they save you a lot of legwork.&lt;/p&gt;
-
-&lt;p&gt;Thank you for reading!
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2/</guid>
+      <description>Intro Hi Folks.
+This is a follow up on my previous post about Google Sign-In. In this post we will discover what to do with the information retrieved in the first encounter, which you can find here: Google Sign-In Part 1.
+Forewords The Project Everything I did in the first post, and that I&amp;rsquo;m going to do in this example, can be found in this project: Google-OAuth-Go-Sample.
+Just to recap, we left off previously on the point where we successfully obtained information about the user, with a secure token and a session initiated with them.</description>
     </item>
     
     <item>
       <title>Always Go with []byte</title>
-      <link>https://skarlso.github.io/2016/08/19/always-go-with-bytes</link>
+      <link>https://skarlso.github.io/2016/08/19/always-go-with-bytes/</link>
       <pubDate>Fri, 19 Aug 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/08/19/always-go-with-bytes</guid>
-      <description>&lt;p&gt;Another quick reminder&amp;hellip; Always go with []byte if possible. I said it before, and I&amp;rsquo;m going to say it over and over again. It&amp;rsquo;s crucial.&lt;/p&gt;
-
-&lt;p&gt;Here is a little code from exercism.io. First, with strings:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package igpay
-
-import (
-    &amp;quot;strings&amp;quot;
-)
-
-// PigLatin translates reguler old English into awesome pig-latin.
-func PigLatin(in string) (ret string) {
-    for _, v := range strings.Fields(in) {
-        ret += pigLatin(v) + &amp;quot; &amp;quot;
-    }
-
-    return strings.Trim(ret, &amp;quot; &amp;quot;)
-}
-
-func pigLatin(in string) (ret string) {
-    if strings.IndexAny(in, &amp;quot;aeiou&amp;quot;) == 0 {
-        ret += in + &amp;quot;ay&amp;quot;
-        return
-    }
-
-    for i := 0; i &amp;lt; len(in); i++ {
-        vowelPos := strings.IndexAny(in, &amp;quot;aeiou&amp;quot;)
-
-        if (in[0] == &#39;y&#39; || in[0] == &#39;x&#39;) &amp;amp;&amp;amp; vowelPos &amp;gt; 1 {
-            vowelPos = 0
-            ret = in
-        }
-        if vowelPos != 0 {
-            adjustPosition := vowelPos
-
-            if in[adjustPosition] == &#39;u&#39; &amp;amp;&amp;amp; in[adjustPosition - 1] == &#39;q&#39; {
-                adjustPosition++
-            }
-
-            ret = in[adjustPosition:] + in[:adjustPosition]
-        }
-    }
-    ret += &amp;quot;ay&amp;quot;
-    return
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Than with []byte:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package igpay
-
-import (
-    // &amp;quot;fmt&amp;quot;
-    &amp;quot;bytes&amp;quot;
-)
-
-// PigLatin translates reguler old English into awesome pig-latin.
-func PigLatin(in string) (ret string) {
-    inBytes := []byte(in)
-    var retBytes [][]byte
-    for _, v := range bytes.Fields(inBytes) {
-        v2 := make([]byte, len(v))
-        copy(v2, v)
-        retBytes = append(retBytes, pigLatin(v2))
-    }
-
-    ret = string(bytes.Join(retBytes, []byte(&amp;quot; &amp;quot;)))
-    return
-}
-
-func pigLatin(in []byte) (ret []byte) {
-    if bytes.IndexAny(in, &amp;quot;aeiou&amp;quot;) == 0 {
-        ret = append(in, []byte(&amp;quot;ay&amp;quot;)...)
-        return
-    }
-
-    for i := 0; i &amp;lt; len(in); i++ {
-        vowelPos := bytes.IndexAny(in, &amp;quot;aeiou&amp;quot;)
-
-        if (in[0] == &#39;y&#39; || in[0] == &#39;x&#39;) &amp;amp;&amp;amp; vowelPos &amp;gt; 1 {
-            vowelPos = 0
-            ret = in
-        }
-        if vowelPos != 0 {
-            adjustPosition := vowelPos
-
-            if in[adjustPosition] == &#39;u&#39; &amp;amp;&amp;amp; in[adjustPosition - 1] == &#39;q&#39; {
-                adjustPosition++
-            }
-
-            in = append(in[adjustPosition:], in[:adjustPosition]...)
-            ret = in
-            // fmt.Printf(&amp;quot;%s\n&amp;quot;, ret)
-        }
-    }
-    ret = append(ret, []byte(&amp;quot;ay&amp;quot;)...)
-    return
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And than,the benchmarks of course:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkPigLatin-8          	  200000	     10688 ns/op
-BenchmarkPigLatinStrings-8   	  100000	     15211 ns/op
-PASS
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The improvement is not massive in this case, but it&amp;rsquo;s more than enough to matter. And in a bigger, more complicated program, string concatenation will take a LOT of time away.&lt;/p&gt;
-
-&lt;p&gt;In Go, the &lt;code&gt;bytes&lt;/code&gt; package has a 1-1 map compared to the &lt;code&gt;strings&lt;/code&gt; packages, so chances are, if you are doing strings concatenations you will be able to port that piece of code easily to []byte.&lt;/p&gt;
-
-&lt;p&gt;That&amp;rsquo;s all folks.&lt;/p&gt;
-
-&lt;p&gt;Happy coding,
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/08/19/always-go-with-bytes/</guid>
+      <description>Another quick reminder&amp;hellip; Always go with []byte if possible. I said it before, and I&amp;rsquo;m going to say it over and over again. It&amp;rsquo;s crucial.
+Here is a little code from exercism.io. First, with strings:
+package igpay import ( &amp;quot;strings&amp;quot; ) // PigLatin translates reguler old English into awesome pig-latin. func PigLatin(in string) (ret string) { for _, v := range strings.Fields(in) { ret += pigLatin(v) + &amp;quot; &amp;quot; } return strings.</description>
     </item>
     
     <item>
       <title>Global variable for never changing regex</title>
-      <link>https://skarlso.github.io/2016/08/16/never-changing-regex</link>
+      <link>https://skarlso.github.io/2016/08/16/never-changing-regex/</link>
       <pubDate>Tue, 16 Aug 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/08/16/never-changing-regex</guid>
-      <description>&lt;p&gt;Quick reminder. If you have a never changing regex in Go, do NOT put it into a frequently called function. ALWAYS put it into a global variable. I&amp;rsquo;ll show you why.&lt;/p&gt;
-
-&lt;p&gt;Benchmark for code with a variable in a frequently called function:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkNumber-8     	   30000	     41633 ns/op
-BenchmarkAreaCode-8   	   50000	     27736 ns/op
-BenchmarkFormat-8     	   50000	     29263 ns/op
-PASS
-ok  	_/phone-number	5.110s
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Benchmark for code with the same variable outside in a global scope:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkNumber-8     	  300000	      5618 ns/op
-BenchmarkAreaCode-8   	  500000	      3884 ns/op
-BenchmarkFormat-8     	  300000	      4696 ns/op
-PASS
-ok  	_/phone-number	5.197s
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Notice the magnitude change in ns/op! That&amp;rsquo;s something to keep an eye out for.&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading!
-Cheers,
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/08/16/never-changing-regex/</guid>
+      <description>Quick reminder. If you have a never changing regex in Go, do NOT put it into a frequently called function. ALWAYS put it into a global variable. I&amp;rsquo;ll show you why.
+Benchmark for code with a variable in a frequently called function:
+BenchmarkNumber-8 30000	41633 ns/op BenchmarkAreaCode-8 50000	27736 ns/op BenchmarkFormat-8 50000	29263 ns/op PASS ok _/phone-number	5.110s  Benchmark for code with the same variable outside in a global scope:</description>
     </item>
     
     <item>
       <title>How to do Google sign-in with Go</title>
-      <link>https://skarlso.github.io/2016/06/12/google-signin-with-go</link>
+      <link>https://skarlso.github.io/2016/06/12/google-signin-with-go/</link>
       <pubDate>Sun, 12 Jun 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/06/12/google-signin-with-go</guid>
+      <guid>https://skarlso.github.io/2016/06/12/google-signin-with-go/</guid>
       <description>&lt;p&gt;Hi folks.&lt;/p&gt;
 
 &lt;p&gt;Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.&lt;/p&gt;
 
-&lt;p&gt;&lt;/p&gt;
-
-&lt;p&gt;Let&amp;rsquo;s get started.&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;EDIT&lt;/strong&gt;: A sample project of this, and &lt;a href=&#34;http://skarlso.github.io/2016/11/02/google-signin-with-go-part2/&#34;&gt;Part 2&lt;/a&gt;, can be found
-&lt;a href=&#34;https://github.com/Skarlso/goquestwebapp&#34;&gt;here&lt;/a&gt; or &lt;a href=&#34;https://github.com/Skarlso/google-oauth-go-sample&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
-
-&lt;h2 id=&#34;google-oauth-token&#34;&gt;Google OAuth token&lt;/h2&gt;
-
-&lt;p&gt;First what you need is, to register your application with Google, so you&amp;rsquo;ll get a Token that you can use to authorize later calls to Google services.&lt;/p&gt;
-
-&lt;p&gt;You can do that here: &lt;a href=&#34;https://console.developers.google.com/iam-admin/projects&#34;&gt;Google Developer Console&lt;/a&gt;. You&amp;rsquo;ll have to create a new project. Once it&amp;rsquo;s done, click on &lt;code&gt;Credentials&lt;/code&gt; and create an OAuth token. You should see something like this: &amp;ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&amp;rdquo;. Go through the questions, like, what type your application is, and once you arrive at stage where it&amp;rsquo;s asking for your application&amp;rsquo;s name &amp;ndash; there is a section asking for redirect URLs; there, write the url you wish to use when authorising your user. If you don&amp;rsquo;t know this yet, don&amp;rsquo;t fret, you can come back and change it later. Do NOT use &lt;code&gt;localhost&lt;/code&gt;. If you are running on your own, use &lt;a href=&#34;http://127.0.0.1:port/whatever&#34;&gt;http://127.0.0.1:port/whatever&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;This will get you a &lt;code&gt;client ID&lt;/code&gt; and a &lt;code&gt;client secret&lt;/code&gt;. I&amp;rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth.&lt;/p&gt;
-
-&lt;p&gt;Your application can now be identified through Google services.&lt;/p&gt;
-
-&lt;h1 id=&#34;the-application&#34;&gt;The Application&lt;/h1&gt;
-
-&lt;h2 id=&#34;libraries&#34;&gt;Libraries&lt;/h2&gt;
-
-&lt;p&gt;Google has a nice library to use with OAuth 2.0. The library is available here: &lt;a href=&#34;https://github.com/golang/oauth2&#34;&gt;Google OAth 2.0&lt;/a&gt;. It&amp;rsquo;s a bit cryptic at first, but not to worry. After a bit of fiddling you&amp;rsquo;ll understand fast what it does. I&amp;rsquo;m also using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt;, and Gin&amp;rsquo;s session handling middleware &lt;a href=&#34;https://github.com/gin-gonic/contrib/tree/master/sessions&#34;&gt;Gin-Session&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h2 id=&#34;setup-credentials&#34;&gt;Setup - Credentials&lt;/h2&gt;
-
-&lt;p&gt;Let&amp;rsquo;s create a setup which configures your credentials from the file you saved earlier. This is pretty straightforward.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// Credentials which stores google ids.
-type Credentials struct {
-    Cid string `json:&amp;quot;cid&amp;quot;`
-    Csecret string `json:&amp;quot;csecret&amp;quot;`
-}
-
-func init() {
-    var c Credentials
-    file, err := ioutil.ReadFile(&amp;quot;./creds.json&amp;quot;)
-    if err != nil {
-        fmt.Printf(&amp;quot;File error: %v\n&amp;quot;, err)
-        os.Exit(1)
-    }
-    json.Unmarshal(file, &amp;amp;c)
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Once you have the creds loaded, you can now go on to construct the OAuth client.&lt;/p&gt;
-
-&lt;h2 id=&#34;setup-oauth-client&#34;&gt;Setup - OAuth client&lt;/h2&gt;
-
-&lt;p&gt;Construct the OAuth config like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;conf := &amp;amp;oauth2.Config{
-  ClientID:     c.Cid,
-  ClientSecret: c.Csecret,
-  RedirectURL:  &amp;quot;http://localhost:9090/auth&amp;quot;,
-  Scopes: []string{
-    &amp;quot;https://www.googleapis.com/auth/userinfo.email&amp;quot;, // You have to select your own scope from here -&amp;gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
-  },
-  Endpoint: google.Endpoint,
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;It will give you a struct which you can then use to Authorize the user in the google domain. Next, all you need to do is call &lt;code&gt;AuthCodeURL&lt;/code&gt; on this config. It will give you a URL which redirects to a Google Sign-In form. Once the user fills that out and clicks &amp;lsquo;Allow&amp;rsquo;, you&amp;rsquo;ll get back a TOKEN in the &lt;code&gt;code&lt;/code&gt; query parameter and a &lt;code&gt;state&lt;/code&gt; which helps protect against CSRF attacks. Always check if the provided state is the same which you provided with AuthCodeURL. This will look something like this &lt;code&gt;http://127.0.0.1:9090/auth?code=4FLKFskdjflf3343d4f&amp;amp;state=lhfu3f983j;asdf&lt;/code&gt;. Small function for this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func getLoginURL(state string) string {
-    // State can be some kind of random generated hash string.
-    // See relevant RFC: http://tools.ietf.org/html/rfc6749#section-10.12
-    return conf.AuthCodeURL(state)
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Construct a button which the user can click and be redirected to the Google Sign-In form. When constructing the url, we must do one more thing. Create a secure state token and save it in the form of a cookie for the current user.&lt;/p&gt;
-
-&lt;h2 id=&#34;random-state-and-button-construction&#34;&gt;Random State and Button construction&lt;/h2&gt;
-
-&lt;p&gt;Small piece of code random token:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func randToken() string {
-	b := make([]byte, 32)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Storing it in a session and constructing the button:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func loginHandler(c *gin.Context) {
-    state = randToken()
-    session := sessions.Default(c)
-    session.Set(&amp;quot;state&amp;quot;, state)
-    session.Save()
-    c.Writer.Write([]byte(&amp;quot;&amp;lt;html&amp;gt;&amp;lt;title&amp;gt;Golang Google&amp;lt;/title&amp;gt; &amp;lt;body&amp;gt; &amp;lt;a href=&#39;&amp;quot; + getLoginURL() + &amp;quot;&#39;&amp;gt;&amp;lt;button&amp;gt;Login with Google!&amp;lt;/button&amp;gt; &amp;lt;/a&amp;gt; &amp;lt;/body&amp;gt;&amp;lt;/html&amp;gt;&amp;quot;))
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;It&amp;rsquo;s not the nicest button I ever come up with, but it will have to do.&lt;/p&gt;
-
-&lt;h1 id=&#34;user-information&#34;&gt;User Information&lt;/h1&gt;
-
-&lt;p&gt;After you got the token, you can construct an authorised Google HTTP Client, which let&amp;rsquo;s you call Google related services and retrieve information about the user.&lt;/p&gt;
-
-&lt;h2 id=&#34;getting-the-client&#34;&gt;Getting the Client&lt;/h2&gt;
-
-&lt;p&gt;Before we construct a client, we must check if the retrieved state is still the same compared to the one we provided. I&amp;rsquo;m doing this before constructing the client. Together this looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func authHandler(c *gin.Context) {
-    // Check state validity.
-    session := sessions.Default(c)
-    retrievedState := session.Get(&amp;quot;state&amp;quot;)
-    if retrievedState != c.Query(&amp;quot;state&amp;quot;) {
-        c.AbortWithError(http.StatusUnauthorized, fmt.Errorf(&amp;quot;Invalid session state: %s&amp;quot;, retrievedState))
-        return
-    }
-    // Handle the exchange code to initiate a transport.
-  	tok, err := conf.Exchange(oauth2.NoContext, c.Query(&amp;quot;code&amp;quot;))
-  	if err != nil {
-  		c.AbortWithError(http.StatusBadRequest, err)
-          return
-  	}
-    // Construct the client.
-    client := conf.Client(oauth2.NoContext, tok)
-    ...
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;h2 id=&#34;obtaining-information&#34;&gt;Obtaining information&lt;/h2&gt;
-
-&lt;p&gt;Our next step is to retrieve information about the user. To achieve this, call Google&amp;rsquo;s API with the authorised client. The code for that is:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
-resp, err := client.Get(&amp;quot;https://www.googleapis.com/oauth2/v3/userinfo&amp;quot;)
-if err != nil {
-    c.AbortWithError(http.StatusBadRequest, err)
-    return
-}
-defer resp.Body.Close()
-data, _ := ioutil.ReadAll(resp.Body)
-log.Println(&amp;quot;Resp body: &amp;quot;, string(data))
-...
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And this will yield a body like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{
-  &amp;quot;sub&amp;quot;: &amp;quot;1111111111111111111111&amp;quot;,
-  &amp;quot;name&amp;quot;: &amp;quot;Your Name&amp;quot;,
-  &amp;quot;given_name&amp;quot;: &amp;quot;Your&amp;quot;,
-  &amp;quot;family_name&amp;quot;: &amp;quot;Name&amp;quot;,
-  &amp;quot;profile&amp;quot;: &amp;quot;https://plus.google.com/1111111111111111111111&amp;quot;,
-  &amp;quot;picture&amp;quot;: &amp;quot;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&amp;quot;,
-  &amp;quot;email&amp;quot;: &amp;quot;your@gmail.com&amp;quot;,
-  &amp;quot;email_verified&amp;quot;: true,
-  &amp;quot;gender&amp;quot;: &amp;quot;male&amp;quot;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Parse it, and you&amp;rsquo;ve got an email which you can store somewhere for registration purposes. At this point, your user is not yet Authenticated. For that, I&amp;rsquo;m going to post a second post, which describes how to go on. Retrieving the stored email address, and user session handling with Gin and MongoDB.&lt;/p&gt;
-
-&lt;h1 id=&#34;putting-it-all-together&#34;&gt;Putting it all together&lt;/h1&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import (
-    &amp;quot;crypto/rand&amp;quot;
-    &amp;quot;encoding/base64&amp;quot;
-    &amp;quot;encoding/json&amp;quot;
-    &amp;quot;io/ioutil&amp;quot;
-    &amp;quot;fmt&amp;quot;
-    &amp;quot;log&amp;quot;
-    &amp;quot;os&amp;quot;
-    &amp;quot;net/http&amp;quot;
-
-    &amp;quot;github.com/gin-gonic/contrib/sessions&amp;quot;
-    &amp;quot;github.com/gin-gonic/gin&amp;quot;
-    &amp;quot;golang.org/x/oauth2&amp;quot;
-    &amp;quot;golang.org/x/oauth2/google&amp;quot;
-)
-
-// Credentials which stores google ids.
-type Credentials struct {
-    Cid     string `json:&amp;quot;cid&amp;quot;`
-    Csecret string `json:&amp;quot;csecret&amp;quot;`
-}
-
-// User is a retrieved and authentiacted user.
-type User struct {
-    Sub string `json:&amp;quot;sub&amp;quot;`
-    Name string `json:&amp;quot;name&amp;quot;`
-    GivenName string `json:&amp;quot;given_name&amp;quot;`
-    FamilyName string `json:&amp;quot;family_name&amp;quot;`
-    Profile string `json:&amp;quot;profile&amp;quot;`
-    Picture string `json:&amp;quot;picture&amp;quot;`
-    Email string `json:&amp;quot;email&amp;quot;`
-    EmailVerified string `json:&amp;quot;email_verified&amp;quot;`
-    Gender string `json:&amp;quot;gender&amp;quot;`
-}
-
-var cred Credentials
-var conf *oauth2.Config
-var state string
-var store = sessions.NewCookieStore([]byte(&amp;quot;secret&amp;quot;))
-
-func randToken() string {
-	b := make([]byte, 32)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
-}
-
-func init() {
-    file, err := ioutil.ReadFile(&amp;quot;./creds.json&amp;quot;)
-    if err != nil {
-        log.Printf(&amp;quot;File error: %v\n&amp;quot;, err)
-        os.Exit(1)
-    }
-    json.Unmarshal(file, &amp;amp;cred)
-
-    conf = &amp;amp;oauth2.Config{
-        ClientID:     cred.Cid,
-        ClientSecret: cred.Csecret,
-        RedirectURL:  &amp;quot;http://127.0.0.1:9090/auth&amp;quot;,
-        Scopes: []string{
-            &amp;quot;https://www.googleapis.com/auth/userinfo.email&amp;quot;, // You have to select your own scope from here -&amp;gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
-        },
-        Endpoint: google.Endpoint,
-    }
-}
-
-func indexHandler(c *gin.Context) {
-    c.HTML(http.StatusOK, &amp;quot;index.tmpl&amp;quot;, gin.H{})
-}
-
-func getLoginURL(state string) string {
-    return conf.AuthCodeURL(state)
-}
-
-func authHandler(c *gin.Context) {
-    // Handle the exchange code to initiate a transport.
-    session := sessions.Default(c)
-    retrievedState := session.Get(&amp;quot;state&amp;quot;)
-    if retrievedState != c.Query(&amp;quot;state&amp;quot;) {
-        c.AbortWithError(http.StatusUnauthorized, fmt.Errorf(&amp;quot;Invalid session state: %s&amp;quot;, retrievedState))
-        return
-    }
-
-	tok, err := conf.Exchange(oauth2.NoContext, c.Query(&amp;quot;code&amp;quot;))
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-        return
-	}
-
-	client := conf.Client(oauth2.NoContext, tok)
-	email, err := client.Get(&amp;quot;https://www.googleapis.com/oauth2/v3/userinfo&amp;quot;)
-    if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-        return
-	}
-    defer email.Body.Close()
-    data, _ := ioutil.ReadAll(email.Body)
-    log.Println(&amp;quot;Email body: &amp;quot;, string(data))
-    c.Status(http.StatusOK)
-}
-
-func loginHandler(c *gin.Context) {
-    state = randToken()
-    session := sessions.Default(c)
-    session.Set(&amp;quot;state&amp;quot;, state)
-    session.Save()
-    c.Writer.Write([]byte(&amp;quot;&amp;lt;html&amp;gt;&amp;lt;title&amp;gt;Golang Google&amp;lt;/title&amp;gt; &amp;lt;body&amp;gt; &amp;lt;a href=&#39;&amp;quot; + getLoginURL(state) + &amp;quot;&#39;&amp;gt;&amp;lt;button&amp;gt;Login with Google!&amp;lt;/button&amp;gt; &amp;lt;/a&amp;gt; &amp;lt;/body&amp;gt;&amp;lt;/html&amp;gt;&amp;quot;))
-}
-
-func main() {
-    router := gin.Default()
-    router.Use(sessions.Sessions(&amp;quot;goquestsession&amp;quot;, store))
-    router.Static(&amp;quot;/css&amp;quot;, &amp;quot;./static/css&amp;quot;)
-    router.Static(&amp;quot;/img&amp;quot;, &amp;quot;./static/img&amp;quot;)
-    router.LoadHTMLGlob(&amp;quot;templates/*&amp;quot;)
-
-    router.GET(&amp;quot;/&amp;quot;, indexHandler)
-    router.GET(&amp;quot;/login&amp;quot;, loginHandler)
-    router.GET(&amp;quot;/auth&amp;quot;, authHandler)
-
-    router.Run(&amp;quot;127.0.0.1:9090&amp;quot;)
-}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This is it folks. I hope this helped. Any comments or advices are welcomed.&lt;/p&gt;
-
-&lt;h1 id=&#34;google-api-documentation&#34;&gt;Google API Documentation&lt;/h1&gt;
-
-&lt;p&gt;The documentation to this whole process, and MUCH more information can be found here: &lt;a href=&#34;https://developers.google.com/identity/protocols/OAuth2&#34;&gt;Google API Docs&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading,
-Gergely.&lt;/p&gt;</description>
+&lt;p&gt;&lt;/p&gt;</description>
     </item>
     
     <item>
       <title>Wercker Fixed</title>
-      <link>https://skarlso.github.io/2016/03/09/wercker-fixed</link>
+      <link>https://skarlso.github.io/2016/03/09/wercker-fixed/</link>
       <pubDate>Wed, 09 Mar 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/03/09/wercker-fixed</guid>
-      <description>&lt;p&gt;Hi Folks.&lt;/p&gt;
-
-&lt;p&gt;So Wercker was not working. After a minor modification it seems to be okay now. The config file needed for it to work looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;box: golang 
-build:
-    steps:
-        - arjen/hugo-build:
-            theme: redlounge
-deploy:
-    steps:
-        - install-packages:
-            packages: git 
-        - leipert/git-push:
-            gh_oauth: $GIT_TOKEN
-            repo: skarlso/skarlso.github.io
-            branch: master
-            basedir: public    
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The modification is the box type to &lt;em&gt;golang&lt;/em&gt; and removed &lt;em&gt;ssh-client&lt;/em&gt; from &lt;em&gt;packages&lt;/em&gt;.&lt;/p&gt;
-
-&lt;p&gt;Thanks,
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/03/09/wercker-fixed/</guid>
+      <description>Hi Folks.
+So Wercker was not working. After a minor modification it seems to be okay now. The config file needed for it to work looks like this:
+box: golang build: steps: - arjen/hugo-build: theme: redlounge deploy: steps: - install-packages: packages: git - leipert/git-push: gh_oauth: $GIT_TOKEN repo: skarlso/skarlso.github.io branch: master basedir: public  The modification is the box type to golang and removed ssh-client from packages.
+Thanks, Gergely.</description>
     </item>
     
     <item>
       <title>Wercker Test</title>
-      <link>https://skarlso.github.io/2016/03/04/wercker-test-2</link>
+      <link>https://skarlso.github.io/2016/03/04/wercker-test-2/</link>
       <pubDate>Fri, 04 Mar 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/03/04/wercker-test-2</guid>
-      <description>
-
-&lt;h2 id=&#34;basics&#34;&gt;Basics&lt;/h2&gt;
-
-&lt;p&gt;This is a wercker Test.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/03/04/wercker-test-2/</guid>
+      <description>Basics This is a wercker Test.</description>
     </item>
     
     <item>
       <title>Wercker Test</title>
-      <link>https://skarlso.github.io/2016/02/10/wercker-test</link>
+      <link>https://skarlso.github.io/2016/02/10/wercker-test/</link>
       <pubDate>Wed, 10 Feb 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/02/10/wercker-test</guid>
-      <description>
-
-&lt;h2 id=&#34;basics&#34;&gt;Basics&lt;/h2&gt;
-
-&lt;p&gt;This is a wercker Test.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/02/10/wercker-test/</guid>
+      <description>Basics This is a wercker Test.</description>
     </item>
     
     <item>
       <title>Doing CORS in Go with Gin and JSON</title>
-      <link>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json</link>
+      <link>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json/</link>
       <pubDate>Tue, 02 Feb 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json</guid>
-      <description>
-
-&lt;h2 id=&#34;basics&#34;&gt;Basics&lt;/h2&gt;
-
-&lt;p&gt;Hello folks.&lt;/p&gt;
-
-&lt;p&gt;This will be a quick post about how to do CORS with jQuery, Gin in Go with a very simple ajax GET and Json.&lt;/p&gt;
-
-&lt;p&gt;I&amp;rsquo;m choosing JSON here because basically I don&amp;rsquo;t really like JSONP. And actually, it&amp;rsquo;s not very complicated to do CORS, it&amp;rsquo;s just hidden enough so that it doesn&amp;rsquo;t become transparent.&lt;/p&gt;
-
-&lt;p&gt;First, what is CORS? It&amp;rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization in the header of a request, Javascript can&amp;rsquo;t reach outside of your domain and be potentially harmful to your visitors.&lt;/p&gt;
-
-&lt;p&gt;Now, suppose you have an architecture like this.&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/architecture.png&#34; alt=&#34;Architecture&#34; /&gt;&lt;/p&gt;
-
-&lt;p&gt;You have multiple agents sitting on multiple nodes. You have one central server, and you have multiple front-ends. Everybody can only talk to the Server but the server does talk to everyone. You would like to have a dynamic front-end and would like to display data with ajax calls. Since your front-end sits on a different server, you will have to do something about CORS. This is how I solved it&amp;hellip;&lt;/p&gt;
-
-&lt;p&gt;I&amp;rsquo;m using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt; for my REST service for &lt;a href=&#34;https://github.com/Skarlso/dockmaster2&#34;&gt;Dockmaster&lt;/a&gt;. For this two work, you need to adjust two component.&lt;/p&gt;
-
-&lt;h2 id=&#34;server&#34;&gt;Server&lt;/h2&gt;
-
-&lt;p&gt;There is thing called a Preflight-Check. In essence, the preflight check is sent BEFORE the actual request to check if the next request is allowed to go out of the domain. The preflight check is sent to the same URI just with OPTIONS method. In order to tell the caller that the next one will be safe, you need three things.&lt;/p&gt;
-
-&lt;p&gt;First, you need to set two Headers.
-#1 -&amp;gt; Access-Control-Allow-Origin to &amp;ldquo;*&amp;ldquo;.
-#2 -&amp;gt; Access-Control-Allow-Headers to &amp;ldquo;access-control-allow-origin, access-control-allow-headers&amp;rdquo;.&lt;/p&gt;
-
-&lt;p&gt;These are the minimum headers you can set. If you allow Access-Control-Allow-Origin you also have to allow it in the headers section because the next request will expect it to be there. Also, note here that setting Origin to * is only recommended in development environment. Otherwise it should be set to whatever your domain is.&lt;/p&gt;
-
-&lt;p&gt;Second, you need to respond to the OPTIONS method with a 200. In order to do that, I added a simple rule with the same end-point but with OPTIONS.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;func main() {
-    router := gin.Default()
-    v1 := router.Group(APIBASE)
-    {
-        v1.GET(&amp;quot;/list&amp;quot;, listContainers)
-        v1.POST(&amp;quot;/add&amp;quot;, addContainers)
-        v1.POST(&amp;quot;/delete&amp;quot;, deleteContainers)
-        v1.GET(&amp;quot;/inspect/:agentID/:containerID&amp;quot;, inspectContainer)
-        v1.OPTIONS(&amp;quot;/inspect/:agentID/:containerID&amp;quot;, preflight)
-        v1.POST(&amp;quot;/stopAll&amp;quot;, stopAll)
-        v1.OPTIONS(&amp;quot;/stopAll&amp;quot;, preflight)
-    }
-    router.Run(&amp;quot;:8989&amp;quot;)
-}
-
-func preflight(c *gin.Context) {
-    c.Header(&amp;quot;Access-Control-Allow-Origin&amp;quot;, &amp;quot;*&amp;quot;)
-    c.Header(&amp;quot;Access-Control-Allow-Headers&amp;quot;, &amp;quot;access-control-allow-origin, access-control-allow-headers&amp;quot;)
-    c.JSON(http.StatusOK, struct{}{})
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;You can see that the preflight method is there for two end-points. I added it to those end-points which will reach over the domain. The others are all local, thus they don&amp;rsquo;t need that. This leads to a little duplication, but that is fine. I have a very fine control over what actually is allowed to go outside of the domain.&lt;/p&gt;
-
-&lt;p&gt;So, how do we call this?&lt;/p&gt;
-
-&lt;h2 id=&#34;frontend&#34;&gt;Frontend&lt;/h2&gt;
-
-&lt;p&gt;In the front-end&amp;rsquo;s web layout, I&amp;rsquo;m doing an Ajax GET, which looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-javascript&#34;&gt;                $.ajax({
-                    url: &#39;http://localhost:8989/api/1/inspect/&#39;+data.agentid+&#39;/&#39;+data.id,
-                    type: &#39;GET&#39;,
-                    dataType:&amp;quot;json&amp;quot;,
-                    headers: {&amp;quot;Access-Control-Allow-Origin&amp;quot;: &amp;quot;*&amp;quot;, &amp;quot;Access-Control-Allow-Headers&amp;quot;: &amp;quot;access-control-allow-origin, access-control-allow-headers&amp;quot;},
-                    processData: false,
-                    success: function(data) {
-                        var json = JSON.stringify(data, null, 4)
-                        independentPopup.html(&amp;quot;&amp;lt;pre &amp;gt;&amp;quot;+json+&amp;quot;&amp;lt;/pre&amp;gt;&amp;quot;);
-                        $(link).after(independentPopup);
-                    }
-                });
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;After the headers are set, the request will work nicely.&lt;/p&gt;
-
-&lt;h2 id=&#34;y-u-no-middleware&#34;&gt;Y U No Middleware?&lt;/h2&gt;
-
-&lt;p&gt;And now you could say that, why not just have a middleware which will always accept OPTIONS for every end-point. Because I like it better this way. Some would argue that this is too granular, but fact is, that in my opinion, this is more readable and immediatly visible. However, if you DO want to do that, you have several options to your disposal.&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&#34;https://github.com/itsjamie/gin-cors&#34;&gt;Cors Basic Http Middleware&lt;/a&gt; and for Gin &lt;a href=&#34;https://github.com/itsjamie/gin-cors&#34;&gt;Gin CORS Middleware&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h2 id=&#34;summary&#34;&gt;Summary&lt;/h2&gt;
-
-&lt;p&gt;This is it. You can see the code in its entirety on Github. Have a better idea on how to do it? Please! Do not hesitate to share. I always like to learn.&lt;/p&gt;
-
-&lt;p&gt;Thank you for reading!&lt;/p&gt;
-
-&lt;p&gt;And as always,
-Have a nice day!&lt;/p&gt;
-
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json/</guid>
+      <description>Basics Hello folks.
+This will be a quick post about how to do CORS with jQuery, Gin in Go with a very simple ajax GET and Json.
+I&amp;rsquo;m choosing JSON here because basically I don&amp;rsquo;t really like JSONP. And actually, it&amp;rsquo;s not very complicated to do CORS, it&amp;rsquo;s just hidden enough so that it doesn&amp;rsquo;t become transparent.
+First, what is CORS? It&amp;rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization in the header of a request, Javascript can&amp;rsquo;t reach outside of your domain and be potentially harmful to your visitors.</description>
     </item>
     
     <item>
       <title>My Journey in advent of code</title>
-      <link>https://skarlso.github.io/2016/01/22/my-journey-in-advent-of-code</link>
+      <link>https://skarlso.github.io/2016/01/22/my-journey-in-advent-of-code/</link>
       <pubDate>Fri, 22 Jan 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/01/22/my-journey-in-advent-of-code</guid>
-      <description>
-
-&lt;p&gt;Hello folks.&lt;/p&gt;
-
-&lt;p&gt;I wanted to share with you my tale of working through the problems with &lt;a href=&#34;http://adventofcode.com&#34;&gt;Advent Of Code&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;It is a nice tale and there are a few things I learned from it, especially in Go, since I used that solve all of the problems. So, let&amp;rsquo;s get started.&lt;/p&gt;
-
-&lt;h1 id=&#34;solving-the-problems&#34;&gt;Solving the problems&lt;/h1&gt;
-
-&lt;p&gt;The most important lesson I learned while doing these exercises was, how to solve these problems. A couple of them were simple enough to not have to over think it, but most of them got very tricky. I could have gone with a brute force attempt, but as we see later, that wasn&amp;rsquo;t always a very good solution. And people who used that, actually just got lucky finding their solutions.&lt;/p&gt;
-
-&lt;p&gt;The eight stages of breaking down a problem according to this book &lt;a href=&#34;http://www.amazon.co.uk/Think-Like-Programmer-Introduction-Creative/dp/1593274246/ref=sr_1_1?s=books&amp;amp;ie=UTF8&amp;amp;qid=1453449575&amp;amp;sr=1-1&amp;amp;keywords=thinking+like+a+programmer&#34;&gt;Thinking Like a Programmer&lt;/a&gt; are the following:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Have a plan&lt;/li&gt;
-&lt;li&gt;Rephrase&lt;/li&gt;
-&lt;li&gt;Divide&lt;/li&gt;
-&lt;li&gt;Start with what you know&lt;/li&gt;
-&lt;li&gt;Reduce&lt;/li&gt;
-&lt;li&gt;Analogies&lt;/li&gt;
-&lt;li&gt;Experiment&lt;/li&gt;
-&lt;li&gt;Don&amp;rsquo;t get frustrated&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&#34;have-a-plan-and-understanding-your-goal&#34;&gt;Have a plan and understanding your goal&lt;/h2&gt;
-
-&lt;p&gt;This is simple. Always have a plan of what you would like to do, and how to start. This will help you massively along the way to not to loose sight of what your goal is actually. For example, look at &lt;a href=&#34;http://adventofcode.com/day/24&#34;&gt;Day 24&lt;/a&gt;. At first, it looks like a permutational puzzle, but if you understand the solution we are looking for, you realize that there is an easier way of finding it. Since you only want the packages which consists of the fewest item counts, you would only care about the largest numbers because those will be the fewest which still give you the desired package weight. Suddenly the problem gets easier because you don&amp;rsquo;t have to worry about the other groups any longer.&lt;/p&gt;
-
-&lt;h2 id=&#34;rephrase&#34;&gt;Rephrase&lt;/h2&gt;
-
-&lt;p&gt;Rephrasing the problem with your own words can help in understanding it better. Or even better, try explaining it to somebody else. If you cannot rephrase it, you didn&amp;rsquo;t understand it in the first place.&lt;/p&gt;
-
-&lt;h2 id=&#34;divide&#34;&gt;Divide&lt;/h2&gt;
-
-&lt;p&gt;If the problem seems daunting because it&amp;rsquo;s massive, just divide it into smaller chunks. This is something that we usually do with large problems, but it&amp;rsquo;s more subtle than that. If you face a problem which seems complex, just factor out parts of it until you got a problem which you do understand. Even if you have to butcher the original puzzle problem. It doesn&amp;rsquo;t matter. Adding complexity later is easier than adding complexity in its infancy.&lt;/p&gt;
-
-&lt;h2 id=&#34;start-with-what-you-know-finding-analogies&#34;&gt;Start with what you know &amp;amp;&amp;amp; Finding analogies&lt;/h2&gt;
-
-&lt;p&gt;This one speaks for itself. If you know parts of the problem, because you know analogy for it, or you faced something similar before, or exactly that, start with that.&lt;/p&gt;
-
-&lt;h2 id=&#34;reduce&#34;&gt;Reduce&lt;/h2&gt;
-
-&lt;p&gt;If the problem seems too complex, remove complexity. Start with a smaller set. Preferably something testable (I&amp;rsquo;ll come back to that later). Remove constraints, or add them as desired. A constraint makes it harder to solve the puzzle? Remove it, and try solving it without. After that, the solution will give you insight into the problem and you can add that constraint back in.&lt;/p&gt;
-
-&lt;p&gt;Consider &lt;a href=&#34;http://adventofcode.com/day/11&#34;&gt;Day 11&lt;/a&gt;. I had fun with this one. In order to easy it up a little, I first, removed the constraint of doing the increment with letters. I did it with numbers. I also removed the constraint of doing it within the confines of a limited length array. After I got that I&amp;rsquo;ll use modulo to make the numbers wrap around, it was way more easy to apply it to characters. And after a little fidgeting this came to life:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;passwd[i] -= &#39;a&#39;
-passwd[i] = (passwd[i] + 1) % ((&#39;z&#39; - &#39;a&#39;) + 1)
-passwd[i] += &#39;a&#39;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The -,+ &amp;lsquo;a&amp;rsquo; is needed so that it&amp;rsquo;s dealing with ascii code from 0 - &amp;lsquo;z&amp;rsquo;. This basically makes it so that when I reach the end of the alphabet it will wrap around and start from &amp;lsquo;a&amp;rsquo; again.&lt;/p&gt;
-
-&lt;h2 id=&#34;experiment&#34;&gt;Experiment&lt;/h2&gt;
-
-&lt;p&gt;This led to more solutions than I care to admit. Basically just start experimenting with solutions which are in your head. There is a chance, that what you come up with, will be the solution. This goes very well with the principle of &lt;em&gt;Make it work&lt;/em&gt;, &lt;em&gt;Make it right&lt;/em&gt;, &lt;em&gt;Make it fast&lt;/em&gt;. Just have something working first, and than you can make it work properly after. It&amp;rsquo;s always better to have &lt;em&gt;something&lt;/em&gt; rather than nothing.&lt;/p&gt;
-
-&lt;p&gt;And last but not least&amp;hellip;&lt;/p&gt;
-
-&lt;h2 id=&#34;don-t-get-frustrated&#34;&gt;Don&amp;rsquo;t get frustrated&lt;/h2&gt;
-
-&lt;p&gt;This is something I cannot say strongly enough. Seriously. &lt;strong&gt;DO NOT GET FRUSTRATED&lt;/strong&gt;. Most of the problems were designed to be harder. Unless you work as a programmer professionally for several years now, or this is a field of interest for you, you will spend a day hacking around on a problem and trying to find a solution which is adequate. In these times, you will get frustrated and think you are too stupid for this, this couldn&amp;rsquo;t be more far from the truth! You might need some inspiration, you might need some time away from the screen, it helps if you draw out the problem in a piece of paper, or just think about it without seeing it for a while. Just take a break, eat something, watch a comedy and get back to it later with a fresh view.&lt;/p&gt;
-
-&lt;h1 id=&#34;technical-gotchas&#34;&gt;Technical Gotchas&lt;/h1&gt;
-
-&lt;p&gt;So after the general problem solving side of things, I learned many things about Go, and about the tidbits of this language.&lt;/p&gt;
-
-&lt;h2 id=&#34;byte-slices&#34;&gt;Byte Slices&lt;/h2&gt;
-
-&lt;p&gt;I already knew that []byte is more performant and that Go optimizes on them more, but not to this extent. As in my previous blog posts I discovered that using them can really make a huge difference. Go even has a library called &lt;code&gt;bytes&lt;/code&gt; which has helper functions similar to that of &lt;code&gt;strings&lt;/code&gt; to help you out in these situations. Go optimizes on map recalls as well when you cast to string from []byte and use that as a map key like this: myMap[string(data)].&lt;/p&gt;
-
-&lt;h2 id=&#34;brute-force-or-looping&#34;&gt;Brute Force or Looping&lt;/h2&gt;
-
-&lt;p&gt;Most of the times you could get away with looping or trying to brute force out a solution. But there were times, where you really had to huddle down and think the problem through. Because simply looping, either took too long, or didn&amp;rsquo;t come up with a good answer. That&amp;rsquo;s why I rather always start with: &amp;lsquo;How could I solve this without looping?&amp;rsquo;. This will get you into the right mindset. Or thinking: &amp;lsquo;How could I solve this without taking each and every combination into account?&amp;rsquo;. These questions will help you to think about the problem without loops. Or only if you REALLY must use one.&lt;/p&gt;
-
-&lt;p&gt;Doing this will get you into the right way of thinking. I know that in advent of code there is a Leaderboard and you could get on it if you were fast. But most of the times having a fast solution is far from having the right solution.&lt;/p&gt;
-
-&lt;h2 id=&#34;structs-are-awesome&#34;&gt;Structs are Awesome&lt;/h2&gt;
-
-&lt;p&gt;I like using structs. They are a very lightweight way of defining objects, structures which stick together. For example in the &lt;a href=&#34;http://adventofcode.com/day/6&#34;&gt;Day 6&lt;/a&gt; Light puzzle, or even &lt;a href=&#34;http://adventofcode.com/day/3&#34;&gt;Day 3&lt;/a&gt; Traveling santa example, a struct which stuck x,y locations together and made it a map key, it was trivial to make my gif out of it with SVG -&amp;gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&#34;https://raw.githubusercontent.com/Skarlso/goprojects/master/advent/day3/day1.gif&#34; alt=&#34;Traveling Santa&#34; /&gt;&lt;/p&gt;
-
-&lt;h2 id=&#34;go-is-simple-to-read&#34;&gt;Go is Simple to Read&lt;/h2&gt;
-
-&lt;p&gt;[opinion] I like Go because of its simplicity. You don&amp;rsquo;t see stuff in Go most of the times, where you need to look three times to understand what the heck is going on. I like filter, reduce, map and syntactic sugar, but they make for a very poor reading experience. Go, in that way, choose not to incorporate these paradigms and I find that refreshing. [/opinion]&lt;/p&gt;
-
-&lt;h2 id=&#34;testing&#34;&gt;Testing&lt;/h2&gt;
-
-&lt;p&gt;TDD is something we all should know by now and care about. When I&amp;rsquo;m doing puzzles, or finger exercises, I tend to not write tests. But on a more complex puzzle, or a task, I always start with a test. Especially if you are given samples for a puzzle which work. That&amp;rsquo;s a gold mine. You can tweak your algorithm using those samples until they work and then simply apply a larger sample size.&lt;/p&gt;
-
-&lt;p&gt;Tests will also help you with breaking down a problem and identifying parts which you already know.&lt;/p&gt;
-
-&lt;p&gt;For example &lt;a href=&#34;http://adventofcode.com/day/13&#34;&gt;Day 13&lt;/a&gt;. Optimal Seating arrangements. Or the similar &lt;a href=&#34;http://adventofcode.com/day/9&#34;&gt;Day 9&lt;/a&gt;. Which was calculating shortest route distance. Or the password one, Day 11 which I showed before. In these cases, tests helped me make the core of the algorithm solid. Calculating connections, or the odd regex here and there, which was making sure that the password was validated properly.&lt;/p&gt;
-
-&lt;p&gt;Tests will also help you to be able to move on after you found your solution. When I was done with the first iteration of passwords which was still using strings, I went on to optimize it, to use []byte. The tests helped me to know that the code was still working as expected after the refactoring.&lt;/p&gt;
-
-&lt;h1 id=&#34;closing-words&#34;&gt;Closing words&lt;/h1&gt;
-
-&lt;p&gt;All in all it was a massive amount of fun doing these exercises and I&amp;rsquo;m thankful to the creator for making it. And I did enjoy the story behind the exercises as well. I think this site stood out because it had a fun factor. For simple exercises there are a lot of other sites -like Project Euler, or Sphere Judge Online-, which just plainly present you a problem and that&amp;rsquo;s it. It&amp;rsquo;s still fun, but it can also became boring very fast. Don&amp;rsquo;t forget the fun factor which makes you plow on and go into a blind frenzy that you cannot quit until it&amp;rsquo;s done. That&amp;rsquo;s the fun part.&lt;/p&gt;
-
-&lt;p&gt;Thank you for reading!
-Have a nice day.
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/01/22/my-journey-in-advent-of-code/</guid>
+      <description>Hello folks.
+I wanted to share with you my tale of working through the problems with Advent Of Code.
+It is a nice tale and there are a few things I learned from it, especially in Go, since I used that solve all of the problems. So, let&amp;rsquo;s get started.
+Solving the problems The most important lesson I learned while doing these exercises was, how to solve these problems. A couple of them were simple enough to not have to over think it, but most of them got very tricky.</description>
     </item>
     
     <item>
       <title>Improving performance with byte slice and int map</title>
-      <link>https://skarlso.github.io/2016/01/05/improving-performance-with-byte-slice-and-int-map</link>
+      <link>https://skarlso.github.io/2016/01/05/improving-performance-with-byte-slice-and-int-map/</link>
       <pubDate>Tue, 05 Jan 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/01/05/improving-performance-with-byte-slice-and-int-map</guid>
-      <description>&lt;p&gt;Hello Folks.&lt;/p&gt;
-
-&lt;p&gt;Today I would like to share with you my little tale of refactoring my solution to &lt;a href=&#34;http://adventofcode.com/day/13&#34;&gt;Advent Of Code Day 13&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;It&amp;rsquo;s a lovely tale of action, adventure, drama, and comedy.&lt;/p&gt;
-
-&lt;p&gt;Let&amp;rsquo;s being with my first iteration of the problem.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import (
-	&amp;quot;bufio&amp;quot;
-	&amp;quot;fmt&amp;quot;
-	&amp;quot;math&amp;quot;
-	&amp;quot;os&amp;quot;
-	&amp;quot;strconv&amp;quot;
-	&amp;quot;strings&amp;quot;
-
-	&amp;quot;github.com/skarlso/goutils/arrayutils&amp;quot;
-)
-
-var seatingCombinations = make([][]string, 0)
-var table = make(map[string][]map[string]int)
-var keys = make([]string, 0)
-
-//Person a person
-type Person struct {
-	// neighbour *Person
-	name string
-	like int
-}
-
-func main() {
-	file, _ := os.Open(&amp;quot;input.txt&amp;quot;)
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		split := strings.Split(line, &amp;quot; &amp;quot;)
-		like, _ := strconv.Atoi(split[3]) //If lose -&amp;gt; * -1
-		if split[2] == &amp;quot;lose&amp;quot; {
-			like *= -1
-		}
-		table[split[0]] = append(table[split[0]], map[string]int{strings.Trim(split[10], &amp;quot;.&amp;quot;): like})
-		if !arrayutils.ContainsString(keys, split[0]) {
-			keys = append(keys, split[0])
-		}
-	}
-	generatePermutation(keys, len(keys))
-	fmt.Println(&amp;quot;Best seating efficiency:&amp;quot;, calculateSeatingEfficiancy())
-}
-
-func generatePermutation(s []string, n int) {
-	if n == 1 {
-		news := make([]string, len(s))
-		copy(news, s)
-		seatingCombinations = append(seatingCombinations, news)
-	}
-	for i := 0; i &amp;lt; n; i++ {
-		s[i], s[n-1] = s[n-1], s[i]
-		generatePermutation(s, n-1)
-		s[i], s[n-1] = s[n-1], s[i]
-	}
-}
-
-func calculateSeatingEfficiancy() int {
-	bestSeating := math.MinInt64
-	for _, v := range seatingCombinations {
-		calculatedOrder := 0
-
-		for i := range v {
-			left := (i - 1) % len(v)
-			//This is to work around the fact that in Go
-			//modulo of a negative number will not return a positive number.
-			//So -1 % 4 will not return 3 but -1. In that case we add length.
-			if left &amp;lt; 0 {
-				left += len(v)
-			}
-			right := (i + 1) % len(v)
-			// fmt.Printf(&amp;quot;Left: %d; Right: %d\n&amp;quot;, left, right)
-			leftLike := getLikeForTargetConnect(v[i], v[left])
-			rightLike := getLikeForTargetConnect(v[i], v[right])
-			// fmt.Printf(&amp;quot;Name: %s; Left:%d; Right:%d\n&amp;quot;, v[i], leftLike, rightLike)
-			calculatedOrder += leftLike + rightLike
-		}
-		// fmt.Printf(&amp;quot;Order for: %v; Calc:%d\n&amp;quot;, v, calculatedOrder)
-		if calculatedOrder &amp;gt; bestSeating {
-			bestSeating = calculatedOrder
-		}
-	}
-
-	return bestSeating
-}
-
-func getLikeForTargetConnect(name string, neighbour string) int {
-	neighbours := table[name]
-	for _, t := range neighbours {
-		if v, ok := t[neighbour]; ok {
-			return v
-		}
-	}
-	return 0
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This is quiet large. And takes a bit of explaining. So what is happening here? We are putting the names which correspond with numbers and neighbours into a map which has a map as a value. The map contains seating information for a person. For example, next to Alice, a bunch of people can sit, and they have a certain relationship to Alice, represented by a number.&lt;/p&gt;
-
-&lt;p&gt;We could, at this point, represent it with a graph, but that would be overkill.&lt;/p&gt;
-
-&lt;p&gt;Permutation is simple because I choose to represent a Table with a Circular Slice. This means that a slice like this =&amp;gt; Alice, Bob, Tom; means that Alice is sitting next to Bob and Tom. So Alice&amp;rsquo;s neighbour of -1 (left) is in fact i-1 % 3. And Bob is i + 1. For Tom, Alice is i + 1 % 3. After we got this, we just permutate the possible combinations into slices of slices and iterate over them.&lt;/p&gt;
-
-&lt;p&gt;The benchmark for this is terrible.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;
-================With Strings================
-20	 589571259 ns/op
-ok  	github.com/skarlso/goprojects/advent/day13/part1	11.873s
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;So, my first thought was, convert everything I can to []byte. But because slices cannot be map keys, because map keys need to be comparable, we are still stuck with the same ns/ops.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;//var seatingCombinations = make([][]string, 0)
-//var keys = make([]string, 0)
-var seatingCombinations = make([][][]byte, 0)
-var keys = make([][]byte, 0)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And I adjusted the code to work with []byte instead. What can we do to fix the map though? One obvious gain is, not to use string as a key. Because strings are immutable, working with them always means copy-ing and that&amp;rsquo;s why they get to be very slow. So removing them from Keys and using Numbers instead will mean a huge gain for us.&lt;/p&gt;
-
-&lt;p&gt;To do this, I created a map which maps names with numbers. I could hardcode them with iota, but that is a very bad thing to do. It would mean, that when I add a new name, I would have to go, and re-compile my code, because data changed. That&amp;rsquo;s not what we want.&lt;/p&gt;
-
-&lt;p&gt;So, I added this little tid-bit into the for cycle when I&amp;rsquo;m reading in the file lines =&amp;gt;&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
-if _, ok := nameMapping[split[0]]; !ok {
-    nameMapping[split[0]] = id
-    id++
-}
-if _, ok := nameMapping[trimmedNeighbour]; !ok {
-    nameMapping[trimmedNeighbour] = id
-    id++
-}
-...
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Id starts as Zero. And nameMapping is a simple map[string]int. After this, we fix all the map calls, from &lt;code&gt;table[split[0]]&lt;/code&gt; to &lt;code&gt;table[nameMapping[split[0]]]&lt;/code&gt;. Table&amp;rsquo;s map will now work with int, but we can still work with strings otherwise.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;table[nameMapping[split[0]]] = append(table[nameMapping[split[0]]], map[int]int{nameMapping[trimmedNeighbour]: like})
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This has now a marginally better performance as before:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkCalculateSeating	      50	  32637879 ns/op
-ok  	github.com/skarlso/goprojects/advent/day13/part1	1.698s
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;But, we can still do a HUGE one better. Can you notice the other bottleneck? See, how keys are still []byte? That&amp;rsquo;s, now completely unnecessary. We can use int, since our keys are ints! &lt;em&gt;Permutation&lt;/em&gt; changes, and the retrieve.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
-func generatePermutation(s []int, n int) {
-...
-
-...
-func getLikeForTargetConnect(name int, neighbour int) int {
-	neighbours := table[name]
-	for _, t := range neighbours {
-		if v, ok := t[neighbour]; ok {
-			return v
-		}
-	}
-	return 0
-}
-...
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Permutation was the Other huge performance consumption. Now, our run time is&amp;hellip;. drum rolls&amp;hellip;&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkCalculateSeating	   10000	    166431 ns/op
-ok  	github.com/skarlso/goprojects/advent/day13/part1	1.695s
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Down to 166431 ns/op!!! From 32637879 ns/op!! And notice how suddenly, go&amp;rsquo;s benchmark jumped up in sample count. Our code is now blazing fast. It&amp;rsquo;s 0.05% of the previous run! It&amp;rsquo;s almost &lt;strong&gt;200 times faster&lt;/strong&gt;!&lt;/p&gt;
-
-&lt;p&gt;We could still improve it here and there. I&amp;rsquo;m sure I&amp;rsquo;m doing some extra stuff which is not needed or could be made easier somehow. But I&amp;rsquo;m actually quiet happy with this solution right now.&lt;/p&gt;
-
-&lt;p&gt;The full code:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import (
-	&amp;quot;bufio&amp;quot;
-	&amp;quot;math&amp;quot;
-	&amp;quot;os&amp;quot;
-	&amp;quot;strconv&amp;quot;
-	&amp;quot;strings&amp;quot;
-
-	&amp;quot;github.com/skarlso/goutils/arrayutils&amp;quot;
-)
-
-var seatingCombinations = make([][]int, 0)
-var table = make(map[int][]map[int]int)
-var keys = make([]int, 0)
-var nameMapping = make(map[string]int)
-
-//Person a person
-type Person struct {
-	// neighbour *Person
-	name string
-	like int
-}
-
-func main() {
-	CalculatePerfectSeating()
-}
-
-//CalculatePerfectSeating returns the perfect seating order based on Love/Hate relations
-func CalculatePerfectSeating() {
-	file, _ := os.Open(&amp;quot;input.txt&amp;quot;)
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	id := 0
-	for scanner.Scan() {
-		line := scanner.Text()
-		split := strings.Split(line, &amp;quot; &amp;quot;)
-		trimmedNeighbour := strings.Trim(split[10], &amp;quot;.&amp;quot;)
-		like, _ := strconv.Atoi(split[3]) //If lose -&amp;gt; * -1
-		if _, ok := nameMapping[split[0]]; !ok {
-			nameMapping[split[0]] = id
-			id++
-		}
-		if _, ok := nameMapping[trimmedNeighbour]; !ok {
-			nameMapping[trimmedNeighbour] = id
-			id++
-		}
-		if split[2] == &amp;quot;lose&amp;quot; {
-			like *= -1
-		}
-		table[nameMapping[split[0]]] = append(table[nameMapping[split[0]]], map[int]int{nameMapping[trimmedNeighbour]: like})
-		if !arrayutils.ContainsInt(keys, nameMapping[split[0]]) {
-			keys = append(keys, nameMapping[split[0]])
-		}
-	}
-	generatePermutation(keys, len(keys))
-	// fmt.Println(&amp;quot;Best seating efficiency:&amp;quot;, calculateSeatingEfficiancy())
-}
-
-func generatePermutation(s []int, n int) {
-	if n == 1 {
-		news := make([]int, len(s))
-		copy(news, s)
-		seatingCombinations = append(seatingCombinations, news)
-	}
-	for i := 0; i &amp;lt; n; i++ {
-		s[i], s[n-1] = s[n-1], s[i]
-		generatePermutation(s, n-1)
-		s[i], s[n-1] = s[n-1], s[i]
-	}
-}
-
-func calculateSeatingEfficiancy() int {
-	bestSeating := math.MinInt64
-	for _, v := range seatingCombinations {
-		calculatedOrder := 0
-
-		for i := range v {
-			left := (i - 1) % len(v)
-			//This is to work around the fact that in Go
-			//modulo of a negative number will not return a positive number.
-			//So -1 % 4 will not return 3 but -1. In that case we add length.
-			if left &amp;lt; 0 {
-				left += len(v)
-			}
-			right := (i + 1) % len(v)
-			calculatedOrder += getLikeForTargetConnect(v[i], v[left]) + getLikeForTargetConnect(v[i], v[right])
-		}
-		if calculatedOrder &amp;gt; bestSeating {
-			bestSeating = calculatedOrder
-		}
-	}
-
-	return bestSeating
-}
-
-func getLikeForTargetConnect(name int, neighbour int) int {
-	neighbours := table[name]
-	for _, t := range neighbours {
-		if v, ok := t[neighbour]; ok {
-			return v
-		}
-	}
-	return 0
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Also, on github =&amp;gt; &lt;a href=&#34;https://github.com/Skarlso/goprojects/tree/master/advent/day13&#34;&gt;Advent Of Code Day 13&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Thank you very much for reading, this has been a massive fun to write and to refactor.&lt;/p&gt;
-
-&lt;p&gt;Have something to say? Please don&amp;rsquo;t hesitate.&lt;/p&gt;
-
-&lt;p&gt;And as always,&lt;/p&gt;
-
-&lt;p&gt;Have a nice day!&lt;/p&gt;
-
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/01/05/improving-performance-with-byte-slice-and-int-map/</guid>
+      <description>Hello Folks.
+Today I would like to share with you my little tale of refactoring my solution to Advent Of Code Day 13.
+It&amp;rsquo;s a lovely tale of action, adventure, drama, and comedy.
+Let&amp;rsquo;s being with my first iteration of the problem.
+package main import ( &amp;quot;bufio&amp;quot; &amp;quot;fmt&amp;quot; &amp;quot;math&amp;quot; &amp;quot;os&amp;quot; &amp;quot;strconv&amp;quot; &amp;quot;strings&amp;quot; &amp;quot;github.com/skarlso/goutils/arrayutils&amp;quot; ) var seatingCombinations = make([][]string, 0) var table = make(map[string][]map[string]int) var keys = make([]string, 0) //Person a person type Person struct { // neighbour *Person name string like int } func main() { file, _ := os.</description>
     </item>
     
     <item>
       <title>Byte arrays and Channels</title>
-      <link>https://skarlso.github.io/2016/01/01/byte-arrays-and-channels</link>
+      <link>https://skarlso.github.io/2016/01/01/byte-arrays-and-channels/</link>
       <pubDate>Fri, 01 Jan 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/01/01/byte-arrays-and-channels</guid>
-      <description>&lt;p&gt;Hi folks and a Happy new Year!&lt;/p&gt;
-
-&lt;p&gt;Today, I would like to show you some interesting things you can do with channels. Consider the following simple example.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import &amp;quot;fmt&amp;quot;
-
-func main() {
-	generatedPassword := make(chan int, 100)
-	correctPassword := make(chan int)
-	defer close(generatedPassword)
-	defer close(correctPassword)
-	go passwordIncrement(generatedPassword)
-	go checkPassword(generatedPassword, correctPassword)
-	pass := &amp;lt;-correctPassword
-	fmt.Println(pass)
-}
-
-func checkPassword(input &amp;lt;-chan int, output chan&amp;lt;- int) {
-	for {
-		p := &amp;lt;-input
-		//Introduce lengthy operation here
-		// time.Sleep(time.Second)
-		fmt.Println(&amp;quot;Checking p:&amp;quot;, p)
-		if p &amp;gt; 100000 {
-			output &amp;lt;- p
-		}
-	}
-}
-
-func passwordIncrement(out chan&amp;lt;- int) {
-	p := 0
-	for {
-		p++
-		out &amp;lt;- p
-	}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The premise is as follows. It launches two go routines. One, which generates passwords, and an other which checks for validity. The two routines talk to each other through the channel &lt;code&gt;generatedPassword&lt;/code&gt;. That&amp;rsquo;s the providing connections between them. The channel &lt;code&gt;correctPassword&lt;/code&gt; provides output for the &lt;code&gt;checkPassword&lt;/code&gt; routine.&lt;/p&gt;
-
-&lt;p&gt;If there is data received from &lt;code&gt;correctPassword&lt;/code&gt; channel, we found our first password and there is no need to look further so we, print the password and quit. The channels will close with defer. This works. But the password is usually either a []byte or a string. With string, it still works.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import &amp;quot;fmt&amp;quot;
-
-func main() {
-	generatedPassword := make(chan string, 100)
-	correctPassword := make(chan string)
-	defer close(generatedPassword)
-	defer close(correctPassword)
-	go passwordIncrement(generatedPassword)
-	go checkPassword(generatedPassword, correctPassword)
-	pass := &amp;lt;-correctPassword
-	fmt.Println(pass)
-}
-
-func checkPassword(input &amp;lt;-chan string, output chan&amp;lt;- string) {
-	for {
-		p := &amp;lt;-input
-		//Introduce lengthy operation here
-		// time.Sleep(time.Second)
-		fmt.Println(&amp;quot;Checking p:&amp;quot;, p)
-		if performSomeCheckingOperation(p) {
-			output &amp;lt;- p
-		}
-	}
-}
-
-func generateNewPassword(out chan&amp;lt;- string) {
-	var p string
-	for {
-		p = generate(p)
-		out &amp;lt;- p
-	}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The generating happens based on the previously generated password. For example, we increment, or permeate. aaaa, aaab, aaac&amp;hellip;&lt;/p&gt;
-
-&lt;p&gt;So &lt;code&gt;generatedPassword&lt;/code&gt; is a buffered channel, it gathers a 100 passwords from which checking retrieves passwords one by one and works on them in a slower process.&lt;/p&gt;
-
-&lt;p&gt;Now, this is fine, but using []byte arrays will always be more powerful and faster. So we would like to use []byte. Like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import &amp;quot;fmt&amp;quot;
-
-func main() {
-	generatedPassword := make(chan []byte, 100)
-	correctPassword := make(chan []byte)
-	defer close(generatedPassword)
-	defer close(correctPassword)
-	go passwordIncrement(generatedPassword)
-	go checkPassword(generatedPassword, correctPassword)
-	pass := &amp;lt;-correctPassword
-	fmt.Println(string(pass))
-}
-
-func checkPassword(input &amp;lt;-chan []byte, output chan&amp;lt;- []byte) {
-	for {
-		p := &amp;lt;-input
-		//Introduce lengthy operation here
-		// time.Sleep(time.Second)
-		fmt.Println(&amp;quot;Checking p:&amp;quot;, string(p))
-		if performSomeCheckingOperation(p) {
-			output &amp;lt;- p
-		}
-	}
-}
-
-func generateNewPassword(out chan&amp;lt;- []byte) {
-	var p []byte
-	for {
-		p = generate(p)
-		out &amp;lt;- p
-	}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This will not work. Why? Because []byte is a slice and thus will be constantly overwritten. The checking go routine will always only check the last data and many generated passwords will be lost. This is also noted in go&amp;rsquo;s scanner here =&amp;gt; &lt;a href=&#34;https://golang.org/pkg/bufio/#Scanner.Bytes&#34;&gt;Scanner.Bytes&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;We have a couple of options here.&lt;/p&gt;
-
-&lt;p&gt;We could use &lt;code&gt;string&lt;/code&gt; channels and convert to []byte after. This is still okay, because the conversion isn&amp;rsquo;t very CPU intensive.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
-generatedPassword := make(chan string, 100)
-correctPassword := make(chan string)
-...
-p := []byte(&amp;lt;-input) //This will work very nicely.
-...
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Options two would be If you have a fixed password to handle, fix data, for example MD5 hash, you can use a byte array. Like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import &amp;quot;fmt&amp;quot;
-
-const PASSWD=13
-
-func main() {
-	generatedPassword := make(chan [PASSWD]byte, 100)
-	correctPassword := make(chan [PASSWD]byte)
-	defer close(generatedPassword)
-	defer close(correctPassword)
-	go passwordIncrement(generatedPassword)
-	go checkPassword(generatedPassword, correctPassword)
-	pass := &amp;lt;-correctPassword
-	fmt.Println(string(pass))
-}
-
-func checkPassword(input &amp;lt;-chan [PASSWD]byte, output chan&amp;lt;- [PASSWD]byte) {
-	for {
-		p := &amp;lt;-input
-		//Introduce lengthy operation here
-		// time.Sleep(time.Second)
-		fmt.Println(&amp;quot;Checking p:&amp;quot;, string(p))
-		if performSomeCheckingOperation(p) {
-			output &amp;lt;- p
-		}
-	}
-}
-
-func generateNewPassword(out chan&amp;lt;- [PASSWD]byte) {
-	var p [PASSWD]byte
-	for {
-		p = generate(p)
-		out &amp;lt;- p
-	}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This is also one solution. If you have to convert between the two, could go with &lt;code&gt;p := byte[:]&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;Conclusion is, that use conversion rather than string types and be aware that using slices in channels is dangerous.&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading!
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/01/01/byte-arrays-and-channels/</guid>
+      <description>Hi folks and a Happy new Year!
+Today, I would like to show you some interesting things you can do with channels. Consider the following simple example.
+package main import &amp;quot;fmt&amp;quot; func main() { generatedPassword := make(chan int, 100) correctPassword := make(chan int) defer close(generatedPassword) defer close(correctPassword) go passwordIncrement(generatedPassword) go checkPassword(generatedPassword, correctPassword) pass := &amp;lt;-correctPassword fmt.Println(pass) } func checkPassword(input &amp;lt;-chan int, output chan&amp;lt;- int) { for { p := &amp;lt;-input //Introduce lengthy operation here // time.</description>
     </item>
     
     <item>
@@ -1446,115 +141,11 @@ Gergely.&lt;/p&gt;
       <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
       
       <guid>https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings/</guid>
-      <description>&lt;p&gt;Hello Folks.&lt;/p&gt;
-
-&lt;p&gt;This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.&lt;/p&gt;
-
-&lt;p&gt;[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.&lt;/p&gt;
-
-&lt;p&gt;Sample code:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package solutions
-
-import &amp;quot;fmt&amp;quot;
-
-const (
-    //INPUT input
-    INPUT = &amp;quot;1321131112&amp;quot;
-    //LIMIT limit
-    LIMIT = 50
-)
-
-//LookAndSay translates numbers according to Look and Say algo
-func LookAndSay(s string, c chan string) {
-    charCount := 1
-    look := &amp;quot;&amp;quot;
-    for i := range s {
-        if i+1 &amp;lt; len(s) {
-            if s[i] == s[i+1] {
-                charCount++
-            } else {
-                look += fmt.Sprintf(&amp;quot;%d%s&amp;quot;, charCount, string(s[i]))
-                charCount = 1
-            }
-        } else {
-            look += fmt.Sprintf(&amp;quot;%d%s&amp;quot;, charCount, string(s[i]))
-        }
-    }
-    c &amp;lt;- look
-}
-
-//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
-func GetLengthOfLookAndSay() {
-    c := make(chan string, 0)
-    go LookAndSay(INPUT, c)
-    finalString := &amp;lt;-c
-    for i := 0; i &amp;lt;= LIMIT-2; i++ {
-        go LookAndSay(finalString, c)
-        finalString = &amp;lt;-c
-        // fmt.Println(finalString)
-    }
-    fmt.Println(&amp;quot;Lenght of final String:&amp;quot;, len(finalString))
-}
-
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This, with the limit raised to 50 run for ~1 hour. Even with the routines although they were just for show since they had to wait for each others input.&lt;/p&gt;
-
-&lt;p&gt;Now change this to []byte and the run time was almost under 2 seconds on my machine.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package solutions
-
-import (
-    &amp;quot;fmt&amp;quot;
-    &amp;quot;strconv&amp;quot;
-)
-
-const (
-    //LIMIT limit
-    LIMIT = 50
-)
-
-//INPUT puzzle input
-//This used to be a string until I was reminded that BYTE ARRAY IS ALWAYS FASTER!
-var INPUT = []byte(&amp;quot;1321131112&amp;quot;)
-
-//LookAndSay translates numbers according to Look and Say algo
-func LookAndSay(s []byte) (look []byte) {
-    charCount := 1
-    for i := range s {
-        if i+1 &amp;lt; len(s) {
-            if s[i] == s[i+1] {
-                charCount++
-            } else {
-                b := []byte(strconv.FormatInt(int64(charCount), 10))
-                look = append(look, b[0], s[i])
-                charCount = 1
-            }
-        } else {
-            b := []byte(strconv.FormatInt(int64(charCount), 10))
-            look = append(look, b[0], s[i])
-        }
-    }
-    return
-}
-
-//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
-func GetLengthOfLookAndSay() {
-    finalString := INPUT
-    for i := 0; i &amp;lt;= LIMIT-1; i++ {
-        finalString = LookAndSay(finalString)
-    }
-    fmt.Println(&amp;quot;Lenght of final String:&amp;quot;, len(finalString))
-}
-
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This is the solution for Day 10 on &lt;a href=&#34;http://adventofcode.com/&#34;&gt;AdventOfCode&lt;/a&gt; by the way.&lt;/p&gt;
-
-&lt;p&gt;Thanks for readin&amp;rsquo;.
-Gergely.&lt;/p&gt;
-</description>
+      <description>Hello Folks.
+This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.
+[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.
+Sample code:
+package solutions import &amp;quot;fmt&amp;quot; const ( //INPUT input INPUT = &amp;quot;1321131112&amp;quot; //LIMIT limit LIMIT = 50 ) //LookAndSay translates numbers according to Look and Say algo func LookAndSay(s string, c chan string) { charCount := 1 look := &amp;quot;&amp;quot; for i := range s { if i+1 &amp;lt; len(s) { if s[i] == s[i+1] { charCount++ } else { look += fmt.</description>
     </item>
     
     <item>
@@ -1563,115 +154,11 @@ Gergely.&lt;/p&gt;
       <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
       
       <guid>https://skarlso.github.io/2015/12/29/use-byte-slice-instead-of-strings/</guid>
-      <description>&lt;p&gt;Hello Folks.&lt;/p&gt;
-
-&lt;p&gt;This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.&lt;/p&gt;
-
-&lt;p&gt;[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.&lt;/p&gt;
-
-&lt;p&gt;Sample code:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package solutions
-
-import &amp;quot;fmt&amp;quot;
-
-const (
-    //INPUT input
-    INPUT = &amp;quot;1321131112&amp;quot;
-    //LIMIT limit
-    LIMIT = 50
-)
-
-//LookAndSay translates numbers according to Look and Say algo
-func LookAndSay(s string, c chan string) {
-    charCount := 1
-    look := &amp;quot;&amp;quot;
-    for i := range s {
-        if i+1 &amp;lt; len(s) {
-            if s[i] == s[i+1] {
-                charCount++
-            } else {
-                look += fmt.Sprintf(&amp;quot;%d%s&amp;quot;, charCount, string(s[i]))
-                charCount = 1
-            }
-        } else {
-            look += fmt.Sprintf(&amp;quot;%d%s&amp;quot;, charCount, string(s[i]))
-        }
-    }
-    c &amp;lt;- look
-}
-
-//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
-func GetLengthOfLookAndSay() {
-    c := make(chan string, 0)
-    go LookAndSay(INPUT, c)
-    finalString := &amp;lt;-c
-    for i := 0; i &amp;lt;= LIMIT-2; i++ {
-        go LookAndSay(finalString, c)
-        finalString = &amp;lt;-c
-        // fmt.Println(finalString)
-    }
-    fmt.Println(&amp;quot;Lenght of final String:&amp;quot;, len(finalString))
-}
-
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This, with the limit raised to 50 run for ~1 hour. Even with the routines although they were just for show since they had to wait for each others input.&lt;/p&gt;
-
-&lt;p&gt;Now change this to []byte and the run time was almost under 2 seconds on my machine.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package solutions
-
-import (
-    &amp;quot;fmt&amp;quot;
-    &amp;quot;strconv&amp;quot;
-)
-
-const (
-    //LIMIT limit
-    LIMIT = 50
-)
-
-//INPUT puzzle input
-//This used to be a string until I was reminded that BYTE ARRAY IS ALWAYS FASTER!
-var INPUT = []byte(&amp;quot;1321131112&amp;quot;)
-
-//LookAndSay translates numbers according to Look and Say algo
-func LookAndSay(s []byte) (look []byte) {
-    charCount := 1
-    for i := range s {
-        if i+1 &amp;lt; len(s) {
-            if s[i] == s[i+1] {
-                charCount++
-            } else {
-                b := []byte(strconv.FormatInt(int64(charCount), 10))
-                look = append(look, b[0], s[i])
-                charCount = 1
-            }
-        } else {
-            b := []byte(strconv.FormatInt(int64(charCount), 10))
-            look = append(look, b[0], s[i])
-        }
-    }
-    return
-}
-
-//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
-func GetLengthOfLookAndSay() {
-    finalString := INPUT
-    for i := 0; i &amp;lt;= LIMIT-1; i++ {
-        finalString = LookAndSay(finalString)
-    }
-    fmt.Println(&amp;quot;Lenght of final String:&amp;quot;, len(finalString))
-}
-
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This is the solution for Day 10 on &lt;a href=&#34;http://adventofcode.com/&#34;&gt;AdventOfCode&lt;/a&gt; by the way.&lt;/p&gt;
-
-&lt;p&gt;Thanks for readin&amp;rsquo;.
-Gergely.&lt;/p&gt;
-</description>
+      <description>Hello Folks.
+This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.
+[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.
+Sample code:
+package solutions import &amp;quot;fmt&amp;quot; const ( //INPUT input INPUT = &amp;quot;1321131112&amp;quot; //LIMIT limit LIMIT = 50 ) //LookAndSay translates numbers according to Look and Say algo func LookAndSay(s string, c chan string) { charCount := 1 look := &amp;quot;&amp;quot; for i := range s { if i+1 &amp;lt; len(s) { if s[i] == s[i+1] { charCount++ } else { look += fmt.</description>
     </item>
     
     <item>
@@ -1680,51 +167,11 @@ Gergely.&lt;/p&gt;
       <pubDate>Wed, 23 Dec 2015 00:00:00 +0000</pubDate>
       
       <guid>https://skarlso.github.io/2015/12/23/recursive-freq-count/</guid>
-      <description>&lt;p&gt;Hello everybody!&lt;/p&gt;
-
-&lt;p&gt;I wanted to do a sort post about word frequency count. I did it many times now and I was curious as how a recursive solution would perform as opposed to looping.&lt;/p&gt;
-
-&lt;p&gt;So I wrote it up quickly and added a few benchmarks with different sized data.&lt;/p&gt;
-
-&lt;p&gt;First&amp;hellip;. The code:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;var freqMap = make(map[string]int, 0)
-
-func countLettersRecursive(s string) string {
-    if len(s) == 0 {
-        return s
-    }
-    freqMap[string(s[0])]++
-    return countLettersRecursive(s[1:])
-}
-
-func countLettersLoop(s string) {
-    for _, v := range s {
-        freqMap[string(v)]++
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Very simple. The first run with a small sample: &amp;ldquo;asdfasdfasdfasdfasdf&amp;rdquo;&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkLoopFrequencyCount  5000000           377 ns/op
-BenchmarkRecursiveFrequencyCount     5000000           380 ns/op
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;They almost equal but Recursive seems to be lagging behind. So I increased the sample size to a text which was 496 long.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;PASS
-BenchmarkLoopFrequencyCount    30000         53336 ns/op
-BenchmarkRecursiveFrequencyCount       20000         61780 ns/op
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And, as expected, recursing is less performant than looping. Also, I think my machine would die from a larger data size&amp;hellip;&lt;/p&gt;
-
-&lt;p&gt;But the recursive looks so much cooler though.&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading!
-Gergely.&lt;/p&gt;
-</description>
+      <description>Hello everybody!
+I wanted to do a sort post about word frequency count. I did it many times now and I was curious as how a recursive solution would perform as opposed to looping.
+So I wrote it up quickly and added a few benchmarks with different sized data.
+First&amp;hellip;. The code:
+var freqMap = make(map[string]int, 0) func countLettersRecursive(s string) string { if len(s) == 0 { return s } freqMap[string(s[0])]++ return countLettersRecursive(s[1:]) } func countLettersLoop(s string) { for _, v := range s { freqMap[string(v)]++ } }  Very simple.</description>
     </item>
     
     <item>
@@ -1733,32 +180,67 @@ Gergely.&lt;/p&gt;
       <pubDate>Tue, 08 Dec 2015 00:00:00 +0000</pubDate>
       
       <guid>https://skarlso.github.io/2015/12/08/go-development-environment/</guid>
-      <description>&lt;p&gt;Hello folks.&lt;/p&gt;
-
-&lt;p&gt;Here is a little something I&amp;rsquo;ve put together, since I&amp;rsquo;m doing it a lot.&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&#34;https://github.com/Skarlso/godevelopment&#34;&gt;Go Development Environment&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;If I have a project I&amp;rsquo;d like to contribute, like &lt;a href=&#34;https://gohugo.io&#34;&gt;GoHugo&lt;/a&gt;, I have to setup a development environment, because most of the times, I&amp;rsquo;m on a Mac. And on OSX things work differently. I like to work in a Linux environment since that&amp;rsquo;s what most of the projects are built on.&lt;/p&gt;
-
-&lt;p&gt;So here you go. Just download the files, and say &lt;strong&gt;vagrant up&lt;/strong&gt; which will do the magic.&lt;/p&gt;
-
-&lt;p&gt;This sets up &lt;a href=&#34;https://github.com/fatih/vim-go&#34;&gt;vim-go&lt;/a&gt; with code completion given by YouCompleteMe and some go features like, fmt on save and build error highlighting.&lt;/p&gt;
-
-&lt;p&gt;Also sets up ctags which will give you tags and the ability to do GoTo Declaration.&lt;/p&gt;
-
-&lt;p&gt;Installs a bunch of utilities, and configures Go. There is an option to install docker as well. But it&amp;rsquo;s ignored at the moment.&lt;/p&gt;
-
-&lt;p&gt;Just uncomment this line:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;#config.vm.provision &amp;quot;shell&amp;quot;, path: &amp;quot;install_docker.sh&amp;quot;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Any questions or request, feel free to submit an Issue!&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading!
-Gergely.&lt;/p&gt;
-</description>
+      <description>Hello folks.
+Here is a little something I&amp;rsquo;ve put together, since I&amp;rsquo;m doing it a lot.
+Go Development Environment
+If I have a project I&amp;rsquo;d like to contribute, like GoHugo, I have to setup a development environment, because most of the times, I&amp;rsquo;m on a Mac. And on OSX things work differently. I like to work in a Linux environment since that&amp;rsquo;s what most of the projects are built on.</description>
+    </item>
+    
+    <item>
+      <title>Go JIRA API client</title>
+      <link>https://skarlso.github.io/2015/11/20/go-jira-api-client/</link>
+      <pubDate>Fri, 20 Nov 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/11/20/go-jira-api-client/</guid>
+      <description>Hi folks.
+So, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial.
+It&amp;#8217;s still in it&amp;#8217;s infancy and I have a couple of more features I want to implement, but, here is the code&amp;#8230;
+  package main &amp;nbsp; import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#34;fmt&#34; &#34;io/ioutil&#34; &#34;log&#34; &#34;net/http&#34; &#34;os&#34; &amp;nbsp; &#34;github.com/BurntSushi/toml&#34; ) &amp;nbsp; var configFile = &#34;</description>
+    </item>
+    
+    <item>
+      <title>Go Progress Quest</title>
+      <link>https://skarlso.github.io/2015/11/09/go-progress-quest/</link>
+      <pubDate>Mon, 09 Nov 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/11/09/go-progress-quest/</guid>
+      <description>Hi Folks.
+I started to build a Progress Quest type of web app in Go.
+If you&amp;#8217;d like to join, or just tag along, please drop by here =&amp;gt; Go Progress Quest and feel free to submit an issue if you have an idea, or would like to contribute!
+I will try and document the Progress&amp;#8230;
+Thank you for reading!
+Gergely.</description>
+    </item>
+    
+    <item>
+      <title>Circular buffer in Go</title>
+      <link>https://skarlso.github.io/2015/10/15/circular-buffer-in-go/</link>
+      <pubDate>Thu, 15 Oct 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/10/15/circular-buffer-in-go/</guid>
+      <description>I&amp;#8217;m proud of this one too. No peaking. I like how go let&amp;#8217;s you do this kind of stuff in a very nice way.
+  package circular &amp;nbsp; import &#34;fmt&#34; &amp;nbsp; //TestVersion testVersion const TestVersion = 1 &amp;nbsp; //Buffer buffer type type Buffer struct { buffer []byte full int size int s, e int } &amp;nbsp; //NewBuffer creates a new Buffer func NewBuffer(size int) *Buffer { return &amp;Buffer{buffer: make([]byte, size), s: , e: , size: size, full: } } &amp;nbsp; //ReadByte reads a byte from b Buffer func (b *Buffer) ReadByte() (byte, error) { if b.</description>
+    </item>
+    
+    <item>
+      <title>DataMunger Kata with Go</title>
+      <link>https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/</link>
+      <pubDate>Sun, 04 Oct 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/</guid>
+      <description>Quickly wrote up the Data Munger code kata in Go.
+Next time, I want better abstractions. And a way to select columns based on their header data. For now, this is not bad.
+  package main &amp;nbsp; import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34; &#34;os&#34; &#34;regexp&#34; &#34;strconv&#34; &#34;strings&#34; ) &amp;nbsp; //Data which is Data type Data struct { columnName string compareOne float64 compareTwo float64 } &amp;nbsp; func main() { // datas := []Data{WeatherData{}, FootballData{}} fmt.</description>
+    </item>
+    
+    <item>
+      <title>Sieve of Eratosthenes in Go</title>
+      <link>https://skarlso.github.io/2015/07/30/sieve-of-eratosthenes-in-go/</link>
+      <pubDate>Thu, 30 Jul 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/07/30/sieve-of-eratosthenes-in-go/</guid>
+      <description>I&amp;#8217;m pretty proud of this one as well.
+  package sieve &amp;nbsp; //Sieve Uses the Sieve of Eratosthenes to calculate primes to a certain limit func Sieve(limit int) []int { var listOfPrimes []int markers := make([]bool, limit) &amp;nbsp; for i := 2; i &amp;lt; limit; i++ { if !markers[i] { for j := i + i; j &amp;lt; limit; j += i { markers[j] = true } listOfPrimes = append(listOfPrimes, i) } } &amp;nbsp; return listOfPrimes }     </description>
     </item>
     
   </channel>

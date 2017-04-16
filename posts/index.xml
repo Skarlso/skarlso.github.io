@@ -2,1647 +2,1447 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Posts on Ramblings of a build engineer</title>
-    <link>https://skarlso.github.io/posts/index.xml</link>
+    <link>https://skarlso.github.io/posts/</link>
     <description>Recent content in Posts on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Wed, 22 Mar 2017 12:03:00 +0100</lastBuildDate>
-    <atom:link href="https://skarlso.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 16 Apr 2017 09:23:00 +0100</lastBuildDate>
+    
+	<atom:link href="https://skarlso.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 4</title>
+      <link>https://skarlso.github.io/2017/04/16/building-furnace-part-4/</link>
+      <pubDate>Sun, 16 Apr 2017 09:23:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2017/04/16/building-furnace-part-4/</guid>
+      <description>Intro Hi folks.
+Previously on this blog: Part 1. Part 2. Part 3.
+In this part we are going to talk about Unit Testing Furnace and how to work some magic with AWS and Go.
+Mock Stub Fake Dummy Canned  Unit testing in Go usually follows the Dependency Injection model of dealing with Mocks and Stubs.
+## DI
+Dependency Inject in short is one object supplying the dependencies of another object.</description>
+    </item>
     
     <item>
       <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 3</title>
-      <link>https://skarlso.github.io/2017/03/22/building-furnace-part-3</link>
+      <link>https://skarlso.github.io/2017/03/22/building-furnace-part-3/</link>
       <pubDate>Wed, 22 Mar 2017 12:03:00 +0100</pubDate>
       
-      <guid>https://skarlso.github.io/2017/03/22/building-furnace-part-3</guid>
-      <description>
-
-&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-
-&lt;p&gt;Hi folks.&lt;/p&gt;
-
-&lt;p&gt;Previously on this blog: &lt;a href=&#34;http://skarlso.github.io/2017/03/16/building-furnace-part-1/&#34;&gt;Part 1&lt;/a&gt;. &lt;a href=&#34;http://skarlso.github.io/2017/03/16/building-furnace-part-2/&#34;&gt;Part 2&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;In this part, I&amp;rsquo;m going to talk about the experimental plugin system of Furnace.&lt;/p&gt;
-
-&lt;h1 id=&#34;go-experimental-plugins&#34;&gt;Go Experimental Plugins&lt;/h1&gt;
-
-&lt;p&gt;Since Go 1.8 was released, an exciting and new feature was introduced called a Plug-in system. This system works with dynamic
-libraries built with a special switch to &lt;code&gt;go build&lt;/code&gt;. These libraries, &lt;code&gt;.so&lt;/code&gt; or &lt;code&gt;.dylib&lt;/code&gt; (later), are than loaded and once that
-succeeds, specific functions can be called from them (symbol resolution).&lt;/p&gt;
-
-&lt;p&gt;We will see how this works. For package information, visit the plugin packages Go doc page
-&lt;a href=&#34;https://tip.golang.org/pkg/plugin/&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h1 id=&#34;furnace-plugins&#34;&gt;Furnace Plugins&lt;/h1&gt;
-
-&lt;p&gt;So, what does furnace use plugins for? Furnace uses plugins to execute arbitery code in, currently, four given locations / events.&lt;/p&gt;
-
-&lt;p&gt;These are: &lt;code&gt;pre_create, post_create, pre_delete, post_delete&lt;/code&gt;. These events are called, as their name suggests, before and after
-the creation and deletion of the CloudFormation stack. It allows the user to execute some code without having to rebuild the whole
-project. It does that by defining a single entry point for the custom code called &lt;code&gt;RunPlugin&lt;/code&gt;. Any number of functions can be
-implemented, but the plugin MUST provide this single, exported function. Otherwise it will fail and ignore that plugin.&lt;/p&gt;
-
-&lt;h2 id=&#34;using-plugins&#34;&gt;Using Plugins&lt;/h2&gt;
-
-&lt;p&gt;It&amp;rsquo;s really easy to implement, and use these plugins. I&amp;rsquo;m not going into the detail of how to load them, because that is done by
-Furnace, but only how to write and use them.&lt;/p&gt;
-
-&lt;p&gt;To use a plugin, create a go file called: &lt;code&gt;0001_mailer.go&lt;/code&gt;. The &lt;code&gt;0001&lt;/code&gt; before it will define WHEN it&amp;rsquo;s executed.
-Having multiple plugins is completely okay. Execution of order however, depends on the names of the files.&lt;/p&gt;
-
-&lt;p&gt;Now, in 0001_mailer.post_create we would have something like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import &amp;quot;log&amp;quot;
-
-// RunPlugin runs the plugin.
-func RunPlugin() {
-	log.Println(&amp;quot;My Awesome Pre Create Plugin.&amp;quot;)
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Next step is the build this file to be a plugin library. Note: Right now, this only works on Linux!&lt;/p&gt;
-
-&lt;p&gt;To build this file run the following:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;go build -buildmode=plugin -o 0001_mailer.pre_create 0001_mailer.go
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The important part here is the extension of the file specified with &lt;code&gt;-o&lt;/code&gt;. It&amp;rsquo;s important because that&amp;rsquo;s how Furnace identifies
-what plugins it has to run.&lt;/p&gt;
-
-&lt;p&gt;Finally, copy this file to &lt;code&gt;~/.config/go-furnace/plugins&lt;/code&gt; and you are all set.&lt;/p&gt;
-
-&lt;h2 id=&#34;slack-notification-plugin&#34;&gt;Slack notification Plugin&lt;/h2&gt;
-
-&lt;p&gt;To demonstrate how a plugin could be used is if you need some kind of notification once a Stack is completed. For example, you
-might want to send a message to a Slack room. To do this, your plugin would look something like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package main
-
-import (
-	&amp;quot;fmt&amp;quot;
-	&amp;quot;os&amp;quot;
-
-	&amp;quot;github.com/nlopes/slack&amp;quot;
-)
-
-func RunPlugin() {
-	stackname := os.Getenv(&amp;quot;FURNACE_STACKNAME&amp;quot;)
-	api := slack.New(&amp;quot;YOUR_TOKEN_HERE&amp;quot;)
-	params := slack.PostMessageParameters{}
-	channelID, timestamp, err := api.PostMessage(&amp;quot;#general&amp;quot;, fmt.Sprintf(&amp;quot;Stack with name &#39;%s&#39; is Done.&amp;quot;, stackname), params)
-	if err != nil {
-		fmt.Printf(&amp;quot;%s\n&amp;quot;, err)
-		return
-	}
-	fmt.Printf(&amp;quot;Message successfully sent to channel %s at %s&amp;quot;, channelID, timestamp)
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Currently, Furnace has no ability to share information of the stack with an outside plugin. Thus &amp;lsquo;Done&amp;rsquo; could be anything from
-Rollback to Failed to CreateComplete.&lt;/p&gt;
-
-&lt;h1 id=&#34;closing-words&#34;&gt;Closing Words&lt;/h1&gt;
-
-&lt;p&gt;That&amp;rsquo;s it for plugins. Thanks very much for reading!
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2017/03/22/building-furnace-part-3/</guid>
+      <description>Intro Hi folks.
+Previously on this blog: Part 1. Part 2.
+In this part, I&amp;rsquo;m going to talk about the experimental plugin system of Furnace.
+Go Experimental Plugins Since Go 1.8 was released, an exciting and new feature was introduced called a Plug-in system. This system works with dynamic libraries built with a special switch to go build. These libraries, .so or .dylib (later), are than loaded and once that succeeds, specific functions can be called from them (symbol resolution).</description>
     </item>
     
     <item>
       <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2</title>
-      <link>https://skarlso.github.io/2017/03/19/building-furnace-part-2</link>
+      <link>https://skarlso.github.io/2017/03/19/building-furnace-part-2/</link>
       <pubDate>Sun, 19 Mar 2017 12:03:00 +0100</pubDate>
       
-      <guid>https://skarlso.github.io/2017/03/19/building-furnace-part-2</guid>
-      <description>
-
-&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-
-&lt;p&gt;Hi folks.&lt;/p&gt;
-
-&lt;p&gt;Previously on this blog: &lt;a href=&#34;http://skarlso.github.io/2017/03/16/building-furnace-part-1/&#34;&gt;Part 1&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;In this part, I&amp;rsquo;m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.&lt;/p&gt;
-
-&lt;h1 id=&#34;aws-sdk&#34;&gt;AWS SDK&lt;/h1&gt;
-
-&lt;p&gt;Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn&amp;rsquo;t make it less complex
-and less cryptic at times. I&amp;rsquo;m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time.&lt;/p&gt;
-
-&lt;h2 id=&#34;getting-started-and-developers-guide&#34;&gt;Getting Started and Developers Guide&lt;/h2&gt;
-
-&lt;p&gt;As always, and common from AWS, the documentation is top notch. There is a 141 pages long developer&amp;rsquo;s guide on the SDK containing
-a getting started section and an API reference. Go check it out. I&amp;rsquo;ll wait. &lt;a href=&#34;http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/aws-sdk-go-dg.pdf&#34;&gt;AWS Go SDK DG PDF&lt;/a&gt;. I will only talk about some gotchas and things I encountered, not the basics of the SDK.&lt;/p&gt;
-
-&lt;h2 id=&#34;aws-string-and-other-types&#34;&gt;aws.String and other types&lt;/h2&gt;
-
-&lt;p&gt;Something which is immediately visible once we take a look at the API is that everything is a pointer. Now, there are a
-tremendous amount of discussions about this, but I&amp;rsquo;m with Amazon. There are various reasons for it, but to list the most prominent
-ones:
-    - Type completion and compile time type safety.
-    - Values for AWS API calls have valid zero values, in addition to being optional, i.e. not being provided at all.
-    - Other option, like, empty interfaces with maps, or using zero values, or struct wrappers around every type, made life much
-       harder rather than easier or not possible at all.
-    - The AWS API is volatile. You never know when something gets to be optional, or required. Pointers made that decision easy.&lt;/p&gt;
-
-&lt;p&gt;There are good number of other discussions around this topic, for example: &lt;a href=&#34;https://github.com/aws/aws-sdk-go/issues/363&#34;&gt;AWS Go GitHub #363&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;In order to use primitives, AWS has helper functions like &lt;code&gt;aws.String&lt;/code&gt;. Because &amp;amp;&amp;ldquo;asdf&amp;rdquo; is not allowed, you would have to create a
-variable and use its address in situations where a string pointer is needed, for example, name of the stack. These primitive helpers will
-make in-lining possible. We&amp;rsquo;ll see later that they are used to a great extent. Pointers, however, make life a bit difficult when
-constructing Input structs and make for poor aesthetics.&lt;/p&gt;
-
-&lt;p&gt;This is something I&amp;rsquo;m returning in a test for stubbing a client call:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;		return &amp;amp;cloudformation.ListStackResourcesOutput{
-			StackResourceSummaries: []*cloudformation.StackResourceSummary{
-				{
-					ResourceType:       aws.String(&amp;quot;NoASG&amp;quot;),
-					PhysicalResourceId: aws.String(&amp;quot;arn::whatever&amp;quot;),
-				},
-			},
-		}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This doesn&amp;rsquo;t look so appealing, but one gets used to it quickly.&lt;/p&gt;
-
-&lt;h2 id=&#34;error-handling&#34;&gt;Error handling&lt;/h2&gt;
-
-&lt;p&gt;Errors also have their own types. An AWS error looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;if err != nil {
-    if awsErr, ok := err.(awserr.Error); ok {
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;First, we check if error is nil, than we type check if the error is an AWS error or something different. In the wild, this will
-look something like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			if awsErr.Code() != codedeploy.ErrCodeDeploymentGroupAlreadyExistsException {
-				log.Println(awsErr.Code())
-				return err
-			}
-			log.Println(&amp;quot;DeploymentGroup already exists. Nothing to do.&amp;quot;)
-			return nil
-		}
-		return err
-	}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;If it&amp;rsquo;s an AWS error, we can check further for the error code that it returns in order to identify what to handle, or what to throw
-on to the caller to a potential fatal. Here, I&amp;rsquo;m ignoring the AlreadyExistsException because, if it does, we just go on to a next
-action.&lt;/p&gt;
-
-&lt;h2 id=&#34;examples&#34;&gt;Examples&lt;/h2&gt;
-
-&lt;p&gt;Luckily the API doc is very mature. In most of the cases, they provide an example to an API call. These examples, however, from
-time to time provide more confusion than clarity. Take CloudFormation. For me, when I first glanced upon the
-description of the API it wasn&amp;rsquo;t immediately clear that the &lt;code&gt;TemplateBody&lt;/code&gt; was supposed to be the whole template, and that
-the rest of the fields were almost all optional settings. Or provided overrides in special cases.&lt;/p&gt;
-
-&lt;p&gt;And since the template is not an ordinary JAML or JSON file, I was looking for something that parses it into that the Struct I
-was going to use. After some time, and digging, I realized that I didn&amp;rsquo;t need that, and that I just need to read in the template,
-define some extra parameters, and give the TemplateBody the whole of the template. The parameters defined by the CloudFormation
-template where extracted for me by &lt;code&gt;ValidateTemplate&lt;/code&gt; API call which returned all of them in a convenient
-&lt;code&gt;[]*cloudformation.Parameter&lt;/code&gt; slice. These things are not described in the document or visible from the examples. I mainly found
-them through playing with the API and focused experimentation.&lt;/p&gt;
-
-&lt;h2 id=&#34;waiters&#34;&gt;Waiters&lt;/h2&gt;
-
-&lt;p&gt;From other SDK implementations, we got used to Waiters. These handy methods wait for a service to become available or for certain
-situations to take in effect, like a Stage being &lt;code&gt;CREATE_COMPLETE&lt;/code&gt;. The Go waiters, however, don&amp;rsquo;t allow for callback to be fired,
-or for running blocks, like the ruby SDK does. For this, I wrote a handy little waiter for myself, which outputs a spinner to see
-that we are currently waiting for something and not frozen in time. This waiter looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// WaitForFunctionWithStatusOutput waits for a function to complete its action.
-func WaitForFunctionWithStatusOutput(state string, freq int, f func()) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	done := make(chan bool)
-	go func() {
-		defer wg.Done()
-		f()
-		done &amp;lt;- true
-	}()
-	go func() {
-		counter := 0
-		for {
-			counter = (counter + 1) % len(Spinners[config.SPINNER])
-			fmt.Printf(&amp;quot;\r[%s] Waiting for state: %s&amp;quot;, yellow(string(Spinners[config.SPINNER][counter])), red(state))
-			time.Sleep(time.Duration(freq) * time.Second)
-			select {
-			case &amp;lt;-done:
-				fmt.Println()
-				break
-			default:
-			}
-		}
-	}()
-
-	wg.Wait()
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And I&amp;rsquo;m calling it with the following method:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;	utils.WaitForFunctionWithStatusOutput(&amp;quot;DELETE_COMPLETE&amp;quot;, config.WAITFREQUENCY, func() {
-		cfClient.Client.WaitUntilStackDeleteComplete(describeStackInput)
-	})
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This would output these lines to the console:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;[\] Waiting for state: DELETE_COMPLETE
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The spinner can be configured to be one of the following types:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;var Spinners = []string{`←↖↑↗→↘↓↙`,
-	`▁▃▄▅▆▇█▇▆▅▄▃`,
-	`┤┘┴└├┌┬┐`,
-	`◰◳◲◱`,
-	`◴◷◶◵`,
-	`◐◓◑◒`,
-	`⣾⣽⣻⢿⡿⣟⣯⣷`,
-	`|/-\`}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Handy.&lt;/p&gt;
-
-&lt;p&gt;And with that, let&amp;rsquo;s dive into the basics of Furnace.&lt;/p&gt;
-
-&lt;h1 id=&#34;furnace&#34;&gt;Furnace&lt;/h1&gt;
-
-&lt;h2 id=&#34;directory-structure-and-packages&#34;&gt;Directory Structure and Packages&lt;/h2&gt;
-
-&lt;p&gt;Furnace is divided into three main packages.&lt;/p&gt;
-
-&lt;h3 id=&#34;commands&#34;&gt;commands&lt;/h3&gt;
-
-&lt;p&gt;Commands package is where the gist of Furnace lies. These commands represent the commands which are used through the CLI. Each
-file has the implementation for one command. The structure is devised by this library: &lt;a href=&#34;https://github.com/Yitsushi/go-commander&#34;&gt;Yitsushi&amp;rsquo;s Command Library&lt;/a&gt;.
-As of the writing of this post, the following commands are available:
-- create - Creates a stack using the CloudFormation template file under ~/.config/go-furnace
-- delete - Deletes the created Stack. Doesn&amp;rsquo;t do anything if the stack doesn&amp;rsquo;t exist
-- push - Pushes an application to a stack
-- status - Displays information about the stack
-- delete-application - Deletes the CodeDeploy application and deployment group created by &lt;code&gt;push&lt;/code&gt;&lt;/p&gt;
-
-&lt;p&gt;These commands represent the heart of furnace. I would like to keep these to a minimum, but I do plan on adding more, like
-&lt;code&gt;update&lt;/code&gt; and &lt;code&gt;rollout&lt;/code&gt;. Further details and help messages on these commands can be obtained by running: &lt;code&gt;./furnace help&lt;/code&gt; or
-&lt;code&gt;./furnace help create&lt;/code&gt;.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;❯ ./furnace help push
-Usage: furnace push appName [-s3]
-
-Push a version of the application to a stack
-
-Examples:
-  furnace push
-  furnace push appName
-  furnace push appName -s3
-  furnace push -s3
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;h3 id=&#34;config&#34;&gt;config&lt;/h3&gt;
-
-&lt;p&gt;Contains the configuration loader and some project wide defaults which are as follows:
-- Events for the plugin system - &lt;code&gt;pre-create&lt;/code&gt;, &lt;code&gt;post-create&lt;/code&gt;, &lt;code&gt;pre-delete&lt;/code&gt;, &lt;code&gt;post-delete&lt;/code&gt;.
-- CodeDeploy role name - &lt;code&gt;CodeDeployServiceRole&lt;/code&gt;. This is used if none is provided to locate the CodeDeploy IAM role.
-- Wait frequency - Is the setting which controls how long the waiter should sleep in between status updates. Default is &lt;code&gt;1s&lt;/code&gt;.
-- Spinner - Is just the number of the spinner to use.
-- Plugin registry - Is a map of functions to run for the above events.&lt;/p&gt;
-
-&lt;p&gt;Further more, config loads the CloudFormation template and checks if some necessary settings are present in the environment, exp:
-the configuration folder under &lt;code&gt;~/.config/go-furnace&lt;/code&gt;.&lt;/p&gt;
-
-&lt;h3 id=&#34;utils&#34;&gt;utils&lt;/h3&gt;
-
-&lt;p&gt;These are some helper functions which are used throughout the project. To list them:
-- error_handler - Is a simple error handler. I&amp;rsquo;m thinking of refactoring this one to some saner version.
-- spinner - Sets up which spinner to use in the waiter function.
-- waiter - Contains the verbose waiter introduced above under &lt;a href=&#34;##Waiters&#34;&gt;Waiters&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h2 id=&#34;configuration-and-environment-variables&#34;&gt;Configuration and Environment variables&lt;/h2&gt;
-
-&lt;p&gt;Furnace is a Go application, thus it doesn&amp;rsquo;t have the luxury of Ruby or Python where the configuration files are usually bundled
-with the app. But, it does have a standard for it. Usually, configurations reside in either of these two locations. Environment
-Properties or|and configuration files under a fixed location ( i.e. HOME/.config/app-name ). Furnace employs both.&lt;/p&gt;
-
-&lt;p&gt;Settings like, region, stack name, enable plugin system, are under environment properties ( though this can change ), while the
-CloudFormation template lives under &lt;code&gt;~/.config/go-furnace/&lt;/code&gt;. Lastly it assumes some things, like the Deployment IAM role just
-exists under the used AWS account. All these are loaded and handled by the config package described above.&lt;/p&gt;
-
-&lt;h2 id=&#34;usage&#34;&gt;Usage&lt;/h2&gt;
-
-&lt;p&gt;A typical scenario for Furnace would be the following:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Setup your CloudFormation template or use the one provided. The one provided sets up a highly available and self healing setting
-using Auto-Scaling and Load-Balancing with a single application instance. Edit this template to your liking than copy it to
-&lt;code&gt;~/.config/go-furnace&lt;/code&gt;.&lt;/li&gt;
-&lt;li&gt;Create the configured stack with &lt;code&gt;./furnace create&lt;/code&gt;.&lt;/li&gt;
-&lt;li&gt;Create will ask for the parameters defined in the template. If defaults are setup, simply hitting enter will use these defaults.
-Take note, that the provided template sets up SSH access via a provided key. If that key is not present in CF, you won&amp;rsquo;t be able
-to SSH into the created instance.&lt;/li&gt;
-&lt;li&gt;Once the stack is completed, the application is ready to be pushed. To do this, run: &lt;code&gt;./furnace push&lt;/code&gt;. This will locate the
-appropriate version of the app from S3 or GitHub and push that version to the instances in the Auto-Scaling group. To all of
-them.&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&#34;general-practices-applied-to-the-project&#34;&gt;General Practices Applied to the Project&lt;/h2&gt;
-
-&lt;h3 id=&#34;commands-1&#34;&gt;Commands&lt;/h3&gt;
-
-&lt;p&gt;For each command the main entry point is the &lt;code&gt;execute&lt;/code&gt; function. These functions are usually calling out the small chunks of
-distributed methods. Logic was kept to a bare minimum ( probably could be simplified even further ) in the execute functions
-mostly for testability and the likes. We will see that in a followup post.&lt;/p&gt;
-
-&lt;h3 id=&#34;errors&#34;&gt;Errors&lt;/h3&gt;
-
-&lt;p&gt;Errors are handled immediately and usually through a fatal. If any error occurs than the application is halted. In followup
-versions this might become more granular. I.e. don&amp;rsquo;t immediately stop the world, maybe try to recover, or create a Poller or
-Re-Tryer, which tries a call again for a configured amount of times.&lt;/p&gt;
-
-&lt;h3 id=&#34;output-colors&#34;&gt;Output colors&lt;/h3&gt;
-
-&lt;p&gt;Not that important, but still&amp;hellip; Aesthetics. Displaying data to the console in a nice way gives it some extra flare.&lt;/p&gt;
-
-&lt;h3 id=&#34;makefile&#34;&gt;Makefile&lt;/h3&gt;
-
-&lt;p&gt;This project works with a Makefile for various reasons. Later on, once the project might become more complex, a Makefile makes it
-really easy to handle different ways of packaging the application. Currently, for example, it provides a &lt;code&gt;linux&lt;/code&gt; target which will
-make Go build the project for Linux architecture on any other Architecture i.e. cross-compiling.&lt;/p&gt;
-
-&lt;p&gt;It also provides an easy way to run unit tests with &lt;code&gt;make test&lt;/code&gt; and installing with &lt;code&gt;make &amp;amp;&amp;amp; make install&lt;/code&gt;.&lt;/p&gt;
-
-&lt;h1 id=&#34;closing-words&#34;&gt;Closing Words&lt;/h1&gt;
-
-&lt;p&gt;That is all for Part 2. Join me in Part 3 where I will talk about the experimental Plugin system that Furnace employs.&lt;/p&gt;
-
-&lt;p&gt;Thank you for reading!
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2017/03/19/building-furnace-part-2/</guid>
+      <description>Intro Hi folks.
+Previously on this blog: Part 1.
+In this part, I&amp;rsquo;m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.
+AWS SDK Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn&amp;rsquo;t make it less complex and less cryptic at times. I&amp;rsquo;m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time.</description>
     </item>
     
     <item>
       <title>Testing new Hugo if posts are generated properly</title>
-      <link>https://skarlso.github.io/2017/03/17/test-new-hugo</link>
+      <link>https://skarlso.github.io/2017/03/17/test-new-hugo/</link>
       <pubDate>Fri, 17 Mar 2017 09:09:00 +0100</pubDate>
       
-      <guid>https://skarlso.github.io/2017/03/17/test-new-hugo</guid>
-      <description>&lt;p&gt;Testing.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2017/03/17/test-new-hugo/</guid>
+      <description>Testing.</description>
     </item>
     
     <item>
       <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1</title>
-      <link>https://skarlso.github.io/2017/03/16/building-furnace-part-1</link>
+      <link>https://skarlso.github.io/2017/03/16/building-furnace-part-1/</link>
       <pubDate>Thu, 16 Mar 2017 21:49:00 +0100</pubDate>
       
-      <guid>https://skarlso.github.io/2017/03/16/building-furnace-part-1</guid>
-      <description>
-
-&lt;h1 id=&#34;building-furnace-part-1&#34;&gt;Building Furnace: Part 1&lt;/h1&gt;
-
-&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-
-&lt;p&gt;Hi folks.&lt;/p&gt;
-
-&lt;p&gt;This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go,
-with AWS. Including Unit testing and a experimental plugin feature.&lt;/p&gt;
-
-&lt;p&gt;The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar
-with them. The second part will talk about the Go SDK and the project structure itself, how it can be used, improved, and how it can
-help in everyday life. The third part will talk about the experimental plugin system, and finally, we will tackle unit testing AWS
-in Go.&lt;/p&gt;
-
-&lt;p&gt;Let&amp;rsquo;s begin, shall we?&lt;/p&gt;
-
-&lt;h1 id=&#34;aws&#34;&gt;AWS&lt;/h1&gt;
-
-&lt;h2 id=&#34;cloudformation&#34;&gt;CloudFormation&lt;/h2&gt;
-
-&lt;p&gt;If you haven&amp;rsquo;t yet read about, or know off, AWS&amp;rsquo; CloudFormation service, you can either go ahead and read the &lt;a href=&#34;https://aws.amazon.com/cloudformation/&#34;&gt;Documentation&lt;/a&gt;
-or read on for a very quick summary. If you are familiar with CF, you should skip ahead to &lt;a href=&#34;##CodeDeploy&#34;&gt;CodeDeploy&lt;/a&gt; section.&lt;/p&gt;
-
-&lt;p&gt;CF is a service which bundles together other AWS services (for example: EC2, S3, ELB, ASG, RDS) into one, easily manageable stack.
-After a stack has been created, all the resources can be handled as one, located, tagged and used via CF specific console commands.
-It&amp;rsquo;s also possible to define any number of parameters, so a stack can actually be very versatile. A parameter can be anything, from
-SSH IP restriction to KeyPair names and list of tags to create or in what region the stack will be in.&lt;/p&gt;
-
-&lt;p&gt;To describe how these parts fit together, one must use a CloudFormation Template file which is either in JSON or in
-YAML format. A simple example looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;    Parameters:
-      KeyName:
-        Description: The EC2 Key Pair to allow SSH access to the instance
-        Type: AWS::EC2::KeyPair::KeyName
-    Resources:
-      Ec2Instance:
-        Type: AWS::EC2::Instance
-        Properties:
-          SecurityGroups:
-          - Ref: InstanceSecurityGroup
-          - MyExistingSecurityGroup
-          KeyName:
-            Ref: KeyName
-          ImageId: ami-7a11e213
-      InstanceSecurityGroup:
-        Type: AWS::EC2::SecurityGroup
-        Properties:
-          GroupDescription: Enable SSH access via port 22
-          SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort: &#39;22&#39;
-            ToPort: &#39;22&#39;
-            CidrIp: 0.0.0.0/0
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;There are a myriad of these template samples &lt;a href=&#34;https://aws.amazon.com/cloudformation/aws-cloudformation-templates/&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;I&amp;rsquo;m not going to explain this in too much detail. Parameters define the parameters, and resources define all the AWS services which
-we would like to configure. Here we can see, that we are creating an EC2 instance with a custom Security Group plus and already
-existing security group. ImageId is the AMI which will be used for the EC2 instance. The InstanceSecurityGroup is only defining
-some SSH access to the instance.&lt;/p&gt;
-
-&lt;p&gt;That is pretty much it. This can become bloated relatively quickly once, VPCs, ELBs, and ASGs come into play. And CloudFormation
-templates can also contain simple logical switches, like, conditions, ref for variables, maps and other shenanigans.&lt;/p&gt;
-
-&lt;p&gt;For example consider this part in the above example:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;      KeyName:
-        Ref: KeyName
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Here, we use the &lt;code&gt;KeyName&lt;/code&gt; parameter as a Reference Value which will be interpolated to the real value, or the default one, as the
-template gets processed.&lt;/p&gt;
-
-&lt;h2 id=&#34;codedeploy&#34;&gt;CodeDeploy&lt;/h2&gt;
-
-&lt;p&gt;If you haven&amp;rsquo;t heard about CodeDeploy yet, please browse the relevant &lt;a href=&#34;http://docs.aws.amazon.com/codedeploy/latest/userguide/welcome.html&#34;&gt;Documentation&lt;/a&gt;
-or follow along for a &amp;ldquo;quick&amp;rdquo; description.&lt;/p&gt;
-
-&lt;p&gt;CodeDeploy just does what the name says. It deploys code. Any kind of code, as long as the deployment process is described in a
-file called &lt;code&gt;appspec.yml&lt;/code&gt;. It can be easy as coping a file to a specific location or incredibly complex with builds of various
-kinds.&lt;/p&gt;
-
-&lt;p&gt;For a simple example look at this configuration:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;    version: 0.0
-    os: linux
-    files:
-      - source: /index.html
-        destination: /var/www/html/
-      - source: /healthy.html
-        destination: /var/www/html/
-    hooks:
-      BeforeInstall:
-        - location: scripts/install_dependencies
-          timeout: 300
-          runas: root
-        - location: scripts/clean_up
-          timeout: 300
-          runas: root
-        - location: scripts/start_server
-          timeout: 300
-          runas: root
-      ApplicationStop:
-        - location: scripts/stop_server
-          timeout: 300
-          runas: root
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;CodeDeploy applications have hooks and life-cycle events which can be used to control the deployment process of an like, starting
-the WebServer; making sure files are in the right location; copying files, running configuration management software like puppet,
-ansible or chef; etc, etc.&lt;/p&gt;
-
-&lt;p&gt;What can be done in an &lt;code&gt;appspec.yml&lt;/code&gt; file is described here: &lt;a href=&#34;http://docs.aws.amazon.com/codedeploy/latest/userguide/app-spec-ref.html&#34;&gt;Appspec Reference Documentation&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Deployment happens in one of two ways:&lt;/p&gt;
-
-&lt;h3 id=&#34;github&#34;&gt;GitHub&lt;/h3&gt;
-
-&lt;p&gt;If the preferred way to deploy the application is from GitHub a commit hash must be used to identify which &amp;ldquo;version&amp;rdquo; of the
-application is to be deployed. For example:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;    rev = &amp;amp;codedeploy.RevisionLocation{
-        GitHubLocation: &amp;amp;codedeploy.GitHubLocation{
-            CommitId:   aws.String(&amp;quot;kajdf94j0f9k309klksjdfkj&amp;quot;),
-            Repository: aws.String(&amp;quot;Skarlso/furnace-codedeploy-app&amp;quot;),
-        },
-        RevisionType: aws.String(&amp;quot;GitHub&amp;quot;),
-    }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Commit Id is the hash of the latest release and repository is the full account/repository pointing to the application.&lt;/p&gt;
-
-&lt;h3 id=&#34;s3&#34;&gt;S3&lt;/h3&gt;
-
-&lt;p&gt;The second way is to use an S3 bucket. The bucket will contain an archived version of the application with a given extension. I&amp;rsquo;m
-saying given extension, because it has to be specified like this (and can be either &amp;lsquo;zip&amp;rsquo;, or &amp;lsquo;tar&amp;rsquo; or &amp;lsquo;tgz&amp;rsquo;):&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;    rev = &amp;amp;codedeploy.RevisionLocation{
-        S3Location: &amp;amp;codedeploy.S3Location{
-            Bucket:     aws.String(&amp;quot;my_codedeploy_bucket&amp;quot;),
-            BundleType: aws.String(&amp;quot;zip&amp;quot;),
-            Key:        aws.String(&amp;quot;my_awesome_app&amp;quot;),
-            Version:    aws.String(&amp;quot;VersionId&amp;quot;),
-        },
-        RevisionType: aws.String(&amp;quot;S3&amp;quot;),
-    }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Here, we specify the bucket name, the extension, the name of the file and an optional version id, which can be ignored.&lt;/p&gt;
-
-&lt;h3 id=&#34;deploying&#34;&gt;Deploying&lt;/h3&gt;
-
-&lt;p&gt;So how does code deploy get either of the applications to our EC2 instances? It uses an agent which is running on all of the
-instances that we create. In order to do this, the agent needs to be present on our instance. For linux this can be achieved with
-the following UserData (UserData in CF is the equivalent of a bootsrap script):&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;    &amp;quot;UserData&amp;quot; : {
-        &amp;quot;Fn::Base64&amp;quot; : { &amp;quot;Fn::Join&amp;quot; : [ &amp;quot;\n&amp;quot;, [
-            &amp;quot;#!/bin/bash -v&amp;quot;,
-            &amp;quot;sudo yum -y update&amp;quot;,
-            &amp;quot;sudo yum -y install ruby wget&amp;quot;,
-            &amp;quot;cd /home/ec2-user/&amp;quot;,
-            &amp;quot;wget https://aws-codedeploy-eu-central-1.s3.amazonaws.com/latest/install&amp;quot;,
-            &amp;quot;chmod +x ./install&amp;quot;,
-            &amp;quot;sudo ./install auto&amp;quot;,
-            &amp;quot;sudo service codedeploy-agent start&amp;quot;,
-        ] ] }
-    }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;A simple user data configuration in the CloudFormation template will make sure that every instance that we create will have the
-CodeDeploy agent running and waiting for instructions. This agent is self updating. Which can cause some trouble if AWS releases a
-broken agent. However unlikely, it can happen. Never the less, once installed, it&amp;rsquo;s no longer a concern to be bothered with.&lt;/p&gt;
-
-&lt;p&gt;It communications on HTTPS port 443.&lt;/p&gt;
-
-&lt;p&gt;CodeDeploy identifies instances which need to be updated according to our preferences, by tagging the EC2 and Auto Scaling groups.
-Tagging happens in the CloudFormation template through the AutoScalingGroup settings like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;    &amp;quot;Tags&amp;quot; : [
-        {
-            &amp;quot;Key&amp;quot; : &amp;quot;fu_stage&amp;quot;,
-            &amp;quot;Value&amp;quot; : { &amp;quot;Ref&amp;quot;: &amp;quot;AWS::StackName&amp;quot; },
-            &amp;quot;PropagateAtLaunch&amp;quot; : true
-        }
-    ]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This will give the EC2 instance a tag called &lt;code&gt;fu_stage&lt;/code&gt; with value equaling to the name of the stack. Once this is done, CodeDeploy
-looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;    params := &amp;amp;codedeploy.CreateDeploymentInput{
-        ApplicationName:               aws.String(appName),
-        IgnoreApplicationStopFailures: aws.Bool(true),
-        DeploymentGroupName:           aws.String(appName + &amp;quot;DeploymentGroup&amp;quot;),
-        Revision:                      revisionLocation(),
-        TargetInstances: &amp;amp;codedeploy.TargetInstances{
-            AutoScalingGroups: []*string{
-                aws.String(&amp;quot;AutoScalingGroupPhysicalID&amp;quot;),
-            },
-            TagFilters: []*codedeploy.EC2TagFilter{
-                {
-                    Key:   aws.String(&amp;quot;fu_stage&amp;quot;),
-                    Type:  aws.String(&amp;quot;KEY_AND_VALUE&amp;quot;),
-                    Value: aws.String(config.STACKNAME),
-                },
-            },
-        },
-        UpdateOutdatedInstancesOnly: aws.Bool(false),
-    }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;CreateDeploymentInput is the entire parameter list that is needed in order to identify instances to deploy code to. We can see
-here that it looks for an AutoScalingGroup by Physical Id and the tag labeled &lt;code&gt;fu_stage&lt;/code&gt;. Once found, it will use
-&lt;code&gt;UpdateOutdatedInstancesOnly&lt;/code&gt; to determine if an instance needs to be updated or not. Set to false means, it always updates.&lt;/p&gt;
-
-&lt;h1 id=&#34;furnace&#34;&gt;Furnace&lt;/h1&gt;
-
-&lt;p&gt;Where does &lt;a href=&#34;https://github.com/Skarlso/go-furnace&#34;&gt;Furnace&lt;/a&gt; fit in, in all of this? Furnace provides a very easy mechanism to create,
-delete and push code to a CloudFormation stack using CodeDeploy, and a couple of environment properties. Furnace &lt;code&gt;create&lt;/code&gt; will
-create a CloudFormation stack according to the provided template, all the while asking for the parameters defined in it for
-flexibility. &lt;code&gt;delete&lt;/code&gt; will remove the stack and all affiliated resources except for the created CodeDeploy application. For that,
-there is &lt;code&gt;delete-application&lt;/code&gt;. &lt;code&gt;status&lt;/code&gt; will display information about the stack: Outputs, Parameters, Id, Name, and status.
-Something like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;    2017/03/16 21:14:37 Stack state is:  {
-      Capabilities: [&amp;quot;CAPABILITY_IAM&amp;quot;],
-      CreationTime: 2017-03-16 20:09:38.036 +0000 UTC,
-      DisableRollback: false,
-      Outputs: [{
-          Description: &amp;quot;URL of the website&amp;quot;,
-          OutputKey: &amp;quot;URL&amp;quot;,
-          OutputValue: &amp;quot;http://FurnaceSt-ElasticL-ID.eu-central-1.elb.amazonaws.com&amp;quot;
-        }],
-      Parameters: [
-        {
-          ParameterKey: &amp;quot;KeyName&amp;quot;,
-          ParameterValue: &amp;quot;UserKeyPair&amp;quot;
-        },
-        {
-          ParameterKey: &amp;quot;SSHLocation&amp;quot;,
-          ParameterValue: &amp;quot;0.0.0.0/0&amp;quot;
-        },
-        {
-          ParameterKey: &amp;quot;CodeDeployBucket&amp;quot;,
-          ParameterValue: &amp;quot;None&amp;quot;
-        },
-        {
-          ParameterKey: &amp;quot;InstanceType&amp;quot;,
-          ParameterValue: &amp;quot;t2.nano&amp;quot;
-        }
-      ],
-      StackId: &amp;quot;arn:aws:cloudformation:eu-central-1:9999999999999:stack/FurnaceStack/asdfadsf-adsfa3-432d-a-fdasdf&amp;quot;,
-      StackName: &amp;quot;FurnaceStack&amp;quot;,
-      StackStatus: &amp;quot;CREATE_COMPLETE&amp;quot;
-    }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;( This will later be improved to include created resources as well. )&lt;/p&gt;
-
-&lt;p&gt;Once the stack is &lt;code&gt;CREATE_COMPLETE&lt;/code&gt; a simple &lt;code&gt;push&lt;/code&gt; will deliver our application on each instance in the stack. We will get into
-more detail about how these commands are working in Part 2 of this series.&lt;/p&gt;
-
-&lt;h1 id=&#34;final-words&#34;&gt;Final Words&lt;/h1&gt;
-
-&lt;p&gt;This is it for now.&lt;/p&gt;
-
-&lt;p&gt;Join me next time when I will talk about the AWS Go SDK and its intricacies and we will start to look at the basics of Furnace.&lt;/p&gt;
-
-&lt;p&gt;As always,
-Thanks for reading!
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2017/03/16/building-furnace-part-1/</guid>
+      <description>Building Furnace: Part 1 Intro Hi folks.
+This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.
+The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them. The second part will talk about the Go SDK and the project structure itself, how it can be used, improved, and how it can help in everyday life.</description>
     </item>
     
     <item>
       <title>Images on older posts</title>
-      <link>https://skarlso.github.io/2017/03/03/images-on-old-posts</link>
+      <link>https://skarlso.github.io/2017/03/03/images-on-old-posts/</link>
       <pubDate>Fri, 03 Mar 2017 18:20:00 +0100</pubDate>
       
-      <guid>https://skarlso.github.io/2017/03/03/images-on-old-posts</guid>
-      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
-
-&lt;p&gt;Just a quick headsup, that older posts and images, may have been lost unfortunately, because I made the terrible mistake, when I
-migrated over from my old blog, that I forgot to download all the images from the remote host.&lt;/p&gt;
-
-&lt;p&gt;For lack of options, I deleted the images. :/ Sorry for the inconvencience!&lt;/p&gt;
-
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2017/03/03/images-on-old-posts/</guid>
+      <description>Hi folks.
+Just a quick headsup, that older posts and images, may have been lost unfortunately, because I made the terrible mistake, when I migrated over from my old blog, that I forgot to download all the images from the remote host.
+For lack of options, I deleted the images. :/ Sorry for the inconvencience!
+Gergely.</description>
     </item>
     
     <item>
       <title>How to HTTPS with Hugo LetsEncrypt and HAProxy</title>
-      <link>https://skarlso.github.io/2017/02/15/how-to-https-with-hugo-letsencrypt-haproxy</link>
+      <link>https://skarlso.github.io/2017/02/15/how-to-https-with-hugo-letsencrypt-haproxy/</link>
       <pubDate>Wed, 15 Feb 2017 19:20:00 +0100</pubDate>
       
-      <guid>https://skarlso.github.io/2017/02/15/how-to-https-with-hugo-letsencrypt-haproxy</guid>
-      <description>
-
-&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-
-&lt;p&gt;Hi folks.&lt;/p&gt;
-
-&lt;p&gt;Today, I would like to write about how to do HTTPS for a website, without the need to buy a certificate and set it up via your DNS provider. Let&amp;rsquo;s begin.&lt;/p&gt;
-
-&lt;h2 id=&#34;abstract&#34;&gt;Abstract&lt;/h2&gt;
-
-&lt;p&gt;What you will achieve by the end of this post:
-- Every call to HTTP will be redirected to HTTPS via &lt;a href=&#34;https://www.haproxy.com&#34;&gt;haproxy&lt;/a&gt;.
-- HTTPS will be served with Haproxy and &lt;a href=&#34;https://letsencrypt.org&#34;&gt;LetsEncrypt&lt;/a&gt; as the Certificate provider.
-- Automatically update the certificate before its expiration.
-- No need for IPTable rules to route 8080 to 80.
-- Traffic to and from your page will be encrypted.
-- This all will cost you nothing.&lt;/p&gt;
-
-&lt;p&gt;I will use a static website generator for this called &lt;a href=&#34;https://gohugo.io&#34;&gt;Hugo&lt;/a&gt; which, if you know me, is my favorite generator tool. These instructions
-are for haproxy and hugo, if you wish to use apache and nginx for example, you&amp;rsquo;ll have to dig for the corresponding settings for letsencrypt and certbot.&lt;/p&gt;
-
-&lt;h1 id=&#34;what-you-will-need&#34;&gt;What You Will Need&lt;/h1&gt;
-
-&lt;h2 id=&#34;hugo&#34;&gt;Hugo&lt;/h2&gt;
-
-&lt;p&gt;You will need hugo, which can be downloaded from here: &lt;a href=&#34;https://gohugo.io&#34;&gt;Hugo&lt;/a&gt;. A simple website will be enough. For themes, you can take a look
-at the humongous list located here: &lt;a href=&#34;http://themes.gohugo.io/&#34;&gt;HugoThemes&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h2 id=&#34;haproxy&#34;&gt;Haproxy&lt;/h2&gt;
-
-&lt;p&gt;Haproxy can be found here: &lt;a href=&#34;https://www.haproxy.com&#34;&gt;Haproxy&lt;/a&gt;. There are a number of options to install haproxy. I chose a simple
-&lt;code&gt;apt-get install haproxy&lt;/code&gt;.&lt;/p&gt;
-
-&lt;h2 id=&#34;let-s-encrypt&#34;&gt;Let&amp;rsquo;s Encrypt&lt;/h2&gt;
-
-&lt;p&gt;Information about Let&amp;rsquo;s Encrypt can be found on their website here: &lt;a href=&#34;https://letsencrypt.org&#34;&gt;Let&amp;rsquo;s Encrypt&lt;/a&gt;.
-Let&amp;rsquo;s Encrypt&amp;rsquo;s client is now called &lt;a href=&#34;https://certbot.eff.org/&#34;&gt;Certbot&lt;/a&gt; which is used to generate the certificates. To get the latest code
-you either clone the repository &lt;a href=&#34;https://github.com/certbot/certbot&#34;&gt;Certbot&lt;/a&gt;, or use an auto downloader:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;user@webserver:~$ wget https://dl.eff.org/certbot-auto
-user@webserver:~$ chmod a+x ./certbot-auto
-user@webserver:~$ ./certbot-auto --help
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Either way, I&amp;rsquo;m using the current latest version: &lt;em&gt;v0.11.1&lt;/em&gt;.&lt;/p&gt;
-
-&lt;h2 id=&#34;sudo&#34;&gt;Sudo&lt;/h2&gt;
-
-&lt;p&gt;This goes without saying, but that these operations will require you to have sudo privileges. I suggest staying in sudo for ease of use.
-This means that the commands, I&amp;rsquo;ll write here, will assume you are in &lt;code&gt;sudo su&lt;/code&gt; mode thus no &lt;code&gt;sudo&lt;/code&gt; prefix will be used.&lt;/p&gt;
-
-&lt;h2 id=&#34;portforwarding&#34;&gt;Portforwarding&lt;/h2&gt;
-
-&lt;p&gt;In order for your website to work under https this guide assumes that you have port &lt;em&gt;80&lt;/em&gt; and &lt;em&gt;443&lt;/em&gt; open on your router / network security group.&lt;/p&gt;
-
-&lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
-
-&lt;h2 id=&#34;single-server-environment&#34;&gt;Single Server Environment&lt;/h2&gt;
-
-&lt;p&gt;It is possible for haproxy, certbot and your website to run on designated servers. Haproxy&amp;rsquo;s abilities allows to define multiple server sources.
-In this guide, my haproxy, website and certbot will all run on the same server; thus redirecting to 127.0.0.1 and local ips. This is more
-convenient, because otherwise the haproxy IP would have to be a permanent local/remote ip. Or an automated script would have to be setup which is
-notified upon IP change and updates the ip records.&lt;/p&gt;
-
-&lt;h2 id=&#34;creating-a-certificate&#34;&gt;Creating a Certificate&lt;/h2&gt;
-
-&lt;p&gt;Diving in, the first thing you will require is a certificate. A certificate will allow for encrypted traffic and an authenticated website.
-Let&amp;rsquo;s Encrypt which is basically functioning as an independent, free, automated CA (Certificate Authority). Usually,
-the process would be to pay a CA to give you a signed, generated certificate for your website, and you would have to set that up with your DNS
-provider. Let&amp;rsquo;s Encrypt has that all automated, and free of any charge. Neat.&lt;/p&gt;
-
-&lt;h3 id=&#34;certbot&#34;&gt;Certbot&lt;/h3&gt;
-
-&lt;p&gt;So let&amp;rsquo;s get started. Clone the repository into &lt;code&gt;/opt/letsencrypt&lt;/code&gt; for further usage.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;git clone https://github.com/certbot/certbot /opt/letsencrypt
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;h3 id=&#34;generating-the-certificate&#34;&gt;Generating the certificate&lt;/h3&gt;
-
-&lt;p&gt;Make sure that there is nothing listening on ports: 80, 443. To list usage:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;netstat -nlt | grep &#39;:80\s&#39;
-netstat -nlt | grep &#39;:443\s&#39;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Kill everything that might be on these ports, like apache2 and httpd. These will be used by haproxy and certbot for challenges
-and redirecting traffic.&lt;/p&gt;
-
-&lt;p&gt;You will be creating a &lt;a href=&#34;https://certbot.eff.org/docs/using.html#standalone&#34;&gt;standalone&lt;/a&gt; certificate. This is the reason we need port 80 and 443 open.
-Run certbot by defining the &lt;code&gt;certonly&lt;/code&gt; and &lt;code&gt;--standalone&lt;/code&gt; flags. For domain validation you are going to use port 443, tls-sni-01 challenge.
-The whole command looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;cd /opt/letsencrypt
-./certbot-auto certonly --standalon -d example.com -d www.example.com
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;If this displays something like, &amp;ldquo;couldn&amp;rsquo;t connect&amp;rdquo; you probably still have something running on a port it tries to use. The
-generated certificate will be located under &lt;code&gt;/etc/letsencrypt/archive&lt;/code&gt; and &lt;code&gt;/etc/letsencrypt/keys&lt;/code&gt; while &lt;code&gt;/etc/letsencrypt/live&lt;/code&gt; is
-a symlink to the latest version of the cert. It&amp;rsquo;s wise to not copy these away from here, since the live link is always updated to the latest version.
-Our script will handle haproxy, which requires one cert file made from privkey + fullchain|.pem files.&lt;/p&gt;
-
-&lt;h3 id=&#34;setup-auto-renewal&#34;&gt;Setup Auto-Renewal&lt;/h3&gt;
-
-&lt;p&gt;Let&amp;rsquo;s Encrypt issues short lived certificates (90 days). In order to not have to do this procedure every 89 days, certbot provides a nifty
-command called &lt;code&gt;renew&lt;/code&gt;. However, for the cert to be generated, the port 443 has to be open. This means, haproxy needs to be stopped before
-doing the renew. Now, you COULD write a script which stops it, and after the certificate has been renewed, starts it again, but certbot has
-you covered again in that department. It provides hooks called &lt;code&gt;pre-hook&lt;/code&gt; and &lt;code&gt;post-hook&lt;/code&gt;. Thus, all you have to write is the following:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#!/bin/bash
-
-cd /opt/letsencrypt
-./certbot-auto renew --pre-hook &amp;quot;service haproxy stop&amp;quot; --post-hook &amp;quot;service haproxy start&amp;quot;
-DOMAIN=&#39;example.com&#39; sudo -E bash -c &#39;cat /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/letsencrypt/live/$DOMAIN/privkey.pem &amp;gt; /etc/haproxy/certs/$DOMAIN.pem&#39;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;If you would like to test it first, just include the switch &lt;code&gt;--dry-run&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;In case of success you should see something like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;root@raspberrypi:/opt/letsencrypt# ./certbot-auto renew --pre-hook &amp;quot;service haproxy stop&amp;quot; --post-hook &amp;quot;service haproxy start&amp;quot; --dry-run
-Saving debug log to /var/log/letsencrypt/letsencrypt.log
-
--------------------------------------------------------------------------------
-Processing /etc/letsencrypt/renewal/example.com.conf
--------------------------------------------------------------------------------
-Cert not due for renewal, but simulating renewal for dry run
-Running pre-hook command: service haproxy stop
-Renewing an existing certificate
-Performing the following challenges:
-tls-sni-01 challenge for example.com
-Waiting for verification...
-Cleaning up challenges
-Generating key (2048 bits): /etc/letsencrypt/keys/0002_key-certbot.pem
-Creating CSR: /etc/letsencrypt/csr/0002_csr-certbot.pem
-** DRY RUN: simulating &#39;certbot renew&#39; close to cert expiry
-**          (The test certificates below have not been saved.)
-
-Congratulations, all renewals succeeded. The following certs have been renewed:
-  /etc/letsencrypt/live/example.com/fullchain.pem (success)
-** DRY RUN: simulating &#39;certbot renew&#39; close to cert expiry
-**          (The test certificates above have not been saved.)
-Running post-hook command: service haproxy start
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Put this script into a crontab to run every 89 days like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;crontab -e
-# Open crontab for edit and paste in this line
-* * */89 * * /root/renew-cert.sh
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And you should be all set. Now we move on the configure haproxy to redirect and to use our newly generated certificate.&lt;/p&gt;
-
-&lt;h2 id=&#34;haproxy-1&#34;&gt;Haproxy&lt;/h2&gt;
-
-&lt;p&gt;Like I said, haproxy requires a single file certificate in order to encrypt traffic to and from the website. To do this, we need to combine
-&lt;code&gt;privkey.pem&lt;/code&gt; and &lt;code&gt;fullchain.pem&lt;/code&gt;. As of this writing, there are a couple of solutions to automate this via a post hook on renewal. And also,
-there is an open ticket with certbot to implement a simpler solution located here: &lt;a href=&#34;https://github.com/certbot/certbot/issues/1201&#34;&gt;https://github.com/certbot/certbot/issues/1201&lt;/a&gt;. I, for now,
-have chosen to simply concatenate the two files together with &lt;code&gt;cat&lt;/code&gt; like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;DOMAIN=&#39;example.com&#39; sudo -E bash -c &#39;cat /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/letsencrypt/live/$DOMAIN/privkey.pem &amp;gt; /etc/haproxy/certs/$DOMAIN.pem&#39;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;It will create a combined cert under &lt;code&gt;/etc/haproxy/certs/example.com.pem&lt;/code&gt;.&lt;/p&gt;
-
-&lt;h3 id=&#34;haproxy-configuration&#34;&gt;Haproxy configuration&lt;/h3&gt;
-
-&lt;p&gt;If haproxy happens to be running, stop it with &lt;code&gt;service haproxy stop&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;First, save the default configuration file: &lt;code&gt;cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.old&lt;/code&gt;. Now, overwrite the old one with this
-new one (comments about what each setting does, are in-lined; they are safe to copy):&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;global
-    daemon
-    # Set this to your desired maximum connection count.
-    maxconn 2048
-    # https://cbonte.github.io/haproxy-dconv/configuration-1.5.html#3.2-tune.ssl.default-dh-param
-    # bit setting for Diffie - Hellman key size.
-    tune.ssl.default-dh-param 2048
-
-defaults
-    option forwardfor
-    option http-server-close
-
-    log     global
-    mode    http
-    option  httplog
-    option  dontlognull
-    timeout connect 5000
-    timeout client  50000
-    timeout server  50000
-    errorfile 400 /etc/haproxy/errors/400.http
-    errorfile 403 /etc/haproxy/errors/403.http
-    errorfile 408 /etc/haproxy/errors/408.http
-    errorfile 500 /etc/haproxy/errors/500.http
-    errorfile 502 /etc/haproxy/errors/502.http
-    errorfile 503 /etc/haproxy/errors/503.http
-    errorfile 504 /etc/haproxy/errors/504.http
-
-# In case it&#39;s a simple http call, we redirect to the basic backend server
-# which in turn, if it isn&#39;t an SSL call, will redirect to HTTPS that is
-# handled by the frontend setting called &#39;www-https&#39;.
-frontend www-http
-    # Redirect HTTP to HTTPS
-    bind *:80
-    # Adds http header to end of end of the HTTP request
-    reqadd X-Forwarded-Proto:\ http
-    # Sets the default backend to use which is defined below with name &#39;www-backend&#39;
-    default_backend www-backend
-
-# If the call is HTTPS we set a challenge to letsencrypt backend which
-# verifies our certificate and than direct traffic to the backend server
-# which is the running hugo site that is served under https if the challenge succeeds.
-frontend www-https
-    # Bind 443 with the generated letsencrypt cert.
-    bind *:443 ssl crt /etc/haproxy/certs/skarlso.com.pem
-    # set x-forward to https
-    reqadd X-Forwarded-Proto:\ https
-    # set X-SSL in case of ssl_fc &amp;lt;- explained below
-    http-request set-header X-SSL %[ssl_fc]
-    # Select a Challenge
-    acl letsencrypt-acl path_beg /.well-known/acme-challenge/
-    # Use the challenge backend if the challenge is set
-    use_backend letsencrypt-backend if letsencrypt-acl
-    default_backend www-backend
-
-backend www-backend
-   # Redirect with code 301 so the browser understands it is a redirect. If it&#39;s not SSL_FC.
-   # ssl_fc: Returns true when the front connection was made via an SSL/TLS transport
-   # layer and is locally deciphered. This means it has matched a socket declared
-   # with a &amp;quot;bind&amp;quot; line having the &amp;quot;ssl&amp;quot; option.
-   redirect scheme https code 301 if !{ ssl_fc }
-   # Server for the running hugo site.
-   server www-1 192.168.0.17:8080 check
-
-backend letsencrypt-backend
-   # Lets encrypt backend server
-   server letsencrypt 127.0.0.1:54321
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Save this, and start haproxy with &lt;code&gt;services haproxy start&lt;/code&gt;. If you did everything right, it should say nothing.
-If, however, there went something wrong with starting the proxy, it usually displays something like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;Job for haproxy.service failed. See &#39;systemctl status haproxy.service&#39; and &#39;journalctl -xn&#39; for details.
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;You can also gather some more information on what went wrong from &lt;code&gt;less /var/log/haproxy.log&lt;/code&gt;.&lt;/p&gt;
-
-&lt;h1 id=&#34;starting-the-server&#34;&gt;Starting the Server&lt;/h1&gt;
-
-&lt;p&gt;Everything should be ready to go. Hugo has the concept of a baseUrl. Everything that it loads, and tries to access
-will be prefixed with it. You can either set it through it&amp;rsquo;s &lt;code&gt;config.yaml&lt;/code&gt; file, or from the command line.&lt;/p&gt;
-
-&lt;p&gt;To start the server, call this from the site&amp;rsquo;s root folder:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;hugo server --bind=192.168.x.x --port=8080 --baseUrl=https://example.com --appendPort=false
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Interesting thing here to note is &lt;code&gt;https&lt;/code&gt; and the port. The IP could be 127.0.0.1 as well. I experienced problems though
-with not binding to network IP when I was debugging the site from a different laptop on the same network.&lt;/p&gt;
-
-&lt;p&gt;Once the server is started, you should be able to open up your website from a different browser, not on your local network,
-and see that it has a valid certificate installed. In Chrome you should see a green icon telling you that the cert is valid.&lt;/p&gt;
-
-&lt;h1 id=&#34;last-words&#34;&gt;Last Words&lt;/h1&gt;
-
-&lt;p&gt;And that is all. The site should be up and running and the proxy should auto-renew your site&amp;rsquo;s certificate. If you happened to
-change DNS or change the server, you&amp;rsquo;ll have to reissue the certificate.&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading!
-Any questions or trouble setting something up, please feel free to leave a comment.&lt;/p&gt;
-
-&lt;p&gt;Cheers,
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2017/02/15/how-to-https-with-hugo-letsencrypt-haproxy/</guid>
+      <description>Intro Hi folks.
+Today, I would like to write about how to do HTTPS for a website, without the need to buy a certificate and set it up via your DNS provider. Let&amp;rsquo;s begin.
+Abstract What you will achieve by the end of this post: - Every call to HTTP will be redirected to HTTPS via haproxy. - HTTPS will be served with Haproxy and LetsEncrypt as the Certificate provider.</description>
     </item>
     
     <item>
       <title>How to do Google Sign-In with Go - Part 2</title>
-      <link>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2</link>
+      <link>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2/</link>
       <pubDate>Wed, 02 Nov 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2</guid>
-      <description>
-
-&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-
-&lt;p&gt;Hi Folks.&lt;/p&gt;
-
-&lt;p&gt;This is a follow up on my previous post about Google Sign-In. In this post we will discover what to do with the information retrieved in the first encounter, which you can find here: &lt;a href=&#34;http://skarlso.github.io/2016/06/12/google-signin-with-go/&#34;&gt;Google Sign-In Part 1&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h1 id=&#34;forewords&#34;&gt;Forewords&lt;/h1&gt;
-
-&lt;h2 id=&#34;the-project&#34;&gt;The Project&lt;/h2&gt;
-
-&lt;p&gt;Everything I did in the first post, and that I&amp;rsquo;m going to do in this example, can be found in this project: &lt;a href=&#34;https://github.com/Skarlso/google-oauth-go-sample&#34;&gt;Google-OAuth-Go-Sample&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Just to recap, we left off previously on the point where we successfully obtained information about the user, with a secure token and a session initiated with them. Google nicely enough provided us with some details which we can use. This information was in JSON format and looked something like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{
-  &amp;quot;sub&amp;quot;: &amp;quot;1111111111111111111111&amp;quot;,
-  &amp;quot;name&amp;quot;: &amp;quot;Your Name&amp;quot;,
-  &amp;quot;given_name&amp;quot;: &amp;quot;Your&amp;quot;,
-  &amp;quot;family_name&amp;quot;: &amp;quot;Name&amp;quot;,
-  &amp;quot;profile&amp;quot;: &amp;quot;https://plus.google.com/1111111111111111111111&amp;quot;,
-  &amp;quot;picture&amp;quot;: &amp;quot;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&amp;quot;,
-  &amp;quot;email&amp;quot;: &amp;quot;your@gmail.com&amp;quot;,
-  &amp;quot;email_verified&amp;quot;: true,
-  &amp;quot;gender&amp;quot;: &amp;quot;male&amp;quot;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;In my example, to keep things simple, I will use the email address since that has to be unique in the land of Google. You could assign an ID to the user, and you could complicate things even further, but my goal is not to write an academic paper about cryptography here.&lt;/p&gt;
-
-&lt;h1 id=&#34;implementation&#34;&gt;Implementation&lt;/h1&gt;
-
-&lt;h2 id=&#34;making-something-useful-out-of-the-data&#34;&gt;Making something useful out of the data&lt;/h2&gt;
-
-&lt;p&gt;In order for the app to recognise a user it must save some data about the user. I&amp;rsquo;m doing that in MongoDB right now, but that could be any form of persistence layer, like, SQLite3, BoltDB, PostgresDB, etc.&lt;/p&gt;
-
-&lt;h3 id=&#34;after-successful-user-authorization&#34;&gt;After successful user authorization&lt;/h3&gt;
-
-&lt;p&gt;Once the user used google to provide us with sufficient information about him/herself, we can retrieve data about that user from our records. The data could be anything that is linked to our unique identifier like: Character Profile, Player Information, Status, Last Logged-In, etcetc. For this, there are two things that need to happen after authorization: Save/Load user information and initiate a session.&lt;/p&gt;
-
-&lt;p&gt;The session can be in the form of a cookie, or a Redis storage, or URL re-writing. I&amp;rsquo;m choosing a cookie here.&lt;/p&gt;
-
-&lt;h3 id=&#34;save-load-user-information&#34;&gt;Save / Load user information&lt;/h3&gt;
-
-&lt;p&gt;All I&amp;rsquo;m doing is a simple, &lt;em&gt;returning / new&lt;/em&gt; user handling. The concept is simple. If the email isn&amp;rsquo;t saved, we save it. If it&amp;rsquo;s saved, we set a logic to our page render to greet the returning user.&lt;/p&gt;
-
-&lt;p&gt;In the &lt;code&gt;AuthHandler&lt;/code&gt; I&amp;rsquo;m doing the following:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;...
-seen := false
-db := database.MongoDBConnection{}
-if _, mongoErr := db.LoadUser(u.Email); mongoErr == nil {
-    seen = true
-} else {
-    err = db.SaveUser(&amp;amp;u)
-    if err != nil {
-        log.Println(err)
-        c.HTML(http.StatusBadRequest, &amp;quot;error.tmpl&amp;quot;, gin.H{&amp;quot;message&amp;quot;: &amp;quot;Error while saving user. Please try again.&amp;quot;})
-        return
-    }
-}
-c.HTML(http.StatusOK, &amp;quot;battle.tmpl&amp;quot;, gin.H{&amp;quot;email&amp;quot;: u.Email, &amp;quot;seen&amp;quot;: seen})
-...
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Let&amp;rsquo;s break this down a bit. There is a db connection here, which calls a function that either returns an error, or it doesn&amp;rsquo;t. If it doesn&amp;rsquo;t, that means we have our user. If it does, it means we have to save the user. This is a very simple case (disregard for now, that the error could be something else as well (If you can&amp;rsquo;t get passed that, you could type check the error or check if the returned record contains the requested user information instead of checking for an error.)).&lt;/p&gt;
-
-&lt;p&gt;The template is than rendered depending on the &lt;code&gt;seen&lt;/code&gt; boolean like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-html&#34;&gt;&amp;lt;!DOCTYPE html&amp;gt;
-&amp;lt;link rel=&amp;quot;icon&amp;quot;
-      type=&amp;quot;image/png&amp;quot;
-      href=&amp;quot;/img/favicon.ico&amp;quot; /&amp;gt;
-&amp;lt;html&amp;gt;
-  &amp;lt;head&amp;gt;
-    &amp;lt;link rel=&amp;quot;stylesheet&amp;quot; href=&amp;quot;/css/main.css&amp;quot;&amp;gt;
-  &amp;lt;/head&amp;gt;
-  &amp;lt;body&amp;gt;
-    {{if .seen}}
-        &amp;lt;h1&amp;gt;Welcome back to the battlefield &#39;{{ .email }}&#39;.&amp;lt;/h1&amp;gt;
-    {{else}}
-        &amp;lt;h1&amp;gt;Welcome to the battlefield &#39;{{ .email }}&#39;.&amp;lt;/h1&amp;gt;
-    {{end}}
-  &amp;lt;/body&amp;gt;
-&amp;lt;/html&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;You can see here, that if &lt;code&gt;seen&lt;/code&gt; is &lt;em&gt;true&lt;/em&gt; the header message will say: &amp;ldquo;Welcome &lt;em&gt;back&lt;/em&gt;&amp;hellip;&amp;ldquo;.&lt;/p&gt;
-
-&lt;h3 id=&#34;initiating-a-session&#34;&gt;Initiating a session&lt;/h3&gt;
-
-&lt;p&gt;When the user is successfully authenticated, we activate a session so that the user can access pages that require authorization. Here, I have to mention that I&amp;rsquo;m using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt;, so restricted end-points are made with groups which require a middleware.&lt;/p&gt;
-
-&lt;p&gt;As I mentioned earlier, I&amp;rsquo;m using cookies as session handlers. For this, a new session store has to be created with some secure token. This is achieved with the following code fragments ( note that I&amp;rsquo;m using a Gin session middleware which uses gorilla&amp;rsquo;s session handler located here: &lt;a href=&#34;https://github.com/gin-gonic/contrib&#34;&gt;Gin-Gonic(Sessions)&lt;/a&gt;):&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// RandToken in handlers.go:
-// RandToken generates a random @l length token.
-func RandToken(l int) string {
-	b := make([]byte, l)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
-}
-
-// quest.go:
-// Create the cookie store in main.go.
-store := sessions.NewCookieStore([]byte(handlers.RandToken(64)))
-store.Options(sessions.Options{
-    Path:   &amp;quot;/&amp;quot;,
-    MaxAge: 86400 * 7,
-})
-
-// using the cookie store:
-router.Use(sessions.Sessions(&amp;quot;goquestsession&amp;quot;, store))
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;After this &lt;code&gt;gin.Context&lt;/code&gt; lets us access this session store by doing &lt;code&gt;session := sessions.Default(c)&lt;/code&gt;. Now, create a session variable called &lt;code&gt;user-id&lt;/code&gt; like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;session.Set(&amp;quot;user-id&amp;quot;, u.Email)
-err = session.Save()
-if err != nil {
-    log.Println(err)
-    c.HTML(http.StatusBadRequest, &amp;quot;error.tmpl&amp;quot;, gin.H{&amp;quot;message&amp;quot;: &amp;quot;Error while saving session. Please try again.&amp;quot;})
-    return
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Don&amp;rsquo;t forget to &lt;code&gt;save&lt;/code&gt; the session. ;) That is it. If I restart the server, the cookie won&amp;rsquo;t be usable any longer, since it will generate a new token for the cookie store. The user will have to log in again. &lt;strong&gt;Note&lt;/strong&gt;: It might be that you&amp;rsquo;ll see something like this, from &lt;code&gt;session&lt;/code&gt;: &lt;code&gt;[sessions] ERROR! securecookie: the value is not valid&lt;/code&gt;. You can ignore this error.&lt;/p&gt;
-
-&lt;h2 id=&#34;restricting-access-to-certain-end-points-with-the-auth-middleware&#34;&gt;Restricting access to certain end-points with the auth Middleware™&lt;/h2&gt;
-
-&lt;p&gt;Now, that our session is alive, we can use it to restrict access to some part of the application. With Gin, it looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;authorized := router.Group(&amp;quot;/battle&amp;quot;)
-authorized.Use(middleware.AuthorizeRequest())
-{
-    authorized.GET(&amp;quot;/field&amp;quot;, handlers.FieldHandler)
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This creates a grouping of end-points under &lt;code&gt;/battle&lt;/code&gt;. Which means, everything under &lt;code&gt;/battle&lt;/code&gt; will only be accessible if the middleware passed to the &lt;code&gt;Use&lt;/code&gt; function calls the next handler in the chain. If it aborts the call chain, the end-point will not be accessible. My middleware is pretty simple, but it gets the job done:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;// AuthorizeRequest is used to authorize a request for a certain end-point group.
-func AuthorizeRequest() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		session := sessions.Default(c)
-		v := session.Get(&amp;quot;user-id&amp;quot;)
-		if v == nil {
-			c.HTML(http.StatusUnauthorized, &amp;quot;error.tmpl&amp;quot;, gin.H{&amp;quot;message&amp;quot;: &amp;quot;Please log in.&amp;quot;})
-			c.Abort()
-		}
-		c.Next()
-	}
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Note, that this only check if &lt;code&gt;user-id&lt;/code&gt; is set or not. That&amp;rsquo;s certainly not enough for a secure application. Its only supposed to be a simple example of the mechanics of the auth middleware. Also, the session usually contains more than one parameter. It&amp;rsquo;s more likely that it contains several variables, which describe the user including a state for CORS protection. For CORS I&amp;rsquo;d recommend using &lt;a href=&#34;https://github.com/rs/cors&#34;&gt;rs/cors&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;If you would try to access &lt;a href=&#34;http://127.0.0.1:9090/battle/field&#34;&gt;http://127.0.0.1:9090/battle/field&lt;/a&gt; without logging in, you&amp;rsquo;d be redirected to an &lt;code&gt;error.tmpl&lt;/code&gt; with the message: &lt;strong&gt;Please log in.&lt;/strong&gt;.&lt;/p&gt;
-
-&lt;h1 id=&#34;final-words&#34;&gt;Final Words&lt;/h1&gt;
-
-&lt;p&gt;That&amp;rsquo;s pretty much it. Important parts are:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Saving the right information&lt;/li&gt;
-&lt;li&gt;Secure cookie store&lt;/li&gt;
-&lt;li&gt;CORS for sessions&lt;/li&gt;
-&lt;li&gt;Checks of the users details in the cookie&lt;/li&gt;
-&lt;li&gt;Authorised end-points&lt;/li&gt;
-&lt;li&gt;Session handling&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Any questions, remarks, ideas, are very welcomed in the comment section. There are plenty of very nice Go frameworks which do Google OAuth2 out of the box. I recommend using them, as they save you a lot of legwork.&lt;/p&gt;
-
-&lt;p&gt;Thank you for reading!
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2/</guid>
+      <description>Intro Hi Folks.
+This is a follow up on my previous post about Google Sign-In. In this post we will discover what to do with the information retrieved in the first encounter, which you can find here: Google Sign-In Part 1.
+Forewords The Project Everything I did in the first post, and that I&amp;rsquo;m going to do in this example, can be found in this project: Google-OAuth-Go-Sample.
+Just to recap, we left off previously on the point where we successfully obtained information about the user, with a secure token and a session initiated with them.</description>
     </item>
     
     <item>
       <title>RScrap scraper</title>
-      <link>https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts</link>
+      <link>https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/</link>
       <pubDate>Thu, 06 Oct 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts</guid>
-      <description>
-
-&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-
-&lt;p&gt;Hey folks.&lt;/p&gt;
-
-&lt;p&gt;So, there is this project called &lt;a href=&#34;https://github.com/cantino/huginn&#34;&gt;Huginn&lt;/a&gt; which I absolutely love.&lt;/p&gt;
-
-&lt;p&gt;But the thing is, that for a couple of scrappers ( at least for me ), I don&amp;rsquo;t want to spin up a whole rails app.&lt;/p&gt;
-
-&lt;p&gt;Hence, I&amp;rsquo;ve come up with &lt;a href=&#34;https://github.com/Skarlso/rscrap&#34;&gt;RScrap&lt;/a&gt;. Which is a bunch of Ruby scripts run as cron jobs on a raspberry pi. And because I dislike emails as well, and most of the time, I don&amp;rsquo;t read them, I opted for a nicer solution. Enter the world of &lt;a href=&#34;https://telegram.org&#34;&gt;Telegram&lt;/a&gt;. They provide you with the ability to create bots. You basically get an API key, and than using that key, you can send private messages, or even create an interactive bot which you can send messages too.&lt;/p&gt;
-
-&lt;p&gt;In my simple example, I&amp;rsquo;m using it to send private messages to myself, but I could just as well, make it interactive and than tell it to run one of the scripts.&lt;/p&gt;
-
-&lt;h1 id=&#34;the-code&#34;&gt;The Code&lt;/h1&gt;
-
-&lt;p&gt;Let&amp;rsquo;s take a look at what we got.&lt;/p&gt;
-
-&lt;h2 id=&#34;the-main-scraper&#34;&gt;The main scraper&lt;/h2&gt;
-
-&lt;p&gt;The main scraper, is simply bunch of convenience methods that wrap handling and working with the database and the telegram bot. That&amp;rsquo;s all. It&amp;rsquo;s very simple. Very short. The Telegram part is just this bit:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;def send_message(text)
-  Telegram::Bot::Client.run(@token) do |bot|
-    bot.api.send_message(chat_id: @id, text: text)
-  end
-end
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Straightforward. Creating an interactive bot, would look something like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;#!/usr/bin/env ruby
-require &#39;telegram/bot&#39;
-
-token = &#39;YOUR_TELEGRAM_BOT_API_TOKEN&#39;
-
-Telegram::Bot::Client.run(token) do |bot|
-  bot.listen do |message|
-    case message.text
-    when &#39;/start&#39;
-      bot.api.send_message(chat_id: message.chat.id, text: &amp;quot;Hello, #{message.from.first_name}&amp;quot;)
-    when &#39;/stop&#39;
-      bot.api.send_message(chat_id: message.chat.id, text: &amp;quot;Bye, #{message.from.first_name}&amp;quot;)
-    end
-  end
-end
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Basically, it will listen, and than you can send it messages and based on the parsed &lt;code&gt;message.text&lt;/code&gt; you can define functions to call. For example, for rscrap I could define something like &lt;code&gt;run_script(script)&lt;/code&gt;. And the command would be: &lt;code&gt;/run reddit&lt;/code&gt;. Which will execute my reddit script. The possibilities are endless.&lt;/p&gt;
-
-&lt;h2 id=&#34;the-scripts&#34;&gt;The scripts&lt;/h2&gt;
-
-&lt;p&gt;The scripts use nokogiri to parse a web page, and than return a URL which will be sent by the TelegramBot. They are also saved in the database so that when a new comic strip comes out, I know that it&amp;rsquo;s new. For reddit, I&amp;rsquo;m saving a timestamp as well, and I collect everything after that timestamp through the reddit API as JSON, and send it as a bundled message with shortified links to the posts using bit.ly.&lt;/p&gt;
-
-&lt;p&gt;The scraping is most of the times the same for every comic. Thus, there is a helper method for it. The script itself, is very short. For example, lets look at gunnerkrigg court.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;require_relative &#39;../rscrap&#39;
-require &#39;nokogiri&#39;
-require &#39;open-uri&#39;
-
-url = &#39;http://www.gunnerkrigg.com&#39;
-scrap = Rscrap.new
-page = Nokogiri::HTML(open(url))
-comic_id = page.css(&#39;img.comic_image&#39;)[0].select { |e| e if e[0] == &#39;src&#39; }[0][1]
-new_comic = &amp;quot;#{url}#{comic_id}&amp;quot;
-scrap.send_new_comic(url, new_comic)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The interesting part of it is this bit: &lt;code&gt;comic_id = page.css(&#39;img.comic_image&#39;)[0].select { |e| e if e[0] == &#39;src&#39; }[0][1]&lt;/code&gt;. It extracts the URL for the comic image, and stores it as an &amp;ldquo;id&amp;rdquo; of the comic. This than, is sent as a message which Telegram will embed. There is no need to visit the web page, the image is in your feed and you can view it directly. Just like an RSS ready.&lt;/p&gt;
-
-&lt;h2 id=&#34;cron&#34;&gt;Cron&lt;/h2&gt;
-
-&lt;p&gt;These scripts are best used in a cron job. The comics are usually running with a daily frequency, where as the reddit gatherer is running with an hour frequency. Basically, I&amp;rsquo;m receiving updates on an hourly basis if there are new posts by then. Running ruby from cron was a bit tricky. I&amp;rsquo;m using bundler for the environment, and came up with this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;0 6-23 * * * /bin/bash -l -c &#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/reddit.rb&#39;
-0 8,22 * * * /bin/bash -l -c &#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/gunnerkrigg.rb&#39;
-0 8,22 * * * /bin/bash -l -c &#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/aws_blog.rb&#39;
-0 5,23 * * * /bin/bash -l -c &#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/goblinscomic.rb&#39;
-0 6,20 * * * /bin/bash -l -c &#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/xkcd.rb&#39;
-0 7,19 * * * /bin/bash -l -c &#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/commitstrip.rb&#39;
-0 8 * * * /bin/bash -l -c &#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/sequiential_art.rb&#39;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And a telegram message for all these things, looks like this:
-Reddit:
-&lt;img src=&#34;https://github.com/Skarlso/rscrap/raw/master/shorten.png&#34; alt=&#34;TelegramIMReddit&#34; /&gt;
-Comics:
-&lt;img src=&#34;https://github.com/Skarlso/rscrap/raw/master/rscrap2.png&#34; alt=&#34;TelegramIMComics&#34; /&gt;&lt;/p&gt;
-
-&lt;h1 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h1&gt;
-
-&lt;p&gt;That&amp;rsquo;s it folks. Adding a new scraper is easy. I added the aws blog as a new entry as well by just copying the comics scripts. And I&amp;rsquo;m also getting Weather Reports delivered every morning to me.&lt;/p&gt;
-
-&lt;p&gt;Have fun. Any questions, please feel free to leave a comment!&lt;/p&gt;
-
-&lt;p&gt;Thanks,
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/</guid>
+      <description>Intro Hey folks.
+So, there is this project called Huginn which I absolutely love.
+But the thing is, that for a couple of scrappers ( at least for me ), I don&amp;rsquo;t want to spin up a whole rails app.
+Hence, I&amp;rsquo;ve come up with RScrap. Which is a bunch of Ruby scripts run as cron jobs on a raspberry pi. And because I dislike emails as well, and most of the time, I don&amp;rsquo;t read them, I opted for a nicer solution.</description>
     </item>
     
     <item>
       <title>Budget Home Theather with a Headless Raspberry Pi and Flirc for Remote Controlling</title>
-      <link>https://skarlso.github.io/2016/09/17/simple-hometheater-with-remote-and-flirc</link>
+      <link>https://skarlso.github.io/2016/09/17/simple-hometheater-with-remote-and-flirc/</link>
       <pubDate>Sat, 17 Sep 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/09/17/simple-hometheater-with-remote-and-flirc</guid>
-      <description>
-
-&lt;h2 id=&#34;intro&#34;&gt;Intro&lt;/h2&gt;
-
-&lt;p&gt;Hello folks.&lt;/p&gt;
-
-&lt;p&gt;Today, I would like to tell you about my configuration for a low budget Home Theater setup.&lt;/p&gt;
-
-&lt;p&gt;My tools are as follows:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&#34;https://flirc.tv/&#34;&gt;FLIRC&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;https://www.raspberrypi.org/products/raspberry-pi-2-model-b/&#34;&gt;Raspberry Pi 2&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;500G SSD&lt;/li&gt;
-&lt;li&gt;An a good &amp;lsquo;ol wifi&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&#34;tl-dr&#34;&gt;TL;DR&lt;/h2&gt;
-
-&lt;p&gt;Use Flirc for remote control, &lt;code&gt;omxplayer&lt;/code&gt; for streaming the movie from an SSD on a headless PI controller via SSH and enjoy a nice, cold Lemon - Menta beer.&lt;/p&gt;
-
-&lt;h2 id=&#34;flirc&#34;&gt;Flirc&lt;/h2&gt;
-
-&lt;p&gt;First, the remote control. So, I like to sit in my couch and watch the movie from there. I hate getting up, or having a keyboard at arm length to control the pi. Flirc is a very easy way of doing just that with a simple remote control.&lt;/p&gt;
-
-&lt;p&gt;It costs ~$22 and is easy to setup. Works with any kind of remote control. Setting up key bindings for the control, is as simple as starting the Flirc software and pressing buttons on the remote to map to keyboard keys. Now, my pi is running headless, and the Flirc binary isn&amp;rsquo;t quite working with raspbian; so to do the binding, I just did that on my main machine. When I was done, I just plugged in the Flirc, and proceeded to setup the pi.&lt;/p&gt;
-
-&lt;h2 id=&#34;raspberry-pi-2&#34;&gt;Raspberry Pi 2&lt;/h2&gt;
-
-&lt;p&gt;The pi 2 is a small powerhouse. However, the SD card on which it sits is simply not fast enough. From time to time, I experienced lateness in sound, or stutter in video. So, instead of having the movie on the pi, I&amp;rsquo;m streaming through a faster SSD with &lt;a href=&#34;https://github.com/libfuse/sshfs&#34;&gt;SSHFS&lt;/a&gt;. For playing, I&amp;rsquo;m using &lt;code&gt;omxplayer&lt;/code&gt;. With omxplayer, I had a few problems, because sound was not coming through the HDMI cable. A little bit of research lead me to this change in the pi&amp;rsquo;s boot config. Uncomment this line:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#hdmi_driver=2
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;After rebooting, I also, did this thing:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;sudo apt-get install alsa-utils
-sudo modprobe snd_bcm2835
-sudo amixer -c 0 cset numid=3 2
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This saved my bacon. The whole answer can be found here: &lt;a href=&#34;http://raspberrypi.stackexchange.com/questions/44/why-is-my-audio-sound-output-not-working&#34;&gt;Stackoverflow&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Once SSHFS was working, and HDMI received sound, I just executed this command: &lt;code&gt;omxplayer -o hdmi /media/stream/my_movie.mkv&lt;/code&gt;. This told omxplayer to use the local HDMI connection for video output.&lt;/p&gt;
-
-&lt;p&gt;All this was from my computer through an SSH session so I never controlled the pi directly. Once done, I proceeded to sit down with a nice, cold Lemon - Menta beer and a remote control.&lt;/p&gt;
-
-&lt;p&gt;Once little gotcha &amp;ndash; &lt;code&gt;omxplayer&lt;/code&gt; is controlled through the buttons + (volume up), - (volume down), &lt;SPACE&gt; (stop, play), and q for quitting. Flirc is able to map any key &lt;em&gt;combinations&lt;/em&gt; on a keyboard as well to any button on the remote. Combinations can be done by selecting a control key and pressing another key. So mapping &lt;code&gt;+&lt;/code&gt; to the volume up button was by pressing shift and then &amp;lsquo;=&amp;rsquo;.&lt;/p&gt;
-
-&lt;h2 id=&#34;wrapping-up&#34;&gt;Wrapping Up&lt;/h2&gt;
-
-&lt;p&gt;I enjoyed the movie while being able to adjust the volume, or pause it, when my popcorn was ready, and close the player when the movie was done. There are a number of other ways to do this, like using &lt;a href=&#34;https://kodi.tv/&#34;&gt;kodi&lt;/a&gt; + &lt;a href=&#34;https://play.google.com/store/apps/details?id=org.leetzone.android.yatsewidgetfree&amp;amp;hl=en&#34;&gt;yatse&lt;/a&gt;. Which lets you remote control a media software with your mobile phone. But I&amp;rsquo;m using the pi for a number of other things and the GUI is rather resource heavy.&lt;/p&gt;
-
-&lt;p&gt;There you have it folks. Might not be the easiest setup, but it&amp;rsquo;s pretty awesome anyways.&lt;/p&gt;
-
-&lt;p&gt;Cheers,
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/09/17/simple-hometheater-with-remote-and-flirc/</guid>
+      <description>Intro Hello folks.
+Today, I would like to tell you about my configuration for a low budget Home Theater setup.
+My tools are as follows:
+ FLIRC Raspberry Pi 2 500G SSD An a good &amp;lsquo;ol wifi  TL;DR Use Flirc for remote control, omxplayer for streaming the movie from an SSD on a headless PI controller via SSH and enjoy a nice, cold Lemon - Menta beer.
+Flirc First, the remote control.</description>
     </item>
     
     <item>
       <title>Always Go with []byte</title>
-      <link>https://skarlso.github.io/2016/08/19/always-go-with-bytes</link>
+      <link>https://skarlso.github.io/2016/08/19/always-go-with-bytes/</link>
       <pubDate>Fri, 19 Aug 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/08/19/always-go-with-bytes</guid>
-      <description>&lt;p&gt;Another quick reminder&amp;hellip; Always go with []byte if possible. I said it before, and I&amp;rsquo;m going to say it over and over again. It&amp;rsquo;s crucial.&lt;/p&gt;
-
-&lt;p&gt;Here is a little code from exercism.io. First, with strings:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package igpay
-
-import (
-    &amp;quot;strings&amp;quot;
-)
-
-// PigLatin translates reguler old English into awesome pig-latin.
-func PigLatin(in string) (ret string) {
-    for _, v := range strings.Fields(in) {
-        ret += pigLatin(v) + &amp;quot; &amp;quot;
-    }
-
-    return strings.Trim(ret, &amp;quot; &amp;quot;)
-}
-
-func pigLatin(in string) (ret string) {
-    if strings.IndexAny(in, &amp;quot;aeiou&amp;quot;) == 0 {
-        ret += in + &amp;quot;ay&amp;quot;
-        return
-    }
-
-    for i := 0; i &amp;lt; len(in); i++ {
-        vowelPos := strings.IndexAny(in, &amp;quot;aeiou&amp;quot;)
-
-        if (in[0] == &#39;y&#39; || in[0] == &#39;x&#39;) &amp;amp;&amp;amp; vowelPos &amp;gt; 1 {
-            vowelPos = 0
-            ret = in
-        }
-        if vowelPos != 0 {
-            adjustPosition := vowelPos
-
-            if in[adjustPosition] == &#39;u&#39; &amp;amp;&amp;amp; in[adjustPosition - 1] == &#39;q&#39; {
-                adjustPosition++
-            }
-
-            ret = in[adjustPosition:] + in[:adjustPosition]
-        }
-    }
-    ret += &amp;quot;ay&amp;quot;
-    return
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Than with []byte:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;package igpay
-
-import (
-    // &amp;quot;fmt&amp;quot;
-    &amp;quot;bytes&amp;quot;
-)
-
-// PigLatin translates reguler old English into awesome pig-latin.
-func PigLatin(in string) (ret string) {
-    inBytes := []byte(in)
-    var retBytes [][]byte
-    for _, v := range bytes.Fields(inBytes) {
-        v2 := make([]byte, len(v))
-        copy(v2, v)
-        retBytes = append(retBytes, pigLatin(v2))
-    }
-
-    ret = string(bytes.Join(retBytes, []byte(&amp;quot; &amp;quot;)))
-    return
-}
-
-func pigLatin(in []byte) (ret []byte) {
-    if bytes.IndexAny(in, &amp;quot;aeiou&amp;quot;) == 0 {
-        ret = append(in, []byte(&amp;quot;ay&amp;quot;)...)
-        return
-    }
-
-    for i := 0; i &amp;lt; len(in); i++ {
-        vowelPos := bytes.IndexAny(in, &amp;quot;aeiou&amp;quot;)
-
-        if (in[0] == &#39;y&#39; || in[0] == &#39;x&#39;) &amp;amp;&amp;amp; vowelPos &amp;gt; 1 {
-            vowelPos = 0
-            ret = in
-        }
-        if vowelPos != 0 {
-            adjustPosition := vowelPos
-
-            if in[adjustPosition] == &#39;u&#39; &amp;amp;&amp;amp; in[adjustPosition - 1] == &#39;q&#39; {
-                adjustPosition++
-            }
-
-            in = append(in[adjustPosition:], in[:adjustPosition]...)
-            ret = in
-            // fmt.Printf(&amp;quot;%s\n&amp;quot;, ret)
-        }
-    }
-    ret = append(ret, []byte(&amp;quot;ay&amp;quot;)...)
-    return
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And than,the benchmarks of course:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkPigLatin-8          	  200000	     10688 ns/op
-BenchmarkPigLatinStrings-8   	  100000	     15211 ns/op
-PASS
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The improvement is not massive in this case, but it&amp;rsquo;s more than enough to matter. And in a bigger, more complicated program, string concatenation will take a LOT of time away.&lt;/p&gt;
-
-&lt;p&gt;In Go, the &lt;code&gt;bytes&lt;/code&gt; package has a 1-1 map compared to the &lt;code&gt;strings&lt;/code&gt; packages, so chances are, if you are doing strings concatenations you will be able to port that piece of code easily to []byte.&lt;/p&gt;
-
-&lt;p&gt;That&amp;rsquo;s all folks.&lt;/p&gt;
-
-&lt;p&gt;Happy coding,
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/08/19/always-go-with-bytes/</guid>
+      <description>Another quick reminder&amp;hellip; Always go with []byte if possible. I said it before, and I&amp;rsquo;m going to say it over and over again. It&amp;rsquo;s crucial.
+Here is a little code from exercism.io. First, with strings:
+package igpay import ( &amp;quot;strings&amp;quot; ) // PigLatin translates reguler old English into awesome pig-latin. func PigLatin(in string) (ret string) { for _, v := range strings.Fields(in) { ret += pigLatin(v) + &amp;quot; &amp;quot; } return strings.</description>
     </item>
     
     <item>
       <title>Global variable for never changing regex</title>
-      <link>https://skarlso.github.io/2016/08/16/never-changing-regex</link>
+      <link>https://skarlso.github.io/2016/08/16/never-changing-regex/</link>
       <pubDate>Tue, 16 Aug 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/08/16/never-changing-regex</guid>
-      <description>&lt;p&gt;Quick reminder. If you have a never changing regex in Go, do NOT put it into a frequently called function. ALWAYS put it into a global variable. I&amp;rsquo;ll show you why.&lt;/p&gt;
-
-&lt;p&gt;Benchmark for code with a variable in a frequently called function:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkNumber-8     	   30000	     41633 ns/op
-BenchmarkAreaCode-8   	   50000	     27736 ns/op
-BenchmarkFormat-8     	   50000	     29263 ns/op
-PASS
-ok  	_/phone-number	5.110s
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Benchmark for code with the same variable outside in a global scope:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;BenchmarkNumber-8     	  300000	      5618 ns/op
-BenchmarkAreaCode-8   	  500000	      3884 ns/op
-BenchmarkFormat-8     	  300000	      4696 ns/op
-PASS
-ok  	_/phone-number	5.197s
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Notice the magnitude change in ns/op! That&amp;rsquo;s something to keep an eye out for.&lt;/p&gt;
-
-&lt;p&gt;Thanks for reading!
-Cheers,
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/08/16/never-changing-regex/</guid>
+      <description>Quick reminder. If you have a never changing regex in Go, do NOT put it into a frequently called function. ALWAYS put it into a global variable. I&amp;rsquo;ll show you why.
+Benchmark for code with a variable in a frequently called function:
+BenchmarkNumber-8 30000	41633 ns/op BenchmarkAreaCode-8 50000	27736 ns/op BenchmarkFormat-8 50000	29263 ns/op PASS ok _/phone-number	5.110s  Benchmark for code with the same variable outside in a global scope:</description>
     </item>
     
     <item>
       <title>Drupal missing ToolBar and settings not saving</title>
-      <link>https://skarlso.github.io/2016/08/13/drupal-missing-toolbar-and-settings-not-saving</link>
+      <link>https://skarlso.github.io/2016/08/13/drupal-missing-toolbar-and-settings-not-saving/</link>
       <pubDate>Sat, 13 Aug 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/08/13/drupal-missing-toolbar-and-settings-not-saving</guid>
-      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
-
-&lt;p&gt;Quick gotcha, when working with Drupal. If you just freshly installed it, and everything seems to work fine, and yet you are experiencing things like, the admin toolbar is randomly disappearing, or configuration is not saved; than you might not have modrewrite enabled on your apache server.&lt;/p&gt;
-
-&lt;p&gt;Because, by default, Drupal has clean url enabled, that needs URL rewriting on apache.&lt;/p&gt;
-
-&lt;p&gt;So, step one.&lt;/p&gt;
-
-&lt;p&gt;Have this in your .htaccess file:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;&amp;lt;IfModule mod_rewrite.c&amp;gt;
-  RewriteEngine on
-  ... # and than a bunch of rewrite rules according to your leisure
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Than look up this line in your httpd.conf file and remove the prefix &amp;lsquo;#&amp;rsquo;.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#LoadModule rewrite_module libexec/apache2/mod_rewrite.so
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;That is all. From there on, everything should work. If, you don&amp;rsquo;t want the clean url setting, yet you can&amp;rsquo;t disable it, and don&amp;rsquo;t want to restart the server and edit the settings.php file; use drush like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;drush vset clean_url 0 --yes
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This should disable it and bust the cache in the process so it&amp;rsquo;s immediately visible.&lt;/p&gt;
-
-&lt;p&gt;That is all folks.&lt;/p&gt;
-
-&lt;p&gt;Cheers,
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/08/13/drupal-missing-toolbar-and-settings-not-saving/</guid>
+      <description>Hi folks.
+Quick gotcha, when working with Drupal. If you just freshly installed it, and everything seems to work fine, and yet you are experiencing things like, the admin toolbar is randomly disappearing, or configuration is not saved; than you might not have modrewrite enabled on your apache server.
+Because, by default, Drupal has clean url enabled, that needs URL rewriting on apache.
+So, step one.
+Have this in your .</description>
     </item>
     
     <item>
       <title>Jenkins Best Practices Talk</title>
-      <link>https://skarlso.github.io/2016/07/28/jenkins-best-practices</link>
+      <link>https://skarlso.github.io/2016/07/28/jenkins-best-practices/</link>
       <pubDate>Thu, 28 Jul 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/07/28/jenkins-best-practices</guid>
-      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
-
-&lt;p&gt;I wanted to take the time to share with you a talk that I recently did.&lt;/p&gt;
-
-&lt;p&gt;The slides and the source I used, can be found here: &lt;a href=&#34;https://github.com/Skarlso/jenkinsbestpractices&#34;&gt;Github&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;And then, there is also a docker image which contains all the plugins, job configurations and all the practices which I did during the talk. Please feel free to have a go with it. &lt;a href=&#34;https://hub.docker.com/r/skarlso/jenkinsbestpractices&#34;&gt;DockerHub - Jenkins Best Practices&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;For easy access and reading, here are the slides on Slideshare: &lt;a href=&#34;http://www.slideshare.net/GergelyBrautigam/jenkins-best-practices-meetup-slides&#34;&gt;Jenkins Best Practices Slides&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;I, gladly answer any questions which should arise.&lt;/p&gt;
-
-&lt;p&gt;Thanks!
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/07/28/jenkins-best-practices/</guid>
+      <description>Hi folks.
+I wanted to take the time to share with you a talk that I recently did.
+The slides and the source I used, can be found here: Github.
+And then, there is also a docker image which contains all the plugins, job configurations and all the practices which I did during the talk. Please feel free to have a go with it. DockerHub - Jenkins Best Practices.
+For easy access and reading, here are the slides on Slideshare: Jenkins Best Practices Slides.</description>
     </item>
     
     <item>
       <title>Ruby Sieve</title>
-      <link>https://skarlso.github.io/2016/07/12/ruby-sieve</link>
+      <link>https://skarlso.github.io/2016/07/12/ruby-sieve/</link>
       <pubDate>Tue, 12 Jul 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/07/12/ruby-sieve</guid>
-      <description>&lt;p&gt;Though it could be done better, I&amp;rsquo;m sure, but I&amp;rsquo;m actually pretty satisfied with this one. It loops only twice as opposed to filtered ranges and whatnot other solutions to the sieve. I was thinking of rather creating a list and deleting elements from it, but that&amp;rsquo;s already three loops.&lt;/p&gt;
-
-&lt;p&gt;Maybe I&amp;rsquo;ll do a benchmark later on more solutions.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# Sieve contains a function to return a set of primes
-class Sieve
-  def initialize(n)
-    @n = n
-  end
-
-  # Returns a list of primes up to a certain limit
-  # @param n limit
-  # @return list of primes
-  def primes
-    marked = []
-    primes = []
-    (2..@n).each do |e|
-      unless marked.include?(e)
-        primes.push e
-        (e..@n).step(e) { |s| marked.push s }
-      end
-    end
-    primes
-  end
-end
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Cheers,
-Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/07/12/ruby-sieve/</guid>
+      <description>Though it could be done better, I&amp;rsquo;m sure, but I&amp;rsquo;m actually pretty satisfied with this one. It loops only twice as opposed to filtered ranges and whatnot other solutions to the sieve. I was thinking of rather creating a list and deleting elements from it, but that&amp;rsquo;s already three loops.
+Maybe I&amp;rsquo;ll do a benchmark later on more solutions.
+# Sieve contains a function to return a set of primes class Sieve def initialize(n) @n = n end # Returns a list of primes up to a certain limit # @param n limit # @return list of primes def primes marked = [] primes = [] (2.</description>
     </item>
     
     <item>
       <title>Simple hook to rid of trouble</title>
-      <link>https://skarlso.github.io/2016/07/12/simple-hook-to-rid-of-trouble</link>
+      <link>https://skarlso.github.io/2016/07/12/simple-hook-to-rid-of-trouble/</link>
       <pubDate>Tue, 12 Jul 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/07/12/simple-hook-to-rid-of-trouble</guid>
+      <guid>https://skarlso.github.io/2016/07/12/simple-hook-to-rid-of-trouble/</guid>
+      <description>Hi folks.
+This is but a simple git hook to run a test in order to ensure you can push. It also ignores the vendor folder if you happen to have on in your directory.
+Edit the file under .git/hooks/pre-push.sample and add this at the end before the exit 0.
+go test $(go list ./... |grep -v vendor) RESULT=$? if [ $RESULT -ne 0 ]; then echo &amp;quot;Failed test run. Disallowing push.</description>
+    </item>
+    
+    <item>
+      <title>How to do Google sign-in with Go</title>
+      <link>https://skarlso.github.io/2016/06/12/google-signin-with-go/</link>
+      <pubDate>Sun, 12 Jun 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/06/12/google-signin-with-go/</guid>
       <description>&lt;p&gt;Hi folks.&lt;/p&gt;
 
-&lt;p&gt;This is but a simple git hook to run a test in order to ensure you can push. It also ignores the vendor folder if you happen to have on in your directory.&lt;/p&gt;
+&lt;p&gt;Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.&lt;/p&gt;
 
-&lt;p&gt;Edit the file under &lt;code&gt;.git/hooks/pre-push.sample&lt;/code&gt; and add this at the end before the &lt;code&gt;exit 0&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</title>
+      <link>https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2/</link>
+      <pubDate>Sun, 17 Apr 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2/</guid>
+      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;go test $(go list ./... |grep -v vendor)
-RESULT=$?
-if [ $RESULT -ne 0 ]; then
-    echo &amp;quot;Failed test run. Disallowing push.&amp;quot;
-    exit 1
-fi
-&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Got an update for the backup script. This time, you&amp;rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.&lt;/p&gt;
 
-&lt;p&gt;After this, rename the file to &lt;code&gt;pre-push&lt;/code&gt; removing the .sample from it.&lt;/p&gt;
+&lt;p&gt;Here is the script again, now modified and a bit cleaned up. I hope it&amp;rsquo;s helpful.&lt;/p&gt;
 
-&lt;p&gt;If you now, mess something up, you should see something like this before your push:&lt;/p&gt;
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Minecraft world automatic backup to AWS S3 bucket</title>
+      <link>https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/</link>
+      <pubDate>Sat, 16 Apr 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/</guid>
+      <description>Hi Folks.
+Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&amp;rsquo;m backing up the world once in a while.
+For that, I&amp;rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.
+The script is really straightforward. I&amp;rsquo;m doing manual versioning, although S3 does provide one out of the box.</description>
+    </item>
+    
+    <item>
+      <title>Minecraft Server with Docker on OSX &#43; Mods</title>
+      <link>https://skarlso.github.io/2016/03/29/minecraft-server-with-docker-and-osx/</link>
+      <pubDate>Tue, 29 Mar 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/03/29/minecraft-server-with-docker-and-osx/</guid>
+      <description>Hi Folks.
+Intro Today, I wanted to write about how to create a secure server in a container. Ideally, you don&amp;rsquo;t want to run your server on your own machine. Running it in a container gives you a much needed control and an extra layer of security.
+Docker On OSX While on a mac, you have a couple of options to run docker.
+Docker-Machine Docker-Machine
+Docker machine is very simple.</description>
+    </item>
+    
+    <item>
+      <title>Wercker Fixed</title>
+      <link>https://skarlso.github.io/2016/03/09/wercker-fixed/</link>
+      <pubDate>Wed, 09 Mar 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/03/09/wercker-fixed/</guid>
+      <description>Hi Folks.
+So Wercker was not working. After a minor modification it seems to be okay now. The config file needed for it to work looks like this:
+box: golang build: steps: - arjen/hugo-build: theme: redlounge deploy: steps: - install-packages: packages: git - leipert/git-push: gh_oauth: $GIT_TOKEN repo: skarlso/skarlso.github.io branch: master basedir: public  The modification is the box type to golang and removed ssh-client from packages.
+Thanks, Gergely.</description>
+    </item>
+    
+    <item>
+      <title>Wercker Test</title>
+      <link>https://skarlso.github.io/2016/03/04/wercker-test-2/</link>
+      <pubDate>Fri, 04 Mar 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/03/04/wercker-test-2/</guid>
+      <description>Basics This is a wercker Test.</description>
+    </item>
+    
+    <item>
+      <title>Hugo Autodeploy with Wercker and Github - Pages</title>
+      <link>https://skarlso.github.io/2016/02/10/hugo-autodeploy-with-wercker/</link>
+      <pubDate>Wed, 10 Feb 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/02/10/hugo-autodeploy-with-wercker/</guid>
+      <description>There already is a nice tutorial on how to create github-pages with Hugo Here if you prefer deplying your pages to a different branch on the same repo. There is also a post about Wercker and Hugo Here deploying pages to said separate branch.
+However, I took an easier approach on the matter with a completely separate branch for my blog source and my compiled github pages.
+This blog sits here: https://github.</description>
+    </item>
+    
+    <item>
+      <title>Wercker Test</title>
+      <link>https://skarlso.github.io/2016/02/10/wercker-test/</link>
+      <pubDate>Wed, 10 Feb 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/02/10/wercker-test/</guid>
+      <description>Basics This is a wercker Test.</description>
+    </item>
+    
+    <item>
+      <title>Doing CORS in Go with Gin and JSON</title>
+      <link>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json/</link>
+      <pubDate>Tue, 02 Feb 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/02/02/doing-cors-in-go-with-gin-and-json/</guid>
+      <description>Basics Hello folks.
+This will be a quick post about how to do CORS with jQuery, Gin in Go with a very simple ajax GET and Json.
+I&amp;rsquo;m choosing JSON here because basically I don&amp;rsquo;t really like JSONP. And actually, it&amp;rsquo;s not very complicated to do CORS, it&amp;rsquo;s just hidden enough so that it doesn&amp;rsquo;t become transparent.
+First, what is CORS? It&amp;rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization in the header of a request, Javascript can&amp;rsquo;t reach outside of your domain and be potentially harmful to your visitors.</description>
+    </item>
+    
+    <item>
+      <title>My Journey in advent of code</title>
+      <link>https://skarlso.github.io/2016/01/22/my-journey-in-advent-of-code/</link>
+      <pubDate>Fri, 22 Jan 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/01/22/my-journey-in-advent-of-code/</guid>
+      <description>Hello folks.
+I wanted to share with you my tale of working through the problems with Advent Of Code.
+It is a nice tale and there are a few things I learned from it, especially in Go, since I used that solve all of the problems. So, let&amp;rsquo;s get started.
+Solving the problems The most important lesson I learned while doing these exercises was, how to solve these problems. A couple of them were simple enough to not have to over think it, but most of them got very tricky.</description>
+    </item>
+    
+    <item>
+      <title>Improving performance with byte slice and int map</title>
+      <link>https://skarlso.github.io/2016/01/05/improving-performance-with-byte-slice-and-int-map/</link>
+      <pubDate>Tue, 05 Jan 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/01/05/improving-performance-with-byte-slice-and-int-map/</guid>
+      <description>Hello Folks.
+Today I would like to share with you my little tale of refactoring my solution to Advent Of Code Day 13.
+It&amp;rsquo;s a lovely tale of action, adventure, drama, and comedy.
+Let&amp;rsquo;s being with my first iteration of the problem.
+package main import ( &amp;quot;bufio&amp;quot; &amp;quot;fmt&amp;quot; &amp;quot;math&amp;quot; &amp;quot;os&amp;quot; &amp;quot;strconv&amp;quot; &amp;quot;strings&amp;quot; &amp;quot;github.com/skarlso/goutils/arrayutils&amp;quot; ) var seatingCombinations = make([][]string, 0) var table = make(map[string][]map[string]int) var keys = make([]string, 0) //Person a person type Person struct { // neighbour *Person name string like int } func main() { file, _ := os.</description>
+    </item>
+    
+    <item>
+      <title>Byte arrays and Channels</title>
+      <link>https://skarlso.github.io/2016/01/01/byte-arrays-and-channels/</link>
+      <pubDate>Fri, 01 Jan 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2016/01/01/byte-arrays-and-channels/</guid>
+      <description>Hi folks and a Happy new Year!
+Today, I would like to show you some interesting things you can do with channels. Consider the following simple example.
+package main import &amp;quot;fmt&amp;quot; func main() { generatedPassword := make(chan int, 100) correctPassword := make(chan int) defer close(generatedPassword) defer close(correctPassword) go passwordIncrement(generatedPassword) go checkPassword(generatedPassword, correctPassword) pass := &amp;lt;-correctPassword fmt.Println(pass) } func checkPassword(input &amp;lt;-chan int, output chan&amp;lt;- int) { for { p := &amp;lt;-input //Introduce lengthy operation here // time.</description>
+    </item>
+    
+    <item>
+      <title>Use Byte Array Instead of Strings</title>
+      <link>https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings/</link>
+      <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/12/29/use-byte-array-instead-of-strings/</guid>
+      <description>Hello Folks.
+This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.
+[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.
+Sample code:
+package solutions import &amp;quot;fmt&amp;quot; const ( //INPUT input INPUT = &amp;quot;1321131112&amp;quot; //LIMIT limit LIMIT = 50 ) //LookAndSay translates numbers according to Look and Say algo func LookAndSay(s string, c chan string) { charCount := 1 look := &amp;quot;&amp;quot; for i := range s { if i+1 &amp;lt; len(s) { if s[i] == s[i+1] { charCount++ } else { look += fmt.</description>
+    </item>
+    
+    <item>
+      <title>Use Byte Slice Instead of Strings</title>
+      <link>https://skarlso.github.io/2015/12/29/use-byte-slice-instead-of-strings/</link>
+      <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/12/29/use-byte-slice-instead-of-strings/</guid>
+      <description>Hello Folks.
+This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.
+[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.
+Sample code:
+package solutions import &amp;quot;fmt&amp;quot; const ( //INPUT input INPUT = &amp;quot;1321131112&amp;quot; //LIMIT limit LIMIT = 50 ) //LookAndSay translates numbers according to Look and Say algo func LookAndSay(s string, c chan string) { charCount := 1 look := &amp;quot;&amp;quot; for i := range s { if i+1 &amp;lt; len(s) { if s[i] == s[i+1] { charCount++ } else { look += fmt.</description>
+    </item>
+    
+    <item>
+      <title>Recursive Letter Frequency Count</title>
+      <link>https://skarlso.github.io/2015/12/23/recursive-freq-count/</link>
+      <pubDate>Wed, 23 Dec 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/12/23/recursive-freq-count/</guid>
+      <description>Hello everybody!
+I wanted to do a sort post about word frequency count. I did it many times now and I was curious as how a recursive solution would perform as opposed to looping.
+So I wrote it up quickly and added a few benchmarks with different sized data.
+First&amp;hellip;. The code:
+var freqMap = make(map[string]int, 0) func countLettersRecursive(s string) string { if len(s) == 0 { return s } freqMap[string(s[0])]++ return countLettersRecursive(s[1:]) } func countLettersLoop(s string) { for _, v := range s { freqMap[string(v)]++ } }  Very simple.</description>
+    </item>
+    
+    <item>
+      <title>Go Development Environment</title>
+      <link>https://skarlso.github.io/2015/12/08/go-development-environment/</link>
+      <pubDate>Tue, 08 Dec 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/12/08/go-development-environment/</guid>
+      <description>Hello folks.
+Here is a little something I&amp;rsquo;ve put together, since I&amp;rsquo;m doing it a lot.
+Go Development Environment
+If I have a project I&amp;rsquo;d like to contribute, like GoHugo, I have to setup a development environment, because most of the times, I&amp;rsquo;m on a Mac. And on OSX things work differently. I like to work in a Linux environment since that&amp;rsquo;s what most of the projects are built on.</description>
+    </item>
+    
+    <item>
+      <title>Welcome To My New Blog</title>
+      <link>https://skarlso.github.io/2015/12/07/welcome-to-my-new-blog/</link>
+      <pubDate>Mon, 07 Dec 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/12/07/welcome-to-my-new-blog/</guid>
+      <description>Hello Folks Welcome to my new blog. I decided to move away for a number of reasons, but setting up a static page blog site is very cool if you don&amp;rsquo;t directly use a database. Since posts are just posts and I have a different way of hosting images, this really was just a matter of time.
+And Hugo / Github pages provided the tools which made this move possible.</description>
+    </item>
+    
+    <item>
+      <title>Go JIRA API client</title>
+      <link>https://skarlso.github.io/2015/11/20/go-jira-api-client/</link>
+      <pubDate>Fri, 20 Nov 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/11/20/go-jira-api-client/</guid>
+      <description>Hi folks.
+So, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial.
+It&amp;#8217;s still in it&amp;#8217;s infancy and I have a couple of more features I want to implement, but, here is the code&amp;#8230;
+  package main &amp;nbsp; import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#34;fmt&#34; &#34;io/ioutil&#34; &#34;log&#34; &#34;net/http&#34; &#34;os&#34; &amp;nbsp; &#34;github.com/BurntSushi/toml&#34; ) &amp;nbsp; var configFile = &#34;</description>
+    </item>
+    
+    <item>
+      <title>The One Hundred Day GitHub Challenge</title>
+      <link>https://skarlso.github.io/2015/11/15/the-one-hundred-day-github-challenge/</link>
+      <pubDate>Sun, 15 Nov 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/11/15/the-one-hundred-day-github-challenge/</guid>
+      <description>Hello folks.
+Today, I present to you the One Hundred Day Github Challenge.
+The rules are simple:
+ Minimum of One commit every day for a Hundred days. Commit has to be meaningful but can be as little as a fix in a Readme.md. Doesn&amp;#8217;t matter if you are on vacation, there are no exceptions. There. Are. No. Exceptions. If you fail a day, you have to start over. No cheating.</description>
+    </item>
+    
+    <item>
+      <title>Go Progress Quest</title>
+      <link>https://skarlso.github.io/2015/11/09/go-progress-quest/</link>
+      <pubDate>Mon, 09 Nov 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/11/09/go-progress-quest/</guid>
+      <description>Hi Folks.
+I started to build a Progress Quest type of web app in Go.
+If you&amp;#8217;d like to join, or just tag along, please drop by here =&amp;gt; Go Progress Quest and feel free to submit an issue if you have an idea, or would like to contribute!
+I will try and document the Progress&amp;#8230;
+Thank you for reading!
+Gergely.</description>
+    </item>
+    
+    <item>
+      <title>Kill a Program on Connecting to a specific WiFi – OSX</title>
+      <link>https://skarlso.github.io/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/</link>
+      <pubDate>Mon, 26 Oct 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/</guid>
+      <description>Hi folks.
+If you have the tendency, like me, to forget that you are on the corporate VPN, or leave a certain software open when you bring your laptop to work, this might be helpful to you too.
+It&amp;#8217;s a small script which kills a program when you change your Wifi network.
+Script:
+  #!/bin/bash &amp;nbsp; function log &amp;#123; directory=&#34;/Users/&amp;lt;username&amp;gt;/wifi_detect&#34; log_dir_exists=true if &amp;#91; ! -d $directory &amp;#93;; then echo &#34;</description>
+    </item>
+    
+    <item>
+      <title>Circular buffer in Go</title>
+      <link>https://skarlso.github.io/2015/10/15/circular-buffer-in-go/</link>
+      <pubDate>Thu, 15 Oct 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/10/15/circular-buffer-in-go/</guid>
+      <description>I&amp;#8217;m proud of this one too. No peaking. I like how go let&amp;#8217;s you do this kind of stuff in a very nice way.
+  package circular &amp;nbsp; import &#34;fmt&#34; &amp;nbsp; //TestVersion testVersion const TestVersion = 1 &amp;nbsp; //Buffer buffer type type Buffer struct { buffer []byte full int size int s, e int } &amp;nbsp; //NewBuffer creates a new Buffer func NewBuffer(size int) *Buffer { return &amp;Buffer{buffer: make([]byte, size), s: , e: , size: size, full: } } &amp;nbsp; //ReadByte reads a byte from b Buffer func (b *Buffer) ReadByte() (byte, error) { if b.</description>
+    </item>
+    
+    <item>
+      <title>Jenkins Job DSL and Groovy goodness</title>
+      <link>https://skarlso.github.io/2015/10/15/jenkins-job-dsl-and-groovy-goodness/</link>
+      <pubDate>Thu, 15 Oct 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/10/15/jenkins-job-dsl-and-groovy-goodness/</guid>
+      <description>Hi Folks.
+Ever used Job DSL plugin for Jenkins? What is that you say? Well, it&amp;#8217;s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.
+Today, however, I&amp;#8217;m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.
+Today, I would like to write about a part of it which is even more interesting.</description>
+    </item>
+    
+    <item>
+      <title>DataMunger Kata with Go</title>
+      <link>https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/</link>
+      <pubDate>Sun, 04 Oct 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/</guid>
+      <description>Quickly wrote up the Data Munger code kata in Go.
+Next time, I want better abstractions. And a way to select columns based on their header data. For now, this is not bad.
+  package main &amp;nbsp; import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34; &#34;os&#34; &#34;regexp&#34; &#34;strconv&#34; &#34;strings&#34; ) &amp;nbsp; //Data which is Data type Data struct { columnName string compareOne float64 compareTwo float64 } &amp;nbsp; func main() { // datas := []Data{WeatherData{}, FootballData{}} fmt.</description>
+    </item>
+    
+    <item>
+      <title>How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs</title>
+      <link>https://skarlso.github.io/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/</link>
+      <pubDate>Fri, 02 Oct 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/</guid>
+      <description>Hello folks.
+Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.
+So I&amp;#8217;m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work.</description>
+    </item>
+    
+    <item>
+      <title>I used to have great ideas on the toilet, but I no longer do.</title>
+      <link>https://skarlso.github.io/2015/09/07/i-used-to-have-great-ideas-on-the-toilet-but-i-no-longer-do/</link>
+      <pubDate>Mon, 07 Sep 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/09/07/i-used-to-have-great-ideas-on-the-toilet-but-i-no-longer-do/</guid>
+      <description>I used to have great ideas on the toilet, but I no longer do. And I would like to reflect on that. So this is not going to be a technical post, rather some ramblings.
+I already had a post similar to this one, but I failed to follow up on it, and now I&amp;#8217;m re-visiting the question. With technology on the rise, embedded systems, chips, augmented biology and information being available at our fingertips, I have but one concern.</description>
+    </item>
+    
+    <item>
+      <title>Sieve of Eratosthenes in Go</title>
+      <link>https://skarlso.github.io/2015/07/30/sieve-of-eratosthenes-in-go/</link>
+      <pubDate>Thu, 30 Jul 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/07/30/sieve-of-eratosthenes-in-go/</guid>
+      <description>I&amp;#8217;m pretty proud of this one as well.
+  package sieve &amp;nbsp; //Sieve Uses the Sieve of Eratosthenes to calculate primes to a certain limit func Sieve(limit int) []int { var listOfPrimes []int markers := make([]bool, limit) &amp;nbsp; for i := 2; i &amp;lt; limit; i++ { if !markers[i] { for j := i + i; j &amp;lt; limit; j += i { markers[j] = true } listOfPrimes = append(listOfPrimes, i) } } &amp;nbsp; return listOfPrimes }     </description>
+    </item>
+    
+    <item>
+      <title>Quick Tip for Debugging Headless Locally</title>
+      <link>https://skarlso.github.io/2015/07/22/quick-tip-for-debugging-headless-locally/</link>
+      <pubDate>Wed, 22 Jul 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/07/22/quick-tip-for-debugging-headless-locally/</guid>
+      <description>If you are installing something with Packer and you have Headless enabled(and you are lazy and don&amp;#8217;t want to switch it off), it gets difficult, to see output.
+Especially on a windows install the Answer File / Unattended install can be like =&amp;gt; Waiting for SSH&amp;#8230; for about an hour or two! If you are doing this locally fret not. Just start VirtualBox, and watch the Preview section which will display the current state even if it&amp;#8217;s a headless install!</description>
+    </item>
+    
+    <item>
+      <title>Converting numbers into string representations</title>
+      <link>https://skarlso.github.io/2015/07/19/converting-numbers-into-string-representations/</link>
+      <pubDate>Sun, 19 Jul 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/07/19/converting-numbers-into-string-representations/</guid>
+      <description>I quiet like this one. My first go program snippet without any peaking or googling. I&amp;#8217;m proud, though it could be improved with a bit of struct magic and such and such. And it only counts &amp;#8217;till 1000&amp;#8230;
+  package main &amp;nbsp; import &#34;fmt&#34; &amp;nbsp; var words = map[int]string{1: &#34;one&#34;, 2: &#34;two&#34;, 3: &#34;three&#34;, 4: &#34;four&#34;, 5: &#34;five&#34;, 6: &#34;six&#34;, 7: &#34;seven&#34;, 8: &#34;eight&#34;, 9: &#34;nine&#34;, 10: &#34;ten&#34;, 11: &#34;</description>
+    </item>
+    
+    <item>
+      <title>Selenium Testing with Packer and Vagrant</title>
+      <link>https://skarlso.github.io/2015/07/16/selenium-testing-with-packer-and-vagrant/</link>
+      <pubDate>Thu, 16 Jul 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/07/16/selenium-testing-with-packer-and-vagrant/</guid>
+      <description>&lt;p&gt;So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution&amp;#8230;&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# github.com/Skarlso/goprogressquest
-./create.go:40: undefined: sha1 in sha1.Sum
-./create.go:41: undefined: fmt in fmt.Sprintf
-./create.go:115: undefined: json in json.Unmarshal
-./create.go:130: undefined: json in json.Unmarshal
-FAIL	github.com/Skarlso/goprogressquest [build failed]
-Failed test run. Disallowing push.
-error: failed to push some refs to &#39;git@github.com:Skarlso/goprogressquest.git&#39;
-&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Bitwise &amp; Operator</title>
+      <link>https://skarlso.github.io/2015/07/15/bitwise-operator/</link>
+      <pubDate>Wed, 15 Jul 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/07/15/bitwise-operator/</guid>
+      <description>The first, and only time so far, that I got to use the bitwise &amp;amp; operator. I enjoyed doing so!!
+And of course from now on, I&amp;#8217;ll be looking for more opportunities to (ab)use it.
+  package secret &amp;nbsp; import &#34;sort&#34; &amp;nbsp; const REVERSE = 16 &amp;nbsp; func Handshake(code int) []string { // binary_rep := convertDecimalToBinary(code) if code &amp;lt;  { return nil } secret_map := map[int]string { 1: &#34;</description>
+    </item>
+    
+    <item>
+      <title>Packer 0.8.1.</title>
+      <link>https://skarlso.github.io/2015/07/01/packer-0-8-1/</link>
+      <pubDate>Wed, 01 Jul 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/07/01/packer-0-8-1/</guid>
+      <description>Previously I wrote that the scripts I&amp;#8217;m writing, are failing because Packer hangs.
+Apparently, this was a known issue. And apparently, I was using an older version, 0.7.5. After I updated everything is working wonderfully!!!
+And for my thanks, here is an updated PowerShell script for provisioning my dotnet stuff.
+  $source = &#34;http://download.microsoft.com/download/1/6/7/167F0D79-9317-48AE-AEDB-17120579F8E2/NDP451-KB2858728-x86-x64-AllOS-ENU.exe&#34; $destination = &#34;C:\Windows\Temp\dotnet.exe&#34; Write-Host &#39;Starting to download dotnet file.&#39; try &amp;#123; &amp;#40;New-Object System.Net.WebClient&amp;#41;.DownloadFile&amp;#40;$source, $destination&amp;#41; &amp;#125; catch &amp;#91;Exception&amp;#93; &amp;#123; Write-Host &#34;</description>
+    </item>
+    
+    <item>
+      <title>Powershell can also be nice -Or Installing Java silently and waiting</title>
+      <link>https://skarlso.github.io/2015/06/30/powershell-can-also-be-nice-or-installing-java-silently-and-waiting/</link>
+      <pubDate>Tue, 30 Jun 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/06/30/powershell-can-also-be-nice-or-installing-java-silently-and-waiting/</guid>
+      <description>Hello folks.
+Today, I would like to show you a small script. It installs Java JDK, both version, x86 and 64 bit, silently, and wait for that process to finish.
+The wait is necessary because /s on a java install has the nasty habit of running in the background. If you are using a .bat file, you shouldn&amp;#8217;t, than you would use something like: start /w jdk-setup.exe /s. This gets it done, but is ugly.</description>
+    </item>
+    
+    <item>
+      <title>The Packer, The Windows, and the Vagrant box</title>
+      <link>https://skarlso.github.io/2015/06/27/the-packer-the-windows-and-the-vagrant-box/</link>
+      <pubDate>Sat, 27 Jun 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/06/27/the-packer-the-windows-and-the-vagrant-box/</guid>
+      <description>&lt;p&gt;Hello folks.&lt;/p&gt;
 
-&lt;p&gt;That is all.&lt;/p&gt;
+&lt;p&gt;Today, I would like to write about something close to my heart recently. I&amp;#8217;ve been fiddling with Packer, Windows and Vagrant these days. Trying to get a Windows box up in running is a pain in the arse though, so I thought I share my pain with you nice folks out there. Let&amp;#8217;s begin.&lt;/p&gt;
 
-&lt;p&gt;Cheers,
-Gergely.&lt;/p&gt;
-</description>
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Docker &#43; Java &#43; Vagrant&#43; GO.CD</title>
+      <link>https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/</link>
+      <pubDate>Sat, 06 Jun 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/</guid>
+      <description>&lt;p&gt;Hello folks.&lt;/p&gt;
+
+&lt;p&gt;Today, I would like to write about something interesting and close to me at the moment. I&amp;#8217;m going to setup Go.cd with Docker, and I&amp;#8217;m going to get a Ruby Lotus app running. Let&amp;#8217;s get started.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Setting up a new Laptop with Puppet</title>
+      <link>https://skarlso.github.io/2015/05/21/setting-up-a-new-laptop-with-puppet/</link>
+      <pubDate>Thu, 21 May 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/05/21/setting-up-a-new-laptop-with-puppet/</guid>
+      <description>Hello folks.
+So, some of you know puppet, some of you don&amp;#8217;t. Puppet is a configuration management system. It&amp;#8217;s quite awesome. I like working with it. One of the benefits of puppet is, that I never, ever, EVER have to setup a new laptop from scratch, EVER again.
+I&amp;#8217;m writing a puppet manifest file which sets up my new laptop to my liking. I will improve it as I go along.</description>
+    </item>
+    
+    <item>
+      <title>Busy building the future</title>
+      <link>https://skarlso.github.io/2015/05/19/busy-building-the-future/</link>
+      <pubDate>Tue, 19 May 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/05/19/busy-building-the-future/</guid>
+      <description>Fact is, I&amp;#8217;ve been busy.
+I&amp;#8217;ve got a new job as a build engineer. As sort of a devops kind of guy. It&amp;#8217;s extremely interesting considering that I made a career as a tester. Granted, I always was technical, and never really knew my path; but it seems my path is finding me after all.
+In the past years, I got better at Docker, Puppet, Chef, AWS, Packer, Vagrant, Gradle, and a hell of a lot more.</description>
+    </item>
+    
+    <item>
+      <title>Django – RPG – Part 3</title>
+      <link>https://skarlso.github.io/2015/04/21/django-rpg-part-3/</link>
+      <pubDate>Tue, 21 Apr 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/04/21/django-rpg-part-3/</guid>
+      <description>Hello folks.
+A small update to this. I created the model now, which is the database design for this app. It&amp;#8217;s very simple, nothing fancy. Also, I&amp;#8217;m writing the app with Python 3 from now on.
+Here is the model now:
+  from django.db import models from django.contrib.auth.models import User &amp;nbsp; # Create your models here. &amp;nbsp; &amp;nbsp; class Item&amp;#40;models.Model&amp;#41;: name = models.CharField&amp;#40;max_length=100, default=&#34;Item&#34;&amp;#41; damage = models.IntegerField&amp;#40;default=&amp;#41; defense = models.</description>
+    </item>
+    
+    <item>
+      <title>Django – RPG – Part 2</title>
+      <link>https://skarlso.github.io/2015/04/12/django-rpg-part-2/</link>
+      <pubDate>Sun, 12 Apr 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/04/12/django-rpg-part-2/</guid>
+      <description>&lt;p&gt;Hello.&lt;/p&gt;
+
+&lt;p&gt;Continuing where we left off with the Django RPG project. Next up is implementing a rudimentary registration and adding the ability to create a character. Maybe even, design the database through django&amp;#8217;s modelling.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Django – RPG – Part 1</title>
+      <link>https://skarlso.github.io/2015/04/10/django-rpg-2/</link>
+      <pubDate>Fri, 10 Apr 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/04/10/django-rpg-2/</guid>
+      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
+
+&lt;p&gt;So last time, we tried to implement a little RPG of mine using Meteor, which failed miserably. This time we are going to try and use Django. Let&amp;#8217;s have at it, shall we?&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Small Python GUI to Calculate Lever Distance</title>
+      <link>https://skarlso.github.io/2015/04/10/small-python-gui-to-calculate-lever-distance/</link>
+      <pubDate>Fri, 10 Apr 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/04/10/small-python-gui-to-calculate-lever-distance/</guid>
+      <description>Hi folks.
+Just a small script which calculates your distance from a lever focal point if you know your weight, the object&amp;#8217;s weight and the object&amp;#8217;s and the distance the object has from the focal point of the lever.
+Like this:
+This script will give you D1. And this is how it will look like in doing so:
+So, in order for me (77kg) to lift an object of 80kg which is on a, by default, 1 meter long lever, I have to stand back ~1.</description>
+    </item>
+    
+    <item>
+      <title>Python and my Math commitment</title>
+      <link>https://skarlso.github.io/2015/03/15/python-and-my-math-commitment/</link>
+      <pubDate>Sun, 15 Mar 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/03/15/python-and-my-math-commitment/</guid>
+      <description>Let&amp;#8217;s talk about plans. It&amp;#8217;s good to have one. For example, I have a plan for this year.
+I kind of like math. So, I have this book:
+It&amp;#8217;s 1400 pages long and basically, has everything in it. It&amp;#8217;s a rather exhaustive book. Hence, my plan is to finish the book by the end of 2015 and write a couple of python scripts that calculate something interesting.
+For example, Newton&amp;#8217;s law of cooling how I learned it is:</description>
+    </item>
+    
+    <item>
+      <title>Sphere Judge Online – Python Kivy Android app – Part 2</title>
+      <link>https://skarlso.github.io/2015/03/02/sphere-judge-online-python-kivy-android-app-part-2/</link>
+      <pubDate>Mon, 02 Mar 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/03/02/sphere-judge-online-python-kivy-android-app-part-2/</guid>
+      <description>&lt;p&gt;Here we are again. I will attempt to further this little journey of mine into the land of Android and Python.&lt;/p&gt;
+
+&lt;p&gt;This is the second part of the advanture you can read the first one a little bit back.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Sphere Judge Online – Python Kivy Android app</title>
+      <link>https://skarlso.github.io/2015/02/26/sphere-judge-online-python-kivy-android-app/</link>
+      <pubDate>Thu, 26 Feb 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/02/26/sphere-judge-online-python-kivy-android-app/</guid>
+      <description>&lt;p&gt;Hello folks.&lt;/p&gt;
+
+&lt;p&gt;Today I would like to take you on a journey I fought myself through in order to write a python android app, which gets you a random problem from &lt;a href=&#34;http://www.spoj.com/problems/classical/&#34; target=&#34;_blank&#34;&gt;Sphere Judge Online&lt;/a&gt;. Then you can mark it as solved and it will be stored as such, and you can move on to the next problem. With the words of Neil deGrasse Tyson, Come with Me!&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Why Lock Picking is like Testing</title>
+      <link>https://skarlso.github.io/2015/02/08/why-lock-picking-is-like-testing/</link>
+      <pubDate>Sun, 08 Feb 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/02/08/why-lock-picking-is-like-testing/</guid>
+      <description>&lt;p&gt;&amp;nbsp;&lt;/p&gt;
+
+&lt;p&gt;Not a great many people know that I&amp;#8217;m actually into Lock Picking as a hobby. This will not be a tutorial on how to do it, or I won&amp;#8217;t really talk about how I do it; I would like to write about something completely different. So if you came here for that, here are a few very good resources:&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.lockpicking101.com/%20&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.lockpicking101.com/&#34;&gt;http://www.lockpicking101.com/&lt;/a&gt; &lt;/a&gt;&amp;#8211; Tutorials&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.ukbumpkeys.com/collections/lock-picking&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.ukbumpkeys.com/collections/lock-picking&#34;&gt;http://www.ukbumpkeys.com/collections/lock-picking&lt;/a&gt;&lt;/a&gt; &amp;#8211; Tools ( UK )&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.reddit.com/r/lockpicking/&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.reddit.com/r/lockpicking/&#34;&gt;http://www.reddit.com/r/lockpicking/&lt;/a&gt;&lt;/a&gt; &amp;#8211; Reddit&lt;/p&gt;
+
+&lt;p&gt;For my post, click on&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Building an RPG App with Meteor – Part One – The struggle</title>
+      <link>https://skarlso.github.io/2015/02/01/building-an-rpg-app-with-meteor-part-one-the-struggle/</link>
+      <pubDate>Sun, 01 Feb 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/02/01/building-an-rpg-app-with-meteor-part-one-the-struggle/</guid>
+      <description>&lt;p&gt;In my previous post, I was getting ready to enjoy some time with the JavaScript web framework Meteor.&lt;/p&gt;
+
+&lt;p&gt;This time I would like to bring it to a bit of overdrive. See, how re-factoring works on a larger scale model with multiple pages. And how it can organize assets, such as, images, multiple CSS, some plugins, you know, ordinary web stuff.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;#8217;s dive in.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>JavaScript Web Framework – Meteor</title>
+      <link>https://skarlso.github.io/2015/01/29/javascript-web-framework-meteor/</link>
+      <pubDate>Thu, 29 Jan 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/01/29/javascript-web-framework-meteor/</guid>
+      <description>&lt;p&gt;Hi,&lt;/p&gt;
+
+&lt;p&gt;This time I would like to write about something that interests me. I wanted to try out a pure JavaScript web framework.&lt;/p&gt;
+
+&lt;p&gt;My choice is: &lt;a href=&#34;https://www.meteor.com/&#34; target=&#34;_blank&#34;&gt;Meteor&lt;/a&gt;. Looks interesting enough and it was recommended by a friend of mine. So, let&amp;#8217;s dive in.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>When cucumber goes wrong</title>
+      <link>https://skarlso.github.io/2015/01/28/when-cucumber-goes-wrong/</link>
+      <pubDate>Wed, 28 Jan 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/01/28/when-cucumber-goes-wrong/</guid>
+      <description>&lt;p&gt;Hi,&lt;/p&gt;
+
+&lt;p&gt;Let&amp;#8217;s face the horrible truth:&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;It&amp;#8217;s rare / never happens that a manager / scrum master / product owner actually reads your cucumber test cases.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>From Zero to Hundred in Four seconds</title>
+      <link>https://skarlso.github.io/2015/01/27/from-zero-to-hundred-in-four-seconds/</link>
+      <pubDate>Tue, 27 Jan 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/01/27/from-zero-to-hundred-in-four-seconds/</guid>
+      <description>&lt;p&gt;I thought I throw my grudge out of the window against Scala and try something with it.&lt;/p&gt;
+
+&lt;p&gt;I also got my hands on a fairly new book, called: &amp;#8220;&lt;a href=&#34;http://www.amazon.co.uk/Learning-Scala-Practical-Functional-Programming/dp/1449367933/ref=sr_1_1?ie=UTF8&amp;qid=1422340157&amp;sr=8-1&amp;keywords=learning+scala+a+practical&#34; target=&#34;_blank&#34;&gt;Learning Scala: Practical Functional Programming for the JVM&lt;/a&gt;&amp;#8220;. Turns out to be a rather fun book to read. And Jason Swartz has a nice way of writing. So I wanted to play around with &lt;a href=&#34;https://www.playframework.com/&#34; target=&#34;_blank&#34;&gt;Play 2 Framework&lt;/a&gt;. It now comes packaged in &lt;a href=&#34;https://typesafe.com/get-started&#34; target=&#34;_blank&#34;&gt;Activator&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Why Testers are, like scientists</title>
+      <link>https://skarlso.github.io/2015/01/26/why-testers-are-like-scientists/</link>
+      <pubDate>Mon, 26 Jan 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/01/26/why-testers-are-like-scientists/</guid>
+      <description>&lt;p&gt;Hello everybody.&lt;/p&gt;
+
+&lt;p&gt;Today, I would like to write about little observation I made along the way of being a tester.&lt;/p&gt;
+
+&lt;p&gt;The title says it all. I think Testers, are like scientists. I would go even further, and say: Testers, are scientists.&lt;/p&gt;
+
+&lt;p&gt;Let us see how the two compare.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Why the expressiveness of your Tests is important – Part One</title>
+      <link>https://skarlso.github.io/2014/11/15/why-the-expressiveness-of-your-tests-is-important-part-one/</link>
+      <pubDate>Sat, 15 Nov 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/11/15/why-the-expressiveness-of-your-tests-is-important-part-one/</guid>
+      <description>&lt;p&gt;Hello Everybody.&lt;/p&gt;
+
+&lt;p&gt;This time I&amp;#8217;d like to write about the expressiveness of a Test. I think that it&amp;#8217;s very important to write understandable and expressive tests. In older times I was studying novel writing. There is a rule which a novel needs to follow. It goes something like this: &amp;#8220;A novel needs to lead its reader and make him understand in the simplest way what&amp;#8217;s going on, with whom and why?&amp;#8221;. In other words, it&amp;#8217;s not a puzzle. It should be obvious what the test is trying to do and it should not require the reader to try and solve it in order to understand it.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Updating All Jenkins Jobs Via Jenkins API – Python</title>
+      <link>https://skarlso.github.io/2014/11/07/updating-all-jenkins-jobs-via-jenkins-api-python/</link>
+      <pubDate>Fri, 07 Nov 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/11/07/updating-all-jenkins-jobs-via-jenkins-api-python/</guid>
+      <description>&lt;p&gt;Hello everybody.&lt;/p&gt;
+
+&lt;p&gt;I would like to share with you a small script I wrote to update all, or a single, Jenkins job from a Python script remotely.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>The seven Principles of Context Driven Testing – Mind Map</title>
+      <link>https://skarlso.github.io/2014/10/23/the-seven-guidelines-of-context-driven-testing/</link>
+      <pubDate>Thu, 23 Oct 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/10/23/the-seven-guidelines-of-context-driven-testing/</guid>
+      <description>&lt;p&gt;Hi Folks!&lt;/p&gt;
+
+&lt;p&gt;I just wanted to share with you my mind map on the seven principles of Context Driven Testing.&lt;/p&gt;
+
+&lt;p&gt;I used the notion of dragons since it&amp;#8217;s seven. And a dragon is usually seven headed in my mind&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;So without further ado&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Python Course Review</title>
+      <link>https://skarlso.github.io/2014/08/25/python-course-review/</link>
+      <pubDate>Mon, 25 Aug 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/08/25/python-course-review/</guid>
+      <description>&lt;p&gt;Hello Everybody.&lt;/p&gt;
+
+&lt;p&gt;Today I&amp;#8217;d like to write a little bit about a python course I did.&lt;/p&gt;
+
+&lt;p&gt;It&amp;#8217;s an 8 week course on algorithmic programming with fun little projects. I&amp;#8217;d like to write down some of my solutions with pseudo code for my own better understanding and for the sake of sharing knowledge. I won&amp;#8217;t, however, share full projects since that would be against the honour code.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;#8217;s begin&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Five reasons why a tester should learn SQL</title>
+      <link>https://skarlso.github.io/2014/05/31/five-reasons-why-a-tester-should-learn-sql/</link>
+      <pubDate>Sat, 31 May 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/05/31/five-reasons-why-a-tester-should-learn-sql/</guid>
+      <description>&lt;p&gt;Hello Folks.&lt;/p&gt;
+
+&lt;p&gt;So last I was writing about why a tester should learn Javascript. Today I would like to write about why a tester should learn SQL.&lt;/p&gt;
+
+&lt;p&gt;There, I said it. I know many people, especially testers, don&amp;#8217;t like SQL. They view it as a monster best be avoided. Something only Database people will know. Something which is so scary and ugly, nobody really wants it.&lt;/p&gt;
+
+&lt;p&gt;But I will give you a couple of good reasons why you shouldn&amp;#8217;t be afraid of SQL. And why you should welcome it as your best friend and partner in crime.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;#8217;s go.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>TDD is Dead – Not really</title>
+      <link>https://skarlso.github.io/2014/05/26/tdd-is-dead-not-really/</link>
+      <pubDate>Mon, 26 May 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/05/26/tdd-is-dead-not-really/</guid>
+      <description>&lt;p&gt;Is TDD dead?&lt;/p&gt;
+
+&lt;p&gt;Not really. So let&amp;#8217;s talk about this topic for a little bit.&lt;/p&gt;
+
+&lt;p&gt;I&amp;#8217;m sure you already read a gazillion posts about this debate but frankly I&amp;#8217;m writing this for myself, to rant a little bit, you know&amp;#8230; Because somebody is wrong on the internet and I must intervene.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Five reasons why a front-end tester should learn Javascript</title>
+      <link>https://skarlso.github.io/2014/05/23/five-reasons-why-a-front-end-tester-should-learn-javascript/</link>
+      <pubDate>Fri, 23 May 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/05/23/five-reasons-why-a-front-end-tester-should-learn-javascript/</guid>
+      <description>&lt;p&gt;Hello everybody.&lt;/p&gt;
+
+&lt;p&gt;Today I would like to write about a very interesting topic, I hope. So let&amp;#8217;s get started.&lt;/p&gt;
+
+&lt;p&gt;As the title already suggests, I&amp;#8217;m writing about why a front-end tester should learn at least a little bit about JavaScripting and the DOM.&lt;/p&gt;
+
+&lt;p&gt;Ohhh and contrary to the belief CSP ( Content Security Policy ) will &lt;strong&gt;not&lt;/strong&gt; be the death of such scripts. There are white-lists and workarounds and exclusions which can be implemented in order to allow local JavaScripting to continue. So don&amp;#8217;t fret&amp;#8230; Read on.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Note taking what when how often</title>
+      <link>https://skarlso.github.io/2014/05/20/note-taking-what-when-how-often/</link>
+      <pubDate>Tue, 20 May 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/05/20/note-taking-what-when-how-often/</guid>
+      <description>&lt;p&gt;Hello Everybody.&lt;/p&gt;
+
+&lt;p&gt;Today I would like to tell you about a little conversation I had with my friend Adrian.&lt;/p&gt;
+
+&lt;p&gt;The topic was about how, when and what to log during a testing session regarding a story.&lt;/p&gt;
+
+&lt;p&gt;So let&amp;#8217;s see what came out of that talk&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Using Chrome Search Engine – Multiple Search Params</title>
+      <link>https://skarlso.github.io/2014/05/18/using-chrome-search-engine-multiple-search-params/</link>
+      <pubDate>Sun, 18 May 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/05/18/using-chrome-search-engine-multiple-search-params/</guid>
+      <description>&lt;p&gt;Hello Everybody.&lt;/p&gt;
+
+&lt;p&gt;Today I would like to write a few words about Chrome&amp;#8217;s Search Engines.&lt;/p&gt;
+
+&lt;p&gt;You&amp;#8217;re probably already using it for a couple of things, like Google, or Amazon searches or YouTube or anything like that. But are you using it to access environments and testing tools faster, with queries?&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>How I started Running</title>
+      <link>https://skarlso.github.io/2014/05/16/how-i-started-running/</link>
+      <pubDate>Fri, 16 May 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/05/16/how-i-started-running/</guid>
+      <description>&lt;p&gt;Hello Everybody.&lt;/p&gt;
+
+&lt;p&gt;Today I would like to write about something non-technical. I would like to write about running and how I started it and what my experiences were with it.&lt;/p&gt;
+
+&lt;p&gt;So tl;dr&amp;#8230; here we go.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>How the past influences the present</title>
+      <link>https://skarlso.github.io/2014/04/13/how-the-past-influences-the-present/</link>
+      <pubDate>Sun, 13 Apr 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/04/13/how-the-past-influences-the-present/</guid>
+      <description>&lt;p&gt;Hello.&lt;/p&gt;
+
+&lt;p&gt;This is only a quick rant about a discussion I overheard the other day&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Example when to use the Strategy Pattern</title>
+      <link>https://skarlso.github.io/2014/02/19/example-when-to-use-the-strategy-pattern/</link>
+      <pubDate>Wed, 19 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/02/19/example-when-to-use-the-strategy-pattern/</guid>
+      <description>&lt;p&gt;Hello folks.&lt;/p&gt;
+
+&lt;p&gt;A quick post about an interesting idea.&lt;/p&gt;
+
+&lt;p&gt;I want to elaborate on a possibility to use the Strategy Design pattern.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>How to write a blog – Why long posts rarely work</title>
+      <link>https://skarlso.github.io/2014/02/13/how-to-write-a-blog-why-long-posts-rarely-work/</link>
+      <pubDate>Thu, 13 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/02/13/how-to-write-a-blog-why-long-posts-rarely-work/</guid>
+      <description>Hello.
+So let&amp;#8217;s clarify this&amp;#8230; They rarely or ever work if you are a beginner blogger. If you have a reputation it will probably work or people will use it as a reference. But I&amp;#8217;m skipping ahead.
+Beginnings
+When you are a beginner blog writer you want to get out as much content as possible. Write mostly relevant things and interesting information because you need to establish a name for yourself.</description>
+    </item>
+    
+    <item>
+      <title>How to check content header on unknown number of items – Python</title>
+      <link>https://skarlso.github.io/2014/02/11/how-to-check-content-header-on-unknown-number-of-items-python/</link>
+      <pubDate>Tue, 11 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/02/11/how-to-check-content-header-on-unknown-number-of-items-python/</guid>
+      <description>Hello guys.
+I&amp;#8217;d like to share a little something with you. It&amp;#8217;s what I cooked up in Python to check an unknown number of content items in a web application.
+Basically the script runs from a script folder under Grails. It goes through all the configured folders where there is static content like images, javascript, css and so on and so forth.
+And then with curl it calls these items up in using their respective paths&amp;#8217;.</description>
+    </item>
+    
+    <item>
+      <title>The method of Loci and how it works for me</title>
+      <link>https://skarlso.github.io/2014/02/11/the-method-of-loci-and-how-it-works-for-me/</link>
+      <pubDate>Tue, 11 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/02/11/the-method-of-loci-and-how-it-works-for-me/</guid>
+      <description>Hello.
+Today I would like to write about something very interesting to you folks.
+It&amp;#8217;s a common remember / recall technique called the Method of loci. Otherwise known as the Memory Palace. A very popular usage can be seen in the episodes of Sherlock Holmes from BBC. He uses it often.
+What is the Method of loci?
+As the Wikipedia page write so properly&amp;#8230;&amp;#8221;In basic terms, it is a method of memory enhancement which uses visualization to organize and recall information.</description>
+    </item>
+    
+    <item>
+      <title>Why you should learn using Vim</title>
+      <link>https://skarlso.github.io/2014/02/10/why-you-should-learn-using-vim/</link>
+      <pubDate>Mon, 10 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/02/10/why-you-should-learn-using-vim/</guid>
+      <description>Hello,
+So Vim is a very powerful editing tool and has lots and lots of potential in regarding plug-ins.
+It has years and years of gathered knowledge and extensions and can virtually do anything you want. But that&amp;#8217;s not even it&amp;#8217;s final form&amp;#8230;
+The real power of Vim lies in navigation and manipulation. The ability to navigate and edit without the use of arrow keys or mouse chops of a large portion of your time which you didn&amp;#8217;t even realize you are wasting until you try it without it.</description>
+    </item>
+    
+    <item>
+      <title>Why does it matter if I sit in an office or in a park</title>
+      <link>https://skarlso.github.io/2014/02/09/why-does-it-matter-if-i-sit-in-an-office-or-in-a-park/</link>
+      <pubDate>Sun, 09 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/02/09/why-does-it-matter-if-i-sit-in-an-office-or-in-a-park/</guid>
+      <description>Hello everybody.
+I&amp;#8217;d like to explain a lot about a topic that is very near my heart. If your job is in an office you will understand this.
+Why offices?
+So why are we sitting together in one big place cramped up with 20-300 other people? Why bother the catering and the ventilation and what not to accommodate these people at one place? Why not just leave them be and let them work at home?</description>
+    </item>
+    
+    <item>
+      <title>How I recruit – Why tool requirements are stupid</title>
+      <link>https://skarlso.github.io/2014/02/04/how-i-recruit-why-tool-requirements-are-stupid/</link>
+      <pubDate>Tue, 04 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/02/04/how-i-recruit-why-tool-requirements-are-stupid/</guid>
+      <description>Hello folks!
+Today I would like to write about something very interesting I&amp;#8217;m seeing all over the place from recruiters. And that is tool requirements from developers.
+For words
+So why is it a problem that in a requirement from a developer there a lots of these:
+&amp;#8211; DB2
+&amp;#8211; QTP
+&amp;#8211; Ranorex
+&amp;#8211; Eclipse ( yes I saw a few of these&amp;#8230; )
+&amp;#8211; Hibernate
+&amp;#8211; Grails
+&amp;#8211; Ruby on Rails</description>
+    </item>
+    
+    <item>
+      <title>Why you should care about the quality of your test code</title>
+      <link>https://skarlso.github.io/2013/11/02/why-you-should-care-about-the-quality-of-your-test-code/</link>
+      <pubDate>Sat, 02 Nov 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/11/02/why-you-should-care-about-the-quality-of-your-test-code/</guid>
+      <description>Hello folks.
+Today I would like to talk to you about something interesting I was talking about with a developer friend.
+We talked about the quality of test code.
+He said&amp;#8230; And I will quote this&amp;#8230;&amp;#8221;Why should we care? It&amp;#8217;s not production code. We aren&amp;#8217;t giving it to the customer.&amp;#8221;
+There are a few reasons why you are going to get a slap in the face for a sentence like this.</description>
+    </item>
+    
+    <item>
+      <title>Diary of a Bit</title>
+      <link>https://skarlso.github.io/2013/10/11/diary-of-a-bit/</link>
+      <pubDate>Fri, 11 Oct 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/10/11/diary-of-a-bit/</guid>
+      <description>&amp;#8212;&amp;#8212;&amp;#8212;&amp;#8212;&amp;#8212;&amp;#8212;&amp;#8212;&amp;#8212;-
+Dear everbody.
+I&amp;#8217;d like to present you a small idea I was working on recently. The reminiscence of an old program. From the view point of the program.
+I&amp;#8217;m planning to put these out in few days successions.
+I hope you enjoy it.
+Cheers,
+Gergely.
+&amp;#8212;&amp;#8212;&amp;#8212;&amp;#8212;&amp;#8212;&amp;#8212;&amp;#8212;&amp;#8212;-
+If I remember correctly it was the year 2012 when I was born. I&amp;#8217;m unsure of this date as my subroutines and algorithms have been re-written so many times that if it weren&amp;#8217;t for my backups I wouldn&amp;#8217;t remember a thing.</description>
+    </item>
+    
+    <item>
+      <title>Low Tech – Why having less will fell more</title>
+      <link>https://skarlso.github.io/2013/08/26/low-tech-why-having-less-will-fell-more/</link>
+      <pubDate>Mon, 26 Aug 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/08/26/low-tech-why-having-less-will-fell-more/</guid>
+      <description>Hi folks.
+I&amp;#8217;d like to share today something with all of you. I&amp;#8217;ve been thinking about how technology affected my life in the long run. And how I perceive the world today around me. So let&amp;#8217;s go around this topic for a little bit shall we?
+The Past
+So as somebody who lived for a while without technology coming near family for a decade or so I have a little bit of past in me without smart phones, gadgets, tv or computers for that matter.</description>
+    </item>
+    
+    <item>
+      <title>Why not to automate everything…</title>
+      <link>https://skarlso.github.io/2013/07/31/why-not-to-automate-everything/</link>
+      <pubDate>Wed, 31 Jul 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/07/31/why-not-to-automate-everything/</guid>
+      <description>Hello. I created a tale of why not to automate everything&amp;#8230; With legos&amp;#8230; Enjoy.
+Gergely.</description>
+    </item>
+    
+    <item>
+      <title>Sublime text</title>
+      <link>https://skarlso.github.io/2013/06/24/sublime-text-5/</link>
+      <pubDate>Mon, 24 Jun 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/06/24/sublime-text-5/</guid>
+      <description>Hello everybody. I&amp;#8217;ve been messing around with sublime for some time now. And been using it to write entires and stuff. So here I was thinking why the hell I should not us it as my main blog entry writer. And being the curious guy I was I thought that creating a plugin that let&amp;#8217;s you submit your post from your favorite editor is just the thing I need.
+So without any further ado here it is&amp;#8230; The wordpress blog entry submitter plugin for sublime text: Sublime WordPress Plugin</description>
+    </item>
+    
+    <item>
+      <title>Cucumber-Jvm And @AfterAll</title>
+      <link>https://skarlso.github.io/2013/04/18/cucumber-jvm-and-afterall/</link>
+      <pubDate>Thu, 18 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/04/18/cucumber-jvm-and-afterall/</guid>
+      <description>Hey folks.
+I find out something new about cucumber-jvm every day.
+If you want something that is executed after all of the tests have finished you must use the Java shutdownHook. It&amp;#8217;s simple really you add in a block of code that can run right before the JVM quits. I know I know&amp;#8230; It sounds awful but I found out that this is the actual way of doing this with java / cucumber.</description>
+    </item>
+    
+    <item>
+      <title>Cucumber Test Name and Tags on Feature</title>
+      <link>https://skarlso.github.io/2013/04/15/cucumber-test-name-and-tags-on-feature/</link>
+      <pubDate>Mon, 15 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/04/15/cucumber-test-name-and-tags-on-feature/</guid>
+      <description>Hello everybody.
+I would like to show you a gem today that I found out.
+Apparently there is no easy way to get to the name of an executing cucumber scenario in cucumber-jvm
+You can try something like that:
+  @After //this is cucumbers @Afters public static void afterExecution&amp;#40;Scenario scenario&amp;#41; &amp;#123; logger.log&amp;#40;&#34;The status of the test is: &#34; + scenario.getStatus&amp;#40;&amp;#41;&amp;#41;; &amp;#125;     But that isn&amp;#8217;t giving you too much now is it?</description>
+    </item>
+    
+    <item>
+      <title>Groovy and Grails course summary</title>
+      <link>https://skarlso.github.io/2013/04/11/groovy-and-grails-course-summary/</link>
+      <pubDate>Thu, 11 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/04/11/groovy-and-grails-course-summary/</guid>
+      <description>Hi folks.
+I attended a 4 day course of Groovy and Grails and this is my attempt at writing up a summary to see how much I retained. I&amp;#8217;ll try to do this from the top of my head without peaking at my notes.
+So let&amp;#8217;s begin.
+Introductions
+First of all, introductions. The course was held by Peter Ledbrook. He is the guy who wrote Grails in Action. He is awesome, go check him out.</description>
+    </item>
+    
+    <item>
+      <title>My history in testing</title>
+      <link>https://skarlso.github.io/2013/04/11/my-history-in-testing/</link>
+      <pubDate>Thu, 11 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/04/11/my-history-in-testing/</guid>
+      <description>Hello folks.
+Today I&amp;#8217;d like to share with you some of the experiences I had as a beginner tester. I hope it sets you off on a path to enlightenment and leaves you off with a good appetite for testing. Shall we begin then?
+The early days
+It was 2004 when I finished school and started working at my first company. I finished as a software developer which is kind of an exaggeration since I only finished a 2 years course of it.</description>
+    </item>
+    
+    <item>
+      <title>It’s all about human interaction.</title>
+      <link>https://skarlso.github.io/2013/01/31/its-all-about-human-interaction/</link>
+      <pubDate>Thu, 31 Jan 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/01/31/its-all-about-human-interaction/</guid>
+      <description>Hello everybody.
+Today I would like to write about something I experienced over the years of being in the software industry.
+Some History
+I&amp;#8217;ve been a tester for a long time now. I&amp;#8217;ve been up and down and down and up. I struggled for a very long time until I became somebody who I am today. And I still have many things to learn ahead of me.
+I learned from many people.</description>
+    </item>
+    
+    <item>
+      <title>What you really need to know to become a Testing Expert</title>
+      <link>https://skarlso.github.io/2013/01/21/what-you-really-need-to-become-a-testing-expert/</link>
+      <pubDate>Mon, 21 Jan 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/01/21/what-you-really-need-to-become-a-testing-expert/</guid>
+      <description>Hello Everybody.
+Today I would like to show you what you need to become a Testing expert.
+If you had noticed I deliberately left out the word Software. Why? Because becoming and expert in Testing Anything has the same root as becoming an expert to test software. And for that let me take you back to a Galaxy Far Far Away in Time AND Space.
+The beginnings&amp;#8230;
+I went to school in Oroszlany, my home town in Hungary.</description>
+    </item>
+    
+    <item>
+      <title>From Chaos There Shall Be Order</title>
+      <link>https://skarlso.github.io/2013/01/04/from-chaos-there-shall-be-order/</link>
+      <pubDate>Fri, 04 Jan 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2013/01/04/from-chaos-there-shall-be-order/</guid>
+      <description>Dear Readers.
+Today I want to talk to you about something I discovered over years of working and experience.
+Also something that I can see in the world repeating over and over again. Not just in Software business but also in History in Human nature in Physics and Systems.
+So let&amp;#8217;s see what I&amp;#8217;m talking about.
+What is Chaos?
+Chaos is a state of utter confusion. Chaos is the opposite of order.</description>
+    </item>
+    
+    <item>
+      <title>Methodologies, Thought Patterns, Lies</title>
+      <link>https://skarlso.github.io/2012/12/12/methodologies-thought-patterns-lies/</link>
+      <pubDate>Wed, 12 Dec 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/12/12/methodologies-thought-patterns-lies/</guid>
+      <description>Hello everybody.
+Today I&amp;#8217;d like to write about something I discovered over the years of researching and following certain people and movements in Testing and Programming world.
+Let me tell you that there are quite an amazing amount of stuff to be read out there. It&amp;#8217;s overwhelming.
+Let&amp;#8217;s talk about Methodologies first.
+There are many out there currently. In programming and in testing too. Many speak of ways how you should or should not do you work.</description>
+    </item>
+    
+    <item>
+      <title>TEAS: Testing Exploration Adventure Session</title>
+      <link>https://skarlso.github.io/2012/12/01/teas-testing-exploration-adventure-session/</link>
+      <pubDate>Sat, 01 Dec 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/12/01/teas-testing-exploration-adventure-session/</guid>
+      <description>Hello Everybody.
+I&amp;#8217;d like to introduce T.E.A.S. to you. This is something I came up with yesterday which requires a lot of fantasy some good thinking planning and enthusiastic people. So, let&amp;#8217;s get started.
+What is it about?
+Testing Exploration Adventure Session is about&amp;#8230; Testing! There. No real surprise, eh? TEAS has it&amp;#8217;s roots in RPGs. Role Playing Games. If you ever heard or read about M.A.G.U.S. or the more known Dungeons &amp;amp; Dragons you will have a better understanding of the concept behind this phenomena.</description>
+    </item>
+    
+    <item>
+      <title>How to eliminate a parameter boom</title>
+      <link>https://skarlso.github.io/2012/10/09/how-to-eliminate-a-parameter-boom/</link>
+      <pubDate>Tue, 09 Oct 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/10/09/how-to-eliminate-a-parameter-boom/</guid>
+      <description>Hello folks.
+Today I want to write about a little trick I learned.
+If you are working with legacy code and you don&amp;#8217;t have the chance to eliminate core design problems, you can use this little pattern to help you out.
+Problem
+Problem is that you have a class that has a gazillion collaborators and at some point in time one of the clever devs thought it would be a cool idea to do dependancy injection via the constructor.</description>
+    </item>
+    
+    <item>
+      <title>Coderetreat London</title>
+      <link>https://skarlso.github.io/2012/09/30/89/</link>
+      <pubDate>Sun, 30 Sep 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/09/30/89/</guid>
+      <description>Hello everybody.
+So yesterday I was on a little gathering called Coderetreat.
+If you look at the link you can read everything about it. If not, I&amp;#8217;ve provided a short description.
+What it is about?
+So what is codereatreat about? In short it&amp;#8217;s about programmers getting together and honing and practicing there skills in order to become more at what they are doing. It&amp;#8217;s a practice run with great people. TDDing one problem the whole day long with constantly applied constraints.</description>
+    </item>
+    
+    <item>
+      <title>What my brain is up to the whole day…</title>
+      <link>https://skarlso.github.io/2012/09/20/what-my-brain-is-up-to-the-whole-day/</link>
+      <pubDate>Thu, 20 Sep 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/09/20/what-my-brain-is-up-to-the-whole-day/</guid>
+      <description>Hello folks.
+Here is a little graphic I made to show what my brain is up to the whole day long&amp;#8230; Excuse me for the lack of my colouring skills&amp;#8230; Enjoy
+Thanks for reading!
+Gergely.</description>
+    </item>
+    
+    <item>
+      <title>Learning programming with a visual mind</title>
+      <link>https://skarlso.github.io/2012/09/09/learning-programming-with-a-visual-mind/</link>
+      <pubDate>Sun, 09 Sep 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/09/09/learning-programming-with-a-visual-mind/</guid>
+      <description>Hi folks.
+Today I want to write to you about learning something with a visual mind. There are a gazillion posts out there that tell you how to learn something with a visual mind. However, there are only a few actually describing how to learn something as complicated and logical as programming. How do you draw up a function? How do you draw up a cycle or a structure?
+Actually these are really easy.</description>
+    </item>
+    
+    <item>
+      <title>TDD and Game of Life</title>
+      <link>https://skarlso.github.io/2012/07/12/tdd-and-game-of-life/</link>
+      <pubDate>Thu, 12 Jul 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/07/12/tdd-and-game-of-life/</guid>
+      <description>So today at 8-12PM I had a great session with two friends of mine. It was awesome. Like a mini code retreat.
+We set down in a musky bar, drank wine and beer and cider, and decided to practice some TDD with the well known problem of Conway&amp;#8217;s Game of Life. This challenge is really interesting. I never done it before, ever. So it was a really good practice for me.</description>
+    </item>
+    
+    <item>
+      <title>Journey into an unknown system</title>
+      <link>https://skarlso.github.io/2012/06/28/journey-into-an-unknown-system/</link>
+      <pubDate>Thu, 28 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/06/28/journey-into-an-unknown-system/</guid>
+      <description>Aka, what you can do if you are facing and unknown framework / system you have to work with for quite some time.
+Get intimate
+You are going to live with this system for a while. The best thing you can do is getting to know it better. You have to get it to know like you would approche a fine lady. You have to ask it questions look after it, how it feels how its day was.</description>
+    </item>
+    
+    <item>
+      <title>Solution to Wrap Kata</title>
+      <link>https://skarlso.github.io/2012/06/26/solution-to-wrap-kata/</link>
+      <pubDate>Tue, 26 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/06/26/solution-to-wrap-kata/</guid>
+      <description>My solution to the String Wrap Kata. The goal is to have it wrap a text on a given column width.
+It is not the best solution but this is my first try. I did it with TDD so there were tests first, which I&amp;#8217;m not going to copy in..
+  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37   &amp;nbsp; public class WrapKata &amp;#123; &amp;nbsp; public String wrap&amp;#40;String input, int columnSize&amp;#41; &amp;#123; &amp;nbsp; if &amp;#40;input.</description>
+    </item>
+    
+    <item>
+      <title>How to read a professional book for slow learners</title>
+      <link>https://skarlso.github.io/2012/06/18/how-to-read-a-professional-book-for-slow-learners/</link>
+      <pubDate>Mon, 18 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/06/18/how-to-read-a-professional-book-for-slow-learners/</guid>
+      <description>Hi everybody.
+Today I want to talk to you about.. Well.. How to read a professional book for slow learners without too much waste of time.
+Let us start at the&amp;#8230; well&amp;#8230; the beginning. How do you normally read a book if you want to memorize it properly. You read it once and then re read the whole thing again until it gets in your head? Or do you have another strategy?</description>
+    </item>
+    
+    <item>
+      <title>Don’t throw Exception</title>
+      <link>https://skarlso.github.io/2012/06/13/dont-throw-exception/</link>
+      <pubDate>Wed, 13 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/06/13/dont-throw-exception/</guid>
+      <description>Hi.
+Today I want to talk about a common problem in many frameworks I encountered over the course of my carrier as a Java dev / automation engineer, whatnot.
+Throwing Exceptions. That is in your method you have something like this:
+  1   public void insertMethodNameHere&amp;#40;String param&amp;#41; throws Exception &amp;#123;&amp;#125;     This is bad. And I will tell you in short forms why.
+Hides exceptions</description>
+    </item>
+    
+    <item>
+      <title>How to write a professional blog</title>
+      <link>https://skarlso.github.io/2012/06/13/how-to-write-a-professional-blog/</link>
+      <pubDate>Wed, 13 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/06/13/how-to-write-a-professional-blog/</guid>
+      <description>Hi folks.
+I want to write a little bit about writing a professional blog.
+Early steps
+Let&amp;#8217;s first talk about what you understand about professional blog. It&amp;#8217;s either a semi professional one, that mixes life with professionalism, like chess, programming, testing, painting, drawing, engineering whatever your profession is. Or it can be a purely professional one without your life getting involved in it.
+Either way you have to decide at the beginning.</description>
+    </item>
+    
+    <item>
+      <title>Making your code understandable</title>
+      <link>https://skarlso.github.io/2012/06/13/making-your-code-understandable/</link>
+      <pubDate>Wed, 13 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/06/13/making-your-code-understandable/</guid>
+      <description>Hi!
+I&amp;#8217;ve seen this many times over and over again. Many people have wrote books about it already. Like Uncle Bob&amp;#8217;s Clean Code. Like Pragmatic Programmer by Andrew Hunt and David Thomas. What makes your code understandable to others.
+Is it Comments?
+No. It&amp;#8217;s not comments. If your code could be read properly you wouldn&amp;#8217;t need comments to explain what it does. Like Uncle Bob said. A good code doesn&amp;#8217;t contain surprises.</description>
+    </item>
+    
+    <item>
+      <title>Getting Dual Card to work on Ubuntu 12.04.</title>
+      <link>https://skarlso.github.io/2012/04/11/getting-dual-card-to-work-on-ubuntu-12-04/</link>
+      <pubDate>Wed, 11 Apr 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/04/11/getting-dual-card-to-work-on-ubuntu-12-04/</guid>
+      <description>Hi guys.
+Today I want to talk about a little adventure I had yesterday night. It was quite the fun and frustration too. But neither comes without the other when it&amp;#8217;s about linux.
+So let us see what the problem is at hand. The problem machine is a Dell Inspiron N5110 with Nvidia card number one: GeForce GT 525M. And number two: Integrated. Optimus for the win.
+So how windows is handling this is actually with a software called Optimus.</description>
+    </item>
+    
+    <item>
+      <title>JMS Connection setup and Framework</title>
+      <link>https://skarlso.github.io/2012/03/04/jms-connection-setup-and-framework/</link>
+      <pubDate>Sun, 04 Mar 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/03/04/jms-connection-setup-and-framework/</guid>
+      <description>Hello chumps.
+Today I want to write about jms connection testing with a small framework. I wrote a small thing using a factory object model. It&amp;#8217;s a lead, a proof of concept. You can use this to go onward.
+First, let&amp;#8217;s begin with the JMS connection it self.
+JMS Connection
+First rule of thumb is: &amp;#8220;Don&amp;#8217;t wait for a response when dealing with JMS queues.&amp;#8221; How so? Because, a JMS queue is asynchronous so you wont get back anything.</description>
+    </item>
+    
+    <item>
+      <title>Configuration</title>
+      <link>https://skarlso.github.io/2012/02/27/configuration/</link>
+      <pubDate>Mon, 27 Feb 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/02/27/configuration/</guid>
+      <description>When I see something like this:
+  1 2 3 4 5 6   public class Config &amp;#123; public static final string DATABASELINK = &#34;linkhere&#34;; . . . &amp;#125;     It sends a small, but chilling shiver down my spine. Just&amp;#8230; don&amp;#8217;t. There are a lot of possibilities to use configuration in Java. Java property files. Xml. Xml serialization. CSV file. Whatever suits you best, but this?</description>
+    </item>
+    
+    <item>
+      <title>Hello and welcome</title>
+      <link>https://skarlso.github.io/2012/02/26/hello-and-welcome/</link>
+      <pubDate>Sun, 26 Feb 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/02/26/hello-and-welcome/</guid>
+      <description>Hello Dear Visitor.
+Welcome to the ramblings of a software test engineer who thinks that he is a tester but feels like a developer but works as a tester but wants to learn programming like a developer&amp;#8230; And so on and so fort.
+I will make a journey that has been done by many automation testers. The journey when you decide to step one forward. A friend of mine told me that it is good that a tester learns proper programming and that more should do so.</description>
+    </item>
+    
+    <item>
+      <title>Testing ‘code’ tag.</title>
+      <link>https://skarlso.github.io/2012/02/26/testing-code-tag/</link>
+      <pubDate>Sun, 26 Feb 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2012/02/26/testing-code-tag/</guid>
+      <description>Hello.
+This is just a quick post to test the working of the code tag.
+  1 2 3   Given&amp;#40;/The Action is &amp;#40;&amp;#91;A-z&amp;#93;*&amp;#41;/&amp;#41; do |action| @action = action end     Perfect!!
+The name of the plugin is WP-Syntax. The trick is to edit the page in plain HTML. Because the WordPress word editor screws up the &amp;lt;&amp;gt; tags. But surely you already knew that&amp;#8230;</description>
     </item>
     
   </channel>

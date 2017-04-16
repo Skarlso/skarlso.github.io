@@ -2,10 +2,13 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Docker on Ramblings of a build engineer</title>
-    <link>https://skarlso.github.io/tags/docker/index.xml</link>
+    <link>https://skarlso.github.io/tags/docker/</link>
     <description>Recent content in Docker on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <atom:link href="https://skarlso.github.io/tags/docker/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 06 Jun 2015 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://skarlso.github.io/tags/docker/index.xml" rel="self" type="application/rss+xml" />
+    
     
     <item>
       <title>Docker &#43; Java &#43; Vagrant&#43; GO.CD</title>
@@ -17,186 +20,7 @@
 
 &lt;p&gt;Today, I would like to write about something interesting and close to me at the moment. I&amp;#8217;m going to setup Go.cd with Docker, and I&amp;#8217;m going to get a Ruby Lotus app running. Let&amp;#8217;s get started.&lt;/p&gt;
 
-&lt;p&gt;&lt;/p&gt;
-
-&lt;h1 id=&#34;fluff&#34;&gt;Fluff&lt;/h1&gt;
-
-&lt;p&gt;Now, obviously, you don&amp;#8217;t really need Go.Cd or Docker to setup a Java Gradle application, since it&amp;#8217;s dead easy. But I&amp;#8217;m going to do it just for the heck of it.&lt;/p&gt;
-
-&lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
-
-&lt;p&gt;Okay, lets start with Vagrant. Docker&amp;#8217;s strength is coming from Linux&amp;#8217;s process isolation capabilities it&amp;#8217;s not yet properly working on OSX or Windows. You have a couple of options if you&amp;#8217;d like to try never the less, like boot2docker, or a Tiny Linux kernel, but at that point, I think it&amp;#8217;s easier to use a VM.&lt;/p&gt;
-
-&lt;h4 id=&#34;vagrant&#34;&gt;Vagrant&lt;/h4&gt;
-
-&lt;p&gt;So, let&amp;#8217;s start with my small Vagrantfile.&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;ruby&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# -*- mode: ruby -*-&lt;/span&gt;
-&lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# vi: set ft=ruby :&lt;/span&gt;
-&amp;nbsp;
-&lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# All Vagrant configuration is done below. The &#34;2&#34; in Vagrant.configure&lt;/span&gt;
-&lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# configures the configuration version (we support older styles for&lt;/span&gt;
-&lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# backwards compatibility). Please don&#39;t change it unless you know what&lt;/span&gt;
-&lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# you&#39;re doing.&lt;/span&gt;
-Vagrant.&lt;span style=&#34;color:#9900CC;&#34;&gt;configure&lt;/span&gt;&lt;span style=&#34;color:#006600; font-weight:bold;&#34;&gt;&amp;#40;&lt;/span&gt;&lt;span style=&#34;color:#006666;&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color:#006600; font-weight:bold;&#34;&gt;&amp;#41;&lt;/span&gt; &lt;span style=&#34;color:#9966CC; font-weight:bold;&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#006600; font-weight:bold;&#34;&gt;|&lt;/span&gt;config&lt;span style=&#34;color:#006600; font-weight:bold;&#34;&gt;|&lt;/span&gt;
-  &lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# The most common configuration options are documented and commented below.&lt;/span&gt;
-  &lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# For a complete reference, please see the online documentation at&lt;/span&gt;
-  &lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# https://docs.vagrantup.com.&lt;/span&gt;
-&amp;nbsp;
-  &lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# Every Vagrant development environment requires a box. You can search for&lt;/span&gt;
-  &lt;span style=&#34;color:#008000; font-style:italic;&#34;&gt;# boxes at https://atlas.hashicorp.com/search.&lt;/span&gt;
-  config.&lt;span style=&#34;color:#9900CC;&#34;&gt;vm&lt;/span&gt;.&lt;span style=&#34;color:#9900CC;&#34;&gt;box&lt;/span&gt; = &lt;span style=&#34;color:#996600;&#34;&gt;&#34;trusty&#34;&lt;/span&gt;
-  config.&lt;span style=&#34;color:#9900CC;&#34;&gt;vm&lt;/span&gt;.&lt;span style=&#34;color:#9900CC;&#34;&gt;box_url&lt;/span&gt; = &lt;span style=&#34;color:#996600;&#34;&gt;&#34;https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box&#34;&lt;/span&gt;
-  config.&lt;span style=&#34;color:#9900CC;&#34;&gt;vm&lt;/span&gt;.&lt;span style=&#34;color:#9900CC;&#34;&gt;network&lt;/span&gt; &lt;span style=&#34;color:#996600;&#34;&gt;&#34;forwarded_port&#34;&lt;/span&gt;, guest: &lt;span style=&#34;color:#006666;&#34;&gt;2300&lt;/span&gt;, host: &lt;span style=&#34;color:#006666;&#34;&gt;2300&lt;/span&gt;
-  config.&lt;span style=&#34;color:#9900CC;&#34;&gt;vm&lt;/span&gt;.&lt;span style=&#34;color:#9900CC;&#34;&gt;network&lt;/span&gt; &lt;span style=&#34;color:#996600;&#34;&gt;&#34;forwarded_port&#34;&lt;/span&gt;, guest: &lt;span style=&#34;color:#006666;&#34;&gt;8153&lt;/span&gt;, host: &lt;span style=&#34;color:#006666;&#34;&gt;8153&lt;/span&gt;
-  config.&lt;span style=&#34;color:#9900CC;&#34;&gt;vm&lt;/span&gt;.&lt;span style=&#34;color:#9900CC;&#34;&gt;provision&lt;/span&gt; &lt;span style=&#34;color:#996600;&#34;&gt;&#34;shell&#34;&lt;/span&gt;, path: &lt;span style=&#34;color:#996600;&#34;&gt;&#34;setup.sh&#34;&lt;/span&gt;
-  config.&lt;span style=&#34;color:#9900CC;&#34;&gt;vm&lt;/span&gt;.&lt;span style=&#34;color:#9900CC;&#34;&gt;provider&lt;/span&gt; &lt;span style=&#34;color:#996600;&#34;&gt;&#34;virtualbox&#34;&lt;/span&gt; &lt;span style=&#34;color:#9966CC; font-weight:bold;&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#006600; font-weight:bold;&#34;&gt;|&lt;/span&gt;v&lt;span style=&#34;color:#006600; font-weight:bold;&#34;&gt;|&lt;/span&gt;
-    v.&lt;span style=&#34;color:#9900CC;&#34;&gt;memory&lt;/span&gt; = &lt;span style=&#34;color:#006666;&#34;&gt;8192&lt;/span&gt;
-    v.&lt;span style=&#34;color:#9900CC;&#34;&gt;cpus&lt;/span&gt; = &lt;span style=&#34;color:#006666;&#34;&gt;2&lt;/span&gt;
-  &lt;span style=&#34;color:#9966CC; font-weight:bold;&#34;&gt;end&lt;/span&gt;
-&lt;span style=&#34;color:#9966CC; font-weight:bold;&#34;&gt;end&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Very simple. I&amp;#8217;m setting up a trusty64(because docker requires 3.10 &amp;lt;= x) box and then doing a simple shell provision. Also, I gave it a bit juice, since go-server requires a raw power. Here is the shell script:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;!&lt;/span&gt;&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;#/bin/bash&lt;/span&gt;
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get update&lt;/span&gt;
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get install&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-y&lt;/span&gt; software-properties-common python-software-properties
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get update&lt;/span&gt;
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get install&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-y&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;vim&lt;/span&gt;
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; add-apt-repository &lt;span style=&#34;color: #660033;&#34;&gt;-y&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;ppa:webupd8team/java&#34;&lt;/span&gt;
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get update&lt;/span&gt;
-&lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;debconf&lt;/span&gt; shared&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;accepted-oracle-license-v1-&lt;span style=&#34;color: #000000;&#34;&gt;1&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;select&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; debconf-set-selections &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;&lt;/span&gt;amp;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;&lt;/span&gt;amp; &lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;debconf&lt;/span&gt; shared&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;accepted-oracle-license-v1-&lt;span style=&#34;color: #000000;&#34;&gt;1&lt;/span&gt; seen &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; debconf-set-selections
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get install&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-y&lt;/span&gt; oracle-java8-installer
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get update&lt;/span&gt;
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;wget&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-qO-&lt;/span&gt; https:&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;//&lt;/span&gt;get.docker.com&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sh&lt;/span&gt;
-route add &lt;span style=&#34;color: #660033;&#34;&gt;-net&lt;/span&gt; 172.17.0.0 netmask 255.255.255.0 gw 172.17.42.1&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;The debconf at the end accepts java8&amp;#8217;s terms and conditions. And the last line installs docker in my box. This runs for a little while&amp;#8230;&lt;/p&gt;
-
-&lt;p&gt;The routing on the end routes every traffic from 172.17.*.* to my vagrant box, which in turn I&amp;#8217;ll be able to use from my mac local, like 127.0.0.1:8153/go/home.&lt;/p&gt;
-
-&lt;p&gt;After a vagrant up, my box is ready to be used.&lt;/p&gt;
-
-&lt;h4 id=&#34;docker&#34;&gt;Docker&lt;/h4&gt;
-
-&lt;p&gt;When that&amp;#8217;s finished, we can move on to the next part, which is writing a little Dockerfile for our image. Go.cd will require java and a couple of other things, so let&amp;#8217;s automate the installation of that so we don&amp;#8217;t have to do it by hand.&lt;/p&gt;
-
-&lt;p&gt;Here is a Dockerfile I came up with:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;FROM ubuntu
-MAINTAINER Skarlso
-&amp;nbsp;
-&lt;span style=&#34;color: #666666; font-style: italic;&#34;&gt;############ SETUP #############&lt;/span&gt;
-RUN &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get update&lt;/span&gt;
-RUN &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get install&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-y&lt;/span&gt; software-properties-common python-software-properties
-RUN add-apt-repository &lt;span style=&#34;color: #660033;&#34;&gt;-y&lt;/span&gt; &lt;span style=&#34;color: #ff0000;&#34;&gt;&#34;ppa:webupd8team/java&#34;&lt;/span&gt;
-RUN &lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;debconf&lt;/span&gt; shared&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;accepted-oracle-license-v1-&lt;span style=&#34;color: #000000;&#34;&gt;1&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;select&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; debconf-set-selections &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;&lt;/span&gt;amp;&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;&amp;&lt;/span&gt;amp; &lt;span style=&#34;color: #7a0874; font-weight: bold;&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;debconf&lt;/span&gt; shared&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;accepted-oracle-license-v1-&lt;span style=&#34;color: #000000;&#34;&gt;1&lt;/span&gt; seen &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;sudo&lt;/span&gt; debconf-set-selections
-RUN &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get update&lt;/span&gt;
-RUN &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get install&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-y&lt;/span&gt; oracle-java8-installer
-RUN &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get install&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-y&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;vim&lt;/span&gt;
-RUN &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get install&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-y&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;unzip&lt;/span&gt;
-RUN &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;apt-get install&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-y&lt;/span&gt; &lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;git&lt;/span&gt;&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;So, our docker images have to be setup with Java as well for go.cd which I&amp;#8217;m taking care of here, and a little bit extra, to add vim, and unzip, which is required for dpkg later.&lt;/p&gt;
-
-&lt;p&gt;At this point run: &lt;strong&gt;docker build -t ubuntu:go .&lt;/strong&gt; -&amp;gt; This will use the dockerfile and create the ubuntu:go image. Note the &lt;strong&gt;. &lt;/strong&gt;at the end.&lt;/p&gt;
-
-&lt;h4 id=&#34;go-cd&#34;&gt;Go.cd&lt;/h4&gt;
-
-&lt;p&gt;Now, I&amp;#8217;m creating two containers. One, go-server, will be the go server, and the other, go-agent, will be the go agent.&lt;/p&gt;
-
-&lt;p&gt;First, go-server:&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;docker run &lt;span style=&#34;color: #660033;&#34;&gt;-i&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-t&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;--name&lt;/span&gt; go-server &lt;span style=&#34;color: #660033;&#34;&gt;--hostname&lt;/span&gt;=go-server &lt;span style=&#34;color: #660033;&#34;&gt;-p&lt;/span&gt; &lt;span style=&#34;color: #000000;&#34;&gt;8153&lt;/span&gt;:&lt;span style=&#34;color: #000000;&#34;&gt;8153&lt;/span&gt; ubuntu:go &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;bin&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;bash&lt;/span&gt;
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;wget&lt;/span&gt; http:&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;//&lt;/span&gt;download.go.cd&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;gocd-deb&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;go-server-15.1.0-&lt;span style=&#34;color: #000000;&#34;&gt;1863&lt;/span&gt;.deb
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;dpkg&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-i&lt;/span&gt; go-server-15.1.0-&lt;span style=&#34;color: #000000;&#34;&gt;1863&lt;/span&gt;.deb&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Pretty straight forward, no? We forward 8153 to vagrant (which forwards it to my mac), so after we start go-server service we should be able to visit: &lt;a href=&#34;http://127.0.0.1:8153/go/home&#34;&gt;http://127.0.0.1:8153/go/home&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Lo&amp;#8217;, and behold, go server. Let&amp;#8217;s add an agent too.&lt;/p&gt;
-
-&lt;div class=&#34;wp_syntax&#34;&gt;
-  &lt;table&gt;
-    &lt;tr&gt;
-      &lt;td class=&#34;code&#34;&gt;
-        &lt;pre class=&#34;bash&#34; style=&#34;font-family:monospace;&#34;&gt;docker run &lt;span style=&#34;color: #660033;&#34;&gt;-i&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-t&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;--name&lt;/span&gt; go-agent &lt;span style=&#34;color: #660033;&#34;&gt;--hostname&lt;/span&gt;=go-agent ubuntu:go &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;bin&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;bash&lt;/span&gt;
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;wget&lt;/span&gt; http:&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;//&lt;/span&gt;download.go.cd&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;gocd-deb&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;go-agent-15.1.0-&lt;span style=&#34;color: #000000;&#34;&gt;1863&lt;/span&gt;.deb
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;dpkg&lt;/span&gt; &lt;span style=&#34;color: #660033;&#34;&gt;-i&lt;/span&gt; go-agent-15.1.0-&lt;span style=&#34;color: #000000;&#34;&gt;1863&lt;/span&gt;.deb
-&lt;span style=&#34;color: #c20cb9; font-weight: bold;&#34;&gt;vim&lt;/span&gt; &lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;etc&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;default&lt;span style=&#34;color: #000000; font-weight: bold;&#34;&gt;/&lt;/span&gt;go-agent
-&lt;span style=&#34;color: #007800;&#34;&gt;GO_SERVER&lt;/span&gt;=172.17.0.1
-service go-agent start&lt;/pre&gt;
-      &lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/table&gt;
-&lt;/div&gt;
-
-&lt;p&gt;No need to forward anything here. And as you can see, my agent was added successfully.&lt;/p&gt;
-
-&lt;p&gt;All nice, and dandy. The agent is there, and I enabled it, so it&amp;#8217;s ready to work. Let&amp;#8217;s give it something to do, shall we?&lt;/p&gt;
-
-&lt;h1 id=&#34;the-app&#34;&gt;The App&lt;/h1&gt;
-
-&lt;p&gt;I&amp;#8217;m going to use my gradle project which is on github. This one =&amp;gt; &lt;a href=&#34;https://github.com/Skarlso/DataMung.git&#34;&gt;https://github.com/Skarlso/DataMung.git&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Very basic setup. Just check it out and then build &amp;amp; run tests. Easy, right?&lt;/p&gt;
-
-&lt;p&gt;First step in this process, define the pipeline. I&amp;#8217;m going to keep it simple. Name the pipeline DataMunger. Group is Linux. Now, in go.cd you have to define something called, an &lt;strong&gt;environment&lt;/strong&gt;. Environment can be anything you want, I&amp;#8217;m going to go with Linux. You have to assign &lt;strong&gt;agents&lt;/strong&gt; to this environment who fulfil it and the pipeline which will use that environment. More on that you can read in the go.cd documentation. This is how you would handle a pipeline which uses linux, and a windows environment at the same time.&lt;/p&gt;
-
-&lt;p&gt;In step one you have to define something called the &lt;strong&gt;Material&lt;/strong&gt;. That will be the source on which the agent will work. This can be multiple, in different folders within the confines of the pipeline, or singular.&lt;/p&gt;
-
-&lt;p&gt;I defined my git project and tested the connection OK. Next up is the first &lt;strong&gt;Stage &lt;/strong&gt;and the initial &lt;strong&gt;Job &lt;/strong&gt;to perform. This, for me, will be a compile or an assemble, and later on a test run.&lt;/p&gt;
-
-&lt;p&gt;Now, Go is awesome in parallelising jobs. If my project would be large enough, I could have multiple jobs here. But for now, I&amp;#8217;ll use stages because they run subsequently. So, first stage, compile. Next stage, testing and archiving the results.&lt;/p&gt;
-
-&lt;p&gt;I added the next stage and defined the artefact. Go supports test-reports. If you define the path to a test artefact than go will parse it and create a nice report out of it.&lt;/p&gt;
-
-&lt;p&gt;Now, let&amp;#8217;s run it. It will probably fail on something. 😉&lt;/p&gt;
-
-&lt;p&gt;Well, I&amp;#8217;ll be&amp;#8230; It worked on the first run.&lt;/p&gt;
-
-&lt;p&gt;And here are the test results.&lt;/p&gt;
-
-&lt;h1 id=&#34;wrap-up&#34;&gt;Wrap-up&lt;/h1&gt;
-
-&lt;p&gt;Well, that&amp;#8217;s it folks. Gradle project, with vagrant, docker, and go.cd. I hope you all enjoyed reading about it as much as I did doing it.&lt;/p&gt;
-
-&lt;p&gt;Any questions, please feel free to ask it in the comment section below.&lt;/p&gt;
-
-&lt;p&gt;Cheers,
-Have a nice weekend,
-Gergely.&lt;/p&gt;</description>
+&lt;p&gt;&lt;/p&gt;</description>
     </item>
     
   </channel>

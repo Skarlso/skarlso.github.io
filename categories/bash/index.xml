@@ -2,247 +2,39 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Bash on Ramblings of a build engineer</title>
-    <link>https://skarlso.github.io/categories/bash/index.xml</link>
+    <link>https://skarlso.github.io/categories/bash/</link>
     <description>Recent content in Bash on Ramblings of a build engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <atom:link href="https://skarlso.github.io/categories/bash/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 17 Apr 2016 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://skarlso.github.io/categories/bash/index.xml" rel="self" type="application/rss+xml" />
+    
     
     <item>
       <title>Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</title>
-      <link>https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2</link>
+      <link>https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2/</link>
       <pubDate>Sun, 17 Apr 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2</guid>
+      <guid>https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2/</guid>
       <description>&lt;p&gt;Hi folks.&lt;/p&gt;
 
 &lt;p&gt;Got an update for the backup script. This time, you&amp;rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.&lt;/p&gt;
 
 &lt;p&gt;Here is the script again, now modified and a bit cleaned up. I hope it&amp;rsquo;s helpful.&lt;/p&gt;
 
-&lt;p&gt;&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#!/bin/bash
-
-if [[ -t 1 ]]; then
-    colors=$(tput colors)
-    if [[ $colors ]]; then
-        RED=&#39;\033[0;31m&#39;
-        LIGHT_GREEN=&#39;\033[1;32m&#39;
-        NC=&#39;\033[0m&#39;
-    fi
-fi
-
-if [[ -z ${MINECRAFT_BUCKET} ]]; then
-    printf &amp;quot;Please set the env variable %bMINECRAFT_BUCKET%b to the s3 archive bucket name.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
-    exit 1
-fi
-
-if [[ -z ${MINECRAFT_ARCHIVE_LIMIT} ]]; then
-    printf &amp;quot;Please set the env variable %bMINECRAFT_ARCHIVE_LIMIT%b to limit the number of archives to keep.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
-    exit 1
-fi
-
-if [[ -z ${MINECRAFT_WORLD} ]]; then
-    printf &amp;quot;Please set the env variable %bMINECRAFT_WORLD%b to specify what world to back-up.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
-    exit 1
-fi
-
-backup_world=${MINECRAFT_WORLD}
-backup_bucket=${MINECRAFT_BUCKET}
-backup_limit=${MINECRAFT_ARCHIVE_LIMIT}
-archive_name=&amp;quot;${backup_world}-$(date +&amp;quot;%H-%M-%S-%m-%d-%Y&amp;quot;).zip&amp;quot;
-
-function create_archive {
-    printf &amp;quot;Creating archive of %b${backup_world}%b\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
-    zip -r $archive_name $backup_world
-}
-
-function amazon_bak {
-
-    create_archive
-
-    printf &amp;quot;Checking if bucket has more than %b${backup_limit}%b files already.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
-    content=( $(aws s3 ls s3://$backup_bucket | awk &#39;{print $4}&#39;) )
-
-    if [[ ${#content[@]} -eq $backup_limit || ${#content[@]} -gt $backup_limit  ]]; then
-        echo &amp;quot;There are too many archives. Deleting oldest one.&amp;quot;
-        # We can assume here that the list is in cronological order
-    	printf &amp;quot;%bs3://${backup_bucket}/${content[0]}\n%b&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
-        aws s3 rm s3://$backup_bucket/${content[0]}
-    fi
-
-    printf &amp;quot;Uploading %b${archive_name}%b to s3 archive bucket.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
-    state=$(aws s3 cp $archive_name s3://$backup_bucket)
-
-    if [[ &amp;quot;$state&amp;quot; =~ &amp;quot;upload:&amp;quot; ]]; then
-        printf &amp;quot;File upload %bsuccessful%b.\n&amp;quot; &amp;quot;${LIGHT_GREEN}&amp;quot; &amp;quot;${NC}&amp;quot;
-    else
-        printf &amp;quot;%bError%b occured while uploading archive. Please investigate.\n&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
-    fi
-}
-
-function custom {
-    if [[ -e custom.sh ]]; then
-        source ./custom.sh
-    else
-        echo &amp;quot;custom.sh script not found. Please implement the apropriate functions.&amp;quot;
-        exit 1
-    fi
-
-    echo &amp;quot;Checking for the number of files. Limit is: $backup_limit.&amp;quot;
-    files=( $(list) )
-    if [[ ${#files[@]} -eq $backup_limit || ${#files[@]} -gt $backup_limit ]]; then
-        echo &amp;quot;Deleting extra file.&amp;quot;
-        delete ${files[0]}
-        if [[ $? != 0 ]]; then
-            printf &amp;quot;%bFailed%b to delete file. Please investigate failure.&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
-            exit $?
-        fi
-    fi
-
-    echo &amp;quot;Zipping world.&amp;quot;
-    create_archive
-
-    echo &amp;quot;Uploading world.&amp;quot;
-    upload $archive_name
-
-    if [[ $? != 0 ]]; then
-        printf &amp;quot;%bFailed%b to upload archive. Please investigate the error.&amp;quot; &amp;quot;${RED}&amp;quot; &amp;quot;${NC}&amp;quot;
-        exit $?
-    fi
-
-    printf &amp;quot;Upload %bsuccessful%b&amp;quot; &amp;quot;${LIGHT_GREEN}&amp;quot; &amp;quot;${NC}&amp;quot;
-}
-
-function help {
-    echo &amp;quot;Usage:&amp;quot;
-    echo &amp;quot;./backup_world [METHOD]&amp;quot;
-    echo &amp;quot;Exp.: ./backup_world aws|./backup_world custom|./backup_world dropbox&amp;quot;
-    echo &amp;quot;Each method has it&#39;s own environment properties that it requires.&amp;quot;
-    echo &amp;quot;Global: MINECRAFT_WORLD|MINECRAFT_BUCKET|MINECRAFT_ARCHIVE_LIMIT&amp;quot;
-    echo &amp;quot;Custom: Have a file, called &#39;custom.sh&#39; which is sourced.&amp;quot;
-    echo &amp;quot;Implement these three functions: upload | list | delete.&amp;quot;
-    echo &amp;quot;upload -&amp;gt; should return exit code 0 on success, should return exit code 1 on failure.&amp;quot;
-    echo &amp;quot;list -&amp;gt; should return a list of cronologically ordered items.&amp;quot;
-    echo &amp;quot;delete -&amp;gt; should return exit code 0 on success, should return exit code 1 on failure.&amp;quot;
-}
-
-case $1 in
-    aws )
-        amazon_bak
-        ;;
-    custom )
-        custom
-        ;;
-    * )
-        help
-        ;;
-esac
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;And here is the sample implementation for the custom upload functionality.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#!/bin/bash
-
-function upload {
-    echo &amp;quot;uploading&amp;quot;
-    local result=0
-    return $result
-}
-
-function delete {
-    echo &amp;quot;deleting $1&amp;quot;
-    local result=0
-    return $result
-}
-
-function list {
-    local arr=(&amp;quot;file1&amp;quot; &amp;quot;file2&amp;quot; &amp;quot;file3&amp;quot;)
-    echo &amp;quot;${arr[@]}&amp;quot;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Thanks for reading!&lt;/p&gt;
-
-&lt;p&gt;Gergely.&lt;/p&gt;</description>
+&lt;p&gt;&lt;/p&gt;</description>
     </item>
     
     <item>
       <title>Minecraft world automatic backup to AWS S3 bucket</title>
-      <link>https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup</link>
+      <link>https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/</link>
       <pubDate>Sat, 16 Apr 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup</guid>
-      <description>&lt;p&gt;Hi Folks.&lt;/p&gt;
-
-&lt;p&gt;Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&amp;rsquo;m backing up the world once in a while.&lt;/p&gt;
-
-&lt;p&gt;For that, I&amp;rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.&lt;/p&gt;
-
-&lt;p&gt;The script is really straightforward. I&amp;rsquo;m doing manual versioning, although S3 does provide one out of the box. However, amazon&amp;rsquo;s S3 versioning doesn&amp;rsquo;t allow limiting the number of versions being kept. And since I&amp;rsquo;m doing that anyways, might as well take care of the rest.&lt;/p&gt;
-
-&lt;p&gt;Without further ado, here is the script:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#!/bin/bash
-
-if [[ -t 1 ]]; then
-    colors=$(tput colors)
-    if [[ $colors ]]; then
-        RED=&#39;\033[0;31m&#39;
-        LIGHT_GREEN=&#39;\033[1;32m&#39;
-        NC=&#39;\033[0m&#39;
-    fi
-fi
-
-if [[ -z ${MINECRAFT_BUCKET} ]]; then
-	printf &amp;quot;Please set the env variable ${RED}MINECRAFT_BUCKET${NC} to the s3 archive bucket name.\n&amp;quot;
-	exit 0
-fi
-
-if [[ -z ${MINECRAFT_ARCHIVE_LIMIT} ]]; then
-	printf &amp;quot;Please set the env variable ${RED}MINECRAFT_ARCHIVE_LIMIT${NC} to limit the number of archives to keep.\n&amp;quot;
-	exit 0
-fi
-
-backup_bucket=${MINECRAFT_BUCKET}
-backup_limit=${MINECRAFT_ARCHIVE_LIMIT}
-world=$1
-printf &amp;quot;Creating archive of ${RED}${world}${NC}\n&amp;quot;
-archive_name=&amp;quot;${world}-$(date +&amp;quot;%H-%M-%S-%m-%d-%Y&amp;quot;).zip&amp;quot;
-zip -r $archive_name $world
-
-printf &amp;quot;Checking if bucket has more than ${RED}${backup_limit}${NC} files already.\n&amp;quot;
-content=( $(aws s3 ls s3://$backup_bucket | awk &#39;{print $4}&#39;) )
-
-if [[ ${#content[@]} -eq $backup_limit || ${#content[@]} -gt $backup_limit  ]]; then
-    echo &amp;quot;There are too many archives. Deleting oldest one.&amp;quot;
-    # We can assume here that the list is in cronological order
-	printf &amp;quot;${RED}s3://${backup_bucket}/${content[0]}\n&amp;quot;
-    aws s3 rm s3://$backup_bucket/${content[0]}
-fi
-
-printf &amp;quot;Uploading ${RED}${archive_name}${NC} to s3 archive bucket.\n&amp;quot;
-state=$(aws s3 cp $archive_name s3://$backup_bucket)
-
-if [[ &amp;quot;$state&amp;quot; =~ &amp;quot;upload:&amp;quot; ]]; then
-    printf &amp;quot;File upload ${LIGHT_GREEN}successful${NC}.\n&amp;quot;
-else
-    printf &amp;quot;${RED}Error${NC} occured while uploading archive. Please investigate.\n&amp;quot;
-fi
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;It uses environment properties to define where to upload the given world and how many versions to keep.&lt;/p&gt;
-
-&lt;p&gt;I&amp;rsquo;m calling this from a cron job, and it&amp;rsquo;s sitting next to where the Minecraft world is.&lt;/p&gt;
-
-&lt;p&gt;That&amp;rsquo;s it folks.&lt;/p&gt;
-
-&lt;p&gt;I&amp;rsquo;ll start expanding on this idea and implement various services, like your own server address, or dropbox, or what have you.&lt;/p&gt;
-
-&lt;p&gt;Happy backing up.&lt;/p&gt;
-
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <guid>https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/</guid>
+      <description>Hi Folks.
+Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&amp;rsquo;m backing up the world once in a while.
+For that, I&amp;rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.
+The script is really straightforward. I&amp;rsquo;m doing manual versioning, although S3 does provide one out of the box.</description>
     </item>
     
   </channel>

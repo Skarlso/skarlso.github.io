@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.19" />
+    <meta name="generator" content="Hugo 0.20" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Posts &middot; Ramblings of a build engineer">
@@ -63,11 +63,149 @@
             
             <div class="posts">
                 
+                <h1 class="content-subhead">19 Aug 2016, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2016/08/19/always-go-with-bytes/" class="post-title">Always Go with []byte</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Another quick reminder&hellip; Always go with []byte if possible. I said it before, and I&rsquo;m going to say it over and over again. It&rsquo;s crucial.</p>
+
+<p>Here is a little code from exercism.io. First, with strings:</p>
+
+<pre><code class="language-go">package igpay
+
+import (
+    &quot;strings&quot;
+)
+
+// PigLatin translates reguler old English into awesome pig-latin.
+func PigLatin(in string) (ret string) {
+    for _, v := range strings.Fields(in) {
+        ret += pigLatin(v) + &quot; &quot;
+    }
+
+    return strings.Trim(ret, &quot; &quot;)
+}
+
+func pigLatin(in string) (ret string) {
+    if strings.IndexAny(in, &quot;aeiou&quot;) == 0 {
+        ret += in + &quot;ay&quot;
+        return
+    }
+
+    for i := 0; i &lt; len(in); i++ {
+        vowelPos := strings.IndexAny(in, &quot;aeiou&quot;)
+
+        if (in[0] == 'y' || in[0] == 'x') &amp;&amp; vowelPos &gt; 1 {
+            vowelPos = 0
+            ret = in
+        }
+        if vowelPos != 0 {
+            adjustPosition := vowelPos
+
+            if in[adjustPosition] == 'u' &amp;&amp; in[adjustPosition - 1] == 'q' {
+                adjustPosition++
+            }
+
+            ret = in[adjustPosition:] + in[:adjustPosition]
+        }
+    }
+    ret += &quot;ay&quot;
+    return
+}
+</code></pre>
+
+<p>Than with []byte:</p>
+
+<pre><code class="language-go">package igpay
+
+import (
+    // &quot;fmt&quot;
+    &quot;bytes&quot;
+)
+
+// PigLatin translates reguler old English into awesome pig-latin.
+func PigLatin(in string) (ret string) {
+    inBytes := []byte(in)
+    var retBytes [][]byte
+    for _, v := range bytes.Fields(inBytes) {
+        v2 := make([]byte, len(v))
+        copy(v2, v)
+        retBytes = append(retBytes, pigLatin(v2))
+    }
+
+    ret = string(bytes.Join(retBytes, []byte(&quot; &quot;)))
+    return
+}
+
+func pigLatin(in []byte) (ret []byte) {
+    if bytes.IndexAny(in, &quot;aeiou&quot;) == 0 {
+        ret = append(in, []byte(&quot;ay&quot;)...)
+        return
+    }
+
+    for i := 0; i &lt; len(in); i++ {
+        vowelPos := bytes.IndexAny(in, &quot;aeiou&quot;)
+
+        if (in[0] == 'y' || in[0] == 'x') &amp;&amp; vowelPos &gt; 1 {
+            vowelPos = 0
+            ret = in
+        }
+        if vowelPos != 0 {
+            adjustPosition := vowelPos
+
+            if in[adjustPosition] == 'u' &amp;&amp; in[adjustPosition - 1] == 'q' {
+                adjustPosition++
+            }
+
+            in = append(in[adjustPosition:], in[:adjustPosition]...)
+            ret = in
+            // fmt.Printf(&quot;%s\n&quot;, ret)
+        }
+    }
+    ret = append(ret, []byte(&quot;ay&quot;)...)
+    return
+}
+</code></pre>
+
+<p>And than,the benchmarks of course:</p>
+
+<pre><code class="language-bash">BenchmarkPigLatin-8          	  200000	     10688 ns/op
+BenchmarkPigLatinStrings-8   	  100000	     15211 ns/op
+PASS
+</code></pre>
+
+<p>The improvement is not massive in this case, but it&rsquo;s more than enough to matter. And in a bigger, more complicated program, string concatenation will take a LOT of time away.</p>
+
+<p>In Go, the <code>bytes</code> package has a 1-1 map compared to the <code>strings</code> packages, so chances are, if you are doing strings concatenations you will be able to port that piece of code easily to []byte.</p>
+
+<p>That&rsquo;s all folks.</p>
+
+<p>Happy coding,
+Gergely.</p>
+
+                    </div>
+                </section>
+                
                 <h1 class="content-subhead">16 Aug 2016, 00:00</h1>
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="https://skarlso.github.io/2016/08/16/never-changing-regex" class="post-title">Global variable for never changing regex</a>
+                        <a href="https://skarlso.github.io/2016/08/16/never-changing-regex/" class="post-title">Global variable for never changing regex</a>
 
                         <p class="post-meta">
                             
@@ -115,7 +253,7 @@ Gergely.</p>
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="https://skarlso.github.io/2016/08/13/drupal-missing-toolbar-and-settings-not-saving" class="post-title">Drupal missing ToolBar and settings not saving</a>
+                        <a href="https://skarlso.github.io/2016/08/13/drupal-missing-toolbar-and-settings-not-saving/" class="post-title">Drupal missing ToolBar and settings not saving</a>
 
                         <p class="post-meta">
                             
@@ -169,7 +307,7 @@ Gergely.</p>
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="https://skarlso.github.io/2016/07/28/jenkins-best-practices" class="post-title">Jenkins Best Practices Talk</a>
+                        <a href="https://skarlso.github.io/2016/07/28/jenkins-best-practices/" class="post-title">Jenkins Best Practices Talk</a>
 
                         <p class="post-meta">
                             
@@ -206,7 +344,7 @@ Gergely.</p>
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="https://skarlso.github.io/2016/07/12/ruby-sieve" class="post-title">Ruby Sieve</a>
+                        <a href="https://skarlso.github.io/2016/07/12/ruby-sieve/" class="post-title">Ruby Sieve</a>
 
                         <p class="post-meta">
                             
@@ -258,7 +396,7 @@ Gergely.</p>
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="https://skarlso.github.io/2016/07/12/simple-hook-to-rid-of-trouble" class="post-title">Simple hook to rid of trouble</a>
+                        <a href="https://skarlso.github.io/2016/07/12/simple-hook-to-rid-of-trouble/" class="post-title">Simple hook to rid of trouble</a>
 
                         <p class="post-meta">
                             
@@ -313,7 +451,7 @@ Gergely.</p>
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="https://skarlso.github.io/2016/06/12/google-signin-with-go" class="post-title">How to do Google sign-in with Go</a>
+                        <a href="https://skarlso.github.io/2016/06/12/google-signin-with-go/" class="post-title">How to do Google sign-in with Go</a>
 
                         <p class="post-meta">
                             
@@ -633,7 +771,7 @@ Gergely.</p>
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2" class="post-title">Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</a>
+                        <a href="https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2/" class="post-title">Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</a>
 
                         <p class="post-meta">
                             
@@ -807,7 +945,7 @@ function list {
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup" class="post-title">Minecraft world automatic backup to AWS S3 bucket</a>
+                        <a href="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/" class="post-title">Minecraft world automatic backup to AWS S3 bucket</a>
 
                         <p class="post-meta">
                             
@@ -899,7 +1037,7 @@ fi
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="https://skarlso.github.io/2016/03/29/minecraft-server-with-docker-and-osx" class="post-title">Minecraft Server with Docker on OSX &#43; Mods</a>
+                        <a href="https://skarlso.github.io/2016/03/29/minecraft-server-with-docker-and-osx/" class="post-title">Minecraft Server with Docker on OSX &#43; Mods</a>
 
                         <p class="post-meta">
                             
@@ -1020,53 +1158,6 @@ docker start mc_server
 <p>Thanks for reading.</p>
 
 <p>Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">09 Mar 2016, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2016/03/09/wercker-fixed" class="post-title">Wercker Fixed</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a><a class="post-category post-category-Wercker" href="https://skarlso.github.io//categories/wercker">Wercker</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Hi Folks.</p>
-
-<p>So Wercker was not working. After a minor modification it seems to be okay now. The config file needed for it to work looks like this:</p>
-
-<pre><code class="language-bash">box: golang 
-build:
-    steps:
-        - arjen/hugo-build:
-            theme: redlounge
-deploy:
-    steps:
-        - install-packages:
-            packages: git 
-        - leipert/git-push:
-            gh_oauth: $GIT_TOKEN
-            repo: skarlso/skarlso.github.io
-            branch: master
-            basedir: public    
-</code></pre>
-
-<p>The modification is the box type to <em>golang</em> and removed <em>ssh-client</em> from <em>packages</em>.</p>
-
-<p>Thanks,
-Gergely.</p>
 
                     </div>
                 </section>

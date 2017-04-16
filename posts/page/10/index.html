@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.19" />
+    <meta name="generator" content="Hugo 0.20" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Posts &middot; Ramblings of a build engineer">
@@ -62,6 +62,104 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">15 Apr 2013, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2013/04/15/cucumber-test-name-and-tags-on-feature/" class="post-title">Cucumber Test Name and Tags on Feature</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-java" href="https://skarlso.github.io//categories/java">java</a><a class="post-category post-category-problem solving" href="https://skarlso.github.io//categories/problem-solving">problem solving</a><a class="post-category post-category-programming" href="https://skarlso.github.io//categories/programming">programming</a><a class="post-category post-category-testing" href="https://skarlso.github.io//categories/testing">testing</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Hello everybody.</p>
+
+<p>I would like to show you a gem today that I found out.</p>
+
+<p>Apparently there is no easy way to get to the name of an executing cucumber scenario in cucumber-jvm</p>
+
+<p>You can try something like that:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="java" style="font-family:monospace;">@After <span style="color: #666666; font-style: italic;">//this is cucumbers @Afters</span>
+<span style="color: #000000; font-weight: bold;">public</span> <span style="color: #000000; font-weight: bold;">static</span> <span style="color: #000066; font-weight: bold;">void</span> afterExecution<span style="color: #009900;">&#40;</span>Scenario scenario<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+    logger.<span style="color: #006633;">log</span><span style="color: #009900;">&#40;</span><span style="color: #0000ff;">"The status of the test is: "</span> <span style="color: #339933;">+</span> scenario.<span style="color: #006633;">getStatus</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+<span style="color: #009900;">&#125;</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>But that isn&#8217;t giving you too much now is it? And the API of scenario is as small as it can get. It offers you four options:</p>
+
+<ul>
+<li>Ember</li>
+<li>getStatus</li>
+<li>isFailed</li>
+<li>write</li>
+</ul>
+
+<p>That doesn&#8217;t help me. I wanted to get the name of the executed feature and the tags on that particular feature. I thought that&#8217;s got to be as easy as just getting a scenario accessing the feature and get the tags. Hooooowww boy I was wrong.</p>
+
+<p>I ended up with this&#8230;.</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="java" style="font-family:monospace;">            <span style="color: #003399;">Field</span> f <span style="color: #339933;">=</span> scenario.<span style="color: #006633;">getClass</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span>.<span style="color: #006633;">getDeclaredField</span><span style="color: #009900;">&#40;</span><span style="color: #0000ff;">"reporter"</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            f.<span style="color: #006633;">setAccessible</span><span style="color: #009900;">&#40;</span><span style="color: #000066; font-weight: bold;">true</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            JUnitReporter reporter <span style="color: #339933;">=</span> <span style="color: #009900;">&#40;</span>JUnitReporter<span style="color: #009900;">&#41;</span> f.<span style="color: #006633;">get</span><span style="color: #009900;">&#40;</span>scenario<span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+&nbsp;
+            <span style="color: #003399;">Field</span> executionRunnerField <span style="color: #339933;">=</span> reporter.<span style="color: #006633;">getClass</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span>.<span style="color: #006633;">getDeclaredField</span><span style="color: #009900;">&#40;</span><span style="color: #0000ff;">"executionUnitRunner"</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            executionRunnerField.<span style="color: #006633;">setAccessible</span><span style="color: #009900;">&#40;</span><span style="color: #000066; font-weight: bold;">true</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            ExecutionUnitRunner executionUnitRunner <span style="color: #339933;">=</span> <span style="color: #009900;">&#40;</span>ExecutionUnitRunner<span style="color: #009900;">&#41;</span> executionRunnerField.<span style="color: #006633;">get</span><span style="color: #009900;">&#40;</span>reporter<span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+&nbsp;
+            <span style="color: #003399;">Field</span> cucumberScenarioField <span style="color: #339933;">=</span> executionUnitRunner.<span style="color: #006633;">getClass</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span>.<span style="color: #006633;">getDeclaredField</span><span style="color: #009900;">&#40;</span><span style="color: #0000ff;">"cucumberScenario"</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            cucumberScenarioField.<span style="color: #006633;">setAccessible</span><span style="color: #009900;">&#40;</span><span style="color: #000066; font-weight: bold;">true</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            CucumberScenario cucumberScenario <span style="color: #339933;">=</span> <span style="color: #009900;">&#40;</span>CucumberScenario<span style="color: #009900;">&#41;</span> cucumberScenarioField.<span style="color: #006633;">get</span><span style="color: #009900;">&#40;</span>executionUnitRunner<span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+&nbsp;
+            <span style="color: #003399;">Field</span> cucumberBackgroundField <span style="color: #339933;">=</span> cucumberScenario.<span style="color: #006633;">getClass</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span>.<span style="color: #006633;">getDeclaredField</span><span style="color: #009900;">&#40;</span><span style="color: #0000ff;">"cucumberBackground"</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            cucumberBackgroundField.<span style="color: #006633;">setAccessible</span><span style="color: #009900;">&#40;</span><span style="color: #000066; font-weight: bold;">true</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            CucumberBackground cucumberBackground <span style="color: #339933;">=</span> <span style="color: #009900;">&#40;</span>CucumberBackground<span style="color: #009900;">&#41;</span> cucumberBackgroundField.<span style="color: #006633;">get</span><span style="color: #009900;">&#40;</span>cucumberScenario<span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+&nbsp;
+            <span style="color: #003399;">Field</span> cucumberFeatureField <span style="color: #339933;">=</span> cucumberBackground.<span style="color: #006633;">getClass</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span>.<span style="color: #006633;">getSuperclass</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span>.<span style="color: #006633;">getDeclaredField</span><span style="color: #009900;">&#40;</span><span style="color: #0000ff;">"cucumberFeature"</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            cucumberFeatureField.<span style="color: #006633;">setAccessible</span><span style="color: #009900;">&#40;</span><span style="color: #000066; font-weight: bold;">true</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+            CucumberFeature cucumberFeature <span style="color: #339933;">=</span> <span style="color: #009900;">&#40;</span>CucumberFeature<span style="color: #009900;">&#41;</span> cucumberFeatureField.<span style="color: #006633;">get</span><span style="color: #009900;">&#40;</span>cucumberBackground<span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Ohhhhh yes! The fields which I wanted were all private and not accessible. I&#8217;m sure there was a reason behind this decision but if it was sensible it eludes me. But in the world of programming nothing is impossible they say so there.</p>
+
+<p>In cucumberFeature there will be everything what you need. Tags, Names, Tests, Execution time. Everything.</p>
+
+<p>I know that cucumber runs with jUnit so if there is a better way to do this please for the love of my sanity share it with me.</p>
+
+<p>Thank you for reading.</p>
+
+<p>And as always,</p>
+
+<p>Have a nice day.</p>
+
+<p>G.</p>
+
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">11 Apr 2013, 00:00</h1>
                 <section class="post">
@@ -1031,38 +1129,6 @@ p.<span style="color: #006600;">addYears</span><span style="color: #66cc66;">&#4
 <p>As always,</p>
 
 <p>Thanks for reading.</p>
-
-<p>Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">20 Sep 2012, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2012/09/20/what-my-brain-is-up-to-the-whole-day/" class="post-title">What my brain is up to the whole day…</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-drawing" href="https://skarlso.github.io//categories/drawing">drawing</a><a class="post-category post-category-knowledge" href="https://skarlso.github.io//categories/knowledge">knowledge</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Hello folks.</p>
-
-<p>Here is a little graphic I made to show what my brain is up to the whole day long&#8230; Excuse me for the lack of my colouring skills&#8230; Enjoy</p>
-
-<p><img src="http://dl.dropbox.com/u/7604030/barinColored.jpg" alt="Brain" /></p>
-
-<p>Thanks for reading!</p>
 
 <p>Gergely.</p>
 
