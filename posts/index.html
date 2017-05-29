@@ -169,7 +169,7 @@ end.call
 
 <p><img src="https://skarlso.github.io/img/dontneed1.jpg" alt="dontneed1" /></p>
 
-<p>The other things we don&rsquo;t need are all the <code>'[]</code></p>
+<p>The other things we don&rsquo;t need are all the <code>'[]?()</code></p>
 
 <p><img src="https://skarlso.github.io/img/dontneed2.jpg" alt="dontneed2" /></p>
 
@@ -187,15 +187,15 @@ end.call
 
 <p><img src="https://skarlso.github.io/img/confused.jpg" alt="confused" /></p>
 
-<p>So, this is a handful. Operations can be <code>&lt;=,&gt;=,&lt;,&gt;,==,!=</code> and operands can be either numbers, or words, and element accessor can be nested. Since something like this is perfectly valid: <code>$..book[?(@.written.year == 1997)]</code>.</p>
+<p>So, this is a handful. Operations can be <code>&lt;=,&gt;=,&lt;,&gt;,==,!=</code> and operands can be either numbers, or words, and element accessor can be nested since something like this is perfectly valid: <code>$..book[?(@.written.year == 1997)]</code>.</p>
 
 <p><img src="https://skarlso.github.io/img/feedline.jpg" alt="feedline" /></p>
 
-<p>To avoid being overwhelmed by something like this, ruby has our back with a method called <code>dig</code>.</p>
+<p>To avoid being overwhelmed, ruby has our back with a method called <code>dig</code>.</p>
 
 <p><img src="https://skarlso.github.io/img/dig.jpg" alt="dig" /></p>
 
-<p>This, basically lets us pass in some parameters into a dig function on a hash or an array which will go on and access those elements in order how they were supplied until it either returns a <code>nil</code> or an end result.</p>
+<p>This, basically lets us pass in some parameters into a dig function on a hash or an array with variadic parameters, which will go on and access those elements in order how they were supplied. Until it either returns a <code>nil</code> or an end result.</p>
 
 <p>For example:</p>
 
@@ -226,13 +226,13 @@ if t = scanner.scan(/\['\w+'\]+/)
 
 <h4 id="operator">Operator</h4>
 
-<p>Selecting the operator is another interesting part as it can be a single one or multiple and all sorts. Until I realized that no&hellip; it can actually be only a handful.</p>
+<p>Selecting the operator is another interesting part as it can be a single one or multiple and all sorts. Until I realized that no&hellip; it can actually be only a couple.</p>
 
 <p><img src="https://skarlso.github.io/img/whatone.jpg" alt="whatone" /></p>
 
 <p><img src="https://skarlso.github.io/img/whattwo.jpg" alt="whattwo" /></p>
 
-<p>Also, after a bit of fiddling and doing a silly case statement on the operator, and doing something silly, which immediately felt wrong like:</p>
+<p>Also, after a bit of fiddling and doing and doing a silly case statement first:</p>
 
 <pre><code class="language-ruby">case op
 when '&gt;'
@@ -243,13 +243,13 @@ when '&lt;'
 end
 </code></pre>
 
-<p>I promptly saw that this is not how it should be done.</p>
+<p>&hellip;I promptly saw that this is not how it should be done.</p>
 
-<p>And here comes object.send.</p>
+<p>And here comes Object.send.</p>
 
 <p><img src="https://skarlso.github.io/img/send.jpg" alt="send" /></p>
 
-<p>This gave me the opportunity to write something like this:</p>
+<p>This gave me the opportunity to write this:</p>
 
 <pre><code class="language-ruby">dig(elements, @_current_node).send(operator, operand)
 </code></pre>
@@ -258,7 +258,7 @@ end
 
 <p><img src="https://skarlso.github.io/img/sendtwo.jpg" alt="send" /></p>
 
-<p>Parsing an op looks like this:</p>
+<p>Parsing an op be like:</p>
 
 <pre><code class="language-ruby">elsif t = scanner.scan(/\s+[&lt;&gt;=][&lt;&gt;=]?\s+?/)
 </code></pre>
@@ -270,22 +270,22 @@ end
 <pre><code class="language-ruby">elsif t = scanner.scan(/(\s+)?'?(\w+)?[.,]?(\w+)?'?(\s+)?/)
 </code></pre>
 
-<p>Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because it&rsquo;s valid having something like this: <code>$..book[?(@.price)]</code>. Which is basically just asserting if a given node has a price element.</p>
+<p>Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because an this expression <code>$..book[?(@.price)]</code> is valid. Which is basically just asserting if a given node has a price element.</p>
 
 <h4 id="logical-operators">Logical Operators</h4>
 
 <p>The last thing that remains is logical operators, which if you are using eval, is pretty straight forward. It takes care of anything that you might add in like <code>&amp;&amp;, ||, |, &amp;, ^</code> etc etc.</p>
 
-<p>Now, that&rsquo;s something I did with a case though. Until I find a nicer solution. Basically, since we can already parse a single expression it&rsquo;s just a question of breaking down a multi structure expression like this: <code>$..book[?(@['price'] &gt; 20 &amp;&amp; @.written.year == 1998)]</code>.</p>
+<p>Now, that&rsquo;s something I did with a case though. Until I find a nicer solution. Since we can already parse a single expression it&rsquo;s just a question of breaking down a multi structure expression as the following one: <code>$..book[?(@['price'] &gt; 20 &amp;&amp; @.written.year == 1998)]</code>.</p>
 
 <pre><code class="language-ruby">exps = exp.split(/(&amp;&amp;)|(\|\|)/)
 </code></pre>
 
-<p>This splits up the string by either <code>&amp;&amp;</code> or <code>||</code> and using groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like <code>[true, '&amp;&amp;', false]</code>. You know what could immediately resolve this? Yep&hellip;</p>
+<p>This splits up the string by either <code>&amp;&amp;</code> or <code>||</code> and the usage of groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like <code>[true, '&amp;&amp;', false]</code>. You know what could immediately resolve this? Yep&hellip;</p>
 
 <p><img src="https://skarlso.github.io/img/saynotoeval.jpg" alt="saynotoeval" />.</p>
 
-<p>I&rsquo;d rather just parse it.</p>
+<p>I&rsquo;d rather just parse it although technically an eval at this stage wouldn&rsquo;t be that big of a problem&hellip;</p>
 
 <pre><code class="language-ruby">def parse(exp)
   exps = exp.split(/(&amp;&amp;)|(\|\|)/)
@@ -304,7 +304,7 @@ end
 
 <h1 id="closing-words">Closing words</h1>
 
-<p>That&rsquo;s it folks. The parser is done. And there is no eval being used. There are some more things here that are interesting. Like, array indexing is allowed in jsonpath which is solved by sending .length to a current node, like this:</p>
+<p>That&rsquo;s it folks. The parser is done. And there is no eval being used. There are some more things here that are interesting. Like, array indexing is allowed in jsonpath which is solved by sending <code>.length</code> to a current node. For example:</p>
 
 <pre><code class="language-ruby">if scanner.scan(/\./)
   sym = scanner.scan(/\w+/)
