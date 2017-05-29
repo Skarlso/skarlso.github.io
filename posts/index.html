@@ -63,6 +63,267 @@
             
             <div class="posts">
                 
+                <h1 class="content-subhead">28 May 2017, 19:23</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/" class="post-title">Replacing Eval with Object.send and a self written Parser</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-Ruby" href="https://skarlso.github.io//categories/ruby">Ruby</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h1 id="intro">Intro</h1>
+
+<p>A while ago, I was added as a curator for a Gem called <a href="https://github.com/joshbuddy/jsonpath">JsonPath</a>. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.</p>
+
+<p>You could opt in using <code>eval</code> with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like <a href="https://github.com/huginn/huginn">Huginn</a> they had to opt out by default, thus missing out on sweet parsing like this: <code>$..book[?(@['price'] &gt; 20)]</code>.</p>
+
+<h2 id="eval">Eval</h2>
+
+<p>In order to remove eval, first I had to understand what it is actually doing. I had to take it apart.</p>
+
+<p><img src="https://skarlso.github.io/img/takeevalapart.jpg" alt="apart" /></p>
+
+<p>After much digging and understanding the code, I found, all it does is perform the given operations on the current node. And if the operation is true, it will select that node, otherwise, return false, and ignore that node.</p>
+
+<p>For example <code>$..book[?(@['price'] &gt; 20)]</code> could be translated to:</p>
+
+<pre><code class="language-ruby">return @_current_node['price'] &gt; 20
+</code></pre>
+
+<p>Checking first if <code>'price'</code> is even a key in <code>@_current_node</code>. Once I&rsquo;ve understood this part, I set on trying to fix eval.</p>
+
+<h3 id="safe-4">SAFE = 4</h3>
+
+<p>In ruby, you could extract the part where you Eval and put it into its own proc and set <code>SAFE = 4</code> which will disable some things like system calls.</p>
+
+<pre><code class="language-ruby">proc do
+  SAFE = 4
+  eval(some_expression)
+end.call
+</code></pre>
+
+<p>SAFE levels:
+| $SAFE | Description                                                                                           |
+|&mdash;&mdash;-|&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;-|
+|   0   |No checking of the use of externally supplied (tainted) data is performed. This is Ruby&rsquo;s default mode.|
+|  &gt;= 1 |Ruby disallows the use of tainted data by potentially dangerous operations.                            |
+|  &gt;= 2 |Ruby prohibits the loading of program files from globally writable locations.                          |
+|  &gt;= 3 |All newly created objects are considered tainted.                                                      |
+|  &gt;= 4 |Ruby effectively partitions the running program in two. None - tainted objects may not be modified. Typically, this will be used to create a sandbox: the program sets up an environment using a lower $SAFE level, then resets $SAFE to 4 to prevent subsequent changes to that environment.|</p>
+
+<p>This has the disadvantage that anything below 4 is just, meh. But nothing above 1 will actually work with JsonPath so&hellip; scratch that.</p>
+
+<h3 id="sandboxing">Sandboxing</h3>
+
+<p>We could technically try and sandbox eval into it&rsquo;s own process with a PID and whitelist methods which are allowed to be called.</p>
+
+<p>Not bad, and there are a few gems out there which are trying to do that like <a href="https://github.com/ukutaht/safe_ruby">SafeRuby</a>. But all of these project have been abandoned years ago for a good reason.</p>
+
+<h3 id="object-send">Object.send</h3>
+
+<p><img src="nobodylikesyou.jpg" alt="nobodylikesyou" /></p>
+
+<p><code>Object.send</code> is the best way to get some flexibility while still being safe. You basically just call methods on objects by describing said method on an object and giving parameters to it, like:</p>
+
+<pre><code class="language-ruby">1.send(:+, 2) =&gt; 3
+</code></pre>
+
+<p>This is a very powerful tool in our toolbox which we will exploit immensely.</p>
+
+<p>So let&rsquo;s get to it.</p>
+
+<h1 id="writing-a-parser">Writing a parser</h1>
+
+<p>Writing a parser in Ruby is a very fluid experience. It has nice tools which support that, and the one I used is <code>StringScanner</code>. It has the ability to track where you are currently at in a string and move a pointer along with regex matches. In fact, JsonPath already employs this method when parsing a json expression. So reusing that logic was in fact&hellip; elementary.</p>
+
+<h2 id="the-expression">The expression</h2>
+
+<p>How do we get from this:</p>
+
+<pre><code class="language-bash">$..book[?(@['price'] &lt; 20)]
+</code></pre>
+
+<p>To this:</p>
+
+<pre><code class="language-ruby">@_current_node['price'] &lt; 20
+</code></pre>
+
+<p>Well. By simple elimination. There are a couple of problems along the way of course. Because this wouldn&rsquo;t be a parser if it couldn&rsquo;t handle ALL the other cases&hellip;</p>
+
+<h3 id="removing-clutter">Removing Clutter</h3>
+
+<p>Some of this we don&rsquo;t need. Like, <code>$..book</code> part.</p>
+
+<p><img src="https://skarlso.github.io/img/dontneed1.jpg" alt="dontneed1" /></p>
+
+<p>The other things we don&rsquo;t need are all the <code>'[]</code></p>
+
+<p><img src="https://skarlso.github.io/img/dontneed2.jpg" alt="dontneed2" /></p>
+
+<p>Once this is done, we can move to isolating the important bits.</p>
+
+<p><img src="https://skarlso.github.io/img/takingaim.jpg" alt="takingaim" /></p>
+
+<h3 id="breakdown">BreakDown</h3>
+
+<h4 id="elements">Elements</h4>
+
+<p>How does an expression actually look like?</p>
+
+<p>Let&rsquo;s break it down.</p>
+
+<p><img src="https://skarlso.github.io/img/confused.jpg" alt="confused" /></p>
+
+<p>So, this is a handful. Operations can be <code>&lt;=,&gt;=,&lt;,&gt;,==,!=</code> and operands can be either numbers, or words, and element accessor can be nested. Since something like this is perfectly valid: <code>$..book[?(@.written.year == 1997)]</code>.</p>
+
+<p><img src="https://skarlso.github.io/img/feedline.jpg" alt="feedline" /></p>
+
+<p>To avoid being overwhelmed by something like this, ruby has our back with a method called <code>dig</code>.</p>
+
+<p><img src="https://skarlso.github.io/img/dig.jpg" alt="dig" /></p>
+
+<p>This, basically lets us pass in some parameters into a dig function on a hash or an array which will go on and access those elements in order how they were supplied until it either returns a <code>nil</code> or an end result.</p>
+
+<p>For example:</p>
+
+<pre><code class="language-ruby">2.3.1 :001 &gt; a = {a: {b: 'c'}}
+ =&gt; {:a=&gt;{:b=&gt;&quot;c&quot;}}
+2.3.1 :002 &gt; a.dig(:a, :b)
+ =&gt; &quot;c&quot;
+</code></pre>
+
+<p>Easy. However&hellip; Dig was only added after ruby 2.3 thus, I had to write my own dig for now, until I stop supporting anything below 2.3.</p>
+
+<p>At first, I wanted to add it to the hash class, but it proved to be a futile attempt if I wanted to do it nicely, thus the parser got it as a private method.</p>
+
+<pre><code class="language-ruby">    def dig(keys, hash)
+      return nil unless hash.key?(keys.first)
+      return hash.fetch(keys.first) if keys.size == 1
+      prev = keys.shift
+      dig(keys, hash.fetch(prev))
+    end
+</code></pre>
+
+<p>And the corresponding regex behind getting a multitude of elements is as follows:</p>
+
+<pre><code class="language-ruby">...
+if t = scanner.scan(/\['\w+'\]+/)
+...
+</code></pre>
+
+<h4 id="operator">Operator</h4>
+
+<p>Selecting the operator is another interesting part as it can be a single one or multiple and all sorts. Until I realized that no&hellip; it can actually be only a handful.</p>
+
+<p><img src="https://skarlso.github.io/img/whatone.jpg" alt="whatone" /></p>
+
+<p><img src="https://skarlso.github.io/img/whattwo.jpg" alt="whattwo" /></p>
+
+<p>Also, after a bit of fiddling and doing a silly case statement on the operator, and doing something silly, which immediately felt wrong like:</p>
+
+<pre><code class="language-ruby">case op
+when '&gt;'
+  dig(@_current_node, *elements) &gt; operand
+when '&lt;'
+  dig(@_current_node, *elements) &gt; operand
+...
+end
+</code></pre>
+
+<p>I promptly saw that this is not how it should be done.</p>
+
+<p>And here comes object.send.</p>
+
+<p><img src="https://skarlso.github.io/img/send.jpg" alt="send" /></p>
+
+<p>This gave me the opportunity to write something like this:</p>
+
+<pre><code class="language-ruby">dig(elements, @_current_node).send(operator, operand)
+</code></pre>
+
+<p>Much better. Now I could send all the things in the way of a node.</p>
+
+<p><img src="https://skarlso.github.io/img/sendtwo.jpg" alt="send" /></p>
+
+<p>Parsing an op looks like this:</p>
+
+<pre><code class="language-ruby">elsif t = scanner.scan(/\s+[&lt;&gt;=][&lt;&gt;=]?\s+?/)
+</code></pre>
+
+<h4 id="operand">Operand</h4>
+
+<p>Now comes the final piece. The value which we are comparing. This could either be a simple integer, a floating number, or a word. Hah. So coming up with a regex which fits this tightly took a little fiddling, but eventually I ended up with this:</p>
+
+<pre><code class="language-ruby">elsif t = scanner.scan(/(\s+)?'?(\w+)?[.,]?(\w+)?'?(\s+)?/)
+</code></pre>
+
+<p>Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because it&rsquo;s valid having something like this: <code>$..book[?(@.price)]</code>. Which is basically just asserting if a given node has a price element.</p>
+
+<h4 id="logical-operators">Logical Operators</h4>
+
+<p>The last thing that remains is logical operators, which if you are using eval, is pretty straight forward. It takes care of anything that you might add in like <code>&amp;&amp;, ||, |, &amp;, ^</code> etc etc.</p>
+
+<p>Now, that&rsquo;s something I did with a case though. Until I find a nicer solution. Basically, since we can already parse a single expression it&rsquo;s just a question of breaking down a multi structure expression like this: <code>$..book[?(@['price'] &gt; 20 &amp;&amp; @.written.year == 1998)]</code>.</p>
+
+<pre><code class="language-ruby">exps = exp.split(/(&amp;&amp;)|(\|\|)/)
+</code></pre>
+
+<p>This splits up the string by either <code>&amp;&amp;</code> or <code>||</code> and using groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like <code>[true, '&amp;&amp;', false]</code>. You know what could immediately resolve this? Yep&hellip;</p>
+
+<p><img src="https://skarlso.github.io/img/saynotoeval.jpg" alt="saynotoeval" />.</p>
+
+<p>I&rsquo;d rather just parse it.</p>
+
+<pre><code class="language-ruby">def parse(exp)
+  exps = exp.split(/(&amp;&amp;)|(\|\|)/)
+  ret = parse_exp(exps.shift)
+  exps.each_with_index do |item, index|
+    case item
+    when '&amp;&amp;'
+      ret &amp;&amp;= parse_exp(exps[index + 1])
+    when '||'
+      ret ||= parse_exp(exps[index + 1])
+    end
+  end
+  ret
+end
+</code></pre>
+
+<h1 id="closing-words">Closing words</h1>
+
+<p>That&rsquo;s it folks. The parser is done. And there is no eval being used. There are some more things here that are interesting. Like, array indexing is allowed in jsonpath which is solved by sending .length to a current node, like this:</p>
+
+<pre><code class="language-ruby">if scanner.scan(/\./)
+  sym = scanner.scan(/\w+/)
+  op = scanner.scan(/./)
+  num = scanner.scan(/\d+/)
+  return @_current_node.send(sym.to_sym).send(op.to_sym, num.to_i)
+end
+</code></pre>
+
+<p>If an expression begins with a <code>.</code>. So you see that using <code>send</code> will help a lot, and understanding what eval is trying to evaluate and rather writing your own parser, isn&rsquo;t that hard at all using ruby.</p>
+
+<p>I hope you enjoyed reading this little tid-bit as much as I enjoyed writing and drawing it. Leave a comment if your liked the drawings or if you did not and I should never do them again (( I don&rsquo;t really care, this is my blog haha. )).</p>
+
+<p>Thank you!
+Gergely.</p>
+
+                    </div>
+                </section>
+                
                 <h1 class="content-subhead">16 Apr 2017, 09:23</h1>
                 <section class="post">
                     <header class="post-header">
@@ -1671,86 +1932,6 @@ Comics:
 <p>Have fun. Any questions, please feel free to leave a comment!</p>
 
 <p>Thanks,
-Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">17 Sep 2016, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2016/09/17/simple-hometheater-with-remote-and-flirc/" class="post-title">Budget Home Theather with a Headless Raspberry Pi and Flirc for Remote Controlling</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Hardware" href="https://skarlso.github.io//categories/hardware">Hardware</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        
-
-<h2 id="intro">Intro</h2>
-
-<p>Hello folks.</p>
-
-<p>Today, I would like to tell you about my configuration for a low budget Home Theater setup.</p>
-
-<p>My tools are as follows:</p>
-
-<ul>
-<li><a href="https://flirc.tv/">FLIRC</a></li>
-<li><a href="https://www.raspberrypi.org/products/raspberry-pi-2-model-b/">Raspberry Pi 2</a></li>
-<li>500G SSD</li>
-<li>An a good &lsquo;ol wifi</li>
-</ul>
-
-<h2 id="tl-dr">TL;DR</h2>
-
-<p>Use Flirc for remote control, <code>omxplayer</code> for streaming the movie from an SSD on a headless PI controller via SSH and enjoy a nice, cold Lemon - Menta beer.</p>
-
-<h2 id="flirc">Flirc</h2>
-
-<p>First, the remote control. So, I like to sit in my couch and watch the movie from there. I hate getting up, or having a keyboard at arm length to control the pi. Flirc is a very easy way of doing just that with a simple remote control.</p>
-
-<p>It costs ~$22 and is easy to setup. Works with any kind of remote control. Setting up key bindings for the control, is as simple as starting the Flirc software and pressing buttons on the remote to map to keyboard keys. Now, my pi is running headless, and the Flirc binary isn&rsquo;t quite working with raspbian; so to do the binding, I just did that on my main machine. When I was done, I just plugged in the Flirc, and proceeded to setup the pi.</p>
-
-<h2 id="raspberry-pi-2">Raspberry Pi 2</h2>
-
-<p>The pi 2 is a small powerhouse. However, the SD card on which it sits is simply not fast enough. From time to time, I experienced lateness in sound, or stutter in video. So, instead of having the movie on the pi, I&rsquo;m streaming through a faster SSD with <a href="https://github.com/libfuse/sshfs">SSHFS</a>. For playing, I&rsquo;m using <code>omxplayer</code>. With omxplayer, I had a few problems, because sound was not coming through the HDMI cable. A little bit of research lead me to this change in the pi&rsquo;s boot config. Uncomment this line:</p>
-
-<pre><code class="language-bash">#hdmi_driver=2
-</code></pre>
-
-<p>After rebooting, I also, did this thing:</p>
-
-<pre><code class="language-bash">sudo apt-get install alsa-utils
-sudo modprobe snd_bcm2835
-sudo amixer -c 0 cset numid=3 2
-</code></pre>
-
-<p>This saved my bacon. The whole answer can be found here: <a href="http://raspberrypi.stackexchange.com/questions/44/why-is-my-audio-sound-output-not-working">Stackoverflow</a>.</p>
-
-<p>Once SSHFS was working, and HDMI received sound, I just executed this command: <code>omxplayer -o hdmi /media/stream/my_movie.mkv</code>. This told omxplayer to use the local HDMI connection for video output.</p>
-
-<p>All this was from my computer through an SSH session so I never controlled the pi directly. Once done, I proceeded to sit down with a nice, cold Lemon - Menta beer and a remote control.</p>
-
-<p>Once little gotcha &ndash; <code>omxplayer</code> is controlled through the buttons + (volume up), - (volume down), <SPACE> (stop, play), and q for quitting. Flirc is able to map any key <em>combinations</em> on a keyboard as well to any button on the remote. Combinations can be done by selecting a control key and pressing another key. So mapping <code>+</code> to the volume up button was by pressing shift and then &lsquo;=&rsquo;.</p>
-
-<h2 id="wrapping-up">Wrapping Up</h2>
-
-<p>I enjoyed the movie while being able to adjust the volume, or pause it, when my popcorn was ready, and close the player when the movie was done. There are a number of other ways to do this, like using <a href="https://kodi.tv/">kodi</a> + <a href="https://play.google.com/store/apps/details?id=org.leetzone.android.yatsewidgetfree&amp;hl=en">yatse</a>. Which lets you remote control a media software with your mobile phone. But I&rsquo;m using the pi for a number of other things and the GUI is rather resource heavy.</p>
-
-<p>There you have it folks. Might not be the easiest setup, but it&rsquo;s pretty awesome anyways.</p>
-
-<p>Cheers,
 Gergely.</p>
 
                     </div>

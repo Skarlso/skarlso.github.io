@@ -63,6 +63,102 @@
             
             <div class="posts">
                 
+                <h1 class="content-subhead">18 Apr 2013, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2013/04/18/cucumber-jvm-and-afterall/" class="post-title">Cucumber-Jvm And @AfterAll</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-java" href="https://skarlso.github.io//categories/java">java</a><a class="post-category post-category-problem solving" href="https://skarlso.github.io//categories/problem-solving">problem solving</a><a class="post-category post-category-testing" href="https://skarlso.github.io//categories/testing">testing</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Hey folks.</p>
+
+<p>I find out something new about cucumber-jvm every day.</p>
+
+<p>If you want something that is executed after all of the tests have finished you must use the Java shutdownHook. It&#8217;s simple really you add in a block of code that can run right before the JVM quits. I know I know&#8230; It sounds awful but I found out that this is the actual way of doing this with java / cucumber.</p>
+
+<p>Anyways&#8230;</p>
+
+<p>Here is something to do when all of your test quit-&gt;</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="java" style="font-family:monospace;">    <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #000000; font-weight: bold;">static</span> <span style="color: #000066; font-weight: bold;">void</span> attachShutDownHook<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#123;</span>
+        <span style="color: #003399;">Runtime</span>.<span style="color: #006633;">getRuntime</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span>.<span style="color: #006633;">addShutdownHook</span><span style="color: #009900;">&#40;</span><span style="color: #000000; font-weight: bold;">new</span> <span style="color: #003399;">Thread</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+            @Override
+            <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #000066; font-weight: bold;">void</span> run<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+                <span style="color: #003399;">Properties</span> properties <span style="color: #339933;">=</span> <span style="color: #003399;">System</span>.<span style="color: #006633;">getProperties</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+                <span style="color: #003399;">String</span> filename <span style="color: #339933;">=</span> properties.<span style="color: #006633;">getProperty</span><span style="color: #009900;">&#40;</span><span style="color: #0000ff;">"filename"</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+                <span style="color: #003399;">String</span> path <span style="color: #339933;">=</span> properties.<span style="color: #006633;">getProperty</span><span style="color: #009900;">&#40;</span><span style="color: #0000ff;">"path"</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+                List<span style="color: #339933;">&lt;</span>Story<span style="color: #339933;">&gt;</span> stories <span style="color: #339933;">=</span> <span style="color: #000000; font-weight: bold;">new</span> ArrayList<span style="color: #339933;">&lt;&gt;</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+&nbsp;
+                Path file <span style="color: #339933;">=</span> Paths.<span style="color: #006633;">get</span><span style="color: #009900;">&#40;</span>path <span style="color: #339933;">+</span> filename<span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+                <span style="color: #000000; font-weight: bold;">try</span> <span style="color: #009900;">&#123;</span>
+                    <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #009900;">&#40;</span>Files.<span style="color: #006633;">exists</span><span style="color: #009900;">&#40;</span>file<span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+                        List<span style="color: #339933;">&lt;</span>String<span style="color: #339933;">&gt;</span> lines <span style="color: #339933;">=</span> Files.<span style="color: #006633;">readAllLines</span><span style="color: #009900;">&#40;</span>file, Charset.<span style="color: #006633;">defaultCharset</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+                        <span style="color: #000000; font-weight: bold;">for</span> <span style="color: #009900;">&#40;</span><span style="color: #003399;">String</span> line <span style="color: #339933;">:</span> lines<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+                            <span style="color: #666666; font-style: italic;">//add file lines to a report here</span>
+                        <span style="color: #009900;">&#125;</span>
+                    <span style="color: #009900;">&#125;</span>
+                <span style="color: #009900;">&#125;</span> <span style="color: #000000; font-weight: bold;">catch</span> <span style="color: #009900;">&#40;</span><span style="color: #003399;">IOException</span> e<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
+                    logger.<span style="color: #006633;">error</span><span style="color: #009900;">&#40;</span><span style="color: #0000ff;">"Exception occurred: "</span> <span style="color: #339933;">+</span> e.<span style="color: #006633;">getLocalizedMessage</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+                <span style="color: #009900;">&#125;</span>
+                    <span style="color: #666666; font-style: italic;">//send report to a remote location here</span>
+                    <span style="color: #666666; font-style: italic;">//since this is a shutdown hook this should take only a few seconds.</span>
+            <span style="color: #009900;">&#125;</span>
+        <span style="color: #009900;">&#125;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+        logger.<span style="color: #006633;">infor</span><span style="color: #009900;">&#40;</span><span style="color: #0000ff;">"Shut Down Hook Attached."</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
+    <span style="color: #009900;">&#125;</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>So there you go. You would need to call this in a @BeforeClass to have it attached. This is a small hook attached after each test has run which would submit a report built up from a file. Why not use a listener or a custom report generator or whatever? Because maybe you have the report done in a remote place where you need to place a csv file which will be available to everybody to look at. And you want the report to be sent and generated dynamically. Or you have some clean up to do after your suit is done.</p>
+
+<p>In ruby the @AfterAll is actually equivalent to this which in ruby land would be at_exit.</p>
+
+<p>For example:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="ruby" style="font-family:monospace;">  <span style="color:#CC0066; font-weight:bold;">at_exit</span> <span style="color:#9966CC; font-weight:bold;">do</span>
+    <span style="color:#008000; font-style:italic;"># Global teardown</span>
+    TempFileManager.<span style="color:#9900CC;">clean_up</span>
+  <span style="color:#9966CC; font-weight:bold;">end</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>So there it is. Hope this helped.</p>
+
+<p>Cheers,</p>
+
+<p>And as always,</p>
+
+<p>Have a nice day!</p>
+
+<p>G.</p>
+
+                    </div>
+                </section>
+                
                 <h1 class="content-subhead">15 Apr 2013, 00:00</h1>
                 <section class="post">
                     <header class="post-header">
@@ -1040,95 +1136,6 @@ p.<span style="color: #006600;">addYears</span><span style="color: #66cc66;">&#4
 <p>As always,</p>
 
 <p>Thanks for reading,</p>
-
-<p>Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">30 Sep 2012, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2012/09/30/89/" class="post-title">Coderetreat London</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-programming" href="https://skarlso.github.io//categories/programming">programming</a><a class="post-category post-category-TDD" href="https://skarlso.github.io//categories/tdd">TDD</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Hello everybody.</p>
-
-<p>So yesterday I was on a little gathering called <a href="http://coderetreat.org/" title="Coderetreat" target="_blank">Coderetreat</a>.</p>
-
-<p>If you look at the link you can read everything about it. If not, I&#8217;ve provided a short description.</p>
-
-<p><strong>What it is about?</strong></p>
-
-<p>So what is codereatreat about? In short it&#8217;s about programmers getting together and honing and practicing there skills in order to become more at what they are doing. It&#8217;s a practice run with great people. TDDing one problem the whole day long with constantly applied constraints.</p>
-
-<p><strong>Problem domain</strong></p>
-
-<p>Usually it&#8217;s some kind of coding kata. This sessions problem was <a href="http://en.wikipedia.org/wiki/Conway's_Game_of_Life" target="_blank">Convey&#8217;s Game Of Life</a>. It&#8217;s a well known problem which you can&#8217;t really solve in the given amount of time if you do it right. But that&#8217;s not the goal anyways. The goal is the journey itself as was formulated by our facilitator.</p>
-
-<p><strong>Process</strong></p>
-
-<p>So what was going on there anyways? At 10:00AM the whole thing begun. Thirty developers set down, choose partners for TDD, and started to tackle the problem at hand. There were 6 sessions which lasted 45 minutes. After that a short retro and then a 10 minute break. On every session the code was deleted and rewrote from scratch. The first two sessions were introduction. And then the fun started with the constraints&#8230;</p>
-
-<p><strong>Constraints</strong></p>
-
-<p>The <strong>first</strong> one was that we were not allowed to use any loops when solving the problem. That was a tricky one. You had several options to go on but me not being a proper developer I couldn&#8217;t think of too many. Well that&#8217;s why I was there wasn&#8217;t I? To learn. I came up with the idea of linking the cells together so when one is invalidated it notifies all his neighbours through a call. But I wasn&#8217;t sure how to implement it. Also I choose a group which worked in ruby and it was a long time ago I wrote something in that language. It was a group effort but eventually we came up with a prototype that proved the first rule. I was happy!</p>
-
-<p>The <strong>second</strong> one was <a href="http://coderetreat.org/facilitating/activities/ping-pong" target="_blank">TDD ping pong</a>. That was a really interesting experience for me. I grouped with a guy who had already experience in code retreat session so he didn&#8217;t spare me. In addition we did silent ping pong and it was HARD! It was really hard for me to formulate my thoughts JUST in tests. So that he can get what I want and understand and agree on the design at the same time. So we ended up throwing tests at each other with the thought: Here try to solve this you bastard! It was great fun indeed!</p>
-
-<p>The <strong>third</strong> constraint was &#8216;No conditions.&#8217;. That was the hardest for me. Coming up with recursion for the first one and having a fight in the second was nothing compared to this. Conditions are a fundamental structure of programming. It&#8217;s logic basically. You can have the cells as objects and then a world of cells linked together but you still have to somehow decide if they live or die based on neighbour count.</p>
-
-<p>So how do you avert it? I worked with a guy in this one who was good at low level thinking. He came up with the solution of using expressions as returns for the status:</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="line_numbers">
-        <pre>1
-</pre>
-      </td>
-      
-      <td class="code">
-        <pre class="java" style="font-family:monospace;">    <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #009900;">&#40;</span><span style="color: #339933;">!</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#40;</span>neighbours <span style="color: #339933;">&lt;</span> <span style="color: #cc66cc;">2</span><span style="color: #009900;">&#41;</span> <span style="color: #339933;">||</span> <span style="color: #009900;">&#40;</span>neighbours <span style="color: #339933;">&gt;</span> <span style="color: #cc66cc;">3</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span> <span style="color: #339933;">||</span> <span style="color: #009900;">&#40;</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#40;</span>neighbours <span style="color: #339933;">==</span> <span style="color: #cc66cc;">2</span><span style="color: #009900;">&#41;</span> <span style="color: #339933;">||</span> <span style="color: #009900;">&#40;</span>neighbours <span style="color: #339933;">==</span> <span style="color: #cc66cc;">3</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>It&#8217;s brilliant and easy if you see it like this but I was so used to thinking in higher structure and so used to the features given by the language, that I couldn&#8217;t have come up with this in the given amount of time. So he had the idea and I coded it down. And this is actually working&#8230; It returns true or false based on the neighbour count. And we could use that return value to change the state of the cell afterwords.</p>
-
-<p>The <strong>fourth</strong> and last task was that everybody stand up and finish someones else code. Practicing how to handle &#8220;legacy&#8221; code and a free for all session to finish the job.</p>
-
-<p><strong>What I learned?</strong></p>
-
-<p>Basically I learned that I really like code. I like writing it, thinking about it, solving problems and creating good, clean, clever solutions. I might be a tester by profession and I love being a tester, but there is a coder somewhere in here too who enjoyed every bit of that session yesterday. Of course this is not the only thing I took from that. I learned good technics. I learned that I&#8217;m in a box and I need to think outside of it too. I constraint myself by depending on the language I use. And that I need to keep up practicing alas I loose my ability to solve complex logical problems by coding.</p>
-
-<p>A coding kata a day helps keeping the bugs away. 😉</p>
-
-<p><strong>End thoughts</strong></p>
-
-<p>All in all the day was absolutely awesome. Great lunch and environment was provided by the host <a href="http://www.national-lottery.co.uk/" target="_blank">Camelot</a> and our fearless leader who walked around all day helping out and coordinating the whole thing <a href="www.meza.hu" target="_blank">Marton &#8216;Meza&#8217; Meszaros</a>. A big thank you and a lot of respect for doing it all day long.</p>
-
-<p>Unfortunately because of my broken ankle I couldn&#8217;t stay for the drinks but if you ever get to a session like this I strongly recommend staying the whole day AND the night. And not just &#8217;till you stuffed your belly with free food and booze. 😉</p>
-
-<p>And the top of the cherry is a great time laps of the whole day which can be seen here: <a href="http://www.youtube.com/watch?v=qBvMBAOQD5U" target="_blank">Coderetreat 29.09.12</a>. Enjoy as we had!</p>
-
-<p>As always,</p>
-
-<p>Thanks for reading.</p>
 
 <p>Gergely.</p>
 
