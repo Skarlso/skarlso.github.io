@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.20.6" />
+    <meta name="generator" content="Hugo 0.21" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Posts &middot; Ramblings of a build engineer">
@@ -62,6 +62,126 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">06 Oct 2016, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/" class="post-title">RScrap scraper</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-Ruby" href="https://skarlso.github.io//categories/ruby">Ruby</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h1 id="intro">Intro</h1>
+
+<p>Hey folks.</p>
+
+<p>So, there is this project called <a href="https://github.com/cantino/huginn">Huginn</a> which I absolutely love.</p>
+
+<p>But the thing is, that for a couple of scrappers ( at least for me ), I don&rsquo;t want to spin up a whole rails app.</p>
+
+<p>Hence, I&rsquo;ve come up with <a href="https://github.com/Skarlso/rscrap">RScrap</a>. Which is a bunch of Ruby scripts run as cron jobs on a raspberry pi. And because I dislike emails as well, and most of the time, I don&rsquo;t read them, I opted for a nicer solution. Enter the world of <a href="https://telegram.org">Telegram</a>. They provide you with the ability to create bots. You basically get an API key, and than using that key, you can send private messages, or even create an interactive bot which you can send messages too.</p>
+
+<p>In my simple example, I&rsquo;m using it to send private messages to myself, but I could just as well, make it interactive and than tell it to run one of the scripts.</p>
+
+<h1 id="the-code">The Code</h1>
+
+<p>Let&rsquo;s take a look at what we got.</p>
+
+<h2 id="the-main-scraper">The main scraper</h2>
+
+<p>The main scraper, is simply bunch of convenience methods that wrap handling and working with the database and the telegram bot. That&rsquo;s all. It&rsquo;s very simple. Very short. The Telegram part is just this bit:</p>
+
+<pre><code class="language-ruby">def send_message(text)
+  Telegram::Bot::Client.run(@token) do |bot|
+    bot.api.send_message(chat_id: @id, text: text)
+  end
+end
+</code></pre>
+
+<p>Straightforward. Creating an interactive bot, would look something like this:</p>
+
+<pre><code class="language-ruby">#!/usr/bin/env ruby
+require 'telegram/bot'
+
+token = 'YOUR_TELEGRAM_BOT_API_TOKEN'
+
+Telegram::Bot::Client.run(token) do |bot|
+  bot.listen do |message|
+    case message.text
+    when '/start'
+      bot.api.send_message(chat_id: message.chat.id, text: &quot;Hello, #{message.from.first_name}&quot;)
+    when '/stop'
+      bot.api.send_message(chat_id: message.chat.id, text: &quot;Bye, #{message.from.first_name}&quot;)
+    end
+  end
+end
+</code></pre>
+
+<p>Basically, it will listen, and than you can send it messages and based on the parsed <code>message.text</code> you can define functions to call. For example, for rscrap I could define something like <code>run_script(script)</code>. And the command would be: <code>/run reddit</code>. Which will execute my reddit script. The possibilities are endless.</p>
+
+<h2 id="the-scripts">The scripts</h2>
+
+<p>The scripts use nokogiri to parse a web page, and than return a URL which will be sent by the TelegramBot. They are also saved in the database so that when a new comic strip comes out, I know that it&rsquo;s new. For reddit, I&rsquo;m saving a timestamp as well, and I collect everything after that timestamp through the reddit API as JSON, and send it as a bundled message with shortified links to the posts using bit.ly.</p>
+
+<p>The scraping is most of the times the same for every comic. Thus, there is a helper method for it. The script itself, is very short. For example, lets look at gunnerkrigg court.</p>
+
+<pre><code class="language-ruby">require_relative '../rscrap'
+require 'nokogiri'
+require 'open-uri'
+
+url = 'http://www.gunnerkrigg.com'
+scrap = Rscrap.new
+page = Nokogiri::HTML(open(url))
+comic_id = page.css('img.comic_image')[0].select { |e| e if e[0] == 'src' }[0][1]
+new_comic = &quot;#{url}#{comic_id}&quot;
+scrap.send_new_comic(url, new_comic)
+</code></pre>
+
+<p>The interesting part of it is this bit: <code>comic_id = page.css('img.comic_image')[0].select { |e| e if e[0] == 'src' }[0][1]</code>. It extracts the URL for the comic image, and stores it as an &ldquo;id&rdquo; of the comic. This than, is sent as a message which Telegram will embed. There is no need to visit the web page, the image is in your feed and you can view it directly. Just like an RSS ready.</p>
+
+<h2 id="cron">Cron</h2>
+
+<p>These scripts are best used in a cron job. The comics are usually running with a daily frequency, where as the reddit gatherer is running with an hour frequency. Basically, I&rsquo;m receiving updates on an hourly basis if there are new posts by then. Running ruby from cron was a bit tricky. I&rsquo;m using bundler for the environment, and came up with this:</p>
+
+<pre><code class="language-bash">0 6-23 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/reddit.rb'
+0 8,22 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/gunnerkrigg.rb'
+0 8,22 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/aws_blog.rb'
+0 5,23 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/goblinscomic.rb'
+0 6,20 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/xkcd.rb'
+0 7,19 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/commitstrip.rb'
+0 8 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/sequiential_art.rb'
+</code></pre>
+
+<p>And a telegram message for all these things, looks like this:
+Reddit:
+<img src="https://github.com/Skarlso/rscrap/raw/master/shorten.png" alt="TelegramIMReddit" />
+Comics:
+<img src="https://github.com/Skarlso/rscrap/raw/master/rscrap2.png" alt="TelegramIMComics" /></p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>That&rsquo;s it folks. Adding a new scraper is easy. I added the aws blog as a new entry as well by just copying the comics scripts. And I&rsquo;m also getting Weather Reports delivered every morning to me.</p>
+
+<p>Have fun. Any questions, please feel free to leave a comment!</p>
+
+<p>Thanks,
+Gergely.</p>
+
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">17 Sep 2016, 00:00</h1>
                 <section class="post">
@@ -1018,98 +1138,6 @@ function list {
 <p>Thanks for reading!</p>
 
 <p>Gergely.</p>
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">16 Apr 2016, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/" class="post-title">Minecraft world automatic backup to AWS S3 bucket</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Minecraft" href="https://skarlso.github.io//categories/minecraft">Minecraft</a><a class="post-category post-category-AWS" href="https://skarlso.github.io//categories/aws">AWS</a><a class="post-category post-category-Bash" href="https://skarlso.github.io//categories/bash">Bash</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Hi Folks.</p>
-
-<p>Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&rsquo;m backing up the world once in a while.</p>
-
-<p>For that, I&rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.</p>
-
-<p>The script is really straightforward. I&rsquo;m doing manual versioning, although S3 does provide one out of the box. However, amazon&rsquo;s S3 versioning doesn&rsquo;t allow limiting the number of versions being kept. And since I&rsquo;m doing that anyways, might as well take care of the rest.</p>
-
-<p>Without further ado, here is the script:</p>
-
-<pre><code class="language-bash">#!/bin/bash
-
-if [[ -t 1 ]]; then
-    colors=$(tput colors)
-    if [[ $colors ]]; then
-        RED='\033[0;31m'
-        LIGHT_GREEN='\033[1;32m'
-        NC='\033[0m'
-    fi
-fi
-
-if [[ -z ${MINECRAFT_BUCKET} ]]; then
-	printf &quot;Please set the env variable ${RED}MINECRAFT_BUCKET${NC} to the s3 archive bucket name.\n&quot;
-	exit 0
-fi
-
-if [[ -z ${MINECRAFT_ARCHIVE_LIMIT} ]]; then
-	printf &quot;Please set the env variable ${RED}MINECRAFT_ARCHIVE_LIMIT${NC} to limit the number of archives to keep.\n&quot;
-	exit 0
-fi
-
-backup_bucket=${MINECRAFT_BUCKET}
-backup_limit=${MINECRAFT_ARCHIVE_LIMIT}
-world=$1
-printf &quot;Creating archive of ${RED}${world}${NC}\n&quot;
-archive_name=&quot;${world}-$(date +&quot;%H-%M-%S-%m-%d-%Y&quot;).zip&quot;
-zip -r $archive_name $world
-
-printf &quot;Checking if bucket has more than ${RED}${backup_limit}${NC} files already.\n&quot;
-content=( $(aws s3 ls s3://$backup_bucket | awk '{print $4}') )
-
-if [[ ${#content[@]} -eq $backup_limit || ${#content[@]} -gt $backup_limit  ]]; then
-    echo &quot;There are too many archives. Deleting oldest one.&quot;
-    # We can assume here that the list is in cronological order
-	printf &quot;${RED}s3://${backup_bucket}/${content[0]}\n&quot;
-    aws s3 rm s3://$backup_bucket/${content[0]}
-fi
-
-printf &quot;Uploading ${RED}${archive_name}${NC} to s3 archive bucket.\n&quot;
-state=$(aws s3 cp $archive_name s3://$backup_bucket)
-
-if [[ &quot;$state&quot; =~ &quot;upload:&quot; ]]; then
-    printf &quot;File upload ${LIGHT_GREEN}successful${NC}.\n&quot;
-else
-    printf &quot;${RED}Error${NC} occured while uploading archive. Please investigate.\n&quot;
-fi
-</code></pre>
-
-<p>It uses environment properties to define where to upload the given world and how many versions to keep.</p>
-
-<p>I&rsquo;m calling this from a cron job, and it&rsquo;s sitting next to where the Minecraft world is.</p>
-
-<p>That&rsquo;s it folks.</p>
-
-<p>I&rsquo;ll start expanding on this idea and implement various services, like your own server address, or dropbox, or what have you.</p>
-
-<p>Happy backing up.</p>
-
-<p>Gergely.</p>
-
                     </div>
                 </section>
                 
