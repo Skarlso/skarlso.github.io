@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.21" />
+    <meta name="generator" content="Hugo 0.24.1" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Ramblings of a build engineer &middot; Ramblings of a build engineer">
@@ -62,6 +62,211 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">01 Jan 2016, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2016/01/01/byte-arrays-and-channels/" class="post-title">Byte arrays and Channels</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a><a class="post-category post-category-Programming" href="https://skarlso.github.io//categories/programming">Programming</a><a class="post-category post-category-Channels" href="https://skarlso.github.io//categories/channels">Channels</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Hi folks and a Happy new Year!</p>
+
+<p>Today, I would like to show you some interesting things you can do with channels. Consider the following simple example.</p>
+
+<pre><code class="language-go">package main
+
+import &quot;fmt&quot;
+
+func main() {
+	generatedPassword := make(chan int, 100)
+	correctPassword := make(chan int)
+	defer close(generatedPassword)
+	defer close(correctPassword)
+	go passwordIncrement(generatedPassword)
+	go checkPassword(generatedPassword, correctPassword)
+	pass := &lt;-correctPassword
+	fmt.Println(pass)
+}
+
+func checkPassword(input &lt;-chan int, output chan&lt;- int) {
+	for {
+		p := &lt;-input
+		//Introduce lengthy operation here
+		// time.Sleep(time.Second)
+		fmt.Println(&quot;Checking p:&quot;, p)
+		if p &gt; 100000 {
+			output &lt;- p
+		}
+	}
+}
+
+func passwordIncrement(out chan&lt;- int) {
+	p := 0
+	for {
+		p++
+		out &lt;- p
+	}
+}
+</code></pre>
+
+<p>The premise is as follows. It launches two go routines. One, which generates passwords, and an other which checks for validity. The two routines talk to each other through the channel <code>generatedPassword</code>. That&rsquo;s the providing connections between them. The channel <code>correctPassword</code> provides output for the <code>checkPassword</code> routine.</p>
+
+<p>If there is data received from <code>correctPassword</code> channel, we found our first password and there is no need to look further so we, print the password and quit. The channels will close with defer. This works. But the password is usually either a []byte or a string. With string, it still works.</p>
+
+<pre><code class="language-go">package main
+
+import &quot;fmt&quot;
+
+func main() {
+	generatedPassword := make(chan string, 100)
+	correctPassword := make(chan string)
+	defer close(generatedPassword)
+	defer close(correctPassword)
+	go passwordIncrement(generatedPassword)
+	go checkPassword(generatedPassword, correctPassword)
+	pass := &lt;-correctPassword
+	fmt.Println(pass)
+}
+
+func checkPassword(input &lt;-chan string, output chan&lt;- string) {
+	for {
+		p := &lt;-input
+		//Introduce lengthy operation here
+		// time.Sleep(time.Second)
+		fmt.Println(&quot;Checking p:&quot;, p)
+		if performSomeCheckingOperation(p) {
+			output &lt;- p
+		}
+	}
+}
+
+func generateNewPassword(out chan&lt;- string) {
+	var p string
+	for {
+		p = generate(p)
+		out &lt;- p
+	}
+}
+</code></pre>
+
+<p>The generating happens based on the previously generated password. For example, we increment, or permeate. aaaa, aaab, aaac&hellip;</p>
+
+<p>So <code>generatedPassword</code> is a buffered channel, it gathers a 100 passwords from which checking retrieves passwords one by one and works on them in a slower process.</p>
+
+<p>Now, this is fine, but using []byte arrays will always be more powerful and faster. So we would like to use []byte. Like this:</p>
+
+<pre><code class="language-go">package main
+
+import &quot;fmt&quot;
+
+func main() {
+	generatedPassword := make(chan []byte, 100)
+	correctPassword := make(chan []byte)
+	defer close(generatedPassword)
+	defer close(correctPassword)
+	go passwordIncrement(generatedPassword)
+	go checkPassword(generatedPassword, correctPassword)
+	pass := &lt;-correctPassword
+	fmt.Println(string(pass))
+}
+
+func checkPassword(input &lt;-chan []byte, output chan&lt;- []byte) {
+	for {
+		p := &lt;-input
+		//Introduce lengthy operation here
+		// time.Sleep(time.Second)
+		fmt.Println(&quot;Checking p:&quot;, string(p))
+		if performSomeCheckingOperation(p) {
+			output &lt;- p
+		}
+	}
+}
+
+func generateNewPassword(out chan&lt;- []byte) {
+	var p []byte
+	for {
+		p = generate(p)
+		out &lt;- p
+	}
+}
+</code></pre>
+
+<p>This will not work. Why? Because []byte is a slice and thus will be constantly overwritten. The checking go routine will always only check the last data and many generated passwords will be lost. This is also noted in go&rsquo;s scanner here =&gt; <a href="https://golang.org/pkg/bufio/#Scanner.Bytes">Scanner.Bytes</a></p>
+
+<p>We have a couple of options here.</p>
+
+<p>We could use <code>string</code> channels and convert to []byte after. This is still okay, because the conversion isn&rsquo;t very CPU intensive.</p>
+
+<pre><code class="language-go">...
+generatedPassword := make(chan string, 100)
+correctPassword := make(chan string)
+...
+p := []byte(&lt;-input) //This will work very nicely.
+...
+</code></pre>
+
+<p>Options two would be If you have a fixed password to handle, fix data, for example MD5 hash, you can use a byte array. Like this:</p>
+
+<pre><code class="language-go">package main
+
+import &quot;fmt&quot;
+
+const PASSWD=13
+
+func main() {
+	generatedPassword := make(chan [PASSWD]byte, 100)
+	correctPassword := make(chan [PASSWD]byte)
+	defer close(generatedPassword)
+	defer close(correctPassword)
+	go passwordIncrement(generatedPassword)
+	go checkPassword(generatedPassword, correctPassword)
+	pass := &lt;-correctPassword
+	fmt.Println(string(pass))
+}
+
+func checkPassword(input &lt;-chan [PASSWD]byte, output chan&lt;- [PASSWD]byte) {
+	for {
+		p := &lt;-input
+		//Introduce lengthy operation here
+		// time.Sleep(time.Second)
+		fmt.Println(&quot;Checking p:&quot;, string(p))
+		if performSomeCheckingOperation(p) {
+			output &lt;- p
+		}
+	}
+}
+
+func generateNewPassword(out chan&lt;- [PASSWD]byte) {
+	var p [PASSWD]byte
+	for {
+		p = generate(p)
+		out &lt;- p
+	}
+}
+</code></pre>
+
+<p>This is also one solution. If you have to convert between the two, could go with <code>p := byte[:]</code>.</p>
+
+<p>Conclusion is, that use conversion rather than string types and be aware that using slices in channels is dangerous.</p>
+
+<p>Thanks for reading!
+Gergely.</p>
+
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">29 Dec 2015, 00:00</h1>
                 <section class="post">
@@ -933,96 +1138,6 @@ log <span style="color: #ff0000;">"Wifi name: <span style="color: #007800;">$wif
 <p>Cheers,</p>
 
 <p>Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">15 Oct 2015, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2015/10/15/circular-buffer-in-go/" class="post-title">Circular buffer in Go</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a><a class="post-category post-category-problem solving" href="https://skarlso.github.io//categories/problem-solving">problem solving</a><a class="post-category post-category-programming" href="https://skarlso.github.io//categories/programming">programming</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>I&#8217;m proud of this one too. No peaking. I like how go let&#8217;s you do this kind of stuff in a very nice way.</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="go" style="font-family:monospace;"><span style="color: #b1b100; font-weight: bold;">package</span> circular
-&nbsp;
-<span style="color: #b1b100; font-weight: bold;">import</span> <span style="color: #cc66cc;">"fmt"</span>
-&nbsp;
-<span style="color: #666666; font-style: italic;">//TestVersion testVersion</span>
-<span style="color: #b1b100; font-weight: bold;">const</span> TestVersion <span style="color: #339933;">=</span> <span style="color: #cc66cc;">1</span>
-&nbsp;
-<span style="color: #666666; font-style: italic;">//Buffer buffer type</span>
-<span style="color: #b1b100; font-weight: bold;">type</span> Buffer <span style="color: #993333;">struct</span> <span style="color: #339933;">{</span>
-    buffer <span style="color: #339933;">[]</span><span style="color: #993333;">byte</span>
-    full   <span style="color: #993333;">int</span>
-    size   <span style="color: #993333;">int</span>
-    s<span style="color: #339933;">,</span> e   <span style="color: #993333;">int</span>
-<span style="color: #339933;">}</span>
-&nbsp;
-<span style="color: #666666; font-style: italic;">//NewBuffer creates a new Buffer</span>
-<span style="color: #993333;">func</span> NewBuffer<span style="color: #339933;">(</span>size <span style="color: #993333;">int</span><span style="color: #339933;">)</span> <span style="color: #339933;">*</span>Buffer <span style="color: #339933;">{</span>
-    <span style="color: #b1b100; font-weight: bold;">return</span> &Buffer<span style="color: #339933;">{</span>buffer<span style="color: #339933;">:</span> <span style="color: #000066;">make</span><span style="color: #339933;">([]</span><span style="color: #993333;">byte</span><span style="color: #339933;">,</span> size<span style="color: #339933;">),</span> s<span style="color: #339933;">:</span> <span style="color: #cc66cc;"></span><span style="color: #339933;">,</span> e<span style="color: #339933;">:</span> <span style="color: #cc66cc;"></span><span style="color: #339933;">,</span> size<span style="color: #339933;">:</span> size<span style="color: #339933;">,</span> full<span style="color: #339933;">:</span> <span style="color: #cc66cc;"></span><span style="color: #339933;">}</span>
-<span style="color: #339933;">}</span>
-&nbsp;
-<span style="color: #666666; font-style: italic;">//ReadByte reads a byte from b Buffer</span>
-<span style="color: #993333;">func</span> <span style="color: #339933;">(</span>b <span style="color: #339933;">*</span>Buffer<span style="color: #339933;">)</span> ReadByte<span style="color: #339933;">()</span> <span style="color: #339933;">(</span><span style="color: #993333;">byte</span><span style="color: #339933;">,</span> error<span style="color: #339933;">)</span> <span style="color: #339933;">{</span>
-    <span style="color: #b1b100; font-weight: bold;">if</span> b<span style="color: #339933;">.</span>full <span style="color: #339933;">==</span> <span style="color: #cc66cc;"></span> <span style="color: #339933;">{</span>
-        <span style="color: #b1b100; font-weight: bold;">return</span> <span style="color: #cc66cc;"></span><span style="color: #339933;">,</span> fmt<span style="color: #339933;">.</span>Errorf<span style="color: #339933;">(</span><span style="color: #cc66cc;">"Danger Will Robinson: %s"</span><span style="color: #339933;">,</span> b<span style="color: #339933;">)</span>
-    <span style="color: #339933;">}</span>
-    readByte <span style="color: #339933;">:=</span> b<span style="color: #339933;">.</span>buffer<span style="color: #339933;">[</span>b<span style="color: #339933;">.</span>s<span style="color: #339933;">]</span>
-    b<span style="color: #339933;">.</span>s <span style="color: #339933;">=</span> <span style="color: #339933;">(</span>b<span style="color: #339933;">.</span>s <span style="color: #339933;">+</span> <span style="color: #cc66cc;">1</span><span style="color: #339933;">)</span> <span style="color: #339933;">%</span> b<span style="color: #339933;">.</span>size
-    b<span style="color: #339933;">.</span>full<span style="color: #339933;">--</span>
-    <span style="color: #b1b100; font-weight: bold;">return</span> readByte<span style="color: #339933;">,</span> <span style="color: #000000; font-weight: bold;">nil</span>
-<span style="color: #339933;">}</span>
-&nbsp;
-<span style="color: #666666; font-style: italic;">//WriteByte writes c byte to the buffer</span>
-<span style="color: #993333;">func</span> <span style="color: #339933;">(</span>b <span style="color: #339933;">*</span>Buffer<span style="color: #339933;">)</span> WriteByte<span style="color: #339933;">(</span>c <span style="color: #993333;">byte</span><span style="color: #339933;">)</span> error <span style="color: #339933;">{</span>
-    <span style="color: #b1b100; font-weight: bold;">if</span> b<span style="color: #339933;">.</span>full<span style="color: #339933;">+</span><span style="color: #cc66cc;">1</span> &gt; b<span style="color: #339933;">.</span>size <span style="color: #339933;">{</span>
-        <span style="color: #b1b100; font-weight: bold;">return</span> fmt<span style="color: #339933;">.</span>Errorf<span style="color: #339933;">(</span><span style="color: #cc66cc;">"Danger Will Robinson: %s"</span><span style="color: #339933;">,</span> b<span style="color: #339933;">)</span>
-    <span style="color: #339933;">}</span>
-    b<span style="color: #339933;">.</span>buffer<span style="color: #339933;">[</span>b<span style="color: #339933;">.</span>e<span style="color: #339933;">]</span> <span style="color: #339933;">=</span> c
-    b<span style="color: #339933;">.</span>e <span style="color: #339933;">=</span> <span style="color: #339933;">(</span>b<span style="color: #339933;">.</span>e <span style="color: #339933;">+</span> <span style="color: #cc66cc;">1</span><span style="color: #339933;">)</span> <span style="color: #339933;">%</span> b<span style="color: #339933;">.</span>size
-    b<span style="color: #339933;">.</span>full<span style="color: #339933;">++</span>
-    <span style="color: #b1b100; font-weight: bold;">return</span> <span style="color: #000000; font-weight: bold;">nil</span>
-<span style="color: #339933;">}</span>
-&nbsp;
-<span style="color: #666666; font-style: italic;">//Overwrite overwrites the oldest byte in Buffer</span>
-<span style="color: #993333;">func</span> <span style="color: #339933;">(</span>b <span style="color: #339933;">*</span>Buffer<span style="color: #339933;">)</span> Overwrite<span style="color: #339933;">(</span>c <span style="color: #993333;">byte</span><span style="color: #339933;">)</span> <span style="color: #339933;">{</span>
-    b<span style="color: #339933;">.</span>buffer<span style="color: #339933;">[</span>b<span style="color: #339933;">.</span>s<span style="color: #339933;">]</span> <span style="color: #339933;">=</span> c
-    b<span style="color: #339933;">.</span>s <span style="color: #339933;">=</span> <span style="color: #339933;">(</span>b<span style="color: #339933;">.</span>s <span style="color: #339933;">+</span> <span style="color: #cc66cc;">1</span><span style="color: #339933;">)</span> <span style="color: #339933;">%</span> b<span style="color: #339933;">.</span>size
-<span style="color: #339933;">}</span>
-&nbsp;
-<span style="color: #666666; font-style: italic;">//Reset resets the buffer</span>
-<span style="color: #993333;">func</span> <span style="color: #339933;">(</span>b <span style="color: #339933;">*</span>Buffer<span style="color: #339933;">)</span> Reset<span style="color: #339933;">()</span> <span style="color: #339933;">{</span>
-    <span style="color: #339933;">*</span>b <span style="color: #339933;">=</span> <span style="color: #339933;">*</span>NewBuffer<span style="color: #339933;">(</span>b<span style="color: #339933;">.</span>size<span style="color: #339933;">)</span>
-<span style="color: #339933;">}</span>
-&nbsp;
-<span style="color: #666666; font-style: italic;">//String for a string representation of Buffer</span>
-<span style="color: #993333;">func</span> <span style="color: #339933;">(</span>b <span style="color: #339933;">*</span>Buffer<span style="color: #339933;">)</span> String<span style="color: #339933;">()</span> <span style="color: #993333;">string</span> <span style="color: #339933;">{</span>
-    <span style="color: #b1b100; font-weight: bold;">return</span> fmt<span style="color: #339933;">.</span>Sprintf<span style="color: #339933;">(</span><span style="color: #cc66cc;">"Buffer: %d, %d, %d, %d"</span><span style="color: #339933;">,</span> b<span style="color: #339933;">.</span><span style="">buffer</span><span style="color: #339933;">,</span> b<span style="color: #339933;">.</span><span style="">s</span><span style="color: #339933;">,</span> b<span style="color: #339933;">.</span><span style="">e</span><span style="color: #339933;">,</span> b<span style="color: #339933;">.</span><span style="">size</span><span style="color: #339933;">)</span>
-<span style="color: #339933;">}</span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
 
                     </div>
                 </section>

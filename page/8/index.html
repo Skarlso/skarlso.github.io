@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.21" />
+    <meta name="generator" content="Hugo 0.24.1" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Ramblings of a build engineer &middot; Ramblings of a build engineer">
@@ -62,6 +62,111 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">07 Nov 2014, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2014/11/07/updating-all-jenkins-jobs-via-jenkins-api-python/" class="post-title">Updating All Jenkins Jobs Via Jenkins API – Python</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-Python" href="https://skarlso.github.io//categories/python">Python</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Hello everybody.</p>
+
+<p>I would like to share with you a small script I wrote to update all, or a single, Jenkins job from a Python script remotely.</p>
+
+<p></p>
+
+<p>This will enable you to update a Jenkins job from anywhere using an admin credential based on a config.xml template that you have. With this, if you want to apply a config change to all or just a single job in Jenkins, you don&#8217;t have to go and do it for all the rest. You just call this script and it will cycle through all the jobs you have and update them if the begin with &#8220;yourpipelinedelimiter&#8221; or if they aren&#8217;t in a restricted list of jobs. The delimiter helps to identify pipelines which are dev pipelines. If you have multiple pipelines which are helpers or builders and you don&#8217;t usually apply the same config to them, than the delimiter can help identify the dev pipelines you actually want to update.</p>
+
+<p>Enjoy, hope it helps someone.</p>
+
+<p>And now, without any further ado:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="python" style="font-family:monospace;"><span style="color: #483d8b;">'''
+    Created to update multiple pipelines in jenkins with a given configuration and job list.
+    Usage: 
+    Example 1:
+    Updating a single pipeline's job with a given config.xml.
+    python update-jenkins-jobs.py job-name config.xml pipeline-name
+    Example 2:
+    Updating every pipeline in jenkins dynamically. !!!WARNING!!! This updates every job EXCEPT of the ones specified in restricted_jobs.
+    python update-jenkins-jobs.py job-name config.xml
+'''</span>
+<span style="color: #ff7700;font-weight:bold;">from</span> <span style="color: #dc143c;">xml</span>.<span style="color: black;">dom</span> <span style="color: #ff7700;font-weight:bold;">import</span> minidom
+<span style="color: #ff7700;font-weight:bold;">import</span> requests
+<span style="color: #ff7700;font-weight:bold;">import</span> <span style="color: #dc143c;">sys</span>
+&nbsp;
+<span style="color: #ff7700;font-weight:bold;">def</span> update_pipeline<span style="color: black;">&#40;</span>pipeline<span style="color: black;">&#41;</span>:
+    <span style="color: #483d8b;">'''
+    Takes in a list of pipelines to update.
+    '''</span>
+    config_file <span style="color: #66cc66;">=</span> <span style="color: #008000;">open</span><span style="color: black;">&#40;</span>config_to_use<span style="color: #66cc66;">,</span> <span style="color: #483d8b;">'rb'</span><span style="color: black;">&#41;</span>
+    headers <span style="color: #66cc66;">=</span> <span style="color: black;">&#123;</span><span style="color: #483d8b;">'content-type'</span>: <span style="color: #483d8b;">'application/xml'</span><span style="color: black;">&#125;</span>
+    <span style="color: #ff7700;font-weight:bold;">print</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">"Updating pipelines: "</span><span style="color: #66cc66;">,</span> pipeline<span style="color: black;">&#41;</span>
+&nbsp;
+    <span style="color: #ff7700;font-weight:bold;">for</span> dev_job <span style="color: #ff7700;font-weight:bold;">in</span> pipeline:
+        url <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">"http://jenkins:9999/job/%s/job/%s/config.xml"</span> % <span style="color: black;">&#40;</span>dev_job<span style="color: #66cc66;">,</span> job_to_update<span style="color: black;">&#41;</span>
+        r <span style="color: #66cc66;">=</span> requests.<span style="color: black;">post</span><span style="color: black;">&#40;</span>url<span style="color: #66cc66;">,</span> data<span style="color: #66cc66;">=</span>config_file<span style="color: #66cc66;">,</span> headers<span style="color: #66cc66;">=</span>headers<span style="color: #66cc66;">,</span> auth<span style="color: #66cc66;">=</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'user'</span><span style="color: #66cc66;">,</span> <span style="color: #483d8b;">'password'</span><span style="color: black;">&#41;</span><span style="color: black;">&#41;</span>
+        <span style="color: #ff7700;font-weight:bold;">print</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">"Updating pipeline: %s; Response Code: %s"</span> % <span style="color: black;">&#40;</span>dev_job<span style="color: #66cc66;">,</span> r<span style="color: black;">&#41;</span><span style="color: black;">&#41;</span>
+&nbsp;
+&nbsp;
+<span style="color: #ff7700;font-weight:bold;">def</span> get_dev_pipelines<span style="color: black;">&#40;</span><span style="color: black;">&#41;</span>:
+    <span style="color: #483d8b;">'''
+    Gets a list of pipelines which can be used by update_pipeline.
+    '''</span>
+    r <span style="color: #66cc66;">=</span> requests.<span style="color: black;">get</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'http://jenkins:9999/api/xml'</span><span style="color: #66cc66;">,</span> auth<span style="color: #66cc66;">=</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'user'</span><span style="color: #66cc66;">,</span> <span style="color: #483d8b;">'password'</span><span style="color: black;">&#41;</span><span style="color: #66cc66;">,</span> stream<span style="color: #66cc66;">=</span><span style="color: #008000;">True</span><span style="color: black;">&#41;</span>
+    job_list_xml <span style="color: #66cc66;">=</span> r.<span style="color: black;">text</span>
+&nbsp;
+    xmldoc <span style="color: #66cc66;">=</span> minidom.<span style="color: black;">parseString</span><span style="color: black;">&#40;</span>job_list_xml<span style="color: black;">&#41;</span>
+    itemlist <span style="color: #66cc66;">=</span> xmldoc.<span style="color: black;">getElementsByTagName</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'name'</span><span style="color: black;">&#41;</span> 
+&nbsp;
+    dev_job_list <span style="color: #66cc66;">=</span> <span style="color: black;">&#91;</span><span style="color: black;">&#93;</span>
+&nbsp;
+    restricted_jobs <span style="color: #66cc66;">=</span> <span style="color: black;">&#91;</span><span style="color: #483d8b;">"yourpipelinedelimiter-dev-pipeline1"</span><span style="color: #66cc66;">,</span> <span style="color: #483d8b;">"yourpipelinedelimiter-dev-pipeline2"</span><span style="color: #66cc66;">,</span> <span style="color: #483d8b;">"yourpipelinedelimiter-dev-pipeline3"</span><span style="color: black;">&#93;</span>
+    <span style="color: #ff7700;font-weight:bold;">for</span> s <span style="color: #ff7700;font-weight:bold;">in</span> itemlist:
+        <span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: black;">&#40;</span><span style="color: #483d8b;">"yourpipelinedelimiter-dev"</span> <span style="color: #ff7700;font-weight:bold;">in</span> s.<span style="color: black;">firstChild</span>.<span style="color: black;">nodeValue</span><span style="color: black;">&#41;</span> :
+            value <span style="color: #66cc66;">=</span> s.<span style="color: black;">firstChild</span>.<span style="color: black;">nodeValue</span>
+            <span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: black;">&#40;</span>value <span style="color: #ff7700;font-weight:bold;">not</span> <span style="color: #ff7700;font-weight:bold;">in</span> restricted_jobs<span style="color: black;">&#41;</span>:
+                dev_job_list.<span style="color: black;">append</span><span style="color: black;">&#40;</span>value<span style="color: black;">&#41;</span>
+&nbsp;
+    <span style="color: #ff7700;font-weight:bold;">return</span> dev_job_list
+&nbsp;
+&nbsp;
+job_to_update <span style="color: #66cc66;">=</span> <span style="color: #dc143c;">sys</span>.<span style="color: black;">argv</span><span style="color: black;">&#91;</span><span style="color: #ff4500;">1</span><span style="color: black;">&#93;</span>
+config_to_use <span style="color: #66cc66;">=</span> <span style="color: #dc143c;">sys</span>.<span style="color: black;">argv</span><span style="color: black;">&#91;</span><span style="color: #ff4500;">2</span><span style="color: black;">&#93;</span>
+dev_pipeline <span style="color: #66cc66;">=</span> <span style="color: black;">&#91;</span><span style="color: black;">&#93;</span>
+&nbsp;
+<span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: #008000;">len</span><span style="color: black;">&#40;</span><span style="color: #dc143c;">sys</span>.<span style="color: black;">argv</span><span style="color: black;">&#41;</span> &gt<span style="color: #66cc66;">;</span> <span style="color: #ff4500;">3</span>:
+    <span style="color: #ff7700;font-weight:bold;">print</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">"Args length:"</span><span style="color: #66cc66;">,</span> <span style="color: #008000;">len</span><span style="color: black;">&#40;</span><span style="color: #dc143c;">sys</span>.<span style="color: black;">argv</span><span style="color: black;">&#41;</span><span style="color: black;">&#41;</span>
+    dev_pipeline.<span style="color: black;">append</span><span style="color: black;">&#40;</span><span style="color: #dc143c;">sys</span>.<span style="color: black;">argv</span><span style="color: black;">&#91;</span><span style="color: #ff4500;">3</span><span style="color: black;">&#93;</span><span style="color: black;">&#41;</span>
+&nbsp;
+update_pipeline<span style="color: black;">&#40;</span>get_dev_pipelines<span style="color: black;">&#40;</span><span style="color: black;">&#41;</span> <span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: #ff7700;font-weight:bold;">not</span> dev_pipeline <span style="color: #ff7700;font-weight:bold;">else</span> dev_pipeline<span style="color: black;">&#41;</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Thanks for reading.</p>
+
+<p>Gergely.</p>
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">23 Oct 2014, 00:00</h1>
                 <section class="post">
@@ -1086,181 +1191,6 @@ location.<span style="color: #660066;">replace</span><span style="color: #009900
 <p><strong><em>&#8220;Study the past, if you would define/divine the future.&#8221;</em></strong></p>
 
 <p>As always, thanks for reading!</p>
-
-<p>Gergely.</p>
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">19 Feb 2014, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2014/02/19/example-when-to-use-the-strategy-pattern/" class="post-title">Example when to use the Strategy Pattern</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-java" href="https://skarlso.github.io//categories/java">java</a><a class="post-category post-category-problem solving" href="https://skarlso.github.io//categories/problem-solving">problem solving</a><a class="post-category post-category-programming" href="https://skarlso.github.io//categories/programming">programming</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Hello folks.</p>
-
-<p>A quick post about an interesting idea.</p>
-
-<p>I want to elaborate on a possibility to use the Strategy Design pattern.</p>
-
-<p></p>
-
-<p>There are many clues that you need one. One is for example if your object has a boolean variable which you use a lot in other classes to determine behavior. Then there is perhaps time to implement a Strategy.</p>
-
-<p>Example:</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="java" style="font-family:monospace;">   <span style="color: #000000; font-weight: bold;">class</span> SomeClass <span style="color: #009900;">&#123;</span>
-        <span style="color: #000000; font-weight: bold;">private</span> <span style="color: #000066; font-weight: bold;">boolean</span> stateChange <span style="color: #339933;">=</span> <span style="color: #000066; font-weight: bold;">false</span><span style="color: #339933;">;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> SomeClass <span style="color: #009900;">&#40;</span>stateChange<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            <span style="color: #000000; font-weight: bold;">this</span>.<span style="color: #006633;">stateChange</span> <span style="color: #339933;">=</span> stateChange<span style="color: #339933;">;</span> 
-        <span style="color: #009900;">&#125;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #000066; font-weight: bold;">boolean</span> getStateChange<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            <span style="color: #000000; font-weight: bold;">return</span> stateChange<span style="color: #339933;">;</span>
-        <span style="color: #009900;">&#125;</span>
-    <span style="color: #009900;">&#125;</span>
-&nbsp;
-    <span style="color: #000000; font-weight: bold;">class</span> SomeUserClass <span style="color: #009900;">&#123;</span>
-        <span style="color: #000000; font-weight: bold;">private</span> SomeClass foo<span style="color: #339933;">;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> SomeUserClass<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            foo <span style="color: #339933;">=</span> <span style="color: #000000; font-weight: bold;">new</span> SomeClass<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-        <span style="color: #009900;">&#125;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #003399;">String</span> someMethod<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #009900;">&#40;</span>foo.<span style="color: #006633;">getStateChange</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-                <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #0000ff;">"Some string"</span><span style="color: #339933;">;</span>
-            <span style="color: #009900;">&#125;</span> <span style="color: #000000; font-weight: bold;">else</span> <span style="color: #009900;">&#123;</span>
-                <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #0000ff;">"Some string else"</span><span style="color: #339933;">;</span>
-            <span style="color: #009900;">&#125;</span>
-        <span style="color: #009900;">&#125;</span>
-    <span style="color: #009900;">&#125;</span>
-&nbsp;
-    <span style="color: #000000; font-weight: bold;">class</span> SomeOtherUserClass <span style="color: #009900;">&#123;</span>
-        <span style="color: #000000; font-weight: bold;">private</span> SomeClass foo<span style="color: #339933;">;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> SomeOtherUserClass<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            foo <span style="color: #339933;">=</span> <span style="color: #000000; font-weight: bold;">new</span> SomeClass<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-        <span style="color: #009900;">&#125;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #003399;">String</span> someMethodTwo<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #009900;">&#40;</span>foo.<span style="color: #006633;">getStateChange</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-                <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #0000ff;">"Some string"</span><span style="color: #339933;">;</span>
-            <span style="color: #009900;">&#125;</span> <span style="color: #000000; font-weight: bold;">else</span> <span style="color: #009900;">&#123;</span>
-                <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #0000ff;">"Some string else"</span><span style="color: #339933;">;</span>
-            <span style="color: #009900;">&#125;</span>
-        <span style="color: #009900;">&#125;</span>
-    <span style="color: #009900;">&#125;</span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>So you have two classes which do something based on some boolean coming from a class. So what you can do in this case, simply extract out that change in state.</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="java" style="font-family:monospace;">&nbsp;
-    <span style="color: #000000; font-weight: bold;">class</span> Foo <span style="color: #000000; font-weight: bold;">implements</span> Base <span style="color: #009900;">&#123;</span>
-        <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #003399;">String</span> getMyString<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #0000ff;">"Some string"</span><span style="color: #339933;">;</span>
-        <span style="color: #009900;">&#125;</span>
-    <span style="color: #009900;">&#125;</span>
-&nbsp;
-    <span style="color: #000000; font-weight: bold;">class</span> Bar <span style="color: #000000; font-weight: bold;">implements</span> Base <span style="color: #009900;">&#123;</span>
-        <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #003399;">String</span> getMyString<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #0000ff;">"Some string else"</span><span style="color: #339933;">;</span>
-        <span style="color: #009900;">&#125;</span>
-    <span style="color: #009900;">&#125;</span>
-&nbsp;
-    <span style="color: #000000; font-weight: bold;">interface</span> Base <span style="color: #009900;">&#123;</span>
-        <span style="color: #003399;">String</span> getMyString<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-    <span style="color: #009900;">&#125;</span>
-&nbsp;
-    <span style="color: #000000; font-weight: bold;">class</span> FooStrategy <span style="color: #009900;">&#123;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #000000; font-weight: bold;">static</span> Base getMeAClass<span style="color: #009900;">&#40;</span><span style="color: #000000; font-weight: bold;">enum</span> classChooser<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            <span style="color: #000000; font-weight: bold;">switch</span> classChooser <span style="color: #009900;">&#123;</span>
-                <span style="color: #000000; font-weight: bold;">case</span> classChooser.<span style="color: #006633;">FOO</span> <span style="color: #339933;">:</span> <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #000000; font-weight: bold;">new</span> Foo<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span> <span style="color: #000000; font-weight: bold;">break</span><span style="color: #339933;">;</span>
-                <span style="color: #000000; font-weight: bold;">case</span> classChooser.<span style="color: #006633;">BAR</span> <span style="color: #339933;">:</span> <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #000000; font-weight: bold;">new</span> Bar<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span> <span style="color: #000000; font-weight: bold;">break</span><span style="color: #339933;">;</span>
-                <span style="color: #000000; font-weight: bold;">default</span> <span style="color: #339933;">:</span> <span style="color: #000066; font-weight: bold;">null</span><span style="color: #339933;">;</span> <span style="color: #666666; font-style: italic;">//yeah yeah I know but I'm writing this in notepad... :)</span>
-            <span style="color: #009900;">&#125;</span>
-        <span style="color: #009900;">&#125;</span>
-    <span style="color: #009900;">&#125;</span>
-&nbsp;
-    <span style="color: #000000; font-weight: bold;">class</span> SomeUserClass <span style="color: #009900;">&#123;</span>
-        <span style="color: #000000; font-weight: bold;">private</span> Base foo<span style="color: #339933;">;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> SomeUserClass<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            foo <span style="color: #339933;">=</span> FooStrategy.<span style="color: #006633;">getMeAClass</span><span style="color: #009900;">&#40;</span>ClassChooser.<span style="color: #006633;">FOO</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-        <span style="color: #009900;">&#125;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #003399;">String</span> someMethod<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            <span style="color: #000000; font-weight: bold;">return</span> foo.<span style="color: #006633;">getMyString</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-        <span style="color: #009900;">&#125;</span>
-    <span style="color: #009900;">&#125;</span>
-&nbsp;
-    <span style="color: #000000; font-weight: bold;">class</span> SomeOtherUserClass <span style="color: #009900;">&#123;</span>
-        <span style="color: #000000; font-weight: bold;">private</span> Base bar<span style="color: #339933;">;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> SomeUserClass<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            bar <span style="color: #339933;">=</span> FooStrategy.<span style="color: #006633;">getMeAClass</span><span style="color: #009900;">&#40;</span>ClassChooser.<span style="color: #006633;">BAR</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-        <span style="color: #009900;">&#125;</span>
-&nbsp;
-        <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #003399;">String</span> someMethod<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-            <span style="color: #000000; font-weight: bold;">return</span> bar.<span style="color: #006633;">getMyString</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-        <span style="color: #009900;">&#125;</span>
-    <span style="color: #009900;">&#125;</span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>Now I know this looks like a lot of more code. However imagine this on a much larger scale with lots of implementations for Foo and Bar. Your if statements will get very convulated very quickly. This way you abstract away the choice into a Factory. And you can add as many implementations of Base as you like with as many variants as you like without changing the logic anywhere else but the Factory and the Enum. And the Enum could be a Configuration file and you do something like this:</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="java" style="font-family:monospace;">   <span style="color: #000000; font-weight: bold;">public</span> <span style="color: #000000; font-weight: bold;">static</span> Base getMeAClass<span style="color: #009900;">&#40;</span><span style="color: #003399;">String</span> className<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-        <span style="color: #666666; font-style: italic;">//Where className could be coming from a configuration file</span>
-        <span style="color: #000000; font-weight: bold;">Class</span> clazz <span style="color: #339933;">=</span> <span style="color: #000000; font-weight: bold;">Class</span>.<span style="color: #006633;">forName</span><span style="color: #009900;">&#40;</span>className<span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-        <span style="color: #000000; font-weight: bold;">return</span> <span style="color: #009900;">&#40;</span>Base<span style="color: #009900;">&#41;</span> clazz.<span style="color: #006633;">newInstance</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-    <span style="color: #009900;">&#125;</span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>This way you don&#8217;t even need the Enum anymore. Just use some configuration to determine what class you need at which point in your implementation without using an If statement at all.</p>
-
-<p>Hope this helps.</p>
-
-<p>I whipped this up from memory so please feel free to tell me if I missed something or have a syntax error in there somewhere&#8230;</p>
-
-<p>As always,</p>
-
-<p>Thanks for reading!</p>
 
 <p>Gergely.</p>
                     </div>
