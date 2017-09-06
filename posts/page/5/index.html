@@ -63,6 +63,155 @@
             
             <div class="posts">
                 
+                <h1 class="content-subhead">26 Oct 2015, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/" class="post-title">Kill a Program on Connecting to a specific WiFi – OSX</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-devops" href="https://skarlso.github.io//categories/devops">devops</a><a class="post-category post-category-problem solving" href="https://skarlso.github.io//categories/problem-solving">problem solving</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Hi folks.</p>
+
+<p>If you have the tendency, like me, to forget that you are on the corporate VPN, or leave a certain software open when you bring your laptop to work, this might be helpful to you too.</p>
+
+<p>It&#8217;s a small script which kills a program when you change your Wifi network.</p>
+
+<p>Script:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="bash" style="font-family:monospace;"><span style="color: #666666; font-style: italic;">#!/bin/bash</span>
+&nbsp;
+<span style="color: #000000; font-weight: bold;">function</span> log <span style="color: #7a0874; font-weight: bold;">&#123;</span>
+    <span style="color: #007800;">directory</span>=<span style="color: #ff0000;">"/Users/&lt;username&gt;/wifi_detect"</span>
+    <span style="color: #007800;">log_dir_exists</span>=<span style="color: #c20cb9; font-weight: bold;">true</span>
+    <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #7a0874; font-weight: bold;">&#91;</span> <span style="color: #000000; font-weight: bold;">!</span> <span style="color: #660033;">-d</span> <span style="color: #007800;">$directory</span> <span style="color: #7a0874; font-weight: bold;">&#93;</span>; <span style="color: #000000; font-weight: bold;">then</span>
+        <span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #ff0000;">"Attempting to create =&gt; <span style="color: #007800;">$directory</span>"</span>
+        <span style="color: #c20cb9; font-weight: bold;">mkdir</span> <span style="color: #660033;">-p</span> <span style="color: #007800;">$directory</span>
+        <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #7a0874; font-weight: bold;">&#91;</span> <span style="color: #000000; font-weight: bold;">!</span> <span style="color: #660033;">-d</span> <span style="color: #007800;">$directory</span> <span style="color: #7a0874; font-weight: bold;">&#93;</span>; <span style="color: #000000; font-weight: bold;">then</span>
+            <span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #ff0000;">"Could not create directory. Continue to log to echo."</span>
+            <span style="color: #007800;">log_dir_exists</span>=<span style="color: #c20cb9; font-weight: bold;">false</span>
+        <span style="color: #000000; font-weight: bold;">fi</span>
+    <span style="color: #000000; font-weight: bold;">fi</span>
+    <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #007800;">$log_dir_exists</span> ; <span style="color: #000000; font-weight: bold;">then</span>
+        <span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #ff0000;">"<span style="color: #007800;">$(date)</span>:$1"</span> <span style="color: #000000; font-weight: bold;">&gt;&gt;</span> <span style="color: #ff0000;">"<span style="color: #007800;">$directory</span>/log.txt"</span>
+    <span style="color: #000000; font-weight: bold;">else</span>
+        <span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #ff0000;">"<span style="color: #007800;">$(date)</span>:$1"</span>
+    <span style="color: #000000; font-weight: bold;">fi</span>
+<span style="color: #7a0874; font-weight: bold;">&#125;</span>
+&nbsp;
+<span style="color: #000000; font-weight: bold;">function</span> check_program <span style="color: #7a0874; font-weight: bold;">&#123;</span>
+    <span style="color: #007800;">to_kill</span>=<span style="color: #ff0000;">"[<span style="color: #007800;">${1::1}</span>]<span style="color: #007800;">${1:1}</span>"</span>
+    log <span style="color: #ff0000;">"Checking if <span style="color: #007800;">$to_kill</span> really quit."</span>
+    <span style="color: #007800;">ps</span>=$<span style="color: #7a0874; font-weight: bold;">&#40;</span><span style="color: #c20cb9; font-weight: bold;">ps</span> aux <span style="color: #000000; font-weight: bold;">|</span><span style="color: #c20cb9; font-weight: bold;">grep</span> <span style="color: #ff0000;">"<span style="color: #007800;">$to_kill</span>"</span><span style="color: #7a0874; font-weight: bold;">&#41;</span>
+    log <span style="color: #ff0000;">"ps =&gt; <span style="color: #007800;">$ps</span>"</span>
+    <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #7a0874; font-weight: bold;">&#91;</span> <span style="color: #660033;">-z</span> <span style="color: #ff0000;">"<span style="color: #007800;">$ps</span>"</span> <span style="color: #7a0874; font-weight: bold;">&#93;</span>; <span style="color: #000000; font-weight: bold;">then</span>
+    <span style="color: #666666; font-style: italic;"># 0 - True</span>
+        <span style="color: #7a0874; font-weight: bold;">return</span> <span style="color: #000000;"></span>
+    <span style="color: #000000; font-weight: bold;">else</span>
+    <span style="color: #666666; font-style: italic;"># 1 - False</span>
+        <span style="color: #7a0874; font-weight: bold;">return</span> <span style="color: #000000;">1</span>
+    <span style="color: #000000; font-weight: bold;">fi</span>
+<span style="color: #7a0874; font-weight: bold;">&#125;</span>
+&nbsp;
+<span style="color: #000000; font-weight: bold;">function</span> kill_program <span style="color: #7a0874; font-weight: bold;">&#123;</span>
+    log <span style="color: #ff0000;">"Killing program"</span>
+    <span style="color: #000000; font-weight: bold;">`</span>pkill <span style="color: #660033;">-f</span> <span style="color: #ff0000;">"$1"</span><span style="color: #000000; font-weight: bold;">`</span>
+    <span style="color: #c20cb9; font-weight: bold;">sleep</span> <span style="color: #000000;">1</span>
+    <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000000; font-weight: bold;">!</span> check_program <span style="color: #007800;">$1</span> ; <span style="color: #000000; font-weight: bold;">then</span>
+    log <span style="color: #ff0000;">"$1 Did not quit!"</span>
+    <span style="color: #000000; font-weight: bold;">else</span>
+    log <span style="color: #ff0000;">"$1 quit successfully"</span>
+    <span style="color: #000000; font-weight: bold;">fi</span>
+<span style="color: #7a0874; font-weight: bold;">&#125;</span>
+&nbsp;
+<span style="color: #007800;">wifi_name</span>=$<span style="color: #7a0874; font-weight: bold;">&#40;</span>networksetup <span style="color: #660033;">-getairportnetwork</span> en0 <span style="color: #000000; font-weight: bold;">|</span><span style="color: #c20cb9; font-weight: bold;">awk</span> <span style="color: #660033;">-F</span><span style="color: #ff0000;">": "</span> <span style="color: #ff0000;">'{print $2}'</span><span style="color: #7a0874; font-weight: bold;">&#41;</span>
+log <span style="color: #ff0000;">"Wifi name: <span style="color: #007800;">$wifi_name</span>"</span>
+<span style="color: #000000; font-weight: bold;">if</span> <span style="color: #7a0874; font-weight: bold;">&#91;</span> <span style="color: #ff0000;">"<span style="color: #007800;">$wifi_name</span>"</span> = <span style="color: #ff0000;">"&lt;wifi_name&gt;"</span> <span style="color: #7a0874; font-weight: bold;">&#93;</span>; <span style="color: #000000; font-weight: bold;">then</span>
+    log <span style="color: #ff0000;">"On corporate network... Killing Program"</span>
+    kill_program <span style="color: #ff0000;">"&lt;programname&gt;"</span>
+<span style="color: #000000; font-weight: bold;">elif</span> <span style="color: #7a0874; font-weight: bold;">&#91;</span> <span style="color: #ff0000;">"<span style="color: #007800;">$wifi_name</span>"</span> = <span style="color: #ff0000;">"&lt;home_wifi_name&gt;"</span> <span style="color: #7a0874; font-weight: bold;">&#93;</span>; <span style="color: #000000; font-weight: bold;">then</span>
+    <span style="color: #666666; font-style: italic;"># Kill &lt;program&gt; if enabled and if on &lt;home_wifi&gt; and if Tunnelblick is running.</span>
+    log <span style="color: #ff0000;">"Not on corporate network... Killing &lt;program&gt; if Tunnelblick is active."</span>
+    <span style="color: #000000; font-weight: bold;">if</span> <span style="color: #000000; font-weight: bold;">!</span> check_program <span style="color: #ff0000;">"Tunnelblick"</span> ; <span style="color: #000000; font-weight: bold;">then</span>
+    log <span style="color: #ff0000;">"Tunnelblick is active. Killing &lt;program&gt;"</span>
+    kill_program <span style="color: #ff0000;">"&lt;program&gt;"</span>
+    <span style="color: #000000; font-weight: bold;">else</span>
+    log <span style="color: #ff0000;">"All good... Happy coding."</span>
+    <span style="color: #000000; font-weight: bold;">fi</span>
+<span style="color: #000000; font-weight: bold;">else</span>
+    log <span style="color: #ff0000;">"No known Network..."</span>
+<span style="color: #000000; font-weight: bold;">fi</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Now, the trick is, on OSX to only trigger this when your network changes. For this, you can have a &#8216;launchd&#8217; daemon, which is configured to watch three files which relate to a network being changed.</p>
+
+<p>The script sits under your ~/Library/LaunchAgents folder. Create something like, com.username.checknetwork.plist.</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="xml" style="font-family:monospace;"><span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;?xml</span> <span style="color: #000066;">version</span>=<span style="color: #ff0000;">"1.0"</span> <span style="color: #000066;">encoding</span>=<span style="color: #ff0000;">"UTF-8"</span><span style="color: #000000; font-weight: bold;">?&gt;</span></span>
+<span style="color: #00bbdd;">&lt;!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" \</span>
+<span style="color: #00bbdd;"> "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;</span>
+<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;plist</span> <span style="color: #000066;">version</span>=<span style="color: #ff0000;">"1.0"</span><span style="color: #000000; font-weight: bold;">&gt;</span></span>
+<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;dict<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;key<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>Label<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/key<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;string<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>ifup.ddns<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/string<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+&nbsp;
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;key<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>LowPriorityIO<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/key<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;true</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
+&nbsp;
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;key<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>ProgramArguments<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/key<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;array<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;string<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>/Users/username/scripts/ddns-update.sh<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/string<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/array<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+&nbsp;
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;key<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>WatchPaths<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/key<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;array<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;string<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>/etc/resolv.conf<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/string<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;string<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>/Library/Preferences/SystemConfiguration/NetworkInterfaces.plist<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/string<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;string<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>/Library/Preferences/SystemConfiguration/com.apple.airport.preferences.plist<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/string<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/array<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+&nbsp;
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;key<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>RunAtLoad<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/key<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;true</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
+<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/dict<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
+<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/plist<span style="color: #000000; font-weight: bold;">&gt;</span></span></span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Now, when you change your network, to whatever your corporate network is, you&#8217;ll kill Sublime.</p>
+
+<p>Hope this helps somebody.</p>
+
+<p>Cheers,</p>
+
+<p>Gergely.</p>
+
+                    </div>
+                </section>
+                
                 <h1 class="content-subhead">15 Oct 2015, 00:00</h1>
                 <section class="post">
                     <header class="post-header">
@@ -1278,84 +1427,6 @@ Vagrant.<span style="color:#9900CC;">configure</span><span style="color:#006600;
 <p>Thanks for reading,</p>
 
 <p>Gergely.</p>
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">15 Jul 2015, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2015/07/15/bitwise-operator/" class="post-title">Bitwise &amp; Operator</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-programming" href="https://skarlso.github.io//categories/programming">programming</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>The first, and only time so far, that I got to use the bitwise &amp; operator. I enjoyed doing so!!</p>
-
-<p>And of course from now on, I&#8217;ll be looking for more opportunities to (ab)use it.</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="go" style="font-family:monospace;"><span style="color: #b1b100; font-weight: bold;">package</span> secret
-&nbsp;
-<span style="color: #b1b100; font-weight: bold;">import</span> <span style="color: #cc66cc;">"sort"</span>
-&nbsp;
-<span style="color: #b1b100; font-weight: bold;">const</span> REVERSE <span style="color: #339933;">=</span> <span style="color: #cc66cc;">16</span>
-&nbsp;
-<span style="color: #993333;">func</span> Handshake<span style="color: #339933;">(</span>code <span style="color: #993333;">int</span><span style="color: #339933;">)</span> <span style="color: #339933;">[]</span><span style="color: #993333;">string</span> <span style="color: #339933;">{</span>
-    <span style="color: #666666; font-style: italic;">// binary_rep := convertDecimalToBinary(code)</span>
-    <span style="color: #b1b100; font-weight: bold;">if</span> code &lt; <span style="color: #cc66cc;"></span> <span style="color: #339933;">{</span> <span style="color: #b1b100; font-weight: bold;">return</span> <span style="color: #000000; font-weight: bold;">nil</span> <span style="color: #339933;">}</span>
-    secret_map <span style="color: #339933;">:=</span> <span style="color: #993333;">map</span><span style="color: #339933;">[</span><span style="color: #993333;">int</span><span style="color: #339933;">]</span><span style="color: #993333;">string</span> <span style="color: #339933;">{</span>
-        <span style="color: #cc66cc;">1</span><span style="color: #339933;">:</span> <span style="color: #cc66cc;">"wink"</span><span style="color: #339933;">,</span>
-        <span style="color: #cc66cc;">2</span><span style="color: #339933;">:</span> <span style="color: #cc66cc;">"double blink"</span><span style="color: #339933;">,</span>
-        <span style="color: #cc66cc;">4</span><span style="color: #339933;">:</span> <span style="color: #cc66cc;">"close your eyes"</span><span style="color: #339933;">,</span>
-        <span style="color: #cc66cc;">8</span><span style="color: #339933;">:</span> <span style="color: #cc66cc;">"jump"</span><span style="color: #339933;">,</span>
-    <span style="color: #339933;">}</span>
-&nbsp;
-    <span style="color: #b1b100; font-weight: bold;">var</span> keys <span style="color: #339933;">[]</span><span style="color: #993333;">int</span>
-    <span style="color: #b1b100; font-weight: bold;">for</span> k <span style="color: #339933;">:=</span> <span style="color: #b1b100; font-weight: bold;">range</span> secret_map <span style="color: #339933;">{</span>
-        keys <span style="color: #339933;">=</span> append<span style="color: #339933;">(</span>keys<span style="color: #339933;">,</span> k<span style="color: #339933;">)</span>
-    <span style="color: #339933;">}</span>
-    <span style="color: #666666; font-style: italic;">// To make sure iteration is always in the same order.</span>
-    sort<span style="color: #339933;">.</span>Ints<span style="color: #339933;">(</span>keys<span style="color: #339933;">)</span>
-&nbsp;
-    code_array <span style="color: #339933;">:=</span> <span style="color: #000066;">make</span><span style="color: #339933;">([]</span><span style="color: #993333;">string</span><span style="color: #339933;">,</span> <span style="color: #cc66cc;"></span><span style="color: #339933;">)</span>
-    <span style="color: #b1b100; font-weight: bold;">for</span> _<span style="color: #339933;">,</span> key <span style="color: #339933;">:=</span> <span style="color: #b1b100; font-weight: bold;">range</span> keys <span style="color: #339933;">{</span>
-        <span style="color: #b1b100; font-weight: bold;">if</span> code & key <span style="color: #339933;">==</span> key <span style="color: #339933;">{</span>
-            code_array <span style="color: #339933;">=</span> append<span style="color: #339933;">(</span>code_array<span style="color: #339933;">,</span> secret_map<span style="color: #339933;">[</span>key<span style="color: #339933;">])</span>
-        <span style="color: #339933;">}</span>
-    <span style="color: #339933;">}</span>
-&nbsp;
-    <span style="color: #b1b100; font-weight: bold;">if</span> code & REVERSE <span style="color: #339933;">==</span> REVERSE <span style="color: #339933;">{</span>
-        code_array <span style="color: #339933;">=</span> reverse_array<span style="color: #339933;">(</span>code_array<span style="color: #339933;">)</span>
-    <span style="color: #339933;">}</span>
-&nbsp;
-    <span style="color: #b1b100; font-weight: bold;">return</span> code_array
-<span style="color: #339933;">}</span>
-&nbsp;
-<span style="color: #993333;">func</span> reverse_array <span style="color: #339933;">(</span>array_to_reverse <span style="color: #339933;">[]</span><span style="color: #993333;">string</span><span style="color: #339933;">)</span> <span style="color: #339933;">[]</span><span style="color: #993333;">string</span> <span style="color: #339933;">{</span>
-    <span style="color: #b1b100; font-weight: bold;">for</span> <span style="">i</span><span style="color: #339933;">,</span> j <span style="color: #339933;">:=</span> <span style="color: #cc66cc;"></span><span style="color: #339933;">,</span> <span style="color: #000066;">len</span><span style="color: #339933;">(</span>array_to_reverse<span style="color: #339933;">)</span> <span style="color: #339933;">-</span><span style="color: #cc66cc;">1</span> <span style="color: #339933;">;</span> <span style="">i</span> &lt; j<span style="color: #339933;">;</span> <span style="">i</span><span style="color: #339933;">,</span> j <span style="color: #339933;">=</span> <span style="">i</span> <span style="color: #339933;">+</span> <span style="color: #cc66cc;">1</span><span style="color: #339933;">,</span> j <span style="color: #339933;">-</span> <span style="color: #cc66cc;">1</span> <span style="color: #339933;">{</span>
-        array_to_reverse<span style="color: #339933;">[</span><span style="">i</span><span style="color: #339933;">],</span> array_to_reverse<span style="color: #339933;">[</span>j<span style="color: #339933;">]</span> <span style="color: #339933;">=</span> array_to_reverse<span style="color: #339933;">[</span>j<span style="color: #339933;">],</span> array_to_reverse<span style="color: #339933;">[</span><span style="">i</span><span style="color: #339933;">]</span>
-    <span style="color: #339933;">}</span>
-    <span style="color: #b1b100; font-weight: bold;">return</span> array_to_reverse
-<span style="color: #339933;">}</span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
                     </div>
                 </section>
                 
