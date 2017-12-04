@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.30.2" />
+    <meta name="generator" content="Hugo 0.31.1" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Posts &middot; Ramblings of a build engineer">
@@ -62,6 +62,158 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">04 Dec 2017, 22:34</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2017/12/04/commit-build-deploy/" class="post-title">Commit-Build-Deploy With AWS CodeBuild and Lambda</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-AWS" href="https://skarlso.github.io//categories/aws">AWS</a><a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h1 id="intro">Intro</h1>
+
+<p>Hi All.</p>
+
+<p>Today I would like to write about an AWS finger practice.</p>
+
+<p>Previously, I wrote about how I build and deploy my blog with <a href="www.wercker.com">Wercker</a>. Since, I&rsquo;m a cloud engineer and I dislike Oracle and it&rsquo;s ever expending tenctacles into the abyss, I wanted to switch to use something else.</p>
+
+<p>My build and deploy cycle is simple.</p>
+
+<p>Commit to Blogsource Repo -&gt; Wercker WebHook -&gt; Builds my blog using Hugo -&gt; Pushed to a Different Repository which my Github Blog.</p>
+
+<p>That&rsquo;s all.</p>
+
+<p>It&rsquo;s quiet possible to reproduce this on AWS without infering costs. Unless you publish like&hellip; a couple 100 posts / week.</p>
+
+<p>I&rsquo;m going to use the following services: <a href="https://aws.amazon.com/cloudformation/">CloudFormation</a>, <a href="https://aws.amazon.com/lambda/details/">AWS Lambda</a>, <a href="https://aws.amazon.com/codebuild/">CodeBuild</a>, <a href="https://aws.amazon.com/s3/">S3</a>.</p>
+
+<p>To deploy the below describe architecture in your account in us-east-1 region simply click this button:
+<img src="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=blogbuilder&amp;templateURL=https://s3.amazonaws.com/blog-builder-template-bucket/template.yaml" alt="[Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)" /></p>
+
+<p>BEFORE doing that though you need the following created:</p>
+
+<p>Have a bucket for your lambda function. The lambda function can be found here:</p>
+
+<p><a href="https://github.com/Skarlso/aws-lambda-code-pusher">Lambda Repository</a>.</p>
+
+<p>Zip up the lambda folder contents by doing this:</p>
+
+<pre><code class="language-bash">cd lambda
+zip -r gitpusher.zip *
+aws s3 cp gitpusher.zip s3://your-lambda-bucket
+</code></pre>
+
+<p>That&rsquo;s it.</p>
+
+<p>To read a description of the stack, please continue.</p>
+
+<h1 id="tl-dr">TL;DR;</h1>
+
+<p>The architecture I&rsquo;m about to lay out is simple in its use and design. I tried not to complicate things, because I think the simpler something is, the less prone to failure it will be.</p>
+
+<p>In its most basic form the flow is as follows:</p>
+
+<p><img src="https://skarlso.github.io/img/blog_builder_flow.png" alt="Flow" />.</p>
+
+<p>You push something into a repository you provide. CodeBuild has a webhook to this repository so on each commit it starts to build the blog. The build will use a so called <code>buildspec.yaml</code> file which describes how your blog should be built. Mine looks like this:</p>
+
+<pre><code class="language-yaml">version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo Installing required packages and Hugo
+      - apt-get update
+      - apt-get install -y git golang wget
+      - wget -q https://github.com/gohugoio/hugo/releases/download/v0.31/hugo_0.31_Linux-64bit.deb -O /tmp/hugo.dep
+      - dpkg -i /tmp/hugo.dep
+  pre_build:
+    commands:
+      - echo Downloading source code
+      - git clone https://github.com/Skarlso/blogsource.git /opt/app
+  build:
+    commands:
+      - echo Build started on `date`
+      - cd /opt/app &amp;&amp; hugo --theme purehugo
+  post_build:
+    commands:
+      - echo Build completed on `date`
+artifacts:
+  files:
+    - /opt/app/public/**/*
+</code></pre>
+
+<p>When it&rsquo;s finished, CodeBuild will upload everything in the public folder as a zip to a bucket. The bucket has a lambda attached which triggers on putObject event with the extension <code>.zip</code>. It downloads the archive, extracts it and pushes it to another repository, which is the repository for the blog.</p>
+
+<p>And done! That&rsquo;s it. For an architecture overview, please read on.</p>
+
+<h1 id="architecture">Architecture</h1>
+
+<p>Now, we are going to use CloudFormation stack to deploy these resources. Because we aren&rsquo;t animals to create them by hand, yes?</p>
+
+<p>An overview of my current architecture is best shown by this image:</p>
+
+<p><img src="https://skarlso.github.io/img/blog_builder_cf_template.png" alt="AWS Stack" />.</p>
+
+<p>Let&rsquo;s go over these components one - by - one.</p>
+
+<h2 id="lambda-role">Lambda Role</h2>
+
+<p>This is the <a href="http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html">Role</a> which allows the Lambda to access things in your account. It needs the following service access: s3, logs, lambda; and the following permissions: logs:Create*, logs:PutLogEvents, s3:GetObject, s3:ListBucket.</p>
+
+<h2 id="code-build-role">Code Build Role</h2>
+
+<p>This is the role which allows CodeBuild to have access to services it needs. These services are the following: s3, logs, ssm, codebuild. CodeBuild also needs the following actions allowed: logs:Create*, logs:PutLogEvents, s3:GetObject, s3:PutObject, ssm:GetParameters.</p>
+
+<h2 id="build-bucket">Build Bucket</h2>
+
+<p>This is the bucket in which CodeBuild will push the generated build artifact.</p>
+
+<h2 id="blog-pusher-function">Blog Pusher Function</h2>
+
+<p>This is the heart of this project. It contains the logic to download the zipped artifact, extract it, create a hollow repository from the extracted archive and push the changes to the repository. And just the changes.</p>
+
+<p>This is achieve by a short Python 3.6 script which can be found in the linked repository.</p>
+
+<h2 id="parameters">Parameters</h2>
+
+<p>The stack requires you to provide a couple of parameters which are described in the template. Like, bucket name, github repository, git token and such. Please refer to the template for a full description of each.</p>
+
+<h2 id="charges">Charges</h2>
+
+<p>I recently push a couple of builds to test this configuration and I inferred 0.2 USD in charges. But that was like 10-15 builds a day.</p>
+
+<h1 id="deploying">Deploying</h1>
+
+<p>In order to deploy this you can use <a href="https://github.com/Skarlso/go-furnace">Furnace</a> to easily manage the template and it&rsquo;s parameters. Once you copy the template to the target directory, simply run <code>furnace aws create</code> and provide the necessary parameters.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>And that is all. A nice little stack which does the same as Wercker without costs but the leisure of simply pushing up some change to a repository of your choosing.</p>
+
+<p>I hope you enjoyed this little write up as much as I enjoyed creating it.</p>
+
+<p>As always,
+Thanks for reading!
+Gergely.</p>
+
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">06 Nov 2017, 20:34</h1>
                 <section class="post">
@@ -1379,37 +1531,6 @@ more detail about how these commands are working in Part 2 of this series.</p>
 <p>As always,
 Thanks for reading!
 Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">03 Mar 2017, 18:20</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2017/03/03/images-on-old-posts/" class="post-title">Images on older posts</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-rant" href="https://skarlso.github.io//categories/rant">rant</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Hi folks.</p>
-
-<p>Just a quick headsup, that older posts and images, may have been lost unfortunately, because I made the terrible mistake, when I
-migrated over from my old blog, that I forgot to download all the images from the remote host.</p>
-
-<p>For lack of options, I deleted the images. :/ Sorry for the inconvencience!</p>
-
-<p>Gergely.</p>
 
                     </div>
                 </section>

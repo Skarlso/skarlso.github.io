@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.30.2" />
+    <meta name="generator" content="Hugo 0.31.1" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Posts &middot; Ramblings of a build engineer">
@@ -62,6 +62,202 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">10 Apr 2015, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2015/04/10/django-rpg-2/" class="post-title">Django – RPG – Part 1</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-programming" href="https://skarlso.github.io//categories/programming">programming</a><a class="post-category post-category-Python" href="https://skarlso.github.io//categories/python">Python</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Hi folks.</p>
+
+<p>So last time, we tried to implement a little RPG of mine using Meteor, which failed miserably. This time we are going to try and use Django. Let&#8217;s have at it, shall we?</p>
+
+<p></p>
+
+<p>If you don&#8217;t know what django is (than you are probably not reading this blog entry anyways&#8230; ), have a look =&gt; <a href="https://www.djangoproject.com/" target="_blank">Link</a>. It&#8217;s a Python Web Framework.</p>
+
+<h1 id="in-the-beginning">In the beginning</h1>
+
+<p>So here we are again. I&#8217;m starting off by creating the skeleton for my RPG. First, the welcome page with a tiny login capability. Which means session tracking. For now, on the same page.</p>
+
+<p>To create the skeleton I just run this little command:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="bash" style="font-family:monospace;">django-admin.py startproject myrpg</pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Easy enough, right? Basic directory structure is created. You can read that in django&#8217;s own documentation: <a href="https://docs.djangoproject.com/en/1.8/intro/tutorial01/" target="_blank"><a href="https://docs.djangoproject.com/en/1.8/intro/tutorial01/">https://docs.djangoproject.com/en/1.8/intro/tutorial01/</a></a></p>
+
+<p>I&#8217;m using Sublime Text 3 to build this app. I was thinking of pycharm, but that would take away too much fun.</p>
+
+<p>By default Django uses SQLlite and I&#8217;m okay with that.</p>
+
+<p>The basics are there. Let&#8217;s move to higher ground. The next step can be to design the login page. I&#8217;m not much of a designer so I&#8217;ll leave that part to people who care more / understand it better. I&#8217;m only looking for a simple Login with a username and a password. Nothing fancy. And I&#8217;m going to use Django&#8217;s auth system for users: <tt class="xref py py-mod docutils literal"><span class="pre"><a class="reference internal" title="django.contrib.auth: Django's authentication framework." href="https://docs.djangoproject.com/en/1.8/topics/auth/#module-django.contrib.auth" target="_blank">django.contrib.auth</a>.</span></tt></p>
+
+<p>It&#8217;s pretty good, has lots of features and can auth a user pretty quickly given a username and password, which is all I want for now.</p>
+
+<p>I running a migrate command to create all the necessary tables and data:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="python" style="font-family:monospace;">python manage.<span style="color: black;">py</span> migrate</pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>A quick check with sqlite3 and running <strong>.schema </strong>showed me that the tables are indeed created and filled with default data for all the <strong>INSTALLED_APPS </strong>django has at the moment.</p>
+
+<p>I did a quick check with <em>python manage.py runserver</em> and everything seems to work fine.</p>
+
+<h1 id="the-rpg-app">The RPG App</h1>
+
+<p>So, that concludes the setup. Following the tutorial, django has this notion of apps and projects. In short, a project is a set of configurations and applications which forms a website. Hence, I&#8217;m going to create an RPG APP for now. The tutorial continues with a Poll type of App, but I&#8217;m sure I can apply the same things to a login page.</p>
+
+<p>First, let&#8217;s create the App using the command:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="python" style="font-family:monospace;">python manage.<span style="color: black;">py</span> startapp rpg</pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>That creates the skeleton for the app. The tutorial then suggests to define the database first. Which I think is a bad idea; usually when doing design, you don&#8217;t want to start with the database model. But for now, I shall comply. We want a login page and we are using the auth module, which means, for now, I don&#8217;t care about the database. Skip.</p>
+
+<p>I&#8217;m going to go off corse for now, since I only want to create a basic login. For that, I have to read up on views and models a little bit in order to create a simple login page. Be right back&#8230;</p>
+
+<p>I&#8217;m fighting the basic auth system at the moment. Everything seems to be working fine. In the Admin screen I was able to add a basic user to do some debugging, but for now, the login seems to not work with this error:</p>
+
+<p><strong><span style="color: #ff6600;">CSRF verification failed. Request aborted.</span></strong></p>
+
+<p>This is the CSRF protection which came out with Django. I did a bit of more document reading and setup the CSRF as was described here:</p>
+
+<p><a href="https://docs.djangoproject.com/en/1.8/ref/csrf/" target="_blank"><a href="https://docs.djangoproject.com/en/1.8/ref/csrf/">https://docs.djangoproject.com/en/1.8/ref/csrf/</a></a></p>
+
+<p>However, I&#8217;m still facing the same problem. Let&#8217;s research further&#8230; Ahh yes. I wasn&#8217;t returning the request context I&#8217;ve set up. Before:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="python" style="font-family:monospace;"><span style="color: #ff7700;font-weight:bold;">from</span> django.<span style="color: black;">shortcuts</span> <span style="color: #ff7700;font-weight:bold;">import</span> render_to_response
+<span style="color: #ff7700;font-weight:bold;">from</span> django.<span style="color: black;">contrib</span>.<span style="color: black;">auth</span> <span style="color: #ff7700;font-weight:bold;">import</span> authenticate<span style="color: #66cc66;">,</span> login
+<span style="color: #ff7700;font-weight:bold;">from</span> django.<span style="color: black;">template</span>.<span style="color: black;">context_processors</span> <span style="color: #ff7700;font-weight:bold;">import</span> csrf
+&nbsp;
+<span style="color: #ff7700;font-weight:bold;">def</span> login_user<span style="color: black;">&#40;</span>request<span style="color: black;">&#41;</span>:
+    c <span style="color: #66cc66;">=</span> <span style="color: black;">&#123;</span><span style="color: black;">&#125;</span>
+    c.<span style="color: black;">update</span><span style="color: black;">&#40;</span>csrf<span style="color: black;">&#40;</span>request<span style="color: black;">&#41;</span><span style="color: black;">&#41;</span>
+    state <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">"Please log in below..."</span>
+    username <span style="color: #66cc66;">=</span> password <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">''</span>
+    <span style="color: #ff7700;font-weight:bold;">if</span> request.<span style="color: black;">POST</span>:
+        username <span style="color: #66cc66;">=</span> request.<span style="color: black;">POST</span>.<span style="color: black;">get</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'username'</span><span style="color: black;">&#41;</span>
+        password <span style="color: #66cc66;">=</span> request.<span style="color: black;">POST</span>.<span style="color: black;">get</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'password'</span><span style="color: black;">&#41;</span>
+&nbsp;
+        <span style="color: #dc143c;">user</span> <span style="color: #66cc66;">=</span> authenticate<span style="color: black;">&#40;</span>username<span style="color: #66cc66;">=</span>username<span style="color: #66cc66;">,</span> password<span style="color: #66cc66;">=</span>password<span style="color: black;">&#41;</span>
+        <span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: #dc143c;">user</span> <span style="color: #ff7700;font-weight:bold;">is</span> <span style="color: #ff7700;font-weight:bold;">not</span> <span style="color: #008000;">None</span>:
+            <span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: #dc143c;">user</span>.<span style="color: black;">is_active</span>:
+                login<span style="color: black;">&#40;</span>request<span style="color: #66cc66;">,</span> <span style="color: #dc143c;">user</span><span style="color: black;">&#41;</span>
+                state <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">"You're successfully logged in!"</span>
+            <span style="color: #ff7700;font-weight:bold;">else</span>:
+                state <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">"Your account is not active, please contact the site admin."</span>
+        <span style="color: #ff7700;font-weight:bold;">else</span>:
+            state <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">"Your username and/or password were incorrect."</span>
+&nbsp;
+    <span style="color: #ff7700;font-weight:bold;">return</span> render_to_response<span style="color: black;">&#40;</span><span style="color: #483d8b;">'auth.html'</span><span style="color: #66cc66;">,</span><span style="color: black;">&#123;</span><span style="color: #483d8b;">'state'</span>:state<span style="color: #66cc66;">,</span> <span style="color: #483d8b;">'username'</span>: username<span style="color: black;">&#125;</span><span style="color: black;">&#41;</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>After:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="python" style="font-family:monospace;"><span style="color: #ff7700;font-weight:bold;">from</span> django.<span style="color: black;">shortcuts</span> <span style="color: #ff7700;font-weight:bold;">import</span> render_to_response
+<span style="color: #ff7700;font-weight:bold;">from</span> django.<span style="color: black;">contrib</span>.<span style="color: black;">auth</span> <span style="color: #ff7700;font-weight:bold;">import</span> authenticate<span style="color: #66cc66;">,</span> login
+<span style="color: #ff7700;font-weight:bold;">from</span> django.<span style="color: black;">template</span>.<span style="color: black;">context_processors</span> <span style="color: #ff7700;font-weight:bold;">import</span> csrf
+<span style="color: #ff7700;font-weight:bold;">from</span> django.<span style="color: black;">template</span> <span style="color: #ff7700;font-weight:bold;">import</span> RequestContext
+&nbsp;
+<span style="color: #ff7700;font-weight:bold;">def</span> login_user<span style="color: black;">&#40;</span>request<span style="color: black;">&#41;</span>:
+    state <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">"Please log in below..."</span>
+    username <span style="color: #66cc66;">=</span> password <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">''</span>
+    <span style="color: #ff7700;font-weight:bold;">if</span> request.<span style="color: black;">POST</span>:
+        username <span style="color: #66cc66;">=</span> request.<span style="color: black;">POST</span>.<span style="color: black;">get</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'username'</span><span style="color: black;">&#41;</span>
+        password <span style="color: #66cc66;">=</span> request.<span style="color: black;">POST</span>.<span style="color: black;">get</span><span style="color: black;">&#40;</span><span style="color: #483d8b;">'password'</span><span style="color: black;">&#41;</span>
+&nbsp;
+        <span style="color: #dc143c;">user</span> <span style="color: #66cc66;">=</span> authenticate<span style="color: black;">&#40;</span>username<span style="color: #66cc66;">=</span>username<span style="color: #66cc66;">,</span> password<span style="color: #66cc66;">=</span>password<span style="color: black;">&#41;</span>
+        <span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: #dc143c;">user</span> <span style="color: #ff7700;font-weight:bold;">is</span> <span style="color: #ff7700;font-weight:bold;">not</span> <span style="color: #008000;">None</span>:
+            <span style="color: #ff7700;font-weight:bold;">if</span> <span style="color: #dc143c;">user</span>.<span style="color: black;">is_active</span>:
+                login<span style="color: black;">&#40;</span>request<span style="color: #66cc66;">,</span> <span style="color: #dc143c;">user</span><span style="color: black;">&#41;</span>
+                state <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">"You're successfully logged in!"</span>
+            <span style="color: #ff7700;font-weight:bold;">else</span>:
+                state <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">"Your account is not active, please contact the site admin."</span>
+        <span style="color: #ff7700;font-weight:bold;">else</span>:
+            state <span style="color: #66cc66;">=</span> <span style="color: #483d8b;">"Your username and/or password were incorrect."</span>
+&nbsp;
+    <span style="color: #ff7700;font-weight:bold;">return</span> render_to_response<span style="color: black;">&#40;</span><span style="color: #483d8b;">'auth.html'</span><span style="color: #66cc66;">,</span><span style="color: black;">&#123;</span><span style="color: #483d8b;">'state'</span>:state<span style="color: #66cc66;">,</span> <span style="color: #483d8b;">'username'</span>: username<span style="color: black;">&#125;</span><span style="color: #66cc66;">,</span> context_instance<span style="color: #66cc66;">=</span>RequestContext<span style="color: black;">&#40;</span>request<span style="color: black;">&#41;</span><span style="color: black;">&#41;</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Notice that now I&#8217;m returning the request context at the end when I&#8217;m rendering the response. And lo&#8217; and behold, my login is now working.</p>
+
+<h1 id="progress-so-far">Progress so far</h1>
+
+<p>&nbsp;</p>
+
+<p>So, I&#8217;ve set up a user using the Admin portal accessible from the app / admin. Created my default rpg app, and added my default auth view into a template folder. Configured the URL setting in <strong>urls.py</strong> to look like this:</p>
+
+<div class="wp_syntax">
+  <table>
+    <tr>
+      <td class="code">
+        <pre class="python" style="font-family:monospace;">url<span style="color: black;">&#40;</span>r<span style="color: #483d8b;">'^login/$'</span><span style="color: #66cc66;">,</span> <span style="color: #483d8b;">'rpg.views.login_user'</span><span style="color: black;">&#41;</span><span style="color: #66cc66;">,</span></pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Very basic for now, but when I return to it, we are going to clean it up and then continue with implementing the main screen which will greet the user and display some stats about his/her character.</p>
+
+<p>The whole code is under github here =&gt; <a href="https://github.com/Skarlso/myrpg" target="_blank"><a href="https://github.com/Skarlso/myrpg">https://github.com/Skarlso/myrpg</a></a></p>
+
+<p>Bye for now,</p>
+
+<p>And thanks for reading.</p>
+
+<p>Gergely.</p>
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">10 Apr 2015, 00:00</h1>
                 <section class="post">
@@ -1414,73 +1610,6 @@ $ activator&lt;/span></code></pre>
 <p>As always,</p>
 
 <p>Thanks for reading.</p>
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">26 Jan 2015, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2015/01/26/why-testers-are-like-scientists/" class="post-title">Why Testers are, like scientists</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-testing" href="https://skarlso.github.io//categories/testing">testing</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Hello everybody.</p>
-
-<p>Today, I would like to write about little observation I made along the way of being a tester.</p>
-
-<p>The title says it all. I think Testers, are like scientists. I would go even further, and say: Testers, are scientists.</p>
-
-<p>Let us see how the two compare.</p>
-
-<p></p>
-
-<h3 id="asking-questions">Asking Questions</h3>
-
-<p>A scientist is all about asking the right question to the right person, or the right subject matter. They are using the same 5 Ws as we are. Who, Why, What, When, Where. It&#8217;s simple, really. Asking the right question is sometimes the most difficult task of them all. Ideas come from these questions. They can also help in flushing out early design problems with the experiment / product.</p>
-
-<h4 id="identify-the-subject-matter">Identify the subject matter</h4>
-
-<p>This one is all about getting to know your environment and taking notes while you are doing so. Become familiar with what you are working with, and what tools you are using in your research. Which standards are you following, and why? It&#8217;s the same, when a Tester finds herself/himself in a new environment and tries to get her(is) bearing what the task is and how to perform it.</p>
-
-<h4 id="first-impression-outline-of-an-idea">First impression, outline of an idea</h4>
-
-<p>The first impression will result in a vague idea of what the problem is about. This is the stage where the first thoughts emerge and the first draft of a possible solution is crafted into existence. This is the part where a person will draw information, power, and knowledge from her(is) past resulting in a solution that can get close to a real one; but rarely is this solution the one which will be chosen in the end.</p>
-
-<h4 id="testing">Testing</h4>
-
-<p>Indeed in the life of a scientist it is imperative that ideas, solutions and vague drafts of brainstormed possibilities are <strong>tested all the way through. </strong>For a tester it&#8217;s just as important that all the cases are verified and &#8216;approved&#8217; by either common sense, the requirements, or any other kind of verification that they can come up in certain environments. Fact is, that if a solution / test case is a valid one, depends on several different options based on any given circumstance. That is why it&#8217;s difficult to decide if something is acceptable or not. What is a good solution in one case, might be entirely wrong in another.</p>
-
-<h4 id="results">Results</h4>
-
-<p>If the tests / variables / cases / solutions are satisfying, then we can come to think about producing an actual result. The result could be anything of value to the observer. A failing test could be a good result, if we actually were waiting for that test to fail. In that case the result is a success. So bare in mind that a failing test, a failed solution to an experiment, is <strong>always </strong>also information which <strong>tells you something important. </strong>Never dismiss a failing test, a failed experiment, a failed solution. It gives you a <strong>hint </strong>for a passing one.</p>
-
-<h4 id="community-and-sharing">Community and Sharing</h4>
-
-<p>Scientists have a large community where they are sharing experiments and discoveries. I think I don&#8217;t have to draw a parallel here. We all know several testing pages, forums, events, gatherings where there are people talking about the subject matter. I&#8217;m proud that it such a long way.</p>
-
-<h4 id="practice-practice-practice">Practice, practice, practice</h4>
-
-<p>I think this one is self explanatory. In order to become good at something, we have to continuously do it. There is no magic formula, no pill you can take, no matrix to download Kung Fu, you have to do it to learn it. You have to practice it, gather experience and share / write them down in order to strengthen your knowledge and understanding about it. Writing it out, and sharing information, <strong>explaining it to somebody else, </strong>will make it stick better and increase your knowledge in return. So start a blog now, even if you will have only a few readers it will be worth it. Just by writing a couple of lines about something will make you remember it better, and your understanding of it deeper.</p>
-
-<p>So, there you have it. I think these are pretty good points that let&#8217;s us identify ourselves. It&#8217;s called Computer <strong>science</strong> for a reason.</p>
-
-<p>As always,</p>
-
-<p>Thanks for reading,</p>
-
-<p>Gergely.</p>
                     </div>
                 </section>
                 

@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.30.2" />
+    <meta name="generator" content="Hugo 0.31.1" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Go &middot; Ramblings of a build engineer">
@@ -62,6 +62,158 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">04 Dec 2017, 22:34</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2017/12/04/commit-build-deploy/" class="post-title">Commit-Build-Deploy With AWS CodeBuild and Lambda</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-AWS" href="https://skarlso.github.io//categories/aws">AWS</a><a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h1 id="intro">Intro</h1>
+
+<p>Hi All.</p>
+
+<p>Today I would like to write about an AWS finger practice.</p>
+
+<p>Previously, I wrote about how I build and deploy my blog with <a href="www.wercker.com">Wercker</a>. Since, I&rsquo;m a cloud engineer and I dislike Oracle and it&rsquo;s ever expending tenctacles into the abyss, I wanted to switch to use something else.</p>
+
+<p>My build and deploy cycle is simple.</p>
+
+<p>Commit to Blogsource Repo -&gt; Wercker WebHook -&gt; Builds my blog using Hugo -&gt; Pushed to a Different Repository which my Github Blog.</p>
+
+<p>That&rsquo;s all.</p>
+
+<p>It&rsquo;s quiet possible to reproduce this on AWS without infering costs. Unless you publish like&hellip; a couple 100 posts / week.</p>
+
+<p>I&rsquo;m going to use the following services: <a href="https://aws.amazon.com/cloudformation/">CloudFormation</a>, <a href="https://aws.amazon.com/lambda/details/">AWS Lambda</a>, <a href="https://aws.amazon.com/codebuild/">CodeBuild</a>, <a href="https://aws.amazon.com/s3/">S3</a>.</p>
+
+<p>To deploy the below describe architecture in your account in us-east-1 region simply click this button:
+<img src="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=blogbuilder&amp;templateURL=https://s3.amazonaws.com/blog-builder-template-bucket/template.yaml" alt="[Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)" /></p>
+
+<p>BEFORE doing that though you need the following created:</p>
+
+<p>Have a bucket for your lambda function. The lambda function can be found here:</p>
+
+<p><a href="https://github.com/Skarlso/aws-lambda-code-pusher">Lambda Repository</a>.</p>
+
+<p>Zip up the lambda folder contents by doing this:</p>
+
+<pre><code class="language-bash">cd lambda
+zip -r gitpusher.zip *
+aws s3 cp gitpusher.zip s3://your-lambda-bucket
+</code></pre>
+
+<p>That&rsquo;s it.</p>
+
+<p>To read a description of the stack, please continue.</p>
+
+<h1 id="tl-dr">TL;DR;</h1>
+
+<p>The architecture I&rsquo;m about to lay out is simple in its use and design. I tried not to complicate things, because I think the simpler something is, the less prone to failure it will be.</p>
+
+<p>In its most basic form the flow is as follows:</p>
+
+<p><img src="https://skarlso.github.io/img/blog_builder_flow.png" alt="Flow" />.</p>
+
+<p>You push something into a repository you provide. CodeBuild has a webhook to this repository so on each commit it starts to build the blog. The build will use a so called <code>buildspec.yaml</code> file which describes how your blog should be built. Mine looks like this:</p>
+
+<pre><code class="language-yaml">version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo Installing required packages and Hugo
+      - apt-get update
+      - apt-get install -y git golang wget
+      - wget -q https://github.com/gohugoio/hugo/releases/download/v0.31/hugo_0.31_Linux-64bit.deb -O /tmp/hugo.dep
+      - dpkg -i /tmp/hugo.dep
+  pre_build:
+    commands:
+      - echo Downloading source code
+      - git clone https://github.com/Skarlso/blogsource.git /opt/app
+  build:
+    commands:
+      - echo Build started on `date`
+      - cd /opt/app &amp;&amp; hugo --theme purehugo
+  post_build:
+    commands:
+      - echo Build completed on `date`
+artifacts:
+  files:
+    - /opt/app/public/**/*
+</code></pre>
+
+<p>When it&rsquo;s finished, CodeBuild will upload everything in the public folder as a zip to a bucket. The bucket has a lambda attached which triggers on putObject event with the extension <code>.zip</code>. It downloads the archive, extracts it and pushes it to another repository, which is the repository for the blog.</p>
+
+<p>And done! That&rsquo;s it. For an architecture overview, please read on.</p>
+
+<h1 id="architecture">Architecture</h1>
+
+<p>Now, we are going to use CloudFormation stack to deploy these resources. Because we aren&rsquo;t animals to create them by hand, yes?</p>
+
+<p>An overview of my current architecture is best shown by this image:</p>
+
+<p><img src="https://skarlso.github.io/img/blog_builder_cf_template.png" alt="AWS Stack" />.</p>
+
+<p>Let&rsquo;s go over these components one - by - one.</p>
+
+<h2 id="lambda-role">Lambda Role</h2>
+
+<p>This is the <a href="http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html">Role</a> which allows the Lambda to access things in your account. It needs the following service access: s3, logs, lambda; and the following permissions: logs:Create*, logs:PutLogEvents, s3:GetObject, s3:ListBucket.</p>
+
+<h2 id="code-build-role">Code Build Role</h2>
+
+<p>This is the role which allows CodeBuild to have access to services it needs. These services are the following: s3, logs, ssm, codebuild. CodeBuild also needs the following actions allowed: logs:Create*, logs:PutLogEvents, s3:GetObject, s3:PutObject, ssm:GetParameters.</p>
+
+<h2 id="build-bucket">Build Bucket</h2>
+
+<p>This is the bucket in which CodeBuild will push the generated build artifact.</p>
+
+<h2 id="blog-pusher-function">Blog Pusher Function</h2>
+
+<p>This is the heart of this project. It contains the logic to download the zipped artifact, extract it, create a hollow repository from the extracted archive and push the changes to the repository. And just the changes.</p>
+
+<p>This is achieve by a short Python 3.6 script which can be found in the linked repository.</p>
+
+<h2 id="parameters">Parameters</h2>
+
+<p>The stack requires you to provide a couple of parameters which are described in the template. Like, bucket name, github repository, git token and such. Please refer to the template for a full description of each.</p>
+
+<h2 id="charges">Charges</h2>
+
+<p>I recently push a couple of builds to test this configuration and I inferred 0.2 USD in charges. But that was like 10-15 builds a day.</p>
+
+<h1 id="deploying">Deploying</h1>
+
+<p>In order to deploy this you can use <a href="https://github.com/Skarlso/go-furnace">Furnace</a> to easily manage the template and it&rsquo;s parameters. Once you copy the template to the target directory, simply run <code>furnace aws create</code> and provide the necessary parameters.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>And that is all. A nice little stack which does the same as Wercker without costs but the leisure of simply pushing up some change to a repository of your choosing.</p>
+
+<p>I hope you enjoyed this little write up as much as I enjoyed creating it.</p>
+
+<p>As always,
+Thanks for reading!
+Gergely.</p>
+
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">03 Sep 2017, 10:34</h1>
                 <section class="post">
@@ -1019,134 +1171,6 @@ func preflight(c *gin.Context) {
 Have a nice day!</p>
 
 <p>Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">22 Jan 2016, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2016/01/22/my-journey-in-advent-of-code/" class="post-title">My Journey in advent of code</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a><a class="post-category post-category-Programming" href="https://skarlso.github.io//categories/programming">Programming</a><a class="post-category post-category-Performance" href="https://skarlso.github.io//categories/performance">Performance</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        
-
-<p>Hello folks.</p>
-
-<p>I wanted to share with you my tale of working through the problems with <a href="http://adventofcode.com">Advent Of Code</a>.</p>
-
-<p>It is a nice tale and there are a few things I learned from it, especially in Go, since I used that solve all of the problems. So, let&rsquo;s get started.</p>
-
-<h1 id="solving-the-problems">Solving the problems</h1>
-
-<p>The most important lesson I learned while doing these exercises was, how to solve these problems. A couple of them were simple enough to not have to over think it, but most of them got very tricky. I could have gone with a brute force attempt, but as we see later, that wasn&rsquo;t always a very good solution. And people who used that, actually just got lucky finding their solutions.</p>
-
-<p>The eight stages of breaking down a problem according to this book <a href="http://www.amazon.co.uk/Think-Like-Programmer-Introduction-Creative/dp/1593274246/ref=sr_1_1?s=books&amp;ie=UTF8&amp;qid=1453449575&amp;sr=1-1&amp;keywords=thinking+like+a+programmer">Thinking Like a Programmer</a> are the following:</p>
-
-<ul>
-<li>Have a plan</li>
-<li>Rephrase</li>
-<li>Divide</li>
-<li>Start with what you know</li>
-<li>Reduce</li>
-<li>Analogies</li>
-<li>Experiment</li>
-<li>Don&rsquo;t get frustrated</li>
-</ul>
-
-<h2 id="have-a-plan-and-understanding-your-goal">Have a plan and understanding your goal</h2>
-
-<p>This is simple. Always have a plan of what you would like to do, and how to start. This will help you massively along the way to not to loose sight of what your goal is actually. For example, look at <a href="http://adventofcode.com/day/24">Day 24</a>. At first, it looks like a permutational puzzle, but if you understand the solution we are looking for, you realize that there is an easier way of finding it. Since you only want the packages which consists of the fewest item counts, you would only care about the largest numbers because those will be the fewest which still give you the desired package weight. Suddenly the problem gets easier because you don&rsquo;t have to worry about the other groups any longer.</p>
-
-<h2 id="rephrase">Rephrase</h2>
-
-<p>Rephrasing the problem with your own words can help in understanding it better. Or even better, try explaining it to somebody else. If you cannot rephrase it, you didn&rsquo;t understand it in the first place.</p>
-
-<h2 id="divide">Divide</h2>
-
-<p>If the problem seems daunting because it&rsquo;s massive, just divide it into smaller chunks. This is something that we usually do with large problems, but it&rsquo;s more subtle than that. If you face a problem which seems complex, just factor out parts of it until you got a problem which you do understand. Even if you have to butcher the original puzzle problem. It doesn&rsquo;t matter. Adding complexity later is easier than adding complexity in its infancy.</p>
-
-<h2 id="start-with-what-you-know-finding-analogies">Start with what you know &amp;&amp; Finding analogies</h2>
-
-<p>This one speaks for itself. If you know parts of the problem, because you know analogy for it, or you faced something similar before, or exactly that, start with that.</p>
-
-<h2 id="reduce">Reduce</h2>
-
-<p>If the problem seems too complex, remove complexity. Start with a smaller set. Preferably something testable (I&rsquo;ll come back to that later). Remove constraints, or add them as desired. A constraint makes it harder to solve the puzzle? Remove it, and try solving it without. After that, the solution will give you insight into the problem and you can add that constraint back in.</p>
-
-<p>Consider <a href="http://adventofcode.com/day/11">Day 11</a>. I had fun with this one. In order to easy it up a little, I first, removed the constraint of doing the increment with letters. I did it with numbers. I also removed the constraint of doing it within the confines of a limited length array. After I got that I&rsquo;ll use modulo to make the numbers wrap around, it was way more easy to apply it to characters. And after a little fidgeting this came to life:</p>
-
-<pre><code class="language-go">passwd[i] -= 'a'
-passwd[i] = (passwd[i] + 1) % (('z' - 'a') + 1)
-passwd[i] += 'a'
-</code></pre>
-
-<p>The -,+ &lsquo;a&rsquo; is needed so that it&rsquo;s dealing with ascii code from 0 - &lsquo;z&rsquo;. This basically makes it so that when I reach the end of the alphabet it will wrap around and start from &lsquo;a&rsquo; again.</p>
-
-<h2 id="experiment">Experiment</h2>
-
-<p>This led to more solutions than I care to admit. Basically just start experimenting with solutions which are in your head. There is a chance, that what you come up with, will be the solution. This goes very well with the principle of <em>Make it work</em>, <em>Make it right</em>, <em>Make it fast</em>. Just have something working first, and than you can make it work properly after. It&rsquo;s always better to have <em>something</em> rather than nothing.</p>
-
-<p>And last but not least&hellip;</p>
-
-<h2 id="don-t-get-frustrated">Don&rsquo;t get frustrated</h2>
-
-<p>This is something I cannot say strongly enough. Seriously. <strong>DO NOT GET FRUSTRATED</strong>. Most of the problems were designed to be harder. Unless you work as a programmer professionally for several years now, or this is a field of interest for you, you will spend a day hacking around on a problem and trying to find a solution which is adequate. In these times, you will get frustrated and think you are too stupid for this, this couldn&rsquo;t be more far from the truth! You might need some inspiration, you might need some time away from the screen, it helps if you draw out the problem in a piece of paper, or just think about it without seeing it for a while. Just take a break, eat something, watch a comedy and get back to it later with a fresh view.</p>
-
-<h1 id="technical-gotchas">Technical Gotchas</h1>
-
-<p>So after the general problem solving side of things, I learned many things about Go, and about the tidbits of this language.</p>
-
-<h2 id="byte-slices">Byte Slices</h2>
-
-<p>I already knew that []byte is more performant and that Go optimizes on them more, but not to this extent. As in my previous blog posts I discovered that using them can really make a huge difference. Go even has a library called <code>bytes</code> which has helper functions similar to that of <code>strings</code> to help you out in these situations. Go optimizes on map recalls as well when you cast to string from []byte and use that as a map key like this: myMap[string(data)].</p>
-
-<h2 id="brute-force-or-looping">Brute Force or Looping</h2>
-
-<p>Most of the times you could get away with looping or trying to brute force out a solution. But there were times, where you really had to huddle down and think the problem through. Because simply looping, either took too long, or didn&rsquo;t come up with a good answer. That&rsquo;s why I rather always start with: &lsquo;How could I solve this without looping?&rsquo;. This will get you into the right mindset. Or thinking: &lsquo;How could I solve this without taking each and every combination into account?&rsquo;. These questions will help you to think about the problem without loops. Or only if you REALLY must use one.</p>
-
-<p>Doing this will get you into the right way of thinking. I know that in advent of code there is a Leaderboard and you could get on it if you were fast. But most of the times having a fast solution is far from having the right solution.</p>
-
-<h2 id="structs-are-awesome">Structs are Awesome</h2>
-
-<p>I like using structs. They are a very lightweight way of defining objects, structures which stick together. For example in the <a href="http://adventofcode.com/day/6">Day 6</a> Light puzzle, or even <a href="http://adventofcode.com/day/3">Day 3</a> Traveling santa example, a struct which stuck x,y locations together and made it a map key, it was trivial to make my gif out of it with SVG -&gt;</p>
-
-<p><img src="https://raw.githubusercontent.com/Skarlso/goprojects/master/advent/day3/day1.gif" alt="Traveling Santa" /></p>
-
-<h2 id="go-is-simple-to-read">Go is Simple to Read</h2>
-
-<p>[opinion] I like Go because of its simplicity. You don&rsquo;t see stuff in Go most of the times, where you need to look three times to understand what the heck is going on. I like filter, reduce, map and syntactic sugar, but they make for a very poor reading experience. Go, in that way, choose not to incorporate these paradigms and I find that refreshing. [/opinion]</p>
-
-<h2 id="testing">Testing</h2>
-
-<p>TDD is something we all should know by now and care about. When I&rsquo;m doing puzzles, or finger exercises, I tend to not write tests. But on a more complex puzzle, or a task, I always start with a test. Especially if you are given samples for a puzzle which work. That&rsquo;s a gold mine. You can tweak your algorithm using those samples until they work and then simply apply a larger sample size.</p>
-
-<p>Tests will also help you with breaking down a problem and identifying parts which you already know.</p>
-
-<p>For example <a href="http://adventofcode.com/day/13">Day 13</a>. Optimal Seating arrangements. Or the similar <a href="http://adventofcode.com/day/9">Day 9</a>. Which was calculating shortest route distance. Or the password one, Day 11 which I showed before. In these cases, tests helped me make the core of the algorithm solid. Calculating connections, or the odd regex here and there, which was making sure that the password was validated properly.</p>
-
-<p>Tests will also help you to be able to move on after you found your solution. When I was done with the first iteration of passwords which was still using strings, I went on to optimize it, to use []byte. The tests helped me to know that the code was still working as expected after the refactoring.</p>
-
-<h1 id="closing-words">Closing words</h1>
-
-<p>All in all it was a massive amount of fun doing these exercises and I&rsquo;m thankful to the creator for making it. And I did enjoy the story behind the exercises as well. I think this site stood out because it had a fun factor. For simple exercises there are a lot of other sites -like Project Euler, or Sphere Judge Online-, which just plainly present you a problem and that&rsquo;s it. It&rsquo;s still fun, but it can also became boring very fast. Don&rsquo;t forget the fun factor which makes you plow on and go into a blind frenzy that you cannot quit until it&rsquo;s done. That&rsquo;s the fun part.</p>
-
-<p>Thank you for reading!
-Have a nice day.
-Gergely.</p>
 
                     </div>
                 </section>
