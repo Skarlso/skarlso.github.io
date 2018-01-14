@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.31.1" />
+    <meta name="generator" content="Hugo 0.32.3" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Posts &middot; Ramblings of a build engineer">
@@ -62,6 +62,196 @@
         <div>
             
             <div class="posts">
+                
+                <h1 class="content-subhead">13 Jan 2018, 22:34</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2018/01/13/furnace-massive-update/" class="post-title">Huge Furnace Update</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-AWS" href="https://skarlso.github.io//categories/aws">AWS</a><a class="post-category post-category-Go" href="https://skarlso.github.io//categories/go">Go</a><a class="post-category post-category-Furnace" href="https://skarlso.github.io//categories/furnace">Furnace</a><a class="post-category post-category-GCP" href="https://skarlso.github.io//categories/gcp">GCP</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<p># Intro</p>
+
+<p>Hi folks.</p>
+
+<p>In the past couple of months I&rsquo;ve been slowly updating <a href="https://github.com/Skarlso/go-furnace">Furnace</a>.</p>
+
+<p>There are three major changes that happened. Let&rsquo;s take a look at them, shall we?</p>
+
+<h2 id="google-cloud-platform">Google Cloud Platform</h2>
+
+<p>Furnace now supports <a href="https://cloud.google.com">Google Cloud Platform (GCP)</a>. It provides the same API to handle GCP resource as with AWS. Namely, <code>create</code>, <code>delete</code>, <code>status</code>, <code>update</code>. I opted to leave out <code>push</code> because Google mostly works with git based repositories, meaning a push is literary just a push, than Google handles distributing the new code by itself.</p>
+
+<p>All the rest of the commands should work the same way as AWS.</p>
+
+<h3 id="deployment-manager">Deployment Manager</h3>
+
+<p>GCP has a similar service to AWS CloudFormations called <a href="https://cloud.google.com/deployment-manager/docs/">Deployment Manager</a>. The documentation is fairly detailed with a Bookshelf example app to deploy. Code and Templates can be found in their Git repositroy here: <a href="https://github.com/GoogleCloudPlatform/deploymentmanager-samples">Deployment Manager Git Repository</a>.</p>
+
+<p>### Setting up GCP</p>
+
+<p>As the README of Furnace outlines&hellip;</p>
+
+<blockquote>
+<p>Please carefully read and follow the instruction outlined in this document: <a href="https://cloud.google.com/sdk/#Quick_Start">Google Cloud Getting Started</a>. It will describe how to download and install the SDK and initialize cloud to a Project ID.</p>
+
+<p>Take special attention to these documents:</p>
+
+<p><a href="https://cloud.google.com/sdk/docs/initializing">Initializing GCloud Tools</a>
+<a href="https://cloud.google.com/sdk/docs/authorizing">Authorizing Tools</a></p>
+
+<p>Furnace uses a Google Key-File to authenticate with your Google Cloud Account and Project.
+In the future, Furnace assumes these things are properly set up and in working order.</p>
+</blockquote>
+
+<p>To initialize the client, it uses the following code:</p>
+
+<pre><code class="language-go">  ctx := context.Background()
+  client, err := google.DefaultClient(ctx, dm.NdevCloudmanScope)
+</code></pre>
+
+<p>The DefaultClient in turn, does the following:</p>
+
+<pre><code class="language-go">// FindDefaultCredentials searches for &quot;Application Default Credentials&quot;.
+//
+// It looks for credentials in the following places,
+// preferring the first location found:
+//
+//   1. A JSON file whose path is specified by the
+//      GOOGLE_APPLICATION_CREDENTIALS environment variable.
+//   2. A JSON file in a location known to the gcloud command-line tool.
+//      On Windows, this is %APPDATA%/gcloud/application_default_credentials.json.
+//      On other systems, $HOME/.config/gcloud/application_default_credentials.json.
+//   3. On Google App Engine it uses the appengine.AccessToken function.
+//   4. On Google Compute Engine and Google App Engine Managed VMs, it fetches
+//      credentials from the metadata server.
+//      (In this final case any provided scopes are ignored.)
+func FindDefaultCredentials(ctx context.Context, scope ...string) (*DefaultCredentials, error) {
+</code></pre>
+
+<p>Take note on the order. This is how Google will authenticate your requests.</p>
+
+<h3 id="running-gcp">Running GCP</h3>
+
+<p>Running gcp is largely similar to AWS. First, you create the necessary templates to your infrastructure. This is done via the Deployment Manager and it&rsquo;s templating engine. The GCP templates are Python <a href="http://jinja.pocoo.org/">JINJA</a> files. Examples are provided in the <code>template</code> directory. It&rsquo;s a bit more complicated than the CloudFormation templates in that it uses outside templates plus schema files to configure dynamic details.</p>
+
+<p>It&rsquo;s all explained in these documents: <a href="https://cloud.google.com/deployment-manager/docs/step-by-step-guide/create-a-template">Creating a Template Step-by-step</a> and <a href="https://cloud.google.com/deployment-manager/docs/configuration/templates/create-basic-template">Creating a Basic Template</a>.</p>
+
+<p>It&rsquo;s not trivial however. And using the API can also be confusing. The Google Code is just a generated Go code file using gRPC. But studying it may provide valuable insigth into how the API is structured. I&rsquo;m also providing some basic samples that I gathered together and the readme does a bit more explaining on how to use them.</p>
+
+<p>### Your First Stack</p>
+
+<p>Once you have everything set-up you&rsquo;ll need a configuration file for Furnace. The usage is outlined more here <a href="##YAML-Configuration">YAML Configuration</a>. The configuration file for GCP looks like this:</p>
+
+<pre><code class="language-yaml">main:
+  project_name: testplatform-1234
+  spinner: 1
+gcp:
+  template_name: google_template.yaml
+  stack_name: test-stack
+
+</code></pre>
+
+<p>Where <code>project_name</code> is the name you generate for your first billable Google Cloud Platform project. Template lives next to this yaml file and stack name must be DNS complient.</p>
+
+<p>Once you have a project and a template setup, it&rsquo;s as simple as calling <code>./furnace-gcp create</code> or <code>./furnace-gcp create mycustomstack</code>.</p>
+
+<h3 id="deleting">Deleting</h3>
+
+<p>Deleting happens with <code>./furnace-gcp delete</code> or <code>./furnace-gcp delete mycustomstack</code>. Luckily, as with AWS, this means that every resource created with the DeploymentManager will be deleted leaving no need for search and cleanup.</p>
+
+<h3 id="project-name-vs-project-id">Project Name vs. Project ID</h3>
+
+<p>Unlike with AWS Google requires your stack name and project id to be DNS complient. This is most likely because all API calls and such contain that information.</p>
+
+<h2 id="separate-binaries">Separate Binaries</h2>
+
+<p>In order to mitigate some of Furnace&rsquo;s size, I&rsquo;m providing separate binaries for each service it supports.</p>
+
+<p>The AWS binaries can be found in <code>aws</code> folder, and respectively, the Google Cloud Platform is located in <code>gcp</code>. Both are build-able by running <code>make</code>.</p>
+
+<p>If you would like to run both with a single command, a top level make file is provided for your convinience. Just run <code>make</code> from the root. That will build all binaries. Later on, Digital Oceans will join the ranks.</p>
+
+<p>## YAML Configuration</p>
+
+<p>Last but not least, Furnace now employs YAML files for configuration. However, it isn&rsquo;t JUST using YAML files. It also employs a smart configuration pattern which works as follows.</p>
+
+<p>Since Furnace is a distributed binary file which could be running from any given location at any time. Because of that, at first I opted for a global configuration directory.</p>
+
+<p>Now, however, furnace uses a furnace configuration file named with the following pattern: <code>.stackalias.furnace</code>. Where stackname, or stack is the name of a custom stack you would like to create for a project. The content of this file is a single entry, which is the location, relative to this file, of the YAML configuration files for the given stack. For example:</p>
+
+<pre><code class="language-bash">stacks/mydatabasestack.yaml
+</code></pre>
+
+<p>This means, that in the directory called <code>stacks</code> there will a yaml configuration file for your database stack. The AWS config file looks like this:</p>
+
+<pre><code class="language-YAML">main:
+  stackname: FurnaceStack
+  spinner: 1
+aws:
+  code_deploy_role: CodeDeployServiceRole
+  region: us-east-1
+  enable_plugin_system: false
+  template_name: cloud_formation.template
+  app_name: furnace_app
+  code_deploy:
+    # Only needed in case S3 is used for code deployment
+    code_deploy_s3_bucket: furnace_code_bucket
+    # The name of the zip file in case it's on a bucket
+    code_deploy_s3_key: furnace_deploy_app
+    # In case a Git Repository is used for the application, define these two settings
+    git_account: Skarlso/furnace-codedeploy-app
+    git_revision: b89451234...
+
+</code></pre>
+
+<p>The important part is the <code>template_name</code>. The template has to be next to this yaml file. To use this file, you simply call any of the AWS or GCP commands with an extra, optional parameter like this:</p>
+
+<pre><code class="language-bash">./furnace-aws create mydatabase
+</code></pre>
+
+<p>Note that mydatabase will translate to <code>.mydatabase.furnace</code>.</p>
+
+<p>The intelligent part is, that this file could be placed anywhere in the project folder structure; because furnace, when looking for a config file, traverses backwards from the current execution directory up until <code>/</code>. Where root is not included in the search.</p>
+
+<p>Consider the following directory tree:</p>
+
+<p>├── docs
+│   ├── <code>furnace-aws status mydatabase</code>
+├── stacks
+│   ├── mystack.template
+│   └── mystack.yaml
+└── .mydatabase.furnace</p>
+
+<p>You are currently in your <code>docs</code> directory and would like to ask for the status of your database. You don&rsquo;t have to move to the location of the setting file, just simply run the command from where you are. This only works if you are above the location of the file. If you would be below, furnace would say it can&rsquo;t find the file. Because it only traverses upwards.</p>
+
+<p><code>.mydatabase.furnace</code> here contains only a single entry <code>stacks/mystack.yaml</code>. And that&rsquo;s it. This way, you could have multiple furnace files, for example a <code>.database.furnace</code>, <code>.front-end.furnace</code> and a <code>.backend.furnace</code>. All three would work in unison, and if want needs updating, simply run <code>./furnace-aws update backend</code>. And done!</p>
+
+<h1 id="closing-words">Closing words</h1>
+
+<p>As always, contributions are welcomed in the form of issues or pull requests. Questions anything, I tend to answer as soon as I can.</p>
+
+<p>Always run the tests before submitting.</p>
+
+<p>Thank you for reading.
+Gergely.</p>
+
+                    </div>
+                </section>
                 
                 <h1 class="content-subhead">04 Dec 2017, 22:34</h1>
                 <section class="post">
@@ -1228,309 +1418,6 @@ Gergely.</p>
 
                     <div class="post-description">
                         <p>Testing.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">16 Mar 2017, 21:49</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2017/03/16/building-furnace-part-1/" class="post-title">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Golang" href="https://skarlso.github.io//categories/golang">Golang</a><a class="post-category post-category-AWS" href="https://skarlso.github.io//categories/aws">AWS</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        
-
-<h1 id="other-posts">Other posts:</h1>
-
-<p><a href="https://skarlso.github.io/2017/03/19/building-furnace-part-2/">Part 2</a>, <a href="https://skarlso.github.io/2017/03/22/building-furnace-part-3/">Part 3</a>, <a href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/">Part 4</a>.</p>
-
-<h1 id="building-furnace-part-1">Building Furnace: Part 1</h1>
-
-<h1 id="intro">Intro</h1>
-
-<p>Hi folks.</p>
-
-<p>This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go,
-with AWS. Including Unit testing and a experimental plugin feature.</p>
-
-<p>The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar
-with them. The second part will talk about the Go SDK and the project structure itself, how it can be used, improved, and how it can
-help in everyday life. The third part will talk about the experimental plugin system, and finally, we will tackle unit testing AWS
-in Go.</p>
-
-<p>Let&rsquo;s begin, shall we?</p>
-
-<h1 id="aws">AWS</h1>
-
-<h2 id="cloudformation">CloudFormation</h2>
-
-<p>If you haven&rsquo;t yet read about, or know off, AWS&rsquo; CloudFormation service, you can either go ahead and read the <a href="https://aws.amazon.com/cloudformation/">Documentation</a>
-or read on for a very quick summary. If you are familiar with CF, you should skip ahead to <a href="##CodeDeploy">CodeDeploy</a> section.</p>
-
-<p>CF is a service which bundles together other AWS services (for example: EC2, S3, ELB, ASG, RDS) into one, easily manageable stack.
-After a stack has been created, all the resources can be handled as one, located, tagged and used via CF specific console commands.
-It&rsquo;s also possible to define any number of parameters, so a stack can actually be very versatile. A parameter can be anything, from
-SSH IP restriction to KeyPair names and list of tags to create or in what region the stack will be in.</p>
-
-<p>To describe how these parts fit together, one must use a CloudFormation Template file which is either in JSON or in
-YAML format. A simple example looks like this:</p>
-
-<pre><code class="language-yaml">    Parameters:
-      KeyName:
-        Description: The EC2 Key Pair to allow SSH access to the instance
-        Type: AWS::EC2::KeyPair::KeyName
-    Resources:
-      Ec2Instance:
-        Type: AWS::EC2::Instance
-        Properties:
-          SecurityGroups:
-          - Ref: InstanceSecurityGroup
-          - MyExistingSecurityGroup
-          KeyName:
-            Ref: KeyName
-          ImageId: ami-7a11e213
-      InstanceSecurityGroup:
-        Type: AWS::EC2::SecurityGroup
-        Properties:
-          GroupDescription: Enable SSH access via port 22
-          SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort: '22'
-            ToPort: '22'
-            CidrIp: 0.0.0.0/0
-</code></pre>
-
-<p>There are a myriad of these template samples <a href="https://aws.amazon.com/cloudformation/aws-cloudformation-templates/">here</a>.</p>
-
-<p>I&rsquo;m not going to explain this in too much detail. Parameters define the parameters, and resources define all the AWS services which
-we would like to configure. Here we can see, that we are creating an EC2 instance with a custom Security Group plus and already
-existing security group. ImageId is the AMI which will be used for the EC2 instance. The InstanceSecurityGroup is only defining
-some SSH access to the instance.</p>
-
-<p>That is pretty much it. This can become bloated relatively quickly once, VPCs, ELBs, and ASGs come into play. And CloudFormation
-templates can also contain simple logical switches, like, conditions, ref for variables, maps and other shenanigans.</p>
-
-<p>For example consider this part in the above example:</p>
-
-<pre><code class="language-yaml">      KeyName:
-        Ref: KeyName
-</code></pre>
-
-<p>Here, we use the <code>KeyName</code> parameter as a Reference Value which will be interpolated to the real value, or the default one, as the
-template gets processed.</p>
-
-<h2 id="codedeploy">CodeDeploy</h2>
-
-<p>If you haven&rsquo;t heard about CodeDeploy yet, please browse the relevant <a href="http://docs.aws.amazon.com/codedeploy/latest/userguide/welcome.html">Documentation</a>
-or follow along for a &ldquo;quick&rdquo; description.</p>
-
-<p>CodeDeploy just does what the name says. It deploys code. Any kind of code, as long as the deployment process is described in a
-file called <code>appspec.yml</code>. It can be easy as coping a file to a specific location or incredibly complex with builds of various
-kinds.</p>
-
-<p>For a simple example look at this configuration:</p>
-
-<pre><code class="language-yaml">    version: 0.0
-    os: linux
-    files:
-      - source: /index.html
-        destination: /var/www/html/
-      - source: /healthy.html
-        destination: /var/www/html/
-    hooks:
-      BeforeInstall:
-        - location: scripts/install_dependencies
-          timeout: 300
-          runas: root
-        - location: scripts/clean_up
-          timeout: 300
-          runas: root
-        - location: scripts/start_server
-          timeout: 300
-          runas: root
-      ApplicationStop:
-        - location: scripts/stop_server
-          timeout: 300
-          runas: root
-</code></pre>
-
-<p>CodeDeploy applications have hooks and life-cycle events which can be used to control the deployment process of an like, starting
-the WebServer; making sure files are in the right location; copying files, running configuration management software like puppet,
-ansible or chef; etc, etc.</p>
-
-<p>What can be done in an <code>appspec.yml</code> file is described here: <a href="http://docs.aws.amazon.com/codedeploy/latest/userguide/app-spec-ref.html">Appspec Reference Documentation</a>.</p>
-
-<p>Deployment happens in one of two ways:</p>
-
-<h3 id="github">GitHub</h3>
-
-<p>If the preferred way to deploy the application is from GitHub a commit hash must be used to identify which &ldquo;version&rdquo; of the
-application is to be deployed. For example:</p>
-
-<pre><code class="language-go">    rev = &amp;codedeploy.RevisionLocation{
-        GitHubLocation: &amp;codedeploy.GitHubLocation{
-            CommitId:   aws.String(&quot;kajdf94j0f9k309klksjdfkj&quot;),
-            Repository: aws.String(&quot;Skarlso/furnace-codedeploy-app&quot;),
-        },
-        RevisionType: aws.String(&quot;GitHub&quot;),
-    }
-</code></pre>
-
-<p>Commit Id is the hash of the latest release and repository is the full account/repository pointing to the application.</p>
-
-<h3 id="s3">S3</h3>
-
-<p>The second way is to use an S3 bucket. The bucket will contain an archived version of the application with a given extension. I&rsquo;m
-saying given extension, because it has to be specified like this (and can be either &lsquo;zip&rsquo;, or &lsquo;tar&rsquo; or &lsquo;tgz&rsquo;):</p>
-
-<pre><code class="language-go">    rev = &amp;codedeploy.RevisionLocation{
-        S3Location: &amp;codedeploy.S3Location{
-            Bucket:     aws.String(&quot;my_codedeploy_bucket&quot;),
-            BundleType: aws.String(&quot;zip&quot;),
-            Key:        aws.String(&quot;my_awesome_app&quot;),
-            Version:    aws.String(&quot;VersionId&quot;),
-        },
-        RevisionType: aws.String(&quot;S3&quot;),
-    }
-</code></pre>
-
-<p>Here, we specify the bucket name, the extension, the name of the file and an optional version id, which can be ignored.</p>
-
-<h3 id="deploying">Deploying</h3>
-
-<p>So how does code deploy get either of the applications to our EC2 instances? It uses an agent which is running on all of the
-instances that we create. In order to do this, the agent needs to be present on our instance. For linux this can be achieved with
-the following UserData (UserData in CF is the equivalent of a bootsrap script):</p>
-
-<pre><code class="language-bash">    &quot;UserData&quot; : {
-        &quot;Fn::Base64&quot; : { &quot;Fn::Join&quot; : [ &quot;\n&quot;, [
-            &quot;#!/bin/bash -v&quot;,
-            &quot;sudo yum -y update&quot;,
-            &quot;sudo yum -y install ruby wget&quot;,
-            &quot;cd /home/ec2-user/&quot;,
-            &quot;wget https://aws-codedeploy-eu-central-1.s3.amazonaws.com/latest/install&quot;,
-            &quot;chmod +x ./install&quot;,
-            &quot;sudo ./install auto&quot;,
-            &quot;sudo service codedeploy-agent start&quot;,
-        ] ] }
-    }
-</code></pre>
-
-<p>A simple user data configuration in the CloudFormation template will make sure that every instance that we create will have the
-CodeDeploy agent running and waiting for instructions. This agent is self updating. Which can cause some trouble if AWS releases a
-broken agent. However unlikely, it can happen. Never the less, once installed, it&rsquo;s no longer a concern to be bothered with.</p>
-
-<p>It communications on HTTPS port 443.</p>
-
-<p>CodeDeploy identifies instances which need to be updated according to our preferences, by tagging the EC2 and Auto Scaling groups.
-Tagging happens in the CloudFormation template through the AutoScalingGroup settings like this:</p>
-
-<pre><code class="language-json">    &quot;Tags&quot; : [
-        {
-            &quot;Key&quot; : &quot;fu_stage&quot;,
-            &quot;Value&quot; : { &quot;Ref&quot;: &quot;AWS::StackName&quot; },
-            &quot;PropagateAtLaunch&quot; : true
-        }
-    ]
-</code></pre>
-
-<p>This will give the EC2 instance a tag called <code>fu_stage</code> with value equaling to the name of the stack. Once this is done, CodeDeploy
-looks like this:</p>
-
-<pre><code class="language-go">    params := &amp;codedeploy.CreateDeploymentInput{
-        ApplicationName:               aws.String(appName),
-        IgnoreApplicationStopFailures: aws.Bool(true),
-        DeploymentGroupName:           aws.String(appName + &quot;DeploymentGroup&quot;),
-        Revision:                      revisionLocation(),
-        TargetInstances: &amp;codedeploy.TargetInstances{
-            AutoScalingGroups: []*string{
-                aws.String(&quot;AutoScalingGroupPhysicalID&quot;),
-            },
-            TagFilters: []*codedeploy.EC2TagFilter{
-                {
-                    Key:   aws.String(&quot;fu_stage&quot;),
-                    Type:  aws.String(&quot;KEY_AND_VALUE&quot;),
-                    Value: aws.String(config.STACKNAME),
-                },
-            },
-        },
-        UpdateOutdatedInstancesOnly: aws.Bool(false),
-    }
-</code></pre>
-
-<p>CreateDeploymentInput is the entire parameter list that is needed in order to identify instances to deploy code to. We can see
-here that it looks for an AutoScalingGroup by Physical Id and the tag labeled <code>fu_stage</code>. Once found, it will use
-<code>UpdateOutdatedInstancesOnly</code> to determine if an instance needs to be updated or not. Set to false means, it always updates.</p>
-
-<h1 id="furnace">Furnace</h1>
-
-<p>Where does <a href="https://github.com/Skarlso/go-furnace">Furnace</a> fit in, in all of this? Furnace provides a very easy mechanism to create,
-delete and push code to a CloudFormation stack using CodeDeploy, and a couple of environment properties. Furnace <code>create</code> will
-create a CloudFormation stack according to the provided template, all the while asking for the parameters defined in it for
-flexibility. <code>delete</code> will remove the stack and all affiliated resources except for the created CodeDeploy application. For that,
-there is <code>delete-application</code>. <code>status</code> will display information about the stack: Outputs, Parameters, Id, Name, and status.
-Something like this:</p>
-
-<pre><code class="language-bash">    2017/03/16 21:14:37 Stack state is:  {
-      Capabilities: [&quot;CAPABILITY_IAM&quot;],
-      CreationTime: 2017-03-16 20:09:38.036 +0000 UTC,
-      DisableRollback: false,
-      Outputs: [{
-          Description: &quot;URL of the website&quot;,
-          OutputKey: &quot;URL&quot;,
-          OutputValue: &quot;http://FurnaceSt-ElasticL-ID.eu-central-1.elb.amazonaws.com&quot;
-        }],
-      Parameters: [
-        {
-          ParameterKey: &quot;KeyName&quot;,
-          ParameterValue: &quot;UserKeyPair&quot;
-        },
-        {
-          ParameterKey: &quot;SSHLocation&quot;,
-          ParameterValue: &quot;0.0.0.0/0&quot;
-        },
-        {
-          ParameterKey: &quot;CodeDeployBucket&quot;,
-          ParameterValue: &quot;None&quot;
-        },
-        {
-          ParameterKey: &quot;InstanceType&quot;,
-          ParameterValue: &quot;t2.nano&quot;
-        }
-      ],
-      StackId: &quot;arn:aws:cloudformation:eu-central-1:9999999999999:stack/FurnaceStack/asdfadsf-adsfa3-432d-a-fdasdf&quot;,
-      StackName: &quot;FurnaceStack&quot;,
-      StackStatus: &quot;CREATE_COMPLETE&quot;
-    }
-</code></pre>
-
-<p>( This will later be improved to include created resources as well. )</p>
-
-<p>Once the stack is <code>CREATE_COMPLETE</code> a simple <code>push</code> will deliver our application on each instance in the stack. We will get into
-more detail about how these commands are working in Part 2 of this series.</p>
-
-<h1 id="final-words">Final Words</h1>
-
-<p>This is it for now.</p>
-
-<p>Join me next time when I will talk about the AWS Go SDK and its intricacies and we will start to look at the basics of Furnace.</p>
-
-<p>As always,
-Thanks for reading!
-Gergely.</p>
 
                     </div>
                 </section>
