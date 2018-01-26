@@ -83,31 +83,31 @@
                     <div class="post-description">
                         
 
-<p># Intro</p>
+<h1 id="intro">Intro</h1>
 
 <p>Hi folks.</p>
 
 <p>Today, I would like demonstrate how to use <a href="https://www.ansible.com/">Ansible</a> in order to construct a server hosting multiple HTTPS domains with <a href="https://www.nginx.com/">Nginx</a> and <a href="https://letsencrypt.org/">LetsEncrypt</a>. Are you ready? Let&rsquo;s dive in.</p>
 
-<p>## What you will need</p>
+<h2 id="what-you-will-need">What you will need</h2>
 
 <p>There is really only one thing you need in order for this to work and that is Ansible. If you would like to run local tests without a remote server, than you will need <a href="https://www.vagrantup.com/">Vagrant</a> and <a href="https://www.virtualbox.org/wiki/Downloads">VirtualBox</a>. But those two are optional.</p>
 
-<p>## What We Are Going To Set Up</p>
+<h2 id="what-we-are-going-to-set-up">What We Are Going To Set Up</h2>
 
 <p>The setup is as follows:</p>
 
-<p>### Nagios</p>
+<h3 id="nagios">Nagios</h3>
 
 <p>We are going to have a Nagios with a custom check for pending security updates. That will run under nagios.example.com.</p>
 
-<p>### Hugo Website</p>
+<h3 id="hugo-website">Hugo Website</h3>
 
 <p>The main web site is going to be a basic <a href="https://gohugo.io/">Hugo</a> site. Hugo is a static Go based web site generator. This Blog is run by it.</p>
 
 <p>We are also going to setup <a href="https://www.noip.com/">NoIP</a> which will provide the DNS for the sites.</p>
 
-<p>### Wiki</p>
+<h3 id="wiki">Wiki</h3>
 
 <p>The wiki is a plain, basic <a href="https://www.dokuwiki.org/dokuwiki#">DokuWiki</a>.</p>
 
@@ -115,7 +115,7 @@
 
 <p>And all the above will be hosted by Nginx with HTTPS provided by letsencrypt. We are going to set all these up with Ansible on top so it will be idempotent.</p>
 
-<p>### Repository</p>
+<h3 id="repository">Repository</h3>
 
 <p>All of the playbooks and the whole thing together can be viewed here: <a href="https://github.com/Skarlso/ansible-server-setup">Github Ansible Server Setup</a>.</p>
 
@@ -123,7 +123,7 @@
 
 <p>I won&rsquo;t be writing everything down to the basics about Ansible. For that you will need to go and read its documentation. But I will provide ample of clarification for using what I&rsquo;ll be using.</p>
 
-<p>### Some Basics</p>
+<h3 id="some-basics">Some Basics</h3>
 
 <p>Ansible is a configuration management tool which, unlike chef or puppet, isn&rsquo;t master - slave based. It&rsquo;s using SSH to run a set of instructions on a target machine. The instructions are written in yaml files and look something like this:</p>
 
@@ -167,7 +167,7 @@ ansible_ssh_private_key_file: '{{vault_ansible_ssh_private_key_file}}'
 home_dir: /root
 </code></pre>
 
-<p>### Further reading</p>
+<h3 id="further-reading">Further reading</h3>
 
 <p>Further readings are:</p>
 
@@ -176,7 +176,7 @@ home_dir: /root
 <li><a href="http://docs.ansible.com/ansible/latest/intro_getting_started.html">Ansible docs</a></li>
 </ul>
 
-<p>### Vault</p>
+<h3 id="vault">Vault</h3>
 
 <p>The vault is the place where we can keep secure information. This file is called <code>vault</code> and usually lives under either <code>group_vars</code> or <code>host_vars</code>. The preference is up to you.</p>
 
@@ -218,7 +218,7 @@ vault_nginx_user: &lt;localuser&gt;
 
 <p>The following are a collection of tasks which execute in order. The end task, which is letsencrypt, relies on all the hosts being present and configured under Nginx. Otherwise it will throw an error that the host you are trying to configure HTTPS for, isn&rsquo;t defined.</p>
 
-<p>#### No-IP</p>
+<h4 id="no-ip">No-IP</h4>
 
 <p>I&rsquo;m choosing No-ip as a DNS provider because it&rsquo;s cheap and the sync tool is easy to automate. To automate the CLI of No-IP, I&rsquo;m using a package called <code>expect</code>. This looks something like this:</p>
 
@@ -246,7 +246,7 @@ END_SCRIPT
 
 <p>The interesting part is the command running expect. Basically, it&rsquo;s expecting some kind of output which is outlined there. And has canned answers for those which it <code>send</code>s to the waiting command.</p>
 
-<p>#### To Util or Not To Util</p>
+<h4 id="to-util-or-not-to-util">To Util or Not To Util</h4>
 
 <p>So, there are small tasks, like installing vim and wget and such which could warrant the existance of a <code>utils</code> task. Utils task would install the packages that are used as convinience and don&rsquo;t really relate to a singe task.</p>
 
@@ -269,7 +269,7 @@ deps: ['git', 'python-dev', 'build-essential', 'libpython-dev', 'libpython2.7', 
 
 <p>This is much cleaner. And if a task is no longer needed, it&rsquo;s dependencies will no longer be needed either in most of the cases.</p>
 
-<p>#### Nagios</p>
+<h4 id="nagios-1">Nagios</h4>
 
 <p>I&rsquo;m using Nagios 4 which is a real pain in the butt to install. Luckily, thanks to Ansiblei, I only ever had to figure it out once. Now I have a script for that. Installing Nagios demands several, smaller components to be installed. Thus our task uses import from outside tasks like this:</p>
 
@@ -295,7 +295,7 @@ deps: ['git', 'python-dev', 'build-essential', 'libpython-dev', 'libpython2.7', 
 
 <p>I&rsquo;m not going to paste in here all the subtasks because that would be huge. You can check those out in the repository under Nagios.</p>
 
-<p>#### Hugo</p>
+<h4 id="hugo">Hugo</h4>
 
 <p>Hugo is easy to install. Its sole requirement is Go. To install hugo you simply run <code>apt-get install hugo</code>. Setting up the
 site for me was just checking out the git repo and than execute hugo from the root folder like this:</p>
@@ -303,7 +303,7 @@ site for me was just checking out the git repo and than execute hugo from the ro
 <pre><code class="language-bash">hugo server --bind=127.0.0.1 --port=8080 --baseUrl=https://example.com --appendPort=false --logFile hugo.log --verboseLog --verbose -v &amp;
 </code></pre>
 
-<p>#### Wiki</p>
+<h4 id="wiki-1">Wiki</h4>
 
 <p>I used DokuWiki because it&rsquo;s a file based wiki so installation is basically just downloading the archive, extracting it and done. The only thing that&rsquo;s needed for it, is php-fpm to run it and a few php modules which I&rsquo;ll outline in the ansible playbook.</p>
 
@@ -372,7 +372,7 @@ it is that it does this only once, even if it was called multiple times. The han
 
 <p>With this, Nginx is done and should be providing our sites under plain HTTP.</p>
 
-<p>#### LetsEncrypt</p>
+<h4 id="letsencrypt">LetsEncrypt</h4>
 
 <p>Now comes the part where we enable HTTPS for all these three domains. Which is as follows:</p>
 
@@ -394,7 +394,7 @@ variables for <code>certbot-auto</code> to run in a non-interactive mode. This l
 
 <p>And that&rsquo;s that. The interesting and required part here is the <code>pre-hook</code> and <code>post-hook</code>. Without those it wouldn&rsquo;t work because
 the ports that certbot is performing the challenge on would be taken already. This stops nginx, performs the challenge and
-generates the certs, and starts nginx again.</p>
+generates the certs, and starts nginx again. Also note <code>--redirect</code>. This will force HTTPS on the sites and disables plain HTTP.</p>
 
 <p>If all went well our sites should contain information like this:</p>
 
@@ -405,7 +405,7 @@ generates the certs, and starts nginx again.</p>
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 </code></pre>
 
-<p>### Test Run using Vagrant</p>
+<h3 id="test-run-using-vagrant">Test Run using Vagrant</h3>
 
 <p>If you don&rsquo;t want to run all this on a live server to test out, you can do either of these two things:</p>
 
