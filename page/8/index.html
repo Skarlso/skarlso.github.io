@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.40.1" />
+    <meta name="generator" content="Hugo 0.40.2" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Ramblings of a build engineer &middot; Ramblings of a build engineer">
@@ -69,208 +69,6 @@
         <div>
             
             <div class="posts">
-                
-                <h1 class="content-subhead">01 Feb 2015, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2015/02/01/building-an-rpg-app-with-meteor-part-one-the-struggle/" class="post-title">Building an RPG App with Meteor – Part One – The struggle</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-JavaScript" href="https://skarlso.github.io//categories/javascript">JavaScript</a><a class="post-category post-category-programming" href="https://skarlso.github.io//categories/programming">programming</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>In my previous post, I was getting ready to enjoy some time with the JavaScript web framework Meteor.</p>
-
-<p>This time I would like to bring it to a bit of overdrive. See, how re-factoring works on a larger scale model with multiple pages. And how it can organize assets, such as, images, multiple CSS, some plugins, you know, ordinary web stuff.</p>
-
-<p>Let&#8217;s dive in.</p>
-
-<p></p>
-
-<p>I&#8217;m planning this to be a series of posts as I&#8217;m going along building up my RPG app. Let&#8217;s define the rules.</p>
-
-<h1 id="in-the-beginning">In the beginning</h1>
-
-<h3 id="rules">Rules</h3>
-
-<p>&nbsp;</p>
-
-<h4 id="inventory">Inventory</h4>
-
-<p>&nbsp;</p>
-
-<p>Our main character will have a basic inventory. He will have space to carry stuff around and a body to put stuff on. One ring on each hand, one weapon in each hand, helmet, armour, legs, and a necklace. That&#8217;s it. For simplicities sake. The game mechanics will be like those old books which you could play, Fighting RPG Books, like the one Ian Livingstone was writing. This is one of my favourites; Robot commando:</p>
-
-<h4 id="stats">Stats</h4>
-
-<p>&nbsp;</p>
-
-<p>A very basic stat system.</p>
-
-<ul>
-<li>Strength</li>
-<li>Agility</li>
-<li>Constitution</li>
-<li>Intelligence</li>
-<li>Magic</li>
-</ul>
-
-<p>&nbsp;</p>
-
-<h4 id="fighting">Fighting</h4>
-
-<p>&nbsp;</p>
-
-<p>A very basic fighting system with the possibility of casting magic which, for simplicity, will count as attacks and can be dodged based on agility.</p>
-
-<p>Let&#8217;s say we have dice throwing with a couple of 6 sided ones. So X * 6 sided dice. Dodging will require agility, HP is defined by constitution, Intelligence will help in puzzles which require a throw against intelligence, Magic will define Mana Points.</p>
-
-<p>Simple, right?</p>
-
-<h3 id="design">Design</h3>
-
-<p>&nbsp;</p>
-
-<p>I&#8217;m not much of a front-end developer, so I don&#8217;t really care about how it will look like. I&#8217;ll try to squeeze in some very basic stuff, like ordering, but that&#8217;s it.</p>
-
-<h3 id="game-play">Game Play</h3>
-
-<p>&nbsp;</p>
-
-<p>Basically there will be a story which can be loaded threw a JSON structured file. The file will hold information about what a current page has. The probable things a page can contain at any given time:</p>
-
-<ul>
-<li>Current location description</li>
-<li>Selectable proceed location ( page number )</li>
-<li>Enemy -&gt; Fight ( Might contain an option to not to attack the beast )</li>
-<li>Riddle -&gt; Solving it is determined by a throw against intelligence</li>
-<li>Trap -&gt; Springing it is determined by a throw against agility</li>
-<li>Lootable items</li>
-<li>Death</li>
-</ul>
-
-<p>All of the above define an action that a player can, or HAS to take. If there is no ability to choose the player has to proceed as the page requests it. That might be easier to do if I just say if there is only one possible choose it&#8217;s choosen automatically for you.</p>
-
-<h1 id="implementation">Implementation</h1>
-
-<p>&nbsp;</p>
-
-<p>I&#8217;ll be using Meteor which is based on Node and MongoDB. Hence, my stuff will be in mongoDB. I have a fair knowledge of how mongodb works, I&#8217;ll write down my progress as I go along.</p>
-
-<p>Everything I&#8217;ll do is of course under version control and can be followed here:</p>
-
-<p><a href="https://github.com/Skarlso/coolrpgapp" target="_blank"><a href="https://github.com/Skarlso/coolrpgapp">https://github.com/Skarlso/coolrpgapp</a></a></p>
-
-<h4 id="character">Character</h4>
-
-<p>&nbsp;</p>
-
-<p>I need to be able to create a character with a name. Meaning, I need to figure out how meteor handles input. I already know that it uses templates and <a href="https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md" target="_blank">Spacebars Compiler</a>. So what I want at this point is to enter a username and then click a button which will direct me to the story page. Simple, right&#8230;?</p>
-
-<p>For data handling we will use Meteor&#8217;s <a href="https://www.meteor.com/try/3" target="_blank">Collections</a>.</p>
-
-<p>Using a form to submit the username looks like this:</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="javascript" style="font-family:monospace;">Usernames <span style="color: #339933;">=</span> <span style="color: #000066; font-weight: bold;">new</span> Mongo.<span style="color: #660066;">Collection</span><span style="color: #009900;">&#40;</span><span style="color: #3366CC;">"usernames"</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-&nbsp;
-<span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">&#40;</span>Meteor.<span style="color: #660066;">isClient</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-  Template.<span style="color: #660066;">body</span>.<span style="color: #660066;">events</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#123;</span>
-    <span style="color: #3366CC;">"submit .new-user"</span><span style="color: #339933;">:</span> <span style="color: #000066; font-weight: bold;">function</span> <span style="color: #009900;">&#40;</span>event<span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-      <span style="color: #006600; font-style: italic;">// This function is called when the new task form is submitted</span>
-&nbsp;
-      <span style="color: #000066; font-weight: bold;">var</span> username <span style="color: #339933;">=</span> event.<span style="color: #660066;">target</span>.<span style="color: #660066;">username</span>.<span style="color: #660066;">value</span><span style="color: #339933;">;</span>
-&nbsp;
-      Usernames.<span style="color: #660066;">insert</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#123;</span>
-        username<span style="color: #339933;">:</span> username<span style="color: #339933;">,</span>
-        createdAt<span style="color: #339933;">:</span> <span style="color: #000066; font-weight: bold;">new</span> <span style="">Date</span><span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #006600; font-style: italic;">// current time</span>
-      <span style="color: #009900;">&#125;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-&nbsp;
-      <span style="color: #006600; font-style: italic;">// Clear form</span>
-      event.<span style="color: #660066;">target</span>.<span style="color: #660066;">username</span>.<span style="color: #660066;">value</span> <span style="color: #339933;">=</span> <span style="color: #3366CC;">""</span><span style="color: #339933;">;</span>
-&nbsp;
-      <span style="color: #006600; font-style: italic;">// Prevent default form submit</span>
-      <span style="color: #000066; font-weight: bold;">return</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">;</span>
-    <span style="color: #009900;">&#125;</span>
-  <span style="color: #009900;">&#125;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-<span style="color: #009900;">&#125;</span>
-&nbsp;
-<span style="color: #000066; font-weight: bold;">if</span> <span style="color: #009900;">&#40;</span>Meteor.<span style="color: #660066;">isServer</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-  Meteor.<span style="color: #660066;">startup</span><span style="color: #009900;">&#40;</span><span style="color: #000066; font-weight: bold;">function</span> <span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span> <span style="color: #009900;">&#123;</span>
-    <span style="color: #006600; font-style: italic;">// code to run on server at startup</span>
-  <span style="color: #009900;">&#125;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">;</span>
-<span style="color: #009900;">&#125;</span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>Of course there is no way to know if that actually succeeded so far unless I get a look at the DB. Navigate to the folder of your app and type in:</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="bash" style="font-family:monospace;">meteor mongo</pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>This will open a console to your database where you can query it like you would normally do with a mongodb console. Hence for me it&#8217;s:</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="bash" style="font-family:monospace;">db.usernames.find<span style="color: #7a0874; font-weight: bold;">&#40;</span><span style="color: #7a0874; font-weight: bold;">&#41;</span> <span style="color: #666666; font-style: italic;"># which return this -&gt;</span>
-meteor:PRIMARY<span style="color: #000000; font-weight: bold;">&</span>gt; db.usernames.find<span style="color: #7a0874; font-weight: bold;">&#40;</span><span style="color: #7a0874; font-weight: bold;">&#41;</span>
-<span style="color: #7a0874; font-weight: bold;">&#123;</span> <span style="color: #ff0000;">"username"</span> : <span style="color: #ff0000;">"olaf"</span>, <span style="color: #ff0000;">"createdAt"</span> : ISODate<span style="color: #7a0874; font-weight: bold;">&#40;</span><span style="color: #ff0000;">"2015-02-01T16:58:24.100Z"</span><span style="color: #7a0874; font-weight: bold;">&#41;</span>, <span style="color: #ff0000;">"_id"</span> : <span style="color: #ff0000;">"MS67d95ShFkc3yHiX"</span> <span style="color: #7a0874; font-weight: bold;">&#125;</span>
-<span style="color: #7a0874; font-weight: bold;">&#123;</span> <span style="color: #ff0000;">"username"</span> : <span style="color: #ff0000;">"skarlso"</span>, <span style="color: #ff0000;">"createdAt"</span> : ISODate<span style="color: #7a0874; font-weight: bold;">&#40;</span><span style="color: #ff0000;">"2015-02-01T16:59:18.792Z"</span><span style="color: #7a0874; font-weight: bold;">&#41;</span>, <span style="color: #ff0000;">"_id"</span> : <span style="color: #ff0000;">"ig8DJngmGKLca2dqS"</span> <span style="color: #7a0874; font-weight: bold;">&#125;</span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>As you can see, I already have two characters in the system. This is so far very easy but it does not redirect me to a new page displaying the beginning of my journey. Let&#8217;s try a redirect.</p>
-
-<h1 id="complications">Complications</h1>
-
-<p>Turns out it&#8217;s not that easy to get a redirect going. If I would be a beginner at this, I would give up right now and move on. The guide, or the tutorial does not contain any HINTS at least that I have to use a different method if I want a multi-layered multi-paged app. Of course Meteor provides a built in, easy to use, easy to add, answer-to-everything-you-ever-would-want-to-do, Login feature. But guys, it&#8217;s not useful. I would go as far as say it&#8217;s completely useless. Do you actually know someone who uses it? I would never use a built in something which is completely hidden from me and have no idea what it does. The ability to control what&#8217;s happening is THE most important thing in every developers life.</p>
-
-<p>So after I did a bit of digging and StackOverflowing ( which replaces the tutorial AND the user guide (and is a trademarked expression)), I found out that you can add <a href="https://atmospherejs.com/cmather/iron-router" target="_blank">Iron-Router</a> which was built specifically for this purpose.</p>
-
-<pre>meteor add iron:router</pre>
-
-<p>So all of a sudden my Page is completely screwed up with Iron Router information. Again, there is no information on this on Meteors page or in the guide nor in the COMPLETE guide so, I&#8217;m left Googling.</p>
-
-<p>A very helpful StackOverflow ( again, and I&#8217;m wondering why people don&#8217;t bother with the guide in the first place just go to stackoverflow straight ) answer explains to me the following:</p>
-
-<p>&#8220;<em>You have to define a subscription handle (an object returned by Meteor.subscribe) in order to use it&#8217;s reactive ready method : we&#8217;ll reference it in the myDataIsReady helper to track data availability, and the helper will automatically rerun when the state of ready changes.</em>&#8221;</p>
-
-<p>Okay, so subscriptions are mentioned in the SECURITY section of the guide regarding detecting specific users and private data and so on and so forth. All right so that&#8217;s used by iron routing as well which means I have to build that in, and not to mention first of all understanding how Iron Router works.</p>
-
-<p>I&#8217;m going to stop here now. After spending a couple of hours I can determine that this stuff is not intuitive and &#8220;easy&#8221;. I don&#8217;t know enough about JavaScript and redirecting and Iron Router to be able to use Meteor out of the box. Which means I have to educate myself a bit before returning to this stuff.</p>
-
-<p>Stay tuned for more.</p>
-
-<p>And as always,
-Thanks for reading!</p>
-                    </div>
-                </section>
                 
                 <h1 class="content-subhead">29 Jan 2015, 00:00</h1>
                 <section class="post">
@@ -1527,6 +1325,81 @@ Gergely.</p>
 <p>Thanks for reading!</p>
 
 <p>Have a nice day|night!</p>
+
+<p>Gergely.</p>
+                    </div>
+                </section>
+                
+                <h1 class="content-subhead">26 May 2014, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://skarlso.github.io/2014/05/26/tdd-is-dead-not-really/" class="post-title">TDD is Dead – Not really</a>
+
+                        <p class="post-meta">
+                            
+                                By <strong class="post-author">hannibal</strong>
+                            
+                            
+                                under 
+                                
+                                <a class="post-category post-category-programming" href="https://skarlso.github.io//categories/programming">programming</a><a class="post-category post-category-rambling" href="https://skarlso.github.io//categories/rambling">rambling</a><a class="post-category post-category-TDD" href="https://skarlso.github.io//categories/tdd">TDD</a><a class="post-category post-category-testing" href="https://skarlso.github.io//categories/testing">testing</a>
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Is TDD dead?</p>
+
+<p>Not really. So let&#8217;s talk about this topic for a little bit.</p>
+
+<p>I&#8217;m sure you already read a gazillion posts about this debate but frankly I&#8217;m writing this for myself, to rant a little bit, you know&#8230; Because somebody is wrong on the internet and I must intervene.</p>
+
+<p></p>
+
+<p>So first of all, the hashtag #tddisdead (and I will use it shamelessly as well). This is clearly an attempt to get as many peoples attention as you can. TDD is NOT DEAD. Obviously since it has soooo many supporters how could it be dead? It&#8217;s like asking, is Design Patterns dead? Or is Functional Automation dead? Or is Oreo cookies dead?</p>
+
+<p>No, it&#8217;s not dead. And it won&#8217;t ever be dead. It will maybe change into something new, something better even, but it will never be dead. So let&#8217;s skip that part.</p>
+
+<p>Now, about the <strong>debate</strong>.</p>
+
+<p>I haven&#8217;t hear so much bull spoken for this long since I watched the political debate of two fractions in my home country. The right wing extremists against the left wing&#8230;. I don&#8217;t know whats. And it was just that. A political debate. It had no merit and no value whatsoever. At all. Nothing.</p>
+
+<p>And right in the middle <strong>DHH</strong> says this:</p>
+
+<p><em>&#8220;&#8230;you&#8217;re not done until you also have tests for a piece of functionality &#8212; I&#8217;m completely on board with that.&#8221;.</em></p>
+
+<p>That made the whole conversation completely irrelevant.</p>
+
+<p>Every counter against TDD I heard was <strong>bull</strong>. Not in that debate, in general. People are either too lazy to write them, just don&#8217;t want to get out of their comfort zone, don&#8217;t really care about tests, or don&#8217;t really care about quality or under time pressure ( I get to this later. ).</p>
+
+<p>Which brings me to my next point.</p>
+
+<p><strong>Quality</strong></p>
+
+<p>People seem to not care about quality that much. Would they, they would understand that having a bulletproof west will save your life when you get shot in the chest with a 357 magnum. You can flush out early design flaws you can detect early bugs and do a better system design.</p>
+
+<p>Sure if you are the most intelligent man on the planet maybe you can come up with a perfect system on the first draft and then implement it flawlessly so that it doesn&#8217;t fall apart in two months time. But most people can&#8217;t. Most people make errors on the way.</p>
+
+<p>And yes, writing tests can be hard. But guess what? If writing a test is hard because that part of the system is complicated, than it will be that part of the system which will react the worst to change. And only change is constant. Which brings me to the next item&#8230;</p>
+
+<p><strong>Time constraints</strong></p>
+
+<p>So your manager is sitting right next to you and saying come on we are paying you to write code and not tests so do it! And you have to have a feature done today but if you write a suite of tests you&#8217;ll only finish tomorrow. Sure, your estimate at that point will become a very quick one because you make a sacrifice of trust.</p>
+
+<p>And then the next story comes along and you say&#8230; <em>&#8220;Sure I can do that as well. No problem I know how my system works, right? Hmm&#8230; why the hell did that break all of a sudden? I didn&#8217;t change anything in that module&#8230; Ahh damn it I said I&#8217;ll be done today, so let&#8217;s just fix this quickly and then move on to the next card.&#8221;</em></p>
+
+<p>And the next story comes along&#8230; <em>&#8220;Sure I can do that&#8230; wait a minute&#8230; Didn&#8217;t that part brake already twice? Damn, better refactor. Ohh shit, why is that now breaking???? Damn it I said I&#8217;ll be done tomorrow, better patch it, and then move on. Hmm let&#8217;s write a test here to make sure this does not break. Ohhh damn I need PowerMock for that stuff since it&#8217;s in another module. Why the hell is that there? Should it be here in the first place since it&#8217;s somehow used by that other class there? Interesting. Let&#8217;s refactor and put it in here so I can mock it. Ahhhh f*ck now all the rest of the system is not working. Damn, I&#8217;ll just use PowerMock. Shit. Checkstyle error. PowerMock is not allowed?? What?? Who the f*ck says that?&#8221;</em></p>
+
+<p>You get my drift. And suddenly you end up with estimates of <strong>WEEKS</strong>!!!! instead of days / hours for a simple story.</p>
+
+<p><strong>Finishing it up</strong></p>
+
+<p>This a rant only. It&#8217;s my personal opinion, experience and observation of a 10 year time period in Software Testing. Starting with at least a Weak Skeleton and a few upfront tests will help you in the long run. Writing at least ONE &#8211; TWO acceptance tests WILL help you understand business logic better. Writing ONE or TWO unit tests will help you understand your logic better. I&#8217;m not saying write a whole damn suite of tests I can understand you don&#8217;t want to do that, but for quality&#8217;s sake write at least a couple.</p>
+
+<p>You will love it, I promise you that.</p>
+
+<p>Thanks for reading.</p>
 
 <p>Gergely.</p>
                     </div>
