@@ -1,542 +1,752 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruby &middot; Ramblings of a build engineer</title>
 
-    <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.40.3" />
-    <meta name="twitter:card" content="summary">
+
     
-    <meta name="twitter:title" content="Ruby &middot; Ramblings of a build engineer">
-    <meta name="twitter:description" content="">
-
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="Ruby &middot; Ramblings of a build engineer">
-    <meta property="og:description" content="">
-
-    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
-
-    <link rel="stylesheet" href="https://skarlso.github.io//css/all.min.css">
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-
-    <link rel="alternate" type="application/rss+xml" title="Ramblings of a build engineer" href="https://skarlso.github.io//index.xml" />
-</head>
-<body>
+        
+    
 
 
-<div id="layout" class="pure-g">
-    <div class="sidebar pure-u-1 pure-u-md-1-4">
-    <div class="header">
-        <hgroup>
-            <h1 class="brand-title"><a href="https://skarlso.github.io/">Ramblings of a build engineer</a></h1>
-            <h2 class="brand-tagline"></h2>
-        </hgroup>
-
-        <nav class="nav">
-            <ul class="nav-list">
-                
-                <li class="nav-item">
-                    <a class="pure-button" href="https://twitter.com/Skarlso"><i class="fa fa-twitter"></i> Twitter</a>
-                </li>
-                
-                
-                <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/Skarlso "><i class="fa fa-github-alt"></i> github</a>
-                </li>
-                
-                
-                <li class="nav-item">
-                    <a class="pure-button" href="https://linkedin.com/in/brautigamgergely "><i class="fa fa-linkedin-alt"></i> LinkedIn</a>
-                </li>
-                
-                <li class="nav-item">
-                    <a class="pure-button" href="https://skarlso.github.io//index.xml"><i class="fa fa-rss"></i> rss</a>
-                </li></br>
-                <div style="box-shadow: 0px 0px 0px 1px #000; overflow-y: scroll; height:250px;" align="left">
-                    
-                        <a href="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/">Replacing Eval with Object.send and a self written Parser</a></br>
-                    
-                        <a href="https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/">RScrap scraper</a></br>
-                    
-                        <a href="https://skarlso.github.io/2016/07/12/ruby-sieve/">Ruby Sieve</a></br>
-                    
-                </div>
-            </ul>
-        </nav>
-    </div>
-</div>
 
 
-    <div class="content pure-u-1 pure-u-md-3-4">
-        <div>
+<!DOCTYPE HTML>
+
+<html>
+    <head>
+        <script type="application/ld+json">
+    {
+        "@context" : "http://schema.org",
+        "@type" : "BlogPosting",
+        "mainEntityOfPage": {
+             "@type": "WebPage",
+             "@id": "https://skarlso.github.io/"
+        },
+        "articleSection" : "categories",
+        "name" : "Ruby",
+        "headline" : "Ruby",
+        "description" : "",
+        "inLanguage" : "en",
+        "author" : "",
+        "creator" : "",
+        "publisher": "",
+        "accountablePerson" : "",
+        "copyrightHolder" : "",
+        "copyrightYear" : "2017",
+        "datePublished": "2017-05-28 19:23:00 &#43;0100 &#43;0100",
+        "dateModified" : "2017-05-28 19:23:00 &#43;0100 &#43;0100",
+        "url" : "https://skarlso.github.io/categories/ruby/",
+        "wordCount" : "0",
+        "keywords" : [ "Blog" ]
+    }
+    </script>
+        
+            <title>Ruby Posts - Ramblings of a cloud engineer</title>
+        
+
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="generator" content="Hugo 0.40.3" />
+        
+
+
+        
+        
             
-            <div class="posts">
-                
-                <h1 class="content-subhead">28 May 2017, 19:23</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/" class="post-title">Replacing Eval with Object.send and a self written Parser</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Ruby" href="https://skarlso.github.io//categories/ruby">Ruby</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        
-
-<h1 id="intro">Intro</h1>
-
-<p>A while ago, I was added as a curator for a Gem called <a href="https://github.com/joshbuddy/jsonpath">JsonPath</a>. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.</p>
-
-<p>You could opt in using <code>eval</code> with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like <a href="https://github.com/huginn/huginn">Huginn</a> they had to opt out by default, thus missing out on sweet parsing like this: <code>$..book[?(@['price'] &gt; 20)]</code>.</p>
-
-<h2 id="eval">Eval</h2>
-
-<p>In order to remove eval, first I had to understand what it is actually doing. I had to take it apart.</p>
-
-<p><img src="https://skarlso.github.io/img/takeevalapart.jpg" alt="apart" /></p>
-
-<p>After much digging and understanding the code, I found, all it does is perform the given operations on the current node. And if the operation is true, it will select that node, otherwise, return false, and ignore that node.</p>
-
-<p>For example <code>$..book[?(@['price'] &gt; 20)]</code> could be translated to:</p>
-
-<pre><code class="language-ruby">return @_current_node['price'] &gt; 20
-</code></pre>
-
-<p>Checking first if <code>'price'</code> is even a key in <code>@_current_node</code>. Once I&rsquo;ve understood this part, I set on trying to fix eval.</p>
-
-<h3 id="safe-4">SAFE = 4</h3>
-
-<p>In ruby, you could extract the part where you Eval and put it into its own proc and set <code>SAFE = 4</code> which will disable some things like system calls.</p>
-
-<pre><code class="language-ruby">proc do
-  SAFE = 4
-  eval(some_expression)
-end.call
-</code></pre>
-
-<p>SAFE levels:</p>
-
-<p>$SAFE   Description
-0   No checking of the use of externally supplied (tainted) data is performed. This is Ruby&rsquo;s default mode.
-&gt;= 1    Ruby disallows the use of tainted data by potentially dangerous operations.
-&gt;= 2    Ruby prohibits the loading of program files from globally writable locations.
-&gt;= 3    All newly created objects are considered tainted.
-&gt;= 4    Ruby effectively partitions the running program in two. None - tainted objects may not be modified. Typically, this will be used to create a sandbox: the program sets up an environment using a lower $SAFE level, then resets $SAFE to 4 to prevent subsequent changes to that environment.</p>
-
-<p>This has the disadvantage that anything below 4 is just, meh. But nothing above 1 will actually work with JsonPath so&hellip; scratch that.</p>
-
-<h3 id="sandboxing">Sandboxing</h3>
-
-<p>We could technically try and sandbox eval into it&rsquo;s own process with a PID and whitelist methods which are allowed to be called.</p>
-
-<p>Not bad, and there are a few gems out there which are trying to do that like <a href="https://github.com/ukutaht/safe_ruby">SafeRuby</a>. But all of these project have been abandoned years ago for a good reason.</p>
-
-<h3 id="object-send">Object.send</h3>
-
-<p><img src="https://skarlso.github.io/img/nobodylikesyou.jpg" alt="nobodylikesyou" /></p>
-
-<p><code>Object.send</code> is the best way to get some flexibility while still being safe. You basically just call methods on objects by describing said method on an object and giving parameters to it, like:</p>
-
-<pre><code class="language-ruby">1.send(:+, 2) =&gt; 3
-</code></pre>
-
-<p>This is a very powerful tool in our toolbox which we will exploit immensely.</p>
-
-<p>So let&rsquo;s get to it.</p>
-
-<h1 id="writing-a-parser">Writing a parser</h1>
-
-<p>Writing a parser in Ruby is a very fluid experience. It has nice tools which support that, and the one I used is <code>StringScanner</code>. It has the ability to track where you are currently at in a string and move a pointer along with regex matches. In fact, JsonPath already employs this method when parsing a json expression. So reusing that logic was in fact&hellip; elementary.</p>
-
-<h2 id="the-expression">The expression</h2>
-
-<p>How do we get from this:</p>
-
-<pre><code class="language-bash">$..book[?(@['price'] &lt; 20)]
-</code></pre>
-
-<p>To this:</p>
-
-<pre><code class="language-ruby">@_current_node['price'] &lt; 20
-</code></pre>
-
-<p>Well. By simple elimination. There are a couple of problems along the way of course. Because this wouldn&rsquo;t be a parser if it couldn&rsquo;t handle ALL the other cases&hellip;</p>
-
-<h3 id="removing-clutter">Removing Clutter</h3>
-
-<p>Some of this we don&rsquo;t need. Like, <code>$..book</code> part.</p>
-
-<p><img src="https://skarlso.github.io/img/dontneed1.jpg" alt="dontneed1" /></p>
-
-<p>The other things we don&rsquo;t need are all the <code>'[]?()</code></p>
-
-<p><img src="https://skarlso.github.io/img/dontneed2.jpg" alt="dontneed2" /></p>
-
-<p>Once this is done, we can move to isolating the important bits.</p>
-
-<p><img src="https://skarlso.github.io/img/takingaim.jpg" alt="takingaim" /></p>
-
-<h3 id="breakdown">BreakDown</h3>
-
-<h4 id="elements">Elements</h4>
-
-<p>How does an expression actually look like?</p>
-
-<p>Let&rsquo;s break it down.</p>
-
-<p><img src="https://skarlso.github.io/img/confused.jpg" alt="confused" /></p>
-
-<p>So, this is a handful. Operations can be <code>&lt;=,&gt;=,&lt;,&gt;,==,!=</code> and operands can be either numbers, or words, and element accessor can be nested since something like this is perfectly valid: <code>$..book[?(@.written.year == 1997)]</code>.</p>
-
-<p><img src="https://skarlso.github.io/img/feedline.jpg" alt="feedline" /></p>
-
-<p>To avoid being overwhelmed, ruby has our back with a method called <code>dig</code>.</p>
-
-<p><img src="https://skarlso.github.io/img/dig.jpg" alt="dig" /></p>
-
-<p>This, basically lets us pass in some parameters into a dig function on a hash or an array with variadic parameters, which will go on and access those elements in order how they were supplied. Until it either returns a <code>nil</code> or an end result.</p>
-
-<p>For example:</p>
-
-<pre><code class="language-ruby">2.3.1 :001 &gt; a = {a: {b: 'c'}}
- =&gt; {:a=&gt;{:b=&gt;&quot;c&quot;}}
-2.3.1 :002 &gt; a.dig(:a, :b)
- =&gt; &quot;c&quot;
-</code></pre>
-
-<p>Easy. However&hellip; Dig was only added after ruby 2.3 thus, I had to write my own dig for now, until I stop supporting anything below 2.3.</p>
-
-<p>At first, I wanted to add it to the hash class, but it proved to be a futile attempt if I wanted to do it nicely, thus the parser got it as a private method.</p>
-
-<pre><code class="language-ruby">    def dig(keys, hash)
-      return hash unless hash.is_a? Hash
-      return nil unless hash.key?(keys.first)
-      return hash.fetch(keys.first) if keys.size == 1
-      prev = keys.shift
-      dig(keys, hash.fetch(prev))
-    end
-</code></pre>
-
-<p>And the corresponding regex behind getting a multitude of elements is as follows:</p>
-
-<pre><code class="language-ruby">...
-if t = scanner.scan(/\['\w+'\]+/)
-...
-</code></pre>
-
-<h4 id="operator">Operator</h4>
-
-<p>Selecting the operator is another interesting part as it can be a single one or multiple and all sorts. Until I realized that no&hellip; it can actually be only a couple.</p>
-
-<p><img src="https://skarlso.github.io/img/whatone.jpg" alt="whatone" /></p>
-
-<p><img src="https://skarlso.github.io/img/whattwo.jpg" alt="whattwo" /></p>
-
-<p>Also, after a bit of fiddling and doing and doing a silly case statement first:</p>
-
-<pre><code class="language-ruby">case op
-when '&gt;'
-  dig(@_current_node, *elements) &gt; operand
-when '&lt;'
-  dig(@_current_node, *elements) &gt; operand
-...
-end
-</code></pre>
-
-<p>&hellip;I promptly saw that this is not how it should be done.</p>
-
-<p>And here comes Object.send.</p>
-
-<p><img src="https://skarlso.github.io/img/send.jpg" alt="send" /></p>
-
-<p>This gave me the opportunity to write this:</p>
-
-<pre><code class="language-ruby">dig(elements, @_current_node).send(operator, operand)
-</code></pre>
-
-<p>Much better. Now I could send all the things in the way of a node.</p>
-
-<p><img src="https://skarlso.github.io/img/sendtwo.jpg" alt="send" /></p>
-
-<p>Parsing an op be like:</p>
-
-<pre><code class="language-ruby">elsif t = scanner.scan(/\s+[&lt;&gt;=][&lt;&gt;=]?\s+?/)
-</code></pre>
-
-<h4 id="operand">Operand</h4>
-
-<p>Now comes the final piece. The value which we are comparing. This could either be a simple integer, a floating number, or a word. Hah. So coming up with a regex which fits this tightly took a little fiddling, but eventually I ended up with this:</p>
-
-<pre><code class="language-ruby">elsif t = scanner.scan(/(\s+)?'?(\w+)?[.,]?(\w+)?'?(\s+)?/)
-</code></pre>
-
-<p>Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because an this expression <code>$..book[?(@.price)]</code> is valid. Which is basically just asserting if a given node has a price element.</p>
-
-<h4 id="logical-operators">Logical Operators</h4>
-
-<p>The last thing that remains is logical operators, which if you are using eval, is pretty straight forward. It takes care of anything that you might add in like <code>&amp;&amp;, ||, |, &amp;, ^</code> etc etc.</p>
-
-<p>Now, that&rsquo;s something I did with a case though. Until I find a nicer solution. Since we can already parse a single expression it&rsquo;s just a question of breaking down a multi structure expression as the following one: <code>$..book[?(@['price'] &gt; 20 &amp;&amp; @.written.year == 1998)]</code>.</p>
-
-<pre><code class="language-ruby">exps = exp.split(/(&amp;&amp;)|(\|\|)/)
-</code></pre>
-
-<p>This splits up the string by either <code>&amp;&amp;</code> or <code>||</code> and the usage of groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like <code>[true, '&amp;&amp;', false]</code>. You know what could immediately resolve this? Yep&hellip;</p>
-
-<p><img src="https://skarlso.github.io/img/saynotoeval.jpg" alt="saynotoeval" />.</p>
-
-<p>I&rsquo;d rather just parse it although technically an eval at this stage wouldn&rsquo;t be that big of a problem&hellip;</p>
-
-<pre><code class="language-ruby">def parse(exp)
-  exps = exp.split(/(&amp;&amp;)|(\|\|)/)
-  ret = parse_exp(exps.shift)
-  exps.each_with_index do |item, index|
-    case item
-    when '&amp;&amp;'
-      ret &amp;&amp;= parse_exp(exps[index + 1])
-    when '||'
-      ret ||= parse_exp(exps[index + 1])
-    end
-  end
-  ret
-end
-</code></pre>
-
-<h1 id="closing-words">Closing words</h1>
-
-<p>That&rsquo;s it folks. The parser is done. And there is no eval being used. There are some more things here that are interesting. Like, array indexing is allowed in jsonpath which is solved by sending <code>.length</code> to a current node. For example:</p>
-
-<pre><code class="language-ruby">if scanner.scan(/\./)
-  sym = scanner.scan(/\w+/)
-  op = scanner.scan(/./)
-  num = scanner.scan(/\d+/)
-  return @_current_node.send(sym.to_sym).send(op.to_sym, num.to_i)
-end
-</code></pre>
-
-<p>If an expression begins with a <code>.</code>. So you see that using <code>send</code> will help a lot, and understanding what eval is trying to evaluate and rather writing your own parser, isn&rsquo;t that hard at all using ruby.</p>
-
-<p>I hope you enjoyed reading this little tid-bit as much as I enjoyed writing and drawing it. Leave a comment if your liked the drawings or if you did not and I should never do them again (( I don&rsquo;t really care, this is my blog haha. )). Note to self: I shouldn&rsquo;t draw on the other side of the drawing because of bleed-through.</p>
-
-<p>Thank you!
-Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">06 Oct 2016, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/" class="post-title">RScrap scraper</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Ruby" href="https://skarlso.github.io//categories/ruby">Ruby</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        
-
-<h1 id="intro">Intro</h1>
-
-<p>Hey folks.</p>
-
-<p>So, there is this project called <a href="https://github.com/cantino/huginn">Huginn</a> which I absolutely love.</p>
-
-<p>But the thing is, that for a couple of scrappers ( at least for me ), I don&rsquo;t want to spin up a whole rails app.</p>
-
-<p>Hence, I&rsquo;ve come up with <a href="https://github.com/Skarlso/rscrap">RScrap</a>. Which is a bunch of Ruby scripts run as cron jobs on a raspberry pi. And because I dislike emails as well, and most of the time, I don&rsquo;t read them, I opted for a nicer solution. Enter the world of <a href="https://telegram.org">Telegram</a>. They provide you with the ability to create bots. You basically get an API key, and than using that key, you can send private messages, or even create an interactive bot which you can send messages too.</p>
-
-<p>In my simple example, I&rsquo;m using it to send private messages to myself, but I could just as well, make it interactive and than tell it to run one of the scripts.</p>
-
-<h1 id="the-code">The Code</h1>
-
-<p>Let&rsquo;s take a look at what we got.</p>
-
-<h2 id="the-main-scraper">The main scraper</h2>
-
-<p>The main scraper, is simply bunch of convenience methods that wrap handling and working with the database and the telegram bot. That&rsquo;s all. It&rsquo;s very simple. Very short. The Telegram part is just this bit:</p>
-
-<pre><code class="language-ruby">def send_message(text)
-  Telegram::Bot::Client.run(@token) do |bot|
-    bot.api.send_message(chat_id: @id, text: text)
-  end
-end
-</code></pre>
-
-<p>Straightforward. Creating an interactive bot, would look something like this:</p>
-
-<pre><code class="language-ruby">#!/usr/bin/env ruby
-require 'telegram/bot'
-
-token = 'YOUR_TELEGRAM_BOT_API_TOKEN'
-
-Telegram::Bot::Client.run(token) do |bot|
-  bot.listen do |message|
-    case message.text
-    when '/start'
-      bot.api.send_message(chat_id: message.chat.id, text: &quot;Hello, #{message.from.first_name}&quot;)
-    when '/stop'
-      bot.api.send_message(chat_id: message.chat.id, text: &quot;Bye, #{message.from.first_name}&quot;)
-    end
-  end
-end
-</code></pre>
-
-<p>Basically, it will listen, and than you can send it messages and based on the parsed <code>message.text</code> you can define functions to call. For example, for rscrap I could define something like <code>run_script(script)</code>. And the command would be: <code>/run reddit</code>. Which will execute my reddit script. The possibilities are endless.</p>
-
-<h2 id="the-scripts">The scripts</h2>
-
-<p>The scripts use nokogiri to parse a web page, and than return a URL which will be sent by the TelegramBot. They are also saved in the database so that when a new comic strip comes out, I know that it&rsquo;s new. For reddit, I&rsquo;m saving a timestamp as well, and I collect everything after that timestamp through the reddit API as JSON, and send it as a bundled message with shortified links to the posts using bit.ly.</p>
-
-<p>The scraping is most of the times the same for every comic. Thus, there is a helper method for it. The script itself, is very short. For example, lets look at gunnerkrigg court.</p>
-
-<pre><code class="language-ruby">require_relative '../rscrap'
-require 'nokogiri'
-require 'open-uri'
-
-url = 'http://www.gunnerkrigg.com'
-scrap = Rscrap.new
-page = Nokogiri::HTML(open(url))
-comic_id = page.css('img.comic_image')[0].select { |e| e if e[0] == 'src' }[0][1]
-new_comic = &quot;#{url}#{comic_id}&quot;
-scrap.send_new_comic(url, new_comic)
-</code></pre>
-
-<p>The interesting part of it is this bit: <code>comic_id = page.css('img.comic_image')[0].select { |e| e if e[0] == 'src' }[0][1]</code>. It extracts the URL for the comic image, and stores it as an &ldquo;id&rdquo; of the comic. This than, is sent as a message which Telegram will embed. There is no need to visit the web page, the image is in your feed and you can view it directly. Just like an RSS ready.</p>
-
-<h2 id="cron">Cron</h2>
-
-<p>These scripts are best used in a cron job. The comics are usually running with a daily frequency, where as the reddit gatherer is running with an hour frequency. Basically, I&rsquo;m receiving updates on an hourly basis if there are new posts by then. Running ruby from cron was a bit tricky. I&rsquo;m using bundler for the environment, and came up with this:</p>
-
-<pre><code class="language-bash">0 6-23 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/reddit.rb'
-0 8,22 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/gunnerkrigg.rb'
-0 8,22 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/aws_blog.rb'
-0 5,23 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/goblinscomic.rb'
-0 6,20 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/xkcd.rb'
-0 7,19 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/commitstrip.rb'
-0 8 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/sequiential_art.rb'
-</code></pre>
-
-<p>And a telegram message for all these things, looks like this:
-Reddit:
-<img src="https://github.com/Skarlso/rscrap/raw/master/shorten.png" alt="TelegramIMReddit" />
-Comics:
-<img src="https://github.com/Skarlso/rscrap/raw/master/rscrap2.png" alt="TelegramIMComics" /></p>
-
-<h1 id="conclusion">Conclusion</h1>
-
-<p>That&rsquo;s it folks. Adding a new scraper is easy. I added the aws blog as a new entry as well by just copying the comics scripts. And I&rsquo;m also getting Weather Reports delivered every morning to me.</p>
-
-<p>Have fun. Any questions, please feel free to leave a comment!</p>
-
-<p>Thanks,
-Gergely.</p>
-
-                    </div>
-                </section>
-                
-                <h1 class="content-subhead">12 Jul 2016, 00:00</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://skarlso.github.io/2016/07/12/ruby-sieve/" class="post-title">Ruby Sieve</a>
-
-                        <p class="post-meta">
-                            
-                                By <strong class="post-author">hannibal</strong>
-                            
-                            
-                                under 
-                                
-                                <a class="post-category post-category-Ruby" href="https://skarlso.github.io//categories/ruby">Ruby</a>
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        <p>Though it could be done better, I&rsquo;m sure, but I&rsquo;m actually pretty satisfied with this one. It loops only twice as opposed to filtered ranges and whatnot other solutions to the sieve. I was thinking of rather creating a list and deleting elements from it, but that&rsquo;s already three loops.</p>
-
-<p>Maybe I&rsquo;ll do a benchmark later on more solutions.</p>
-
-<pre><code class="language-ruby"># Sieve contains a function to return a set of primes
-class Sieve
-  def initialize(n)
-    @n = n
-  end
-
-  # Returns a list of primes up to a certain limit
-  # @param n limit
-  # @return list of primes
-  def primes
-    marked = []
-    primes = []
-    (2..@n).each do |e|
-      unless marked.include?(e)
-        primes.push e
-        (e..@n).step(e) { |s| marked.push s }
-      end
-    end
-    primes
-  end
-end
-</code></pre>
-
-<p>Cheers,
-Gergely.</p>
-
-                    </div>
-                </section>
-                
-            </div>
+                <meta name="description" content="Ramblings of a Cloud Engineer">
             
+        
 
-            <div class="footer">
-    <div class="pure-menu pure-menu-horizontal pure-menu-open">
-        <ul>
-            <li>Powered by <a class="hugo" href="https://gohugo.io/" target="_blank">hugo</a></li>
-        </ul>
-    </div>
-</div>
-<script src="https://skarlso.github.io//js/all.min.js"></script>
+        <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Ruby"/>
+<meta name="twitter:description" content="Ramblings of a Cloud Engineer"/>
+<meta name="twitter:site" content="@Skarlso"/>
 
-        </div>
-    </div>
-</div>
+        <meta property="og:title" content="Ruby" />
+<meta property="og:description" content="Ramblings of a Cloud Engineer" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://skarlso.github.io/categories/ruby/" />
 
+
+
+<meta property="og:updated_time" content="2017-05-28T19:23:00&#43;01:00"/>
+
+
+
+
+
+
+
+
+
+
+        <meta property="og:image" content="https://skarlso.github.io//images/logo.png">
+        <meta property="og:image:type" content="image/png">
+        <meta property="og:image:width" content="512">
+        <meta property="og:image:height" content="512">
+        
+<meta itemprop="name" content="Ruby">
+<meta itemprop="description" content="Ramblings of a Cloud Engineer">
+
+
+        
+
+        
+            
+        
+
+        
+        
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway:400,800,900|Source+Sans+Pro:400,700">
+            <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.1.25/jquery.fancybox.min.css">
+            <link rel="stylesheet" href="https://skarlso.github.io/css/main.css">
+            <link rel="stylesheet" href="https://skarlso.github.io/css/add-on.css">
+            <link rel="stylesheet" href="https://skarlso.github.io/css/academicons.min.css">
+        
+
+        
+
+
+  
+    
+    <link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+  
+
+
+      
 <script>
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
 (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
 m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
 
 ga('create', 'UA-69463020-2', 'auto');
 ga('send', 'pageview');
-
 </script>
 
-</body>
+    </head>
+    <body>
+
+      
+      <div id="wrapper">
+
+    
+<header id="header">
+    
+      <h1><a href="https://skarlso.github.io/">categories</a></h1>
+    
+
+    <nav class="links">
+        <ul>
+            
+                <li>
+                    <a href="https://skarlso.github.io/">
+                            <i class="fa fa-home">&nbsp;</i>Home
+                    </a>
+                </li>
+            
+                <li>
+                    <a href="https://skarlso.github.io/blog/">
+                            <i class="fa fa-newspaper-o">&nbsp;</i>Blog
+                    </a>
+                </li>
+            
+                <li>
+                    <a href="https://skarlso.github.io/categories/">
+                            <i class="fa fa-sitemap">&nbsp;</i>Categories
+                    </a>
+                </li>
+            
+        </ul>
+    </nav>
+    <nav class="main">
+        <ul>
+            
+            <li class="search">
+                <a class="fa-search" href="#search">Search</a>
+                <form id="search" method="get" action="//google.com/search">
+                    <input type="text" name="q" placeholder="Search" />
+                    <input type="hidden" name="as_sitesearch" value="https://skarlso.github.io/">
+                </form>
+            </li>
+            <li class="menu">
+                <a class="fa-bars" href="#menu">Menu</a>
+            </li>
+        </ul>
+    </nav>
+</header>
+
+
+<section id="menu">
+
+    
+        <section>
+            <form class="search" method="get" action="//google.com/search">
+                <input type="text" name="q" placeholder="Search" />
+                <input type="hidden" name="as_sitesearch" value="https://skarlso.github.io/">
+            </form>
+        </section>
+
+    
+        <section>
+            <ul class="links">
+                
+                    <li>
+                        <a href="https://skarlso.github.io/">
+                            <h3>
+                                <i class="fa fa-home">&nbsp;</i>Home
+                            </h3>
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href="https://skarlso.github.io/blog/">
+                            <h3>
+                                <i class="fa fa-newspaper-o">&nbsp;</i>Blog
+                            </h3>
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href="https://skarlso.github.io/categories/">
+                            <h3>
+                                <i class="fa fa-sitemap">&nbsp;</i>Categories
+                            </h3>
+                        </a>
+                    </li>
+                
+            </ul>
+        </section>
+
+    
+        <section class="recent-posts">
+            <div class="mini-posts">
+                <header>
+                    <h3>Recent Posts</h3>
+                </header>
+                
+
+                
+                    
+                
+
+                
+                        <article class="mini-post">
+                            <header>
+                                <h3><a href="https://skarlso.github.io/2018/03/15/kubernetes-distributed-application/">Kubernetes distributed application deployment with sample Face Recognition App</a></h3>
+                                
+                                <time class="published" datetime=
+                                    '2018-03-15'>
+                                    March 15, 2018</time>
+                            </header>
+                            
+
+                        </article>
+                
+                        <article class="mini-post">
+                            <header>
+                                <h3><a href="https://skarlso.github.io/2018/02/06/go-budapest-meetup/">Go Budapest Meetup</a></h3>
+                                
+                                <time class="published" datetime=
+                                    '2018-02-06'>
+                                    February 6, 2018</time>
+                            </header>
+                            
+
+                        </article>
+                
+                        <article class="mini-post">
+                            <header>
+                                <h3><a href="https://skarlso.github.io/2018/01/23/nginx-certbot-ansible/">Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios</a></h3>
+                                
+                                <time class="published" datetime=
+                                    '2018-01-23'>
+                                    January 23, 2018</time>
+                            </header>
+                            
+
+                        </article>
+                
+                        <article class="mini-post">
+                            <header>
+                                <h3><a href="https://skarlso.github.io/2018/01/13/furnace-massive-update/">Huge Furnace Update</a></h3>
+                                
+                                <time class="published" datetime=
+                                    '2018-01-13'>
+                                    January 13, 2018</time>
+                            </header>
+                            
+
+                        </article>
+                
+                        <article class="mini-post">
+                            <header>
+                                <h3><a href="https://skarlso.github.io/2017/12/04/commit-build-deploy/">Commit-Build-Deploy With AWS CodeBuild and Lambda</a></h3>
+                                
+                                <time class="published" datetime=
+                                    '2017-12-04'>
+                                    December 4, 2017</time>
+                            </header>
+                            
+
+                        </article>
+                
+
+                
+                    <a href=
+                        
+                            /blog/
+                        
+                        class="button">View more posts</a>
+                
+            </div>
+        </section>
+
+    
+        
+</section>
+
+    
+    <div id="main">
+        <h1>Ruby</h1>
+        
+        
+            <article class="post">
+  <header>
+    <div class="title">
+        
+            <h2><a href="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/">Replacing Eval with Object.send and a self written Parser</a></h2>
+        
+        
+    </div>
+    <div class="meta">
+        
+
+        <time class="published"
+            datetime='2017-05-28'>
+            May 28, 2017</time>
+        <span class="author">hannibal</span>
+        
+        
+    </div>
+</header>
+
+  
+
+  
+  <p>A while ago, I was added as a curator for a Gem called <a href="https://github.com/joshbuddy/jsonpath">JsonPath</a>. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.</p>
+  <footer>
+    <ul class="actions">
+      <li><a href="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/" class="button big">Continue Reading</a></li>
+    </ul>
+  <ul class="stats">
+  <li class="categories">
+    <ul>
+        
+            
+            
+                <i class="fa fa-folder"></i>
+                
+                
+                <li><a class="article-category-link" href="https://skarlso.github.io/categories/ruby">Ruby</a></li>
+                
+            
+        
+    </ul>
+  </li>
+  <li class="tags">
+    <ul>
+        
+    </ul>
+  </li>
+</ul>
+
+  </footer>
+</article>
+
+        
+            <article class="post">
+  <header>
+    <div class="title">
+        
+            <h2><a href="https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/">RScrap scraper</a></h2>
+        
+        
+    </div>
+    <div class="meta">
+        
+
+        <time class="published"
+            datetime='2016-10-06'>
+            October 6, 2016</time>
+        <span class="author">hannibal</span>
+        
+        
+    </div>
+</header>
+
+  
+
+  
+  <p>Hey folks.</p>
+  <footer>
+    <ul class="actions">
+      <li><a href="https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/" class="button big">Continue Reading</a></li>
+    </ul>
+  <ul class="stats">
+  <li class="categories">
+    <ul>
+        
+            
+            
+                <i class="fa fa-folder"></i>
+                
+                
+                <li><a class="article-category-link" href="https://skarlso.github.io/categories/ruby">Ruby</a></li>
+                
+            
+        
+    </ul>
+  </li>
+  <li class="tags">
+    <ul>
+        
+    </ul>
+  </li>
+</ul>
+
+  </footer>
+</article>
+
+        
+            <article class="post">
+  <header>
+    <div class="title">
+        
+            <h2><a href="https://skarlso.github.io/2016/07/12/ruby-sieve/">Ruby Sieve</a></h2>
+        
+        
+    </div>
+    <div class="meta">
+        
+
+        <time class="published"
+            datetime='2016-07-12'>
+            July 12, 2016</time>
+        <span class="author">hannibal</span>
+        
+        
+    </div>
+</header>
+
+  
+
+  
+  <p>Though it could be done better, I&rsquo;m sure, but I&rsquo;m actually pretty satisfied with this one. It loops only twice as opposed to filtered ranges and whatnot other solutions to the sieve. I was thinking of rather creating a list and deleting elements from it, but that&rsquo;s already three loops.</p>
+  <footer>
+    <ul class="actions">
+      <li><a href="https://skarlso.github.io/2016/07/12/ruby-sieve/" class="button big">Continue Reading</a></li>
+    </ul>
+  <ul class="stats">
+  <li class="categories">
+    <ul>
+        
+            
+            
+                <i class="fa fa-folder"></i>
+                
+                
+                <li><a class="article-category-link" href="https://skarlso.github.io/categories/ruby">Ruby</a></li>
+                
+            
+        
+    </ul>
+  </li>
+  <li class="tags">
+    <ul>
+        
+    </ul>
+  </li>
+</ul>
+
+  </footer>
+</article>
+
+        
+
+        
+<ul class="actions pagination">
+    
+        <li><a href="#" class="disabled button big previous">Previous Page</a></li>
+    
+
+    
+        <li><a href="#" class="disabled button big next">Next Page</a></li>
+    
+</ul>
+
+    </div>
+    
+<section id="sidebar">
+
+  
+  <section id="intro">
+    
+    
+    
+    
+  </section>
+
+  
+  <section class="recent-posts">
+    <div class="mini-posts">
+      <header>
+        <h3>Recent Posts</h3>
+      </header>
+      <div class="posts-container">
+        
+
+        
+          
+        
+
+        
+          <article class="mini-post">
+            <header>
+              <h3>
+                <a href="https://skarlso.github.io/2018/03/15/kubernetes-distributed-application/">Kubernetes distributed application deployment with sample Face Recognition App</a>
+              </h3>
+              
+              <time class="published" datetime='2018-03-15'>
+                March 15, 2018
+              </time>
+            </header>
+            
+
+          </article>
+        
+          <article class="mini-post">
+            <header>
+              <h3>
+                <a href="https://skarlso.github.io/2018/02/06/go-budapest-meetup/">Go Budapest Meetup</a>
+              </h3>
+              
+              <time class="published" datetime='2018-02-06'>
+                February 6, 2018
+              </time>
+            </header>
+            
+
+          </article>
+        
+          <article class="mini-post">
+            <header>
+              <h3>
+                <a href="https://skarlso.github.io/2018/01/23/nginx-certbot-ansible/">Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios</a>
+              </h3>
+              
+              <time class="published" datetime='2018-01-23'>
+                January 23, 2018
+              </time>
+            </header>
+            
+
+          </article>
+        
+          <article class="mini-post">
+            <header>
+              <h3>
+                <a href="https://skarlso.github.io/2018/01/13/furnace-massive-update/">Huge Furnace Update</a>
+              </h3>
+              
+              <time class="published" datetime='2018-01-13'>
+                January 13, 2018
+              </time>
+            </header>
+            
+
+          </article>
+        
+          <article class="mini-post">
+            <header>
+              <h3>
+                <a href="https://skarlso.github.io/2017/12/04/commit-build-deploy/">Commit-Build-Deploy With AWS CodeBuild and Lambda</a>
+              </h3>
+              
+              <time class="published" datetime='2017-12-04'>
+                December 4, 2017
+              </time>
+            </header>
+            
+
+          </article>
+        
+      </div>
+
+      
+        <a href=
+          
+            /blog/
+          
+        class="button">View more posts</a>
+      
+    </div>
+  </section>
+
+  
+  
+  
+
+  
+  
+
+  
+  <section id="footer">
+    
+      <ul class="icons">
+        
+        
+  <li><a href="//github.com/Skarlso" target="_blank" title="GitHub" class="fa fa-github"></a></li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <li><a href="//linkedin.com/in/gergelybrautigam" target="_blank" title="LinkedIn" class="fa fa-linkedin"></a></li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <li><a href="//twitter.com/Skarlso" target="_blank" title="Twitter" class="fa fa-twitter"></a></li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      </ul>
+    
+    <p class="copyright">
+      
+        &copy; 2018
+        
+          Ramblings of a cloud engineer
+        
+      .
+      Powered by <a href="//gohugo.io" target="_blank">Hugo</a>
+    </p>
+  </section>
+</section>
+
+    </div>
+    <a id="back-to-top" href="#" class="fa fa-arrow-up fa-border fa-2x"></a>
+    
+
+    
+      
+    
+
+    
+      
+      
+      
+        <script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+        
+        
+        
+        <script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/json.min.js"></script>
+        <script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+        <script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/css.min.js"></script>
+        <script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/go.min.js"></script>
+        <script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/bash.min.js"></script>
+        <script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+      
+    
+    
+    
+      <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/skel/3.0.1/skel.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.1.25/jquery.fancybox.min.js"></script>
+      <script src="https://skarlso.github.io/js/util.js"></script>
+      <script src="https://skarlso.github.io/js/main.js"></script>
+      <script src="https://skarlso.github.io/js/backToTop.js"></script>
+    
+
+    
+
+    
+    <script>hljs.initHighlightingOnLoad();</script>
+      <script src="//yihui.name/js/math-code.js"></script>
+<script async
+src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
+
+
+  </body>
 </html>
+
