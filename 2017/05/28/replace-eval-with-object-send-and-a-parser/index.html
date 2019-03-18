@@ -1,74 +1,13 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
+<html lang="en-us">
 
-<html>
-    <head>
-        <script type="application/ld+json">
-    {
-        "@context" : "http://schema.org",
-        "@type" : "BlogPosting",
-        "mainEntityOfPage": {
-             "@type": "WebPage",
-             "@id": "https://skarlso.github.io/"
-        },
-        "articleSection" : "blog",
-        "name" : "Replacing Eval with Object.send and a self written Parser",
-        "headline" : "Replacing Eval with Object.send and a self written Parser",
-        "description" : "Intro A while ago, I was added as a curator for a Gem called JsonPath. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
-You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $.",
-        "inLanguage" : "en",
-        "author" : "",
-        "creator" : "",
-        "publisher": "",
-        "accountablePerson" : "",
-        "copyrightHolder" : "",
-        "copyrightYear" : "2017",
-        "datePublished": "2017-05-28 19:23:00 &#43;0100 &#43;0100",
-        "dateModified" : "2017-05-28 19:23:00 &#43;0100 &#43;0100",
-        "url" : "https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/",
-        "wordCount" : "1407",
-        "keywords" : [ "Blog" ]
-    }
-    </script>
-        
-            
-                <title>Replacing Eval with Object.send and a self written Parser</title>
-            
-        
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
 
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="generator" content="Hugo 0.55.0-DEV" />
-        
-
-
-        
-            <meta name="author" content="hannibal">
-        
-        
-            
-                <meta name="description" content="Ramblings of a Cloud Engineer">
-            
-        
-
-        <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Replacing Eval with Object.send and a self written Parser"/>
-<meta name="twitter:description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
-You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $."/>
-<meta name="twitter:site" content="@Skarlso"/>
-
-        <meta property="og:title" content="Replacing Eval with Object.send and a self written Parser" />
-<meta property="og:description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
-You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/" />
-<meta property="article:published_time" content="2017-05-28T19:23:00&#43;01:00"/>
-<meta property="article:modified_time" content="2017-05-28T19:23:00&#43;01:00"/>
-
-        <meta property="og:image" content="https://skarlso.github.io//images/logo.png">
-        <meta property="og:image:type" content="image/png">
-        <meta property="og:image:width" content="512">
-        <meta property="og:image:height" content="512">
-        
 <meta itemprop="name" content="Replacing Eval with Object.send and a self written Parser">
 <meta itemprop="description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
 You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $.">
@@ -81,605 +20,88 @@ You could opt in using eval with a constructor parameter, but generally, it was 
 
 
 <meta itemprop="keywords" content="" />
+<meta property="og:title" content="Replacing Eval with Object.send and a self written Parser" />
+<meta property="og:description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
+You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/" />
+<meta property="article:published_time" content="2017-05-28T19:23:00&#43;01:00"/>
+<meta property="article:modified_time" content="2017-05-28T19:23:00&#43;01:00"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Replacing Eval with Object.send and a self written Parser"/>
+<meta name="twitter:description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
+You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $."/>
 
-        
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
 
-        
-            
-        
-
-        
-        
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
-            <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway:400,800,900|Source+Sans+Pro:400,700">
-            <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.1.25/jquery.fancybox.min.css">
-            <link rel="stylesheet" href="https://skarlso.github.io/css/main.css">
-            <link rel="stylesheet" href="https://skarlso.github.io/css/add-on.css">
-            <link rel="stylesheet" href="https://skarlso.github.io/css/academicons.min.css">
-        
-
-        
-
-
-  
-    
-    <link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/github.min.css' rel='stylesheet' type='text/css' />
-  
-
-
-      
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-	ga('create', 'UA-69463020-2', 'auto');
+	<title>Replacing Eval with Object.send and a self written Parser</title>
+	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
 	
-	ga('send', 'pageview');
-}
-</script>
-
-    </head>
-    <body>
-
-      
-      <div id="wrapper">
-
-    
-    
-<header id="header">
-    
-      <h1><a href="https://skarlso.github.io/">blog</a></h1>
-    
-
-    <nav class="links">
-        <ul>
-            
-                <li>
-                    <a href="https://skarlso.github.io/">
-                            <i class="fa fa-home">&nbsp;</i>Home
-                    </a>
-                </li>
-            
-                <li>
-                    <a href="https://skarlso.github.io/blog/">
-                            <i class="fa fa-newspaper-o">&nbsp;</i>Blog
-                    </a>
-                </li>
-            
-                <li>
-                    <a href="https://skarlso.github.io/categories/">
-                            <i class="fa fa-sitemap">&nbsp;</i>Categories
-                    </a>
-                </li>
-            
-        </ul>
-    </nav>
-    <nav class="main">
-        <ul>
-            
-            <li id="share-nav" class="share-menu" style="display:none;">
-                <a class="fa-share-alt" href="#share-menu">Share</a>
-            </li>
-            
-            <li class="search">
-                <a class="fa-search" href="#search">Search</a>
-                <form id="search" method="get" action="//google.com/search">
-                    <input type="text" name="q" placeholder="Search" />
-                    <input type="hidden" name="as_sitesearch" value="https://skarlso.github.io/">
-                </form>
-            </li>
-            <li class="menu">
-                <a class="fa-bars" href="#menu">Menu</a>
-            </li>
-        </ul>
-    </nav>
-</header>
-
-
-<section id="menu">
-
-    
-        <section>
-            <form class="search" method="get" action="//google.com/search">
-                <input type="text" name="q" placeholder="Search" />
-                <input type="hidden" name="as_sitesearch" value="https://skarlso.github.io/">
-            </form>
-        </section>
-
-    
-        <section>
-            <ul class="links">
-                
-                    <li>
-                        <a href="https://skarlso.github.io/">
-                            <h3>
-                                <i class="fa fa-home">&nbsp;</i>Home
-                            </h3>
-                        </a>
-                    </li>
-                
-                    <li>
-                        <a href="https://skarlso.github.io/blog/">
-                            <h3>
-                                <i class="fa fa-newspaper-o">&nbsp;</i>Blog
-                            </h3>
-                        </a>
-                    </li>
-                
-                    <li>
-                        <a href="https://skarlso.github.io/categories/">
-                            <h3>
-                                <i class="fa fa-sitemap">&nbsp;</i>Categories
-                            </h3>
-                        </a>
-                    </li>
-                
-            </ul>
-        </section>
-
-    
-        <section class="recent-posts">
-            <div class="mini-posts">
-                <header>
-                    <h3>Recent Posts</h3>
-                </header>
-                
-
-                
-                    
-                
-
-                
-                        <article class="mini-post">
-                            <header>
-                                <h3><a href="https://skarlso.github.io/2019/02/17/go-ssh-with-host-key-verification/">Go SSH with Host Key Verification</a></h3>
-                                
-                                <time class="published" datetime=
-                                    '2019-02-17'>
-                                    February 17, 2019</time>
-                            </header>
-                            
-    
-
-    
-        
-        
-
-
-
-
-
-
-
-  
-
-
-        
-        
-        
-
-        <a href="https://skarlso.github.io/2019/02/17/go-ssh-with-host-key-verification/" class="image featured">
-            <img src="https://skarlso.github.io/img/2019/02/ssh.png" alt="">
-        </a>
-    
-
-
-                        </article>
-                
-                        <article class="mini-post">
-                            <header>
-                                <h3><a href="https://skarlso.github.io/2018/10/29/go-plugin-tutorial/">Extensive tutorial on go-plugin.</a></h3>
-                                
-                                <time class="published" datetime=
-                                    '2018-10-29'>
-                                    October 29, 2018</time>
-                            </header>
-                            
-    
-
-    
-        
-        
-
-
-
-
-
-
-
-  
-
-
-        
-        
-        
-
-        <a href="https://skarlso.github.io/2018/10/29/go-plugin-tutorial/" class="image featured">
-            <img src="https://skarlso.github.io/img//go-plugin-tutorial.png" alt="">
-        </a>
-    
-
-
-                        </article>
-                
-                        <article class="mini-post">
-                            <header>
-                                <h3><a href="https://skarlso.github.io/2018/09/17/furnace-plugin-update/">Furnace with a new Plugin System</a></h3>
-                                
-                                <time class="published" datetime=
-                                    '2018-09-17'>
-                                    September 17, 2018</time>
-                            </header>
-                            
-    
-
-    
-        
-        
-
-
-
-
-
-
-
-  
-
-
-        
-        
-        
-
-        <a href="https://skarlso.github.io/2018/09/17/furnace-plugin-update/" class="image featured">
-            <img src="https://skarlso.github.io/img//furnace.png" alt="">
-        </a>
-    
-
-
-                        </article>
-                
-                        <article class="mini-post">
-                            <header>
-                                <h3><a href="https://skarlso.github.io/2018/09/13/gotp/">TOTP generator with account handling for multiple tokens</a></h3>
-                                
-                                <time class="published" datetime=
-                                    '2018-09-13'>
-                                    September 13, 2018</time>
-                            </header>
-                            
-    
-
-    
-        
-        
-
-
-
-
-
-
-
-  
-  
-    
-  
-
-
-        
-        
-        
-
-        <a href="https://skarlso.github.io/2018/09/13/gotp/" class="image featured">
-            <img src="https://skarlso.github.io/img/2018/092018/09/gotp.png" alt="">
-        </a>
-    
-
-
-                        </article>
-                
-                        <article class="mini-post">
-                            <header>
-                                <h3><a href="https://skarlso.github.io/2018/06/08/fork-updater/">Keep your git forks updated all the time</a></h3>
-                                
-                                <time class="published" datetime=
-                                    '2018-06-08'>
-                                    June 8, 2018</time>
-                            </header>
-                            
-    
-
-    
-        
-        
-
-
-
-
-
-
-
-  
-  
-    
-  
-
-
-        
-        
-        
-
-        <a href="https://skarlso.github.io/2018/06/08/fork-updater/" class="image featured">
-            <img src="https://skarlso.github.io/img/2018/062018/06/git_updater.png" alt="">
-        </a>
-    
-
-
-                        </article>
-                
-
-                
-                    <a href=
-                        
-                            /blog/
-                        
-                        class="button">View more posts</a>
-                
-            </div>
-        </section>
-
-    
-        
-</section>
-
-    <section id="share-menu">
-    <section id="social-share-nav">
-        <ul class="links">
-            <header>
-                <h3>Share this post <i class="fa fa-smile-o"></i></h3>
-            </header>
-            
-
-
-
-<li>
-  <a href="//twitter.com/share?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f&amp;text=Replacing%20Eval%20with%20Object.send%20and%20a%20self%20written%20Parser&amp;via=Skarlso" target="_blank" class="share-btn twitter">
-    <i class="fa fa-twitter"></i>
-    <p>Twitter</p>
-    </a>
-</li>
-
-
-
-
-<li>
-  <a href="//plus.google.com/share?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f" target="_blank" class="share-btn google-plus">
-    <i class="fa fa-google-plus"></i>
-    <p>Google+</p>
-  </a>
-</li>
-
-
-
-
-
-<li>
-  <a href="//www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f" target="_blank" class="share-btn facebook">
-    <i class="fa fa-facebook"></i>
-    <p>Facebook</p>
-    </a>
-</li>
-
-
-
-
-<li>
-  <a href="//reddit.com/submit?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f&amp;title=Replacing%20Eval%20with%20Object.send%20and%20a%20self%20written%20Parser" target="_blank" class="share-btn reddit">
-    <i class="fa fa-reddit-alien"></i>
-    <p>Reddit</p>
-  </a>
-</li>
-
-
-
-
-<li>
-  <a href="//www.linkedin.com/shareArticle?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f&amp;title=Replacing%20Eval%20with%20Object.send%20and%20a%20self%20written%20Parser" target="_blank" class="share-btn linkedin">
-      <i class="fa fa-linkedin"></i>
-      <p>LinkedIn</p>
-    </a>
-</li>
-
-
-
-
-<li>
-  <a href="//www.stumbleupon.com/submit?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f&amp;title=Replacing%20Eval%20with%20Object.send%20and%20a%20self%20written%20Parser" target="_blank" class="share-btn stumbleupon">
-    <i class="fa fa-stumbleupon"></i>
-    <p>StumbleUpon</p>
-  </a>
-</li>
-
-
-
-
-<li>
-  <a href="//www.pinterest.com/pin/create/button/?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f&amp;description=Replacing%20Eval%20with%20Object.send%20and%20a%20self%20written%20Parser" target="_blank" class="share-btn pinterest">
-    <i class="fa fa-pinterest-p"></i>
-    <p>Pinterest</p>
-  </a>
-</li>
-
-
-
-
-<li>
-  <a href="mailto:?subject=Check out this post by hannibal&amp;body=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f" target="_blank" class="share-btn email">
-    <i class="fa fa-envelope"></i>
-    <p>Email</p>
-  </a>
-</li>
-
-
-        </ul>
-    </section>
-</section>
-
-    
-    <div id="main">
-        
-        
-        <article class="post">
-  <header>
-    <div class="title">
-        
-            <h1><a href="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/">Replacing Eval with Object.send and a self written Parser</a></h1>
-            
-        
-        
-    </div>
-    <div class="meta">
-        
-
-        <time class="published"
-            datetime='2017-05-28'>
-            May 28, 2017</time>
-        <span class="author">hannibal</span>
-        
-        
-    </div>
-</header>
-
-
-  
-    <section id="social-share">
-      <ul class="icons">
-        
-
-
-
-<li>
-  <a href="//twitter.com/share?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f&amp;text=Replacing%20Eval%20with%20Object.send%20and%20a%20self%20written%20Parser&amp;via=Skarlso" target="_blank" class="share-btn twitter">
-    <i class="fa fa-twitter"></i>
-    <p>Twitter</p>
-    </a>
-</li>
-
-
-
-
-<li>
-  <a href="//plus.google.com/share?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f" target="_blank" class="share-btn google-plus">
-    <i class="fa fa-google-plus"></i>
-    <p>Google+</p>
-  </a>
-</li>
-
-
-
-
-
-<li>
-  <a href="//www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f" target="_blank" class="share-btn facebook">
-    <i class="fa fa-facebook"></i>
-    <p>Facebook</p>
-    </a>
-</li>
-
-
-
-
-<li>
-  <a href="//reddit.com/submit?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f&amp;title=Replacing%20Eval%20with%20Object.send%20and%20a%20self%20written%20Parser" target="_blank" class="share-btn reddit">
-    <i class="fa fa-reddit-alien"></i>
-    <p>Reddit</p>
-  </a>
-</li>
-
-
-
-
-<li>
-  <a href="//www.linkedin.com/shareArticle?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f&amp;title=Replacing%20Eval%20with%20Object.send%20and%20a%20self%20written%20Parser" target="_blank" class="share-btn linkedin">
-      <i class="fa fa-linkedin"></i>
-      <p>LinkedIn</p>
-    </a>
-</li>
-
-
-
-
-<li>
-  <a href="//www.stumbleupon.com/submit?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f&amp;title=Replacing%20Eval%20with%20Object.send%20and%20a%20self%20written%20Parser" target="_blank" class="share-btn stumbleupon">
-    <i class="fa fa-stumbleupon"></i>
-    <p>StumbleUpon</p>
-  </a>
-</li>
-
-
-
-
-<li>
-  <a href="//www.pinterest.com/pin/create/button/?url=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f&amp;description=Replacing%20Eval%20with%20Object.send%20and%20a%20self%20written%20Parser" target="_blank" class="share-btn pinterest">
-    <i class="fa fa-pinterest-p"></i>
-    <p>Pinterest</p>
-  </a>
-</li>
-
-
-
-
-<li>
-  <a href="mailto:?subject=Check out this post by hannibal&amp;body=https%3a%2f%2fskarlso.github.io%2f2017%2f05%2f28%2freplace-eval-with-object-send-and-a-parser%2f" target="_blank" class="share-btn email">
-    <i class="fa fa-envelope"></i>
-    <p>Email</p>
-  </a>
-</li>
-
-
-      </ul>
-    </section>
-  
-
-  
-
-  <div id="content">
-    
-
-<h1 id="intro">Intro</h1>
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://skarlso.github.io/blog/">blog</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<span class="hdr-social hide-in-mobile"><a href="https://twitter.com/skarlso" target="_blank" rel="noopener" title="Twitter"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a><a href="https://github.com/Skarlso" target="_blank" rel="noopener" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>May 28, 2017</span></div>
+				<h1>Replacing Eval with Object.send and a self written Parser</h1>
+			</header>
+			<div class="content">
+				
+
+<h1 id="intro">Intro<a href="#intro" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
 
 <p>A while ago, I was added as a curator for a Gem called <a href="https://github.com/joshbuddy/jsonpath">JsonPath</a>. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.</p>
 
 <p>You could opt in using <code>eval</code> with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like <a href="https://github.com/huginn/huginn">Huginn</a> they had to opt out by default, thus missing out on sweet parsing like this: <code>$..book[?(@['price'] &gt; 20)]</code>.</p>
 
-<h2 id="eval">Eval</h2>
+<h2 id="eval">Eval<a href="#eval" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
 
 <p>In order to remove eval, first I had to understand what it is actually doing. I had to take it apart.</p>
 
-<p><img src="https://skarlso.github.io/img/takeevalapart.jpg" alt="apart" /></p>
+<p><img src="/img/takeevalapart.jpg" alt="apart" /></p>
 
 <p>After much digging and understanding the code, I found, all it does is perform the given operations on the current node. And if the operation is true, it will select that node, otherwise, return false, and ignore that node.</p>
 
 <p>For example <code>$..book[?(@['price'] &gt; 20)]</code> could be translated to:</p>
-
-<pre><code class="language-ruby">return @_current_node['price'] &gt; 20
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">return</span> <span class="vi">@_current_node</span><span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> <span class="o">&gt;</span> <span class="mi">20</span></code></pre></div>
 <p>Checking first if <code>'price'</code> is even a key in <code>@_current_node</code>. Once I&rsquo;ve understood this part, I set on trying to fix eval.</p>
 
-<h3 id="safe-4">SAFE = 4</h3>
+<h3 id="safe-4">SAFE = 4<a href="#safe-4" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
 <p>In ruby, you could extract the part where you Eval and put it into its own proc and set <code>SAFE = 4</code> which will disable some things like system calls.</p>
-
-<pre><code class="language-ruby">proc do
-  SAFE = 4
-  eval(some_expression)
-end.call
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="nb">proc</span> <span class="k">do</span>
+  <span class="no">SAFE</span> <span class="o">=</span> <span class="mi">4</span>
+  <span class="nb">eval</span><span class="p">(</span><span class="n">some_expression</span><span class="p">)</span>
+<span class="k">end</span><span class="o">.</span><span class="n">call</span></code></pre></div>
 <p>SAFE levels:</p>
 
 <p>$SAFE   Description
@@ -691,195 +113,156 @@ end.call
 
 <p>This has the disadvantage that anything below 4 is just, meh. But nothing above 1 will actually work with JsonPath so&hellip; scratch that.</p>
 
-<h3 id="sandboxing">Sandboxing</h3>
+<h3 id="sandboxing">Sandboxing<a href="#sandboxing" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
 <p>We could technically try and sandbox eval into it&rsquo;s own process with a PID and whitelist methods which are allowed to be called.</p>
 
 <p>Not bad, and there are a few gems out there which are trying to do that like <a href="https://github.com/ukutaht/safe_ruby">SafeRuby</a>. But all of these project have been abandoned years ago for a good reason.</p>
 
-<h3 id="object-send">Object.send</h3>
+<h3 id="object-send">Object.send<a href="#object-send" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
-<p><img src="https://skarlso.github.io/img/nobodylikesyou.jpg" alt="nobodylikesyou" /></p>
+<p><img src="/img/nobodylikesyou.jpg" alt="nobodylikesyou" /></p>
 
 <p><code>Object.send</code> is the best way to get some flexibility while still being safe. You basically just call methods on objects by describing said method on an object and giving parameters to it, like:</p>
-
-<pre><code class="language-ruby">1.send(:+, 2) =&gt; 3
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="mi">1</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="ss">:+</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="mi">3</span></code></pre></div>
 <p>This is a very powerful tool in our toolbox which we will exploit immensely.</p>
 
 <p>So let&rsquo;s get to it.</p>
 
-<h1 id="writing-a-parser">Writing a parser</h1>
+<h1 id="writing-a-parser">Writing a parser<a href="#writing-a-parser" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
 
 <p>Writing a parser in Ruby is a very fluid experience. It has nice tools which support that, and the one I used is <code>StringScanner</code>. It has the ability to track where you are currently at in a string and move a pointer along with regex matches. In fact, JsonPath already employs this method when parsing a json expression. So reusing that logic was in fact&hellip; elementary.</p>
 
-<h2 id="the-expression">The expression</h2>
+<h2 id="the-expression">The expression<a href="#the-expression" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
 
 <p>How do we get from this:</p>
-
-<pre><code class="language-bash">$..book[?(@['price'] &lt; 20)]
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">$..book<span class="o">[</span>?<span class="o">(</span>@<span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> &lt; <span class="m">20</span><span class="o">)]</span></code></pre></div>
 <p>To this:</p>
-
-<pre><code class="language-ruby">@_current_node['price'] &lt; 20
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="vi">@_current_node</span><span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> <span class="o">&lt;</span> <span class="mi">20</span></code></pre></div>
 <p>Well. By simple elimination. There are a couple of problems along the way of course. Because this wouldn&rsquo;t be a parser if it couldn&rsquo;t handle ALL the other cases&hellip;</p>
 
-<h3 id="removing-clutter">Removing Clutter</h3>
+<h3 id="removing-clutter">Removing Clutter<a href="#removing-clutter" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
 <p>Some of this we don&rsquo;t need. Like, <code>$..book</code> part.</p>
 
-<p><img src="https://skarlso.github.io/img/dontneed1.jpg" alt="dontneed1" /></p>
+<p><img src="/img/dontneed1.jpg" alt="dontneed1" /></p>
 
 <p>The other things we don&rsquo;t need are all the <code>'[]?()</code></p>
 
-<p><img src="https://skarlso.github.io/img/dontneed2.jpg" alt="dontneed2" /></p>
+<p><img src="/img/dontneed2.jpg" alt="dontneed2" /></p>
 
 <p>Once this is done, we can move to isolating the important bits.</p>
 
-<p><img src="https://skarlso.github.io/img/takingaim.jpg" alt="takingaim" /></p>
+<p><img src="/img/takingaim.jpg" alt="takingaim" /></p>
 
-<h3 id="breakdown">BreakDown</h3>
+<h3 id="breakdown">BreakDown<a href="#breakdown" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
-<h4 id="elements">Elements</h4>
+<h4 id="elements">Elements<a href="#elements" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
 <p>How does an expression actually look like?</p>
 
 <p>Let&rsquo;s break it down.</p>
 
-<p><img src="https://skarlso.github.io/img/confused.jpg" alt="confused" /></p>
+<p><img src="/img/confused.jpg" alt="confused" /></p>
 
 <p>So, this is a handful. Operations can be <code>&lt;=,&gt;=,&lt;,&gt;,==,!=</code> and operands can be either numbers, or words, and element accessor can be nested since something like this is perfectly valid: <code>$..book[?(@.written.year == 1997)]</code>.</p>
 
-<p><img src="https://skarlso.github.io/img/feedline.jpg" alt="feedline" /></p>
+<p><img src="/img/feedline.jpg" alt="feedline" /></p>
 
 <p>To avoid being overwhelmed, ruby has our back with a method called <code>dig</code>.</p>
 
-<p><img src="https://skarlso.github.io/img/dig.jpg" alt="dig" /></p>
+<p><img src="/img/dig.jpg" alt="dig" /></p>
 
 <p>This, basically lets us pass in some parameters into a dig function on a hash or an array with variadic parameters, which will go on and access those elements in order how they were supplied. Until it either returns a <code>nil</code> or an end result.</p>
 
 <p>For example:</p>
-
-<pre><code class="language-ruby">2.3.1 :001 &gt; a = {a: {b: 'c'}}
- =&gt; {:a=&gt;{:b=&gt;&quot;c&quot;}}
-2.3.1 :002 &gt; a.dig(:a, :b)
- =&gt; &quot;c&quot;
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="mi">2</span><span class="o">.</span><span class="mi">3</span><span class="o">.</span><span class="mi">1</span> <span class="p">:</span><span class="mo">001</span> <span class="o">&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="p">{</span><span class="ss">a</span><span class="p">:</span> <span class="p">{</span><span class="ss">b</span><span class="p">:</span> <span class="s1">&#39;c&#39;</span><span class="p">}}</span>
+ <span class="o">=&gt;</span> <span class="p">{</span><span class="ss">:a</span><span class="o">=&gt;</span><span class="p">{</span><span class="ss">:b</span><span class="o">=&gt;</span><span class="s2">&#34;c&#34;</span><span class="p">}}</span>
+<span class="mi">2</span><span class="o">.</span><span class="mi">3</span><span class="o">.</span><span class="mi">1</span> <span class="p">:</span><span class="mo">002</span> <span class="o">&gt;</span> <span class="n">a</span><span class="o">.</span><span class="n">dig</span><span class="p">(</span><span class="ss">:a</span><span class="p">,</span> <span class="ss">:b</span><span class="p">)</span>
+ <span class="o">=&gt;</span> <span class="s2">&#34;c&#34;</span></code></pre></div>
 <p>Easy. However&hellip; Dig was only added after ruby 2.3 thus, I had to write my own dig for now, until I stop supporting anything below 2.3.</p>
 
 <p>At first, I wanted to add it to the hash class, but it proved to be a futile attempt if I wanted to do it nicely, thus the parser got it as a private method.</p>
-
-<pre><code class="language-ruby">    def dig(keys, hash)
-      return hash unless hash.is_a? Hash
-      return nil unless hash.key?(keys.first)
-      return hash.fetch(keys.first) if keys.size == 1
-      prev = keys.shift
-      dig(keys, hash.fetch(prev))
-    end
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby">    <span class="k">def</span> <span class="nf">dig</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="nb">hash</span><span class="p">)</span>
+      <span class="k">return</span> <span class="nb">hash</span> <span class="k">unless</span> <span class="nb">hash</span><span class="o">.</span><span class="n">is_a?</span> <span class="no">Hash</span>
+      <span class="k">return</span> <span class="kp">nil</span> <span class="k">unless</span> <span class="nb">hash</span><span class="o">.</span><span class="n">key?</span><span class="p">(</span><span class="n">keys</span><span class="o">.</span><span class="n">first</span><span class="p">)</span>
+      <span class="k">return</span> <span class="nb">hash</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">keys</span><span class="o">.</span><span class="n">first</span><span class="p">)</span> <span class="k">if</span> <span class="n">keys</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span>
+      <span class="n">prev</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="n">shift</span>
+      <span class="n">dig</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="nb">hash</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">prev</span><span class="p">))</span>
+    <span class="k">end</span></code></pre></div>
 <p>And the corresponding regex behind getting a multitude of elements is as follows:</p>
-
-<pre><code class="language-ruby">...
-if t = scanner.scan(/\['\w+'\]+/)
-...
-</code></pre>
-
-<h4 id="operator">Operator</h4>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="o">...</span>
+<span class="k">if</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\[&#39;\w+&#39;\]+/</span><span class="p">)</span>
+<span class="o">...</span></code></pre></div>
+<h4 id="operator">Operator<a href="#operator" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
 <p>Selecting the operator is another interesting part as it can be a single one or multiple and all sorts. Until I realized that no&hellip; it can actually be only a couple.</p>
 
-<p><img src="https://skarlso.github.io/img/whatone.jpg" alt="whatone" /></p>
+<p><img src="/img/whatone.jpg" alt="whatone" /></p>
 
-<p><img src="https://skarlso.github.io/img/whattwo.jpg" alt="whattwo" /></p>
+<p><img src="/img/whattwo.jpg" alt="whattwo" /></p>
 
 <p>Also, after a bit of fiddling and doing and doing a silly case statement first:</p>
-
-<pre><code class="language-ruby">case op
-when '&gt;'
-  dig(@_current_node, *elements) &gt; operand
-when '&lt;'
-  dig(@_current_node, *elements) &gt; operand
-...
-end
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">case</span> <span class="n">op</span>
+<span class="k">when</span> <span class="s1">&#39;&gt;&#39;</span>
+  <span class="n">dig</span><span class="p">(</span><span class="vi">@_current_node</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">operand</span>
+<span class="k">when</span> <span class="s1">&#39;&lt;&#39;</span>
+  <span class="n">dig</span><span class="p">(</span><span class="vi">@_current_node</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">operand</span>
+<span class="o">...</span>
+<span class="k">end</span></code></pre></div>
 <p>&hellip;I promptly saw that this is not how it should be done.</p>
 
 <p>And here comes Object.send.</p>
 
-<p><img src="https://skarlso.github.io/img/send.jpg" alt="send" /></p>
+<p><img src="/img/send.jpg" alt="send" /></p>
 
 <p>This gave me the opportunity to write this:</p>
-
-<pre><code class="language-ruby">dig(elements, @_current_node).send(operator, operand)
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">dig</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="vi">@_current_node</span><span class="p">)</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">operator</span><span class="p">,</span> <span class="n">operand</span><span class="p">)</span></code></pre></div>
 <p>Much better. Now I could send all the things in the way of a node.</p>
 
-<p><img src="https://skarlso.github.io/img/sendtwo.jpg" alt="send" /></p>
+<p><img src="/img/sendtwo.jpg" alt="send" /></p>
 
 <p>Parsing an op be like:</p>
-
-<pre><code class="language-ruby">elsif t = scanner.scan(/\s+[&lt;&gt;=][&lt;&gt;=]?\s+?/)
-</code></pre>
-
-<h4 id="operand">Operand</h4>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\s+[&lt;&gt;=][&lt;&gt;=]?\s+?/</span><span class="p">)</span></code></pre></div>
+<h4 id="operand">Operand<a href="#operand" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
 <p>Now comes the final piece. The value which we are comparing. This could either be a simple integer, a floating number, or a word. Hah. So coming up with a regex which fits this tightly took a little fiddling, but eventually I ended up with this:</p>
-
-<pre><code class="language-ruby">elsif t = scanner.scan(/(\s+)?'?(\w+)?[.,]?(\w+)?'?(\s+)?/)
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?&#39;?(\w+)?[.,]?(\w+)?&#39;?(\s+)?/</span><span class="p">)</span></code></pre></div>
 <p>Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because an this expression <code>$..book[?(@.price)]</code> is valid. Which is basically just asserting if a given node has a price element.</p>
 
-<h4 id="logical-operators">Logical Operators</h4>
+<h4 id="logical-operators">Logical Operators<a href="#logical-operators" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
 <p>The last thing that remains is logical operators, which if you are using eval, is pretty straight forward. It takes care of anything that you might add in like <code>&amp;&amp;, ||, |, &amp;, ^</code> etc etc.</p>
 
 <p>Now, that&rsquo;s something I did with a case though. Until I find a nicer solution. Since we can already parse a single expression it&rsquo;s just a question of breaking down a multi structure expression as the following one: <code>$..book[?(@['price'] &gt; 20 &amp;&amp; @.written.year == 1998)]</code>.</p>
-
-<pre><code class="language-ruby">exps = exp.split(/(&amp;&amp;)|(\|\|)/)
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">exps</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sr">/(&amp;&amp;)|(\|\|)/</span><span class="p">)</span></code></pre></div>
 <p>This splits up the string by either <code>&amp;&amp;</code> or <code>||</code> and the usage of groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like <code>[true, '&amp;&amp;', false]</code>. You know what could immediately resolve this? Yep&hellip;</p>
 
-<p><img src="https://skarlso.github.io/img/saynotoeval.jpg" alt="saynotoeval" />.</p>
+<p><img src="/img/saynotoeval.jpg" alt="saynotoeval" />.</p>
 
 <p>I&rsquo;d rather just parse it although technically an eval at this stage wouldn&rsquo;t be that big of a problem&hellip;</p>
-
-<pre><code class="language-ruby">def parse(exp)
-  exps = exp.split(/(&amp;&amp;)|(\|\|)/)
-  ret = parse_exp(exps.shift)
-  exps.each_with_index do |item, index|
-    case item
-    when '&amp;&amp;'
-      ret &amp;&amp;= parse_exp(exps[index + 1])
-    when '||'
-      ret ||= parse_exp(exps[index + 1])
-    end
-  end
-  ret
-end
-</code></pre>
-
-<h1 id="closing-words">Closing words</h1>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+  <span class="n">exps</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sr">/(&amp;&amp;)|(\|\|)/</span><span class="p">)</span>
+  <span class="n">ret</span> <span class="o">=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">.</span><span class="n">shift</span><span class="p">)</span>
+  <span class="n">exps</span><span class="o">.</span><span class="n">each_with_index</span> <span class="k">do</span> <span class="o">|</span><span class="n">item</span><span class="p">,</span> <span class="n">index</span><span class="o">|</span>
+    <span class="k">case</span> <span class="n">item</span>
+    <span class="k">when</span> <span class="s1">&#39;&amp;&amp;&#39;</span>
+      <span class="n">ret</span> <span class="o">&amp;&amp;=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="o">]</span><span class="p">)</span>
+    <span class="k">when</span> <span class="s1">&#39;||&#39;</span>
+      <span class="n">ret</span> <span class="o">||=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="o">]</span><span class="p">)</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+  <span class="n">ret</span>
+<span class="k">end</span></code></pre></div>
+<h1 id="closing-words">Closing words<a href="#closing-words" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
 
 <p>That&rsquo;s it folks. The parser is done. And there is no eval being used. There are some more things here that are interesting. Like, array indexing is allowed in jsonpath which is solved by sending <code>.length</code> to a current node. For example:</p>
-
-<pre><code class="language-ruby">if scanner.scan(/\./)
-  sym = scanner.scan(/\w+/)
-  op = scanner.scan(/./)
-  num = scanner.scan(/\d+/)
-  return @_current_node.send(sym.to_sym).send(op.to_sym, num.to_i)
-end
-</code></pre>
-
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">if</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\./</span><span class="p">)</span>
+  <span class="n">sym</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\w+/</span><span class="p">)</span>
+  <span class="n">op</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/./</span><span class="p">)</span>
+  <span class="n">num</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\d+/</span><span class="p">)</span>
+  <span class="k">return</span> <span class="vi">@_current_node</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sym</span><span class="o">.</span><span class="n">to_sym</span><span class="p">)</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">to_sym</span><span class="p">,</span> <span class="n">num</span><span class="o">.</span><span class="n">to_i</span><span class="p">)</span>
+<span class="k">end</span></code></pre></div>
 <p>If an expression begins with a <code>.</code>. So you see that using <code>send</code> will help a lot, and understanding what eval is trying to evaluate and rather writing your own parser, isn&rsquo;t that hard at all using ruby.</p>
 
 <p>I hope you enjoyed reading this little tid-bit as much as I enjoyed writing and drawing it. Leave a comment if your liked the drawings or if you did not and I should never do them again (( I don&rsquo;t really care, this is my blog haha. )). Note to self: I shouldn&rsquo;t draw on the other side of the drawing because of bleed-through.</p>
@@ -887,468 +270,22 @@ end
 <p>Thank you!
 Gergely.</p>
 
-  </div>
-
-  <footer>
-    <ul class="stats">
-  <li class="categories">
-    <ul>
-        
-            
-            
-                <i class="fa fa-folder"></i>
-                
-                
-                <li><a class="article-category-link" href="https://skarlso.github.io/categories/ruby">Ruby</a></li>
-                
-            
-        
-    </ul>
-  </li>
-  <li class="tags">
-    <ul>
-        
-    </ul>
-  </li>
-</ul>
-
-  </footer>
-
-  <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-  <ul class="actions pagination">
-    
-        <li><a href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/"
-                class="button big previous">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 4</a></li>
-    
-
-    
-        <li><a href="https://skarlso.github.io/2017/05/31/notetaking/"
-                class="button big next">Notetaking</a></li>
-    
-</ul>
-
-
-</article>
-
-    </div>
-    
-<section id="sidebar">
-
-  
-  <section id="intro">
-    
-    
-    
-    
-  </section>
-
-  
-  <section class="recent-posts">
-    <div class="mini-posts">
-      <header>
-        <h3>Recent Posts</h3>
-      </header>
-      <div class="posts-container">
-        
-
-        
-          
-        
-
-        
-          <article class="mini-post">
-            <header>
-              <h3>
-                <a href="https://skarlso.github.io/2019/02/17/go-ssh-with-host-key-verification/">Go SSH with Host Key Verification</a>
-              </h3>
-              
-              <time class="published" datetime='2019-02-17'>
-                February 17, 2019
-              </time>
-            </header>
-            
-    
-
-    
-        
-        
-
-
-
-
-
-
-
-  
-  
-    
-  
-
-
-        
-        
-        
-
-        <a href="https://skarlso.github.io/2019/02/17/go-ssh-with-host-key-verification/" class="image featured">
-            <img src="https://skarlso.github.io/img/2019/02/ssh.png" alt="">
-        </a>
-    
-
-
-          </article>
-        
-          <article class="mini-post">
-            <header>
-              <h3>
-                <a href="https://skarlso.github.io/2018/10/29/go-plugin-tutorial/">Extensive tutorial on go-plugin.</a>
-              </h3>
-              
-              <time class="published" datetime='2018-10-29'>
-                October 29, 2018
-              </time>
-            </header>
-            
-    
-
-    
-        
-        
-
-
-
-
-
-
-
-  
-  
-    
-  
-
-
-        
-        
-        
-
-        <a href="https://skarlso.github.io/2018/10/29/go-plugin-tutorial/" class="image featured">
-            <img src="https://skarlso.github.io/img/2018/10/go-plugin-tutorial.png" alt="">
-        </a>
-    
-
-
-          </article>
-        
-          <article class="mini-post">
-            <header>
-              <h3>
-                <a href="https://skarlso.github.io/2018/09/17/furnace-plugin-update/">Furnace with a new Plugin System</a>
-              </h3>
-              
-              <time class="published" datetime='2018-09-17'>
-                September 17, 2018
-              </time>
-            </header>
-            
-    
-
-    
-        
-        
-
-
-
-
-
-
-
-  
-  
-    
-  
-
-
-        
-        
-        
-
-        <a href="https://skarlso.github.io/2018/09/17/furnace-plugin-update/" class="image featured">
-            <img src="https://skarlso.github.io/img/2018/09/furnace.png" alt="">
-        </a>
-    
-
-
-          </article>
-        
-          <article class="mini-post">
-            <header>
-              <h3>
-                <a href="https://skarlso.github.io/2018/09/13/gotp/">TOTP generator with account handling for multiple tokens</a>
-              </h3>
-              
-              <time class="published" datetime='2018-09-13'>
-                September 13, 2018
-              </time>
-            </header>
-            
-    
-
-    
-        
-        
-
-
-
-
-
-
-
-  
-  
-    
-  
-
-
-        
-        
-        
-
-        <a href="https://skarlso.github.io/2018/09/13/gotp/" class="image featured">
-            <img src="https://skarlso.github.io/img/2018/09/gotp.png" alt="">
-        </a>
-    
-
-
-          </article>
-        
-          <article class="mini-post">
-            <header>
-              <h3>
-                <a href="https://skarlso.github.io/2018/06/08/fork-updater/">Keep your git forks updated all the time</a>
-              </h3>
-              
-              <time class="published" datetime='2018-06-08'>
-                June 8, 2018
-              </time>
-            </header>
-            
-    
-
-    
-        
-        
-
-
-
-
-
-
-
-  
-  
-    
-  
-
-
-        
-        
-        
-
-        <a href="https://skarlso.github.io/2018/06/08/fork-updater/" class="image featured">
-            <img src="https://skarlso.github.io/img/2018/06/git_updater.png" alt="">
-        </a>
-    
-
-
-          </article>
-        
-      </div>
-
-      
-        <a href=
-          
-            /blog/
-          
-        class="button">View more posts</a>
-      
-    </div>
-  </section>
-
-  
-  
-  
-
-  
-  
-
-  
-  <section id="footer">
-    
-      <ul class="icons">
-        
-        
-  <li><a href="//github.com/Skarlso" target="_blank" title="GitHub" class="fa fa-github"></a></li>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  <li><a href="//linkedin.com/in/brautigamgergely" target="_blank" title="LinkedIn" class="fa fa-linkedin"></a></li>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  <li><a href="//twitter.com/Skarlso" target="_blank" title="Twitter" class="fa fa-twitter"></a></li>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      </ul>
-    
-    <p class="copyright">
-      
-        &copy; 2019
-        
-          Ramblings of a cloud engineer
-        
-      .
-      Powered by <a href="//gohugo.io" target="_blank">Hugo</a>
-    </p>
-  </section>
-</section>
-
-    </div>
-    <a id="back-to-top" href="#" class="fa fa-arrow-up fa-border fa-2x"></a>
-    
-
-    
-      
-    
-
-    
-      
-      
-      
-        <script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
-        
-        
-        
-        <script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/json.min.js"></script>
-        <script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
-        <script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/css.min.js"></script>
-        <script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/go.min.js"></script>
-        <script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/bash.min.js"></script>
-        <script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
-      
-    
-    
-    
-      <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/skel/3.0.1/skel.min.js"></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.1.25/jquery.fancybox.min.js"></script>
-      <script src="https://skarlso.github.io/js/util.js"></script>
-      <script src="https://skarlso.github.io/js/main.js"></script>
-      <script src="https://skarlso.github.io/js/backToTop.js"></script>
-    
-
-    
-
-    
-    <script>hljs.initHighlightingOnLoad();</script>
-      <script src="//yihui.name/js/math-code.js"></script>
-<script async
-src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML">
-</script>
-
-
-  </body>
-</html>
-
+			</div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>1407 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2017-05-28 18:23 &#43;0000</p>
+			</footer>
+		</article>
+		<div class="post-nav thin">
+			<a class="next-post" href="https://skarlso.github.io/2017/05/31/notetaking/">
+				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>Notetaking</span>
+			</a>
+			<a class="prev-post" href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 4</span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
 <div id="disqus_thread"></div>
 <script type="application/javascript">
     var disqus_config = function () {
@@ -1369,3 +306,30 @@ src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML">
 </script>
 <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 <a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2019 <a href="https://skarlso.github.io/">Gergely Brautigam</a> &#183; <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://skarlso.github.io/js/main.min.8f39f24808e9d0a9b02da58c2d2838da859dc0b7bdfadbdb1883aae8b6adacfe.js" integrity="sha256-jznySAjp0KmwLaWMLSg42oWdwLe9+tvbGIOq6LatrP4="></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-69463020-2', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>
