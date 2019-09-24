@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+<meta itemprop="name" content="Using a Kubernetes based Cluster for Various Services with auto HTTPS">
+<meta itemprop="description" content="Intro Hi folks.
+Today, I would like to show you how my infrastructure is deployed and managed. Spoiler alert, I&rsquo;m using Kubernetes to do that.
+I know&hellip; What a twist!
+Let&rsquo;s get to it.
+What What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:
+ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs  Fork Updater IDLE RPG online checker  My WebSite (gergelybrautigam.">
+
+
+<meta itemprop="datePublished" content="2019-09-16T21:01:00&#43;01:00" />
+<meta itemprop="dateModified" content="2019-09-16T21:01:00&#43;01:00" />
+<meta itemprop="wordCount" content="3567">
+
+
+
+<meta itemprop="keywords" content="" />
+<meta property="og:title" content="Using a Kubernetes based Cluster for Various Services with auto HTTPS" />
+<meta property="og:description" content="Intro Hi folks.
+Today, I would like to show you how my infrastructure is deployed and managed. Spoiler alert, I&rsquo;m using Kubernetes to do that.
+I know&hellip; What a twist!
+Let&rsquo;s get to it.
+What What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:
+ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs  Fork Updater IDLE RPG online checker  My WebSite (gergelybrautigam." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://skarlso.github.io/2019/09/16/kubernetes-cluster/" />
+<meta property="article:published_time" content="2019-09-16T21:01:00&#43;01:00"/>
+<meta property="article:modified_time" content="2019-09-16T21:01:00&#43;01:00"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Using a Kubernetes based Cluster for Various Services with auto HTTPS"/>
+<meta name="twitter:description" content="Intro Hi folks.
+Today, I would like to show you how my infrastructure is deployed and managed. Spoiler alert, I&rsquo;m using Kubernetes to do that.
+I know&hellip; What a twist!
+Let&rsquo;s get to it.
+What What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:
+ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs  Fork Updater IDLE RPG online checker  My WebSite (gergelybrautigam."/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>Using a Kubernetes based Cluster for Various Services with auto HTTPS</title>
+	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://skarlso.github.io/blog/">blog</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<span class="hdr-social hide-in-mobile"><a href="https://twitter.com/skarlso" target="_blank" rel="noopener" title="Twitter"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a><a href="https://github.com/Skarlso" target="_blank" rel="noopener" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner thin animated fadeIn faster">
+		<h1>Using a Kubernetes based Cluster for Various Services with auto HTTPS</h1>
+		<div class="content">
+			
+
+<h1 id="intro">Intro<a href="#intro" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>Hi folks.</p>
+
+<p>Today, I would like to show you how my infrastructure is deployed and managed. Spoiler alert, I&rsquo;m using Kubernetes to do that.</p>
+
+<p>I know&hellip; What a twist!</p>
+
+<p>Let&rsquo;s get to it.</p>
+
+<h1 id="what">What<a href="#what" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p><img src="/img/hosting/kube-architecture.png" alt="kube-architecture" /></p>
+
+<p>What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:</p>
+
+<ul>
+<li>Athens Go Proxy</li>
+<li>Gitea</li>
+<li>The Lounge (IRC bouncer)</li>
+<li>Two CronJobs
+
+<ul>
+<li>Fork Updater</li>
+<li>IDLE RPG online checker</li>
+</ul></li>
+<li>My WebSite (gergelybrautigam.com)</li>
+<li>Monitoring</li>
+</ul>
+
+<p>And it&rsquo;s really simple to add more.</p>
+
+<h1 id="where">Where<a href="#where" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>My cluster is deployed at DigitalOcean using two droplets each 1vCPU and 2GB RAM.</p>
+
+<p><img src="/img/hosting/kube-on-digitalocean.png" alt="kube-on-digitalocean" /></p>
+
+<h1 id="what-not">What Not<a href="#what-not" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>This isn&rsquo;t going to be a production grade cluster. What I don&rsquo;t include in here:</p>
+
+<h2 id="rbac-for-various-services-and-users">RBAC for various services and users<a href="#rbac-for-various-services-and-users" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Since I&rsquo;m the only user of my cluster I didn&rsquo;t create any kind of access limits / users or such. You are free to create them though. The only role based auth that&rsquo;s going on is for Prometheus.</p>
+
+<p>I&rsquo;m not using any third party things which require access to the API.</p>
+
+<h2 id="resource-limitation">Resource limitation<a href="#resource-limitation" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>I&rsquo;m the sole user of my things. I&rsquo;m not really scaling my gitea up or down based on usage and as such, I did not define things like:</p>
+
+<ul>
+<li>Resource limits</li>
+<li>Nodes with certain capabilities</li>
+<li>Affinities and Taints &ndash; which means, everything can run anywhere</li>
+</ul>
+
+<h1 id="how">How<a href="#how" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>Okay, with that out of the way, let&rsquo;s get into the hows of things&hellip;</p>
+
+<h1 id="beginning">Beginning<a href="#beginning" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>The most important thing that you need to do in order to use Kubernetes is Containerizing all the things.</p>
+
+<p><img src="/img/containers.png" alt="containers" /></p>
+
+<p>Since Kubernetes is a container orchestration tool, without containers it&rsquo;s pretty useless.</p>
+
+<p>As a driver, I&rsquo;m going to use Docker. Kubernetes can use anything that&rsquo;s OCI compatible, which means if you would like to use runc as a container engine, you can do that. I&rsquo;d like to keep my sanity though.</p>
+
+<h2 id="example">Example<a href="#example" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p><img src="/img/fork-updater.png" alt="fork-updater" /></p>
+
+<p>To show you what I mean&hellip; I have a cronjob which is running every month. It gathers all my forks on github and updates them with the latest from their parents. This a small ruby script located here: <a href="https://gist.github.com/Skarlso/fd5bd5971a78a5fa9760b31683de690e">Fork Updater</a>. How do we run this? It requires two things. First, a token. We pass that currently as an environment property. It could be in a file in a vault or a secret mounted in as a file it doesn&rsquo;t matter. Currently, it&rsquo;s an environment property. The second thing is more subtle.</p>
+
+<p>I&rsquo;m pushing the changes back into my remote forks. I&rsquo;m doing this via SSH. So, we need a key in there too. How we&rsquo;ll get that in there, I&rsquo;ll talk about later when we are talking about how to set this cron job up. For now though, the container needs to look for a key in a specific location because we don&rsquo;t want to over-mount <code>/root/.ssh/</code> and we also don&rsquo;t want to use an initContainer to copy over an SSH key (because it&rsquo;s mounted in as a symlink (but that&rsquo;s a different issue all together)). Also, we certianly do NOT want to have a key in the container.</p>
+
+<p>To achieve this, we simply set up a <code>config</code> file for SSH like this one:</p>
+
+<pre><code>Host github.com
+    IdentityFile /etc/secret/id_rsa
+</code></pre>
+
+<p><code>/etc/secret</code> will be the destination of the ssh key we create.</p>
+
+<p>And we also need to have a known_hosts file, otherwise git clone will complain. We also bake this into the container. Why? Why not generate that on the fly? Because I want it to fail in case there is something wrong or there is a MIMA going on etc.</p>
+
+<p>All this translated into a Dockerfile looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="c"># We are using alpine for a minimalistic image</span><span class="err">
+</span><span class="err"></span><span class="k">FROM</span><span class="s"> alpine:latest</span><span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apk --no-cache add ca-certificates<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apk update<span class="err">
+</span><span class="err"></span><span class="c"># Openssh is needed for the SSH command</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apk --no-cache add ruby vim curl git build-base ruby-dev openssh openssh-client<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="c"># Setup dependencies for the fork ruby file</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> gem install octokit logger multi_json json --no-ri --no-rdoc<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> mkdir /data<span class="err">
+</span><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /data</span><span class="err">
+</span><span class="err"></span><span class="c"># Setup some data about the committer</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> git config --global user.name <span class="s2">&#34;Fork Updater&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> git config --global user.email <span class="s2">&#34;email@email.com&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> mkdir -p /root/.ssh<span class="err">
+</span><span class="err"></span><span class="c"># Get the host config for github.com</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> ssh-keyscan github.com &gt;&gt; /root/.ssh/known_hosts<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="c"># Setup the SSH config</span><span class="err">
+</span><span class="err"></span>COPY ./config /root/.ssh<span class="err">
+</span><span class="err"></span>COPY ./fork_updater.rb .<span class="err">
+</span><span class="err"></span><span class="k">CMD</span><span class="s"> [&#34;ruby&#34;, &#34;/data/fork_updater.rb&#34;]</span></code></pre></div>
+<p>That&rsquo;s it. Now our updater is containerized and ready to be deployed as a cronjob on a kube cluster. Oh, and we also need to create the SSH key like this:</p>
+
+<pre><code>kubectl create secret generic ssh-key-secret --from-file=ssh-privatekey=/path/to/.ssh/id_rsa
+</code></pre>
+
+<h1 id="before-we-begin">Before we Begin<a href="#before-we-begin" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>There are two things we will need though to set up for our cluster before we even begin adding the first service. And that&rsquo;s an ingress with a load-balancer and cert-manager.</p>
+
+<h1 id="cert-manager">Cert-Manager<a href="#cert-manager" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>Now, you have the option of installing cert-manager via helm, or via the provided kube config yaml file. I <strong>STRONGLY</strong> recommend using the config yaml file because the upgrading process with helm is a hell of a lot dirtier / failure prone than simply applying a new yaml file with a different version in it.</p>
+
+<p>Either way, to install cert-manager follow this simple guide: <a href="https://docs.cert-manager.io/en/latest/getting-started/install/kubernetes.html#installing-with-regular-manifests">Cert-manager Install Manual</a>.</p>
+
+<h1 id="ingress">Ingress<a href="#ingress" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>An Ingress is a must. This is the component which manages external access to the services which we will define. Like a proxy before your http server. This component will handle the hostname based routing between our services.</p>
+
+<p>I&rsquo;m using nginx ingress, although there are a couple of implementations out there.</p>
+
+<p>To install nginx ingress, follow their guide here: <a href="https://kubernetes.github.io/ingress-nginx/deploy/">Installing Nginx-Ingress</a>.</p>
+
+<h1 id="from-easy-to-complicated">From Easy to Complicated<a href="#from-easy-to-complicated" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>Alright. Now that we have the prereqs out of the way, let&rsquo;s get our hands dirty. I&rsquo;ll start with the easiest of them all, my web site, and then will progress towards the more complicated ones, like Gitea and Athens, which require a lot more fiddling and have more moving parts.</p>
+
+<h2 id="my-website">My Website<a href="#my-website" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>The site, located here: <a href="gergelybrautigam.com">Gergely&rsquo;s Domain</a>; is a really simple, static, <a href="https://gohugo.io">Hugo</a> based website. It contains nothing fancy, no real Javascript magic, has a simple list of things I&rsquo;ve done and who I am.</p>
+
+<p>It&rsquo;s powered / served by an nginx instance running on port 9090 define by a very simple Dockerfile:</p>
+<div class="highlight"><pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="k">FROM</span><span class="s"> golang:latest as builder</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apt-get update <span class="o">&amp;&amp;</span> apt install -y git make vim hugo<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> mkdir -p /opt/website<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> git clone https://github.com/Skarlso/gergelybrautigam /opt/website<span class="err">
+</span><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /opt/website</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> make<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">FROM</span><span class="s"> nginx:latest</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> mkdir -p /var/www/html/gergelybrautigam<span class="err">
+</span><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /var/www/html/gergelybrautigam</span><span class="err">
+</span><span class="err"></span>COPY --from<span class="o">=</span>builder /opt/website/public .<span class="err">
+</span><span class="err"></span>COPY 01_gergelybrautigam /etc/nginx/sites-available/<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> mkdir -p /etc/nginx/sites-enabled/<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> ln -s /etc/nginx/sites-available/01_gergelybrautigam /etc/nginx/sites-enabled/01_gergelybrautigam</code></pre></div>
+<p>Easy as goblin pie. Nginx has a command set like this <code>CMD [&quot;nginx&quot;, &quot;-g&quot;, &quot;daemon off;&quot;]</code> and exposes port 80.</p>
+
+<h3 id="the-deployment">The deployment<a href="#the-deployment" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>In order to deploy this in the cluster, I created a deployment as follows:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>apps/v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Deployment<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>gb-deployment<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>gergely-brautigam<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>gergelybrautigam<span class="w">
+</span><span class="w">  </span>annotations<span class="p">:</span><span class="w">
+</span><span class="w">      </span>prometheus.io/scrape<span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
+</span><span class="w">      </span>prometheus.io/port<span class="p">:</span><span class="w">   </span><span class="s1">&#39;9090&#39;</span><span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>replicas<span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">      </span>app<span class="p">:</span><span class="w"> </span>gergelybrautigam<span class="w">
+</span><span class="w">  </span>template<span class="p">:</span><span class="w">
+</span><span class="w">    </span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">      </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">        </span>app<span class="p">:</span><span class="w"> </span>gergelybrautigam<span class="w">
+</span><span class="w">      </span>annotations<span class="p">:</span><span class="w">
+</span><span class="w">          </span>prometheus.io/scrape<span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
+</span><span class="w">          </span>prometheus.io/port<span class="p">:</span><span class="w">   </span><span class="s1">&#39;9090&#39;</span><span class="w">
+</span><span class="w">    </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">      </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>gergelybrautigam<span class="w">
+</span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>skarlso/gergelybrautigam<span class="p">:</span>v0.<span class="m">0.26</span><span class="w">
+</span><span class="w">        </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>containerPort<span class="p">:</span><span class="w"> </span><span class="m">9090</span></code></pre></div>
+<p>What is going on here? Really simple. The metadata section defines information about the deployment. It&rsquo;s name is gb-deployment. The namespace in which this sits is called gergely-brautigam and it has some labels to it so our routing can find it later on.</p>
+
+<p>It&rsquo;s running a single replica, has a bunch of more metadata and template settings, and finally the container spec which defines the image, and the exposed container port on which the application is running.</p>
+
+<p>Now we need a service to expose this deployment.</p>
+
+<h3 id="the-service">The service<a href="#the-service" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>The service is also simple. It looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
+</span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>gergely-brautigam<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>gb-service<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>gergelybrautigam<span class="w">
+</span><span class="w">  </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>port<span class="p">:</span><span class="w"> </span><span class="m">80</span><span class="w">
+</span><span class="w">    </span>targetPort<span class="p">:</span><span class="w"> </span><span class="m">9090</span></code></pre></div>
+<p>Again, nothing fancy here, just a simple service exposing a port to a different port on the front-end side. This service will be picked up by our previously created routing facility.</p>
+
+<h3 id="ingress-1">Ingress<a href="#ingress-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>Now that we have the service we need to expose it to the domain. I have the domain gergelybrautigam.com and I already pointed it at the LoadBalancer&rsquo;s IP which was created by the nginx ingress controller.</p>
+
+<p>We only want one LoadBalancer, but we have multiple hostnames. We can achieve that by creating an Ingress resource in the namespace our service is in like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>extensions/v1beta1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Ingress<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>gergely-brautigam<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>gergely-brautigam-ingress<span class="w">
+</span><span class="w">  </span>annotations<span class="p">:</span><span class="w">
+</span><span class="w">    </span>kubernetes.io/ingress.class<span class="p">:</span><span class="w"> </span><span class="s2">&#34;nginx&#34;</span><span class="w">
+</span><span class="w">    </span>certmanager.k8s.io/cluster-issuer<span class="p">:</span><span class="w"> </span><span class="s2">&#34;letsencrypt-prod&#34;</span><span class="w">
+</span><span class="w">    </span>certmanager.k8s.io/acme-challenge-type<span class="p">:</span><span class="w"> </span>http01<span class="w">
+</span><span class="w">    </span>nginx.ingress.kubernetes.io/rewrite-target<span class="p">:</span><span class="w"> </span>/<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>tls<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>hosts<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>gergelybrautigam.com<span class="w">
+</span><span class="w">    </span>secretName<span class="p">:</span><span class="w"> </span>gergelybrautigam-tls<span class="w">
+</span><span class="w">  </span>rules<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>host<span class="p">:</span><span class="w"> </span>gergelybrautigam.com<span class="w">
+</span><span class="w">    </span>http<span class="p">:</span><span class="w">
+</span><span class="w">      </span>paths<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>backend<span class="p">:</span><span class="w">
+</span><span class="w">          </span>serviceName<span class="p">:</span><span class="w"> </span>gb-service<span class="w">
+</span><span class="w">          </span>servicePort<span class="p">:</span><span class="w"> </span><span class="m">80</span></code></pre></div>
+<p>Remember, we already have the nginx ingress resource in the default namespace when we installed the controller previously. That is the main entrypoint. We are taking advantage of the rewrite-target annotation. That is our key to success <code>nginx.ingress.kubernetes.io/rewrite-target: /</code>. The rest is basic routing. We&rsquo;ll have something like this in the other namespace to.</p>
+
+<p>And with that, our website is done and it should be working under HTTPS. Cert-manager should have picked it up and generated a certificate for it. Let&rsquo;s check.</p>
+
+<p>Running <code>k get certs -n gergely-brautigam</code> you should see something like this:</p>
+
+<pre><code> $ k get certs -n gergely-brautigam
+NAME                   READY   SECRET                 AGE
+gergelybrautigam-tls   True    gergelybrautigam-tls   86d
+</code></pre>
+
+<p>If there is a problem, just describe the cert resource and look for the generated challenge and if it was successful or not. The challenge contains mostly good error messages.</p>
+
+<h2 id="irc-bouncer">IRC bouncer<a href="#irc-bouncer" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>That wasn&rsquo;t too bad, right? Let&rsquo;s do something a bit more complex this time. We are going to deploy <a href="https://github.com/thelounge/thelounge">The lounge</a> irc bouncer.</p>
+
+<p>It&rsquo;s actually quite easy to do but can be daunting to look at at first.</p>
+
+<p><img src="/img/the-climb.png" alt="easy" /></p>
+
+<h3 id="the-container">The container<a href="#the-container" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>Lucky for us, the bouncer already provides a container located here: <a href="https://hub.docker.com/r/thelounge/thelounge/">The Lounge Docker Hub</a>.</p>
+
+<p>We just need two things. To expose the port 9000 and to give it something called a PersistentVolume. What&rsquo;s a persistent volume? Well, look it up here: <a href="https://kubernetes.io/docs/concepts/storage/persistent-volumes/">Kubernetes Persistent Volumes</a>.</p>
+
+<p>TL;DR: We need to preserve data. Containers are ephemeral in nature. Meaning if there is a problem we usually just delete the pod. Which means that all data will be lost. But we need persistence in this case because we&rsquo;ll have user data and user information which we would like to persist between pods. That&rsquo;s what a volume is for.</p>
+
+<p>It will be mounted into the pod so we can point the bouncer to use that location for data management.</p>
+
+<h3 id="pvc">PVC<a href="#pvc" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>With that, this is how our PersistentVolumeClaim will look like:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>PersistentVolumeClaim<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>do-storage-irc<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>accessModes<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>ReadWriteOnce<span class="w">
+</span><span class="w">  </span>resources<span class="p">:</span><span class="w">
+</span><span class="w">    </span>requests<span class="p">:</span><span class="w">
+</span><span class="w">      </span>storage<span class="p">:</span><span class="w"> </span>5Gi<span class="w">
+</span><span class="w">  </span>storageClassName<span class="p">:</span><span class="w"> </span>do-block-storage</code></pre></div>
+<p>DigitalOcean provides a block storage implementation for this claim so we use that storage class <code>do-block-storage</code>.</p>
+
+<h3 id="deployment">Deployment<a href="#deployment" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>With that, this is how the deployment will look like:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>apps/v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Deployment<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>irc-app<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>replicas<span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">      </span>app<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">  </span>template<span class="p">:</span><span class="w">
+</span><span class="w">    </span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">      </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">        </span>app<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">        </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">        </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">    </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">      </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>thelounge/thelounge<span class="p">:</span><span class="m">3.1</span>.<span class="m">1</span><span class="w">
+</span><span class="w">        </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>containerPort<span class="p">:</span><span class="w"> </span><span class="m">9000</span><span class="w">
+</span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>irc-http<span class="w">
+</span><span class="w">        </span>volumeMounts<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>mountPath<span class="p">:</span><span class="w"> </span>/var/opt/thelounge<span class="w">
+</span><span class="w">          </span>subPath<span class="p">:</span><span class="w"> </span>thelounge<span class="w">
+</span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>irc-data<span class="w">
+</span><span class="w">          </span>readOnly<span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span><span class="w">      </span>volumes<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>irc-data<span class="w">
+</span><span class="w">          </span>persistentVolumeClaim<span class="p">:</span><span class="w">
+</span><span class="w">            </span>claimName<span class="p">:</span><span class="w"> </span>do-storage-irc</code></pre></div>
+<p>Short and sweet. The important bits are the labels, those are used by cert-manager and ingress to find the right deployment, and the <code>volumeMounts</code>. We mount into the /var/opt/thelounge folder because that&rsquo;s the main configuration location. The subPath is important for a correct mounting.</p>
+
+<h3 id="the-service-1">The service<a href="#the-service-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>Alright, with the deployment in place, let&rsquo;s take a look at the service.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
+</span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">  </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>http<span class="w">
+</span><span class="w">    </span>port<span class="p">:</span><span class="w"> </span><span class="m">9000</span><span class="w">
+</span><span class="w">    </span>targetPort<span class="p">:</span><span class="w"> </span>irc-http</code></pre></div>
+<p>Again, very boring stuff. Boring is good. Boring is predictable. We expose port 9000 to the named targetPort called irc-http which we defined in the above deployment.</p>
+
+<p>Now, I have a domain in which these things are running, let&rsquo;s call it <code>powerhouse.com</code> (because I&rsquo;m tired of example.com). And I have multiple services in this namespace too, so I&rsquo;ll call the namespace here, powerhouse and put this irc service in there. This also means that the ingress resource for this namespace will contain a couple more routings, because my powerhouse namespace will also contain my gitea and Athens proxy installation.</p>
+
+<p>We can, however, take a peak the ingress resource here and now too&hellip; because I hate suspense.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>extensions/v1beta1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Ingress<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>powerhouse-ingress<span class="w">
+</span><span class="w">  </span>annotations<span class="p">:</span><span class="w">
+</span><span class="w">    </span>kubernetes.io/ingress.class<span class="p">:</span><span class="w"> </span><span class="s2">&#34;nginx&#34;</span><span class="w">
+</span><span class="w">    </span>certmanager.k8s.io/cluster-issuer<span class="p">:</span><span class="w"> </span><span class="s2">&#34;letsencrypt-prod&#34;</span><span class="w">
+</span><span class="w">    </span>certmanager.k8s.io/acme-challenge-type<span class="p">:</span><span class="w"> </span>http01<span class="w">
+</span><span class="w">    </span>nginx.ingress.kubernetes.io/rewrite-target<span class="p">:</span><span class="w"> </span>/<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>tls<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>hosts<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>irc.powerhouse.com<span class="w">
+</span><span class="w">    </span>secretName<span class="p">:</span><span class="w"> </span>irc-powerhouse-tls<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>hosts<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>gitea.powerhouse.com<span class="w">
+</span><span class="w">    </span>secretName<span class="p">:</span><span class="w"> </span>gitea-powerhouse-tls<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>hosts<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>athens.powerhouse.com<span class="w">
+</span><span class="w">    </span>secretName<span class="p">:</span><span class="w"> </span>athens-powerhouse-tls<span class="w">
+</span><span class="w">  </span>rules<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>host<span class="p">:</span><span class="w"> </span>irc.powerhouse.com<span class="w">
+</span><span class="w">    </span>http<span class="p">:</span><span class="w">
+</span><span class="w">      </span>paths<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>backend<span class="p">:</span><span class="w">
+</span><span class="w">          </span>serviceName<span class="p">:</span><span class="w"> </span>irc<span class="w">
+</span><span class="w">          </span>servicePort<span class="p">:</span><span class="w"> </span><span class="m">9000</span><span class="w">
+</span><span class="w">        </span>path<span class="p">:</span><span class="w"> </span>/<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>host<span class="p">:</span><span class="w"> </span>gitea.powerhouse.com<span class="w">
+</span><span class="w">    </span>http<span class="p">:</span><span class="w">
+</span><span class="w">      </span>paths<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>backend<span class="p">:</span><span class="w">
+</span><span class="w">          </span>serviceName<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">          </span>servicePort<span class="p">:</span><span class="w"> </span><span class="m">3000</span><span class="w">
+</span><span class="w">        </span>path<span class="p">:</span><span class="w"> </span>/<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>host<span class="p">:</span><span class="w"> </span>athens.powerhouse.com<span class="w">
+</span><span class="w">    </span>http<span class="p">:</span><span class="w">
+</span><span class="w">      </span>paths<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>backend<span class="p">:</span><span class="w">
+</span><span class="w">          </span>serviceName<span class="p">:</span><span class="w"> </span>athens-service<span class="w">
+</span><span class="w">          </span>servicePort<span class="p">:</span><span class="w"> </span><span class="m">80</span><span class="w">
+</span><span class="w">        </span>path<span class="p">:</span><span class="w"> </span>/</code></pre></div>
+<p>Here, we can see that we have multiple paths pointing to three different subdomains with different ports. These ports will be routed to by nginx ingress. Meaning you <strong>DO NOT OPEN THESE ON YOUR LOADBALANCER</strong>. These will all be accessible from 443/HTTPS. Expect for gitea&rsquo;s SSH port, now that will be a doozy.</p>
+
+<p>With these in place, cert-manager should pick it up and provide a certificate for it.</p>
+
+<h3 id="side-track-debugging">Side track &ndash; debugging<a href="#side-track-debugging" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>If there is a problem and we can&rsquo;t reach TheLounge we need to debug. I use the following tool to access Kubernetes resources: <a href="https://github.com/derailed/k9s">K9S</a>. It&rsquo;s a neat CLI tool to look at kube resources in an interactive way and not having to type in a bunch of commands. Never the less, I will also paste those in here.</p>
+
+<p>To look at the pods that should have been created, type:</p>
+
+<pre><code>k get pods -n powerhouse
+</code></pre>
+
+<p>Should see something like this:</p>
+
+<pre><code>NAME                          READY   STATUS    RESTARTS   AGE
+athens-app-857749c59c-lmjnb   1/1     Running   0          6d3h
+gitea-app-6974fb995b-pn2vv    1/1     Running   0          9d
+gitea-db-59758fbcd9-4562c     1/1     Running   0          9d
+irc-app-5f87688f98-dqsvb      1/1     Running   0          9d
+</code></pre>
+
+<p>You can see that my other services are running fine. And there is IRC as well. Now if there would be any kind of problem we could access the Pods information be describing the pod with:</p>
+
+<pre><code>k describe pod/irc-app-5f87688f98-dqsvb -n powerhouse
+</code></pre>
+
+<p>Which will provide a bunch of information about the pod. But the pod could be absolutely fine, yet our service could be down. (We didn&rsquo;t define any liveliness or readiness probs after all).</p>
+
+<p>We can verify that by taking a peak in the container (also, check if our mounting was successful). Since this is just a container, exec works similar to docker exec.</p>
+
+<pre><code> $ k exec -it irc-app-5f87688f98-dqsvb -n powerhouse /bin/bash
+root@irc-app-5f87688f98-dqsvb:/#
+</code></pre>
+
+<p>Should give us a prompt. We can now look at logs, check out the configuration folder etc.</p>
+
+<p>In k9s you would simply select the right namespace, select the pod, hit <code>d</code> for describe or <code>s</code> for shell. Done.</p>
+
+<h2 id="gitea">Gitea<a href="#gitea" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Now, we have IRC running. Let&rsquo;s try deploying <a href="https://gitea.io/en-us/">Gitea</a>. This takes a tiny bit more fiddling though.</p>
+
+<h3 id="requirements">Requirements<a href="#requirements" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>Gitea requires the following things to be present:</p>
+
+<ul>
+<li>The gitea app configuration file (this can be done via environment properties though)</li>
+<li>A DB</li>
+<li>A PersistentVolume</li>
+<li>SSH Port for SSH based git clones instead of simple https</li>
+</ul>
+
+<h4 id="db">DB<a href="#db" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+
+<p>We shall begin with the simplest of them, the DB. At this point we could go with the DigitalOcean managed Postgres installation, but I didn&rsquo;t want to put that on the bill as well. So I choose to simply put my DB into a container and deploy it within the cluster.</p>
+
+<p>This is actually quite simple. The DB will be a separate deployment / application in the same namespace as the Gitea app. It will also contain a network policy, since the DB doesn&rsquo;t need internet access and the internet shouldn&rsquo;t be able to access it.</p>
+
+<p>In fact the only thing that should be able to access the DB is the Gitea application itself which we will be able to restrict via the usage of&hellip; Labels!</p>
+
+<h5 id="deployment-1">Deployment<a href="#deployment-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h5>
+
+<p>But first, take a look at the deployment of a Postgres 11 pod:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>apps/v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Deployment<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>gitea-db<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>replicas<span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">      </span>app<span class="p">:</span><span class="w"> </span>gitea-db<span class="w">
+</span><span class="w">  </span>template<span class="p">:</span><span class="w">
+</span><span class="w">    </span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">      </span>name<span class="p">:</span><span class="w"> </span>gitea-db<span class="w">
+</span><span class="w">      </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">        </span>app<span class="p">:</span><span class="w"> </span>gitea-db<span class="w">
+</span><span class="w">    </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">      </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>postgres<span class="w">
+</span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>postgres<span class="p">:</span><span class="m">11</span><span class="w">
+</span><span class="w">        </span>env<span class="p">:</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>POSTGRES_USER<span class="w">
+</span><span class="w">            </span>value<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>POSTGRES_PASSWORD<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>secretKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>gitea-db-password<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>password<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>POSTGRES_DB<span class="w">
+</span><span class="w">            </span>value<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">        </span>volumeMounts<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>mountPath<span class="p">:</span><span class="w"> </span>/var/lib/postgresql/data<span class="w">
+</span><span class="w">          </span>subPath<span class="p">:</span><span class="w"> </span>data<span class="w"> </span><span class="c"># important so it gets mounted properly</span><span class="w">
+</span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>git-db-data<span class="w">
+</span><span class="w">      </span>volumes<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>git-db-data<span class="w">
+</span><span class="w">          </span>persistentVolumeClaim<span class="p">:</span><span class="w">
+</span><span class="w">            </span>claimName<span class="p">:</span><span class="w"> </span>do-storage-gitea-db</code></pre></div>
+<p>Okay, there are a lot of things going on here, but the three things we need to note are the following:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">      </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">        </span>app<span class="p">:</span><span class="w"> </span>gitea-db</code></pre></div>
+<p>Our network policy will look for this label to identify the pods which fell under its rule.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>POSTGRES_PASSWORD<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>secretKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>gitea-db-password<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>password</code></pre></div>
+<p>The database password will come from a secret.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">        </span>volumeMounts<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>mountPath<span class="p">:</span><span class="w"> </span>/var/lib/postgresql/data<span class="w">
+</span><span class="w">          </span>subPath<span class="p">:</span><span class="w"> </span>data<span class="w"> </span><span class="c"># important so it gets mounted properly</span><span class="w">
+</span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>git-db-data<span class="w">
+</span><span class="w">      </span>volumes<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>git-db-data<span class="w">
+</span><span class="w">          </span>persistentVolumeClaim<span class="p">:</span><span class="w">
+</span><span class="w">            </span>claimName<span class="p">:</span><span class="w"> </span>do-storage-gitea-db</code></pre></div>
+<p>We also need a persistent volume otherwise the data will be lost on each pod restart.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">---<span class="w">
+</span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>PersistentVolumeClaim<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>do-storage-gitea-db<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>accessModes<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>ReadWriteOnce<span class="w">
+</span><span class="w">  </span>resources<span class="p">:</span><span class="w">
+</span><span class="w">    </span>requests<span class="p">:</span><span class="w">
+</span><span class="w">      </span>storage<span class="p">:</span><span class="w"> </span>10Gi<span class="w">
+</span><span class="w">  </span>storageClassName<span class="p">:</span><span class="w"> </span>do-block-storage</code></pre></div>
+<h5 id="service">Service<a href="#service" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h5>
+
+<p>We also need a Service so Gitea will be able to reach it. This isn&rsquo;t public though so a NodePort is enough with no clusterIP.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
+</span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>gitea-db-service<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>port<span class="p">:</span><span class="w"> </span><span class="m">5432</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>gitea-db<span class="w">
+</span><span class="w">  </span>clusterIP<span class="p">:</span><span class="w"> </span>None</code></pre></div>
+<p>In order to reach this DB we can use a URL like this now from the Gitea app: <code>gitea-db-service.powerhouse.svc.cluster.local:5432</code>.</p>
+
+<h5 id="networkpolicy">NetworkPolicy<a href="#networkpolicy" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h5>
+
+<p>We want the Gitea app to be able to reach it. Which means in-out to the Gitea app and nothing else.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>networking.k8s.io/v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>NetworkPolicy<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>gitea-db-network-policy<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powehouse<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>podSelector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">      </span>app<span class="p">:</span><span class="w"> </span>gitea-db<span class="w">
+</span><span class="w">  </span>policyTypes<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>Ingress<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>Egress<span class="w">
+</span><span class="w">  </span>ingress<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>from<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>podSelector<span class="p">:</span><span class="w">
+</span><span class="w">        </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">          </span>app<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">    </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>protocol<span class="p">:</span><span class="w"> </span>TCP<span class="w">
+</span><span class="w">      </span>port<span class="p">:</span><span class="w"> </span><span class="m">5432</span><span class="w">
+</span><span class="w">  </span>egress<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>to<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>podSelector<span class="p">:</span><span class="w">
+</span><span class="w">        </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">          </span>app<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">    </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>protocol<span class="p">:</span><span class="w"> </span>TCP<span class="w">
+</span><span class="w">      </span>port<span class="p">:</span><span class="w"> </span><span class="m">5432</span></code></pre></div>
+<p>We can test this now by exec-ing into the Pod of the DB deployment and trying to ping google.com for example. It should be denied. Yet later, when we deploy our Gitea app, that should be able to talk to the DB instance.</p>
+
+<h5 id="secret">Secret<a href="#secret" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h5>
+
+<p>Finally, we have a Secret which contains our db password base64 encoded.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Secret<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>cronohub<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>gitea-db-password<span class="w">
+</span><span class="w"></span>type<span class="p">:</span><span class="w"> </span>Opaque<span class="w">
+</span><span class="w"></span>data<span class="p">:</span><span class="w">
+</span><span class="w">  </span>password<span class="p">:</span><span class="w"> </span>Z2l0ZWE=</code></pre></div>
+<p>That says password123. To get it, you can run something like <code>echo -n &quot;password123&quot; | base64</code>.</p>
+
+<h4 id="gitea-app-ini">Gitea App ini<a href="#gitea-app-ini" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+
+<p>Huh, with that done, we can go on with the application ini file. This can be configured via environment properties but once you get over a dozen configuration entries, it&rsquo;s just easier to use an app.ini. My app ini is large, so I won&rsquo;t post it here. I could mount it in as a file, but that proved to be difficult or not work at all properly because Gitea is running under a different user than root. Also, once the mount happened the fact the gitea was trying to write into it caused problems. Mounting as a different user didn&rsquo;t work out either, so I&rsquo;m using an <a href="https://kubernetes.io/docs/concepts/workloads/pods/init-containers/">InitContainer</a> to do the job. They are there for that reason. And it was actually a hell of a lot simpler than doing file mounting.</p>
+
+<p>The app.ini is defined as a ConfigMap like this:</p>
+
+<pre><code>kubectl create configmap gitea-app-ini --from-file=app.ini --namespace powerhouse
+</code></pre>
+
+<p>This was done from the folder where my app.ini was residing.</p>
+
+<h4 id="deployment-2">Deployment<a href="#deployment-2" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+
+<p>Now comes the big gun. The Gitea deployment file. This is how it looks like in all its glory:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>apps/v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Deployment<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>cronohub<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>gitea-app<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>replicas<span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">      </span>app<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">  </span>template<span class="p">:</span><span class="w">
+</span><span class="w">    </span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">      </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">        </span>app<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">        </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">        </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">    </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">      </span>initContainers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>init-disk<span class="w">
+</span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>busybox<span class="p">:</span>latest<span class="w">
+</span><span class="w">        </span>command<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>/bin/chown<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span><span class="m">1000</span><span class="p">:</span><span class="m">1000</span><span class="w"> </span><span class="c"># we set the gid and uid of the user for gitea.</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>/data<span class="w">
+</span><span class="w">        </span>volumeMounts<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>git-data<span class="w">
+</span><span class="w">          </span>mountPath<span class="p">:</span><span class="w"> </span><span class="s2">&#34;/data&#34;</span><span class="w">
+</span><span class="w">          </span>readOnly<span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>init-app-ini<span class="w">
+</span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>busybox<span class="p">:</span>latest<span class="w">
+</span><span class="w">        </span>command<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;sh&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;-c&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;mkdir -p /data/gitea/conf/; cp /data/app.ini /data/gitea/conf&#39;</span><span class="p">]</span><span class="w">
+</span><span class="w">        </span>volumeMounts<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>git-data<span class="w">
+</span><span class="w">          </span>mountPath<span class="p">:</span><span class="w"> </span><span class="s2">&#34;/data&#34;</span><span class="w">
+</span><span class="w">          </span>readOnly<span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>gitea-app-ini-conf<span class="w">
+</span><span class="w">          </span>mountPath<span class="p">:</span><span class="w"> </span>/data/app.ini<span class="w">
+</span><span class="w">          </span>subPath<span class="p">:</span><span class="w"> </span>app.ini<span class="w">
+</span><span class="w">          </span>readOnly<span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span><span class="w">      </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>gitea/gitea<span class="p">:</span><span class="m">1.9</span>.<span class="m">2</span><span class="w">
+</span><span class="w">        </span>env<span class="p">:</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>DB_PASSWD<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>secretKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>gitea-db-password<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>password<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>DB_TYPE<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>configMapKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>gitea-config-map<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>DB_TYPE<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>DB_HOST<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>configMapKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>gitea-config-map<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>DB_HOST<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>DB_NAME<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>configMapKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>gitea-config-map<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>DB_NAME<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>DB_USER<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>configMapKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>gitea-config-map<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>DB_USER<span class="w">
+</span><span class="w">        </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>containerPort<span class="p">:</span><span class="w"> </span><span class="m">3000</span><span class="w">
+</span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>gitea-http<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>containerPort<span class="p">:</span><span class="w"> </span><span class="m">22</span><span class="w">
+</span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>gitea-ssh<span class="w">
+</span><span class="w">        </span>volumeMounts<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>mountPath<span class="p">:</span><span class="w"> </span>/data<span class="w">
+</span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>git-data<span class="w">
+</span><span class="w">          </span>readOnly<span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span><span class="w">      </span>volumes<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>git-data<span class="w">
+</span><span class="w">          </span>persistentVolumeClaim<span class="p">:</span><span class="w">
+</span><span class="w">            </span>claimName<span class="p">:</span><span class="w"> </span>do-storage-gitea<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>gitea-app-ini-conf<span class="w">
+</span><span class="w">          </span>configMap<span class="p">:</span><span class="w">
+</span><span class="w">            </span>name<span class="p">:</span><span class="w"> </span>gitea-app-ini</code></pre></div>
+<p>The important bit is the initContainer section. What&rsquo;s happening here? We mount the app.ini file to the init container under /data. The awesome part about the initContainer is that the real container will have access to the file system the init container created.</p>
+
+<p>So we take that file, fix the permissions on it and copy it to the right location under <code>/data/gitea/conf</code> for the Gitea app to work with.</p>
+
+<p>Done!</p>
+
+<p>And the configMap is simple:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>ConfigMap<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>gitea-config-map<span class="w">
+</span><span class="w"></span>data<span class="p">:</span><span class="w">
+</span><span class="w">  </span>APP_COLOR<span class="p">:</span><span class="w"> </span>blue<span class="w">
+</span><span class="w">  </span>APP_MOD<span class="p">:</span><span class="w"> </span>prod<span class="w">
+</span><span class="w">  </span>DB_TYPE<span class="p">:</span><span class="w"> </span>postgres<span class="w">
+</span><span class="w">  </span>DB_HOST<span class="p">:</span><span class="w"> </span><span class="s2">&#34;gitea-db-service.cronohub.svc.cluster.local:5432&#34;</span><span class="w">
+</span><span class="w">  </span>DB_NAME<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">  </span>DB_USER<span class="p">:</span><span class="w"> </span>gitea</code></pre></div>
+<h4 id="ssh">SSH<a href="#ssh" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+
+<p>Normally, Ingress only allows HTTP based traffic control. But what would an ingress be without also regular TCP based routing?</p>
+
+<p>But it&rsquo;s not trivial. Nginx Ingress provides a documentation for this here: <a href="https://kubernetes.github.io/ingress-nginx/user-guide/exposing-tcp-udp-services/">Exposing TCP and UDP services</a>. What does that mean in practice?</p>
+
+<p>You see we are also exposing port 22 on the container:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">        </span>-<span class="w"> </span>containerPort<span class="p">:</span><span class="w"> </span><span class="m">22</span><span class="w">
+</span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>gitea-ssh</code></pre></div>
+<p>I choose to differentiate my SSH port for Gitea from port 22 because that&rsquo;s just cumbersome to get done right. Gitea provides an explanation on how to do port 22 forwarding in a docker container with a custom git command which forwards commands to the container itself. This is all just plain too much to worry about.</p>
+
+<p>I have this in the app.ini:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ini" data-lang="ini"><span class="na">SSH_PORT</span>         <span class="o">=</span> <span class="s">&lt;port of my choosing&gt;</span></code></pre></div>
+<p>And then this in the Service definition:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
+</span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>gitea<span class="w">
+</span><span class="w">  </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>http<span class="w">
+</span><span class="w">    </span>port<span class="p">:</span><span class="w"> </span><span class="m">3000</span><span class="w">
+</span><span class="w">    </span>targetPort<span class="p">:</span><span class="w"> </span>gitea-http<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>ssh<span class="w">
+</span><span class="w">    </span>port<span class="p">:</span><span class="w"> </span>&lt;port<span class="w"> </span>of<span class="w"> </span>my<span class="w"> </span>choosing<span class="sd">&gt;
+</span><span class="sd">    targetPort: gitea-ssh</span><span class="w">
+</span><span class="w">    </span>protocol<span class="p">:</span><span class="w"> </span>TCP</code></pre></div>
+<p>And then, we edit the nginx-controller deployment like this:</p>
+
+<pre><code>kubectl edit deployment.apps/nginx-ingress-controller
+</code></pre>
+
+<p>And add this line <code>--tcp-services-configmap=cronohub/gitea-ssh-service</code> to the container&rsquo;s args field:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">      </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>args<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>/nginx-ingress-controller<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>--default-backend-service=default/nginx-ingress-default-backend<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>--election-id=ingress-controller-leader<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>--ingress-class=nginx<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>--configmap=default/nginx-ingress-controller<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>--tcp-services-configmap=powerhouse/gitea-ssh-service</code></pre></div>
+<p>One more thing is that we have to open that port on the load balancer as well to get traffic to it. To that end, edit the nginx ingress service as well:</p>
+
+<pre><code>kubectl edit services/nginx-ingress-controller
+</code></pre>
+
+<p>And add the exposed port:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">  </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>ssh<span class="w">
+</span><span class="w">    </span>port<span class="p">:</span><span class="w"> </span>&lt;port<span class="w"> </span>of<span class="w"> </span>my<span class="w"> </span>choosing<span class="sd">&gt;
+</span><span class="sd">    protocol: TCP</span><span class="w">
+</span><span class="w">    </span>targetPort<span class="p">:</span><span class="w"> </span>&lt;port<span class="w"> </span>of<span class="w"> </span>my<span class="w"> </span>choosing&gt;</code></pre></div>
+<p>There will probably be a nodePort section in there on the other ports. Ignore that for your change.</p>
+
+<p>Also, if you are doing the nginx installation by hand, just add this or save the yaml file from those deployments like this:</p>
+
+<pre><code>kubectl get service/nginx-ingress-controller -o yaml &gt; nginx-ingress-controller.yaml
+</code></pre>
+
+<p>So you can deploy / modify it later on.</p>
+
+<h4 id="finished-gitea">Finished Gitea<a href="#finished-gitea" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+
+<p>And with that, visit <code>gitea.powerhouse.com</code> and it should work including HTTPS and SSH!</p>
+
+<p>You can now clone repositories like this: <code>git clone ssh://git@gitea.powerhouse.com:1234/user/awesome_project.git</code>.</p>
+
+<p>It is important to note that we don&rsquo;t use <code>latest</code> anywhere. It&rsquo;s just not good if you are trying to update a service later on. We could set ImagePolicy to AlwaysPull but that&rsquo;s just not a good thing to do if you have a 2 gig image. Always use version and policy <code>imagePullPolicy: IfNotPresent</code> to save yourself some bandwidth.</p>
+
+<h2 id="idle-checker">Idle Checker<a href="#idle-checker" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p><img src="/img/idle-checker.png" alt="idle-checker" /></p>
+
+<p>Let&rsquo;s create a last resource, then we&rsquo;ll call it a day.</p>
+
+<p>The idle RPG is a cool little game that you play by&hellip; not playing. At all. If you play, you get penalties. Here is a cool resource to start: <a href="https://idlerpg.lolhosting.net">Idle RPG</a>. This looks something like this:</p>
+
+<pre><code>21:56 &lt;@IdleBot&gt; Verily I say unto thee, the Heavens have burst forth, and the blessed hand of God carried ganome 0 days, 03:52:11 toward level 45.
+21:56 &lt;@IdleBot&gt; ganome reaches next level in 0 days, 01:49:16.
+22:02 &lt;@IdleBot&gt; himuraken, the level 77 Mage Of BitFlips, is now online from nickname himuraken. Next level in 11 days, 10:35:53.
+22:14 &lt;@IdleBot&gt; Nechayev, Sundance, and simple [2011/2347] have team battled HeavyPodda, Sixbierehomme, and L [1417/2717] and won! 0 days, 06:14:54 is removed from their clocks.
+22:18 &lt;@IdleBot&gt; canton7 saw an episode of Ally McBeal. This terrible calamity has slowed them 0 days, 05:10:53 from level 85.
+22:18 &lt;@IdleBot&gt; canton7 reaches next level in 2 days, 00:21:36.
+22:26 &lt;@IdleBot&gt; Tor [4/1142] has challenged Brainiac [232/817] in combat and lost! 3 days, 23:06:05 is added to Tor's clock.
+22:26 &lt;@IdleBot&gt; Tor reaches next level in 39 days, 23:39:35.
+</code></pre>
+
+<p>It could happen that by some misfortune the bouncer gets restarted and it doesn&rsquo;t log back in. Or you simply just lose connection and you don&rsquo;t re-connect. That is unacceptable because the point is to be present. Otherwise you don&rsquo;t play. So you need an early warning in case you are offline. Luckily, IdleRPG provides an XML based endpoint to get which contains your status.</p>
+
+<p>From there, I&rsquo;m using mailgun with a registered domain to send me an email in case my status is offline. For that, here is a small Go program <a href="https://gist.github.com/Skarlso/318ddd6f8d71dbda8fbbd1a908fdb159">IdleRPG Checker Go Code</a>.</p>
+
+<p>To put that into a Docker container, here is a Dockerfile:</p>
+<div class="highlight"><pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="k">FROM</span><span class="s"> golang:latest as build</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> go get -v github.com/sirupsen/logrus <span class="o">&amp;&amp;</span> <span class="se">\
+</span><span class="se"></span>    go get -v github.com/mailgun/mailgun-go<span class="err">
+</span><span class="err"></span>COPY ./main.go /code/<span class="err">
+</span><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /code</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> <span class="nv">CGO_ENABLED</span><span class="o">=</span><span class="m">0</span> <span class="nv">GOOS</span><span class="o">=</span>linux go build -a -installsuffix cgo -o /idlerpg-checker .<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">FROM</span><span class="s"> alpine:latest</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apk --no-cache add ca-certificates<span class="err">
+</span><span class="err"></span>COPY --from<span class="o">=</span>build /idlerpg-checker /idlerpg-checker<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> <span class="nb">echo</span> <span class="s2">&#34;v0.0.1&#34;</span> &gt;&gt; .version<span class="err">
+</span><span class="err"></span><span class="k">ENTRYPOINT</span><span class="s"> [&#34;/idlerpg-checker&#34;]</span></code></pre></div>
+<p>And the corresponding cronjob resource definition:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>batch/v1beta1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>CronJob<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>idle-checker<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>idle-checker<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>schedule<span class="p">:</span><span class="w"> </span><span class="s2">&#34;*/20 * * * *&#34;</span><span class="w">
+</span><span class="w">  </span>jobTemplate<span class="p">:</span><span class="w">
+</span><span class="w">    </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">      </span>template<span class="p">:</span><span class="w">
+</span><span class="w">        </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">          </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>idle-checker<span class="w">
+</span><span class="w">            </span>image<span class="p">:</span><span class="w"> </span>skarlso/idle-checker<span class="w">
+</span><span class="w">            </span>imagePullPolicy<span class="p">:</span><span class="w"> </span>IfNotPresent<span class="w">
+</span><span class="w">            </span>env<span class="p">:</span><span class="w">
+</span><span class="w">              </span>-<span class="w"> </span>name<span class="p">:</span><span class="w">  </span>MG_API_KEY<span class="w">
+</span><span class="w">                </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">                  </span>secretKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                    </span>name<span class="p">:</span><span class="w">  </span>idle-rpg-secret<span class="w">
+</span><span class="w">                    </span>key<span class="p">:</span><span class="w">  </span>MG_API_KEY<span class="w">
+</span><span class="w">              </span>-<span class="w"> </span>name<span class="p">:</span><span class="w">  </span>MG_DOMAIN<span class="w">
+</span><span class="w">                </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">                  </span>secretKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                    </span>name<span class="p">:</span><span class="w">  </span>idle-rpg-secret<span class="w">
+</span><span class="w">                    </span>key<span class="p">:</span><span class="w">  </span>MG_DOMAIN<span class="w">
+</span><span class="w">            </span>args<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;-username&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;username&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;-email&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;user@powerhouse.com&#39;</span><span class="p">]</span><span class="w">
+</span><span class="w">          </span>restartPolicy<span class="p">:</span><span class="w"> </span>OnFailure</code></pre></div>
+<p>Aaaand, the secret for the API key:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Secret<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>idle-checker<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>idle-rpg-secret<span class="w">
+</span><span class="w"></span>type<span class="p">:</span><span class="w"> </span>Opaque<span class="w">
+</span><span class="w"></span>data<span class="p">:</span><span class="w">
+</span><span class="w">  </span>MG_API_KEY<span class="p">:</span><span class="w"> </span>asdf=<span class="w">
+</span><span class="w">  </span>MG_DOMAIN<span class="p">:</span><span class="w"> </span>asdf==</code></pre></div>
+<p>Done. Huh. This will run every 20 minutes and check if the user with username <code>username</code> is online. If not, it will send an email to the given email address. Your levels are safe.</p>
+
+<h1 id="closing-words">Closing words<a href="#closing-words" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>Phew. This has been quite the ride. The post is now really long, so I will split the rest out into a Part 2. That is, Athens and Monitoring.</p>
+
+<p>Thank you for reading this far!</p>
+
+<p>Cheers,
+Gergely.</p>
+
+		</div>
+		<div id="comments" class="thin">
+			
+<div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2019 <a href="https://skarlso.github.io/">Gergely Brautigam</a> &#183; <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://skarlso.github.io/js/main.min.8f39f24808e9d0a9b02da58c2d2838da859dc0b7bdfadbdb1883aae8b6adacfe.js" integrity="sha256-jznySAjp0KmwLaWMLSg42oWdwLe9+tvbGIOq6LatrP4="></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-69463020-2', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>
