@@ -17,7 +17,7 @@ What What services am I running exactly? Here is a list I&rsquo;m running at the
 
 <meta itemprop="datePublished" content="2019-09-21T21:01:00&#43;01:00" />
 <meta itemprop="dateModified" content="2019-09-21T21:01:00&#43;01:00" />
-<meta itemprop="wordCount" content="3567">
+<meta itemprop="wordCount" content="3590">
 
 
 
@@ -141,6 +141,10 @@ What What services am I running exactly? Here is a list I&rsquo;m running at the
 <li>Affinities and Taints &ndash; which means, everything can run anywhere</li>
 </ul>
 
+<h2 id="readiness-liveliness">Readiness Liveliness<a href="#readiness-liveliness" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Most of by deploys and services don&rsquo;t have these except for Athens.</p>
+
 <h1 id="how">How<a href="#how" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
 
 <p>Okay, with that out of the way, let&rsquo;s get into the hows of things&hellip;</p>
@@ -227,7 +231,7 @@ What What services am I running exactly? Here is a list I&rsquo;m running at the
 
 <h2 id="my-website">My Website<a href="#my-website" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
 
-<p>The site, located here: <a href="gergelybrautigam.com">Gergely&rsquo;s Domain</a>; is a really simple, static, <a href="https://gohugo.io">Hugo</a> based website. It contains nothing fancy, no real Javascript magic, has a simple list of things I&rsquo;ve done and who I am.</p>
+<p>The site, located here: <a href="https://gergelybrautigam.com">Gergely&rsquo;s Domain</a>; is a really simple, static, <a href="https://gohugo.io">Hugo</a> based website. It contains nothing fancy, no real Javascript magic, has a simple list of things I&rsquo;ve done and who I am.</p>
 
 <p>It&rsquo;s powered / served by an nginx instance running on port 9090 define by a very simple Dockerfile:</p>
 <div class="highlight"><pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="k">FROM</span><span class="s"> golang:latest as builder</span><span class="err">
@@ -277,7 +281,7 @@ What What services am I running exactly? Here is a list I&rsquo;m running at the
 </span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>skarlso/gergelybrautigam<span class="p">:</span>v0.<span class="m">0.26</span><span class="w">
 </span><span class="w">        </span>ports<span class="p">:</span><span class="w">
 </span><span class="w">        </span>-<span class="w"> </span>containerPort<span class="p">:</span><span class="w"> </span><span class="m">9090</span></code></pre></div>
-<p>What is going on here? Really simple. The metadata section defines information about the deployment. It&rsquo;s name is gb-deployment. The namespace in which this sits is called gergely-brautigam and it has some labels to it so our routing can find it later on.</p>
+<p>The metadata section defines information about the deployment. It&rsquo;s name is gb-deployment. The namespace in which this sits is called gergely-brautigam and it has some labels to it so Prometheus monitoring tool can discover the pod.</p>
 
 <p>It&rsquo;s running a single replica, has a bunch of more metadata and template settings, and finally the container spec which defines the image, and the exposed container port on which the application is running.</p>
 
@@ -438,7 +442,7 @@ gergelybrautigam-tls   True    gergelybrautigam-tls   86d
 
 <p>Now, I have a domain in which these things are running, let&rsquo;s call it <code>powerhouse.com</code> (because I&rsquo;m tired of example.com). And I have multiple services in this namespace too, so I&rsquo;ll call the namespace here, powerhouse and put this irc service in there. This also means that the ingress resource for this namespace will contain a couple more routings, because my powerhouse namespace will also contain my gitea and Athens proxy installation.</p>
 
-<p>We can, however, take a peak the ingress resource here and now too&hellip; because I hate suspense.</p>
+<p>We can, however, take a peak at the ingress resource here and now&hellip; because I hate suspense.</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>extensions/v1beta1<span class="w">
 </span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Ingress<span class="w">
 </span><span class="w"></span>metadata<span class="p">:</span><span class="w">
@@ -482,7 +486,7 @@ gergelybrautigam-tls   True    gergelybrautigam-tls   86d
 </span><span class="w">          </span>serviceName<span class="p">:</span><span class="w"> </span>athens-service<span class="w">
 </span><span class="w">          </span>servicePort<span class="p">:</span><span class="w"> </span><span class="m">80</span><span class="w">
 </span><span class="w">        </span>path<span class="p">:</span><span class="w"> </span>/</code></pre></div>
-<p>Here, we can see that we have multiple paths pointing to three different subdomains with different ports. These ports will be routed to by nginx ingress. Meaning you <strong>DO NOT OPEN THESE ON YOUR LOADBALANCER</strong>. These will all be accessible from 443/HTTPS. Expect for gitea&rsquo;s SSH port, now that will be a doozy.</p>
+<p>We can see that I have multiple paths pointing to three different subdomains with different ports. These ports will be routed to by nginx ingress. Meaning you <strong>DO NOT OPEN THESE ON YOUR LOADBALANCER</strong>. These will all be accessible from 443/HTTPS. Expect for gitea&rsquo;s SSH port later on.</p>
 
 <p>With these in place, cert-manager should pick it up and provide a certificate for it.</p>
 
@@ -870,7 +874,9 @@ root@irc-app-5f87688f98-dqsvb:/#
 
 <p>And with that, visit <code>gitea.powerhouse.com</code> and it should work including HTTPS and SSH!</p>
 
-<p>You can now clone repositories like this: <code>git clone ssh://git@gitea.powerhouse.com:1234/user/awesome_project.git</code>.</p>
+<p>You can now clone repositories like this: <code>git clone ssh://git@gitea.powerhouse.com:1234/user/awesome_project.git</code> after you created your user.</p>
+
+<p>User creation is done by using the gitea admin CLI tool described here: <a href="https://docs.gitea.io/en-us/command-line/">Gitea Documentation</a>.</p>
 
 <p>It is important to note that we don&rsquo;t use <code>latest</code> anywhere. It&rsquo;s just not good if you are trying to update a service later on. We could set ImagePolicy to AlwaysPull but that&rsquo;s just not a good thing to do if you have a 2 gig image. Always use version and policy <code>imagePullPolicy: IfNotPresent</code> to save yourself some bandwidth.</p>
 
@@ -880,7 +886,7 @@ root@irc-app-5f87688f98-dqsvb:/#
 
 <p>Let&rsquo;s create a last resource, then we&rsquo;ll call it a day.</p>
 
-<p>The idle RPG is a cool little game that you play by&hellip; not playing. At all. If you play, you get penalties. Here is a cool resource to start: <a href="https://idlerpg.lolhosting.net">Idle RPG</a>. This looks something like this:</p>
+<p>The idle RPG is a cool little game that you play by&hellip; not playing. At all. If you play, you get penalties. Here is a cool resource to start: <a href="https://idlerpg.lolhosting.net">Idle RPG</a>. It looks something like this:</p>
 
 <pre><code>21:56 &lt;@IdleBot&gt; Verily I say unto thee, the Heavens have burst forth, and the blessed hand of God carried ganome 0 days, 03:52:11 toward level 45.
 21:56 &lt;@IdleBot&gt; ganome reaches next level in 0 days, 01:49:16.
@@ -892,7 +898,7 @@ root@irc-app-5f87688f98-dqsvb:/#
 22:26 &lt;@IdleBot&gt; Tor reaches next level in 39 days, 23:39:35.
 </code></pre>
 
-<p>It could happen that by some misfortune the bouncer gets restarted and it doesn&rsquo;t log back in. Or you simply just lose connection and you don&rsquo;t re-connect. That is unacceptable because the point is to be present. Otherwise you don&rsquo;t play. So you need an early warning in case you are offline. Luckily, IdleRPG provides an XML based endpoint to get which contains your status.</p>
+<p>It could happen that by some misfortune the bouncer gets restarted and it doesn&rsquo;t log you back in. Or you simply just lose connection and you don&rsquo;t re-connect. That is unacceptable because the point is to be present. Otherwise you don&rsquo;t play. So you need an early warning in case you are offline. Luckily, IdleRPG provides an XML based endpoint to get which contains your status.</p>
 
 <p>From there, I&rsquo;m using mailgun with a registered domain to send me an email in case my status is offline. For that, here is a small Go program <a href="https://gist.github.com/Skarlso/318ddd6f8d71dbda8fbbd1a908fdb159">IdleRPG Checker Go Code</a>.</p>
 
