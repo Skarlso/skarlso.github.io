@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+<meta itemprop="name" content="Using a Kubernetes based Cluster for Various Services with auto HTTPS - Part 2">
+<meta itemprop="description" content="Intro Hi folks.
+This is a continuation of the previous post about my Kubernetes infrastructure located here. The two remaining points are to deploy Athens Go proxy and setting up monitoring.
+Athens Let&rsquo;s start with Athens.
+First of all if you are a helm user, Athens has an awesome set of helm charts which you can use to deploy it in your cluster. Located here.
+I prefer to deploy my own config files, but that&rsquo;s me.">
+
+
+<meta itemprop="datePublished" content="2019-10-15T21:01:00&#43;01:00" />
+<meta itemprop="dateModified" content="2019-10-15T21:01:00&#43;01:00" />
+<meta itemprop="wordCount" content="1115">
+
+
+
+<meta itemprop="keywords" content="" />
+<meta property="og:title" content="Using a Kubernetes based Cluster for Various Services with auto HTTPS - Part 2" />
+<meta property="og:description" content="Intro Hi folks.
+This is a continuation of the previous post about my Kubernetes infrastructure located here. The two remaining points are to deploy Athens Go proxy and setting up monitoring.
+Athens Let&rsquo;s start with Athens.
+First of all if you are a helm user, Athens has an awesome set of helm charts which you can use to deploy it in your cluster. Located here.
+I prefer to deploy my own config files, but that&rsquo;s me." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://skarlso.github.io/2019/10/15/kubernetes-cluster-part2/" />
+<meta property="article:published_time" content="2019-10-15T21:01:00&#43;01:00"/>
+<meta property="article:modified_time" content="2019-10-15T21:01:00&#43;01:00"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Using a Kubernetes based Cluster for Various Services with auto HTTPS - Part 2"/>
+<meta name="twitter:description" content="Intro Hi folks.
+This is a continuation of the previous post about my Kubernetes infrastructure located here. The two remaining points are to deploy Athens Go proxy and setting up monitoring.
+Athens Let&rsquo;s start with Athens.
+First of all if you are a helm user, Athens has an awesome set of helm charts which you can use to deploy it in your cluster. Located here.
+I prefer to deploy my own config files, but that&rsquo;s me."/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>Using a Kubernetes based Cluster for Various Services with auto HTTPS - Part 2</title>
+	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://skarlso.github.io/blog/">blog</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<span class="hdr-social hide-in-mobile"><a href="https://twitter.com/skarlso" target="_blank" rel="noopener" title="Twitter"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a><a href="https://github.com/Skarlso" target="_blank" rel="noopener" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner thin animated fadeIn faster">
+		<h1>Using a Kubernetes based Cluster for Various Services with auto HTTPS - Part 2</h1>
+		<div class="content">
+			
+
+<h1 id="intro">Intro<a href="#intro" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>Hi folks.</p>
+
+<p>This is a continuation of the previous post about my Kubernetes infrastructure located <a href="https://skarlso.github.io/2019/09/21/kubernetes-cluster/">here</a>. The two remaining points are to deploy Athens Go proxy and setting up monitoring.</p>
+
+<h1 id="athens">Athens<a href="#athens" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p><img src="/img/hosting/athens.png" alt="Athens" /></p>
+
+<p>Let&rsquo;s start with <a href="https://github.com/gomods/athens">Athens</a>.</p>
+
+<p>First of all if you are a helm user, Athens has an awesome set of helm charts which you can use to deploy it in your cluster.
+Located <a href="https://github.com/gomods/athens/tree/master/charts/athens-proxy">here</a>.</p>
+
+<p>I prefer to deploy my own config files, but that&rsquo;s me. So here is my preferred way of deploying Athens.</p>
+
+<p>Since this is also a subdomain of the previously created <code>powerhouse</code> namespace we are going to use that.</p>
+
+<h2 id="pvc">PVC<a href="#pvc" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>We are going to need a PersistentVolumeClaim for Athens so it can store all the things forever.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>PersistentVolumeClaim<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>athens-storage<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>accessModes<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>ReadWriteOnce<span class="w">
+</span><span class="w">  </span>resources<span class="p">:</span><span class="w">
+</span><span class="w">    </span>requests<span class="p">:</span><span class="w">
+</span><span class="w">      </span>storage<span class="p">:</span><span class="w"> </span>10Gi<span class="w">
+</span><span class="w">  </span>storageClassName<span class="p">:</span><span class="w"> </span>do-block-storage</code></pre></div>
+<p>Claim is very boring. Which means it just works.</p>
+
+<h2 id="deployment">Deployment<a href="#deployment" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>This is more interesting. Athens provides a lot of possibilities for the deployment. I&rsquo;m just deploying the barest possible here. Which means, no user auth, no private repository support, ssh key configuration, etc&hellip; It&rsquo;s a plain proxy installation.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>apps/v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Deployment<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>athens-app<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>replicas<span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">      </span>app<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w">  </span>template<span class="p">:</span><span class="w">
+</span><span class="w">    </span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">      </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">        </span>app<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w">        </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w">        </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w">    </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">      </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>gomods/athens<span class="p">:</span>v0.<span class="m">6.0</span><span class="w">
+</span><span class="w">        </span>livenessProbe<span class="p">:</span><span class="w">
+</span><span class="w">          </span>httpGet<span class="p">:</span><span class="w">
+</span><span class="w">            </span>path<span class="p">:</span><span class="w"> </span><span class="s2">&#34;/healthz&#34;</span><span class="w">
+</span><span class="w">            </span>port<span class="p">:</span><span class="w"> </span><span class="m">3000</span><span class="w">
+</span><span class="w">        </span>readinessProbe<span class="p">:</span><span class="w">
+</span><span class="w">          </span>httpGet<span class="p">:</span><span class="w">
+</span><span class="w">            </span>path<span class="p">:</span><span class="w"> </span><span class="s2">&#34;/readyz&#34;</span><span class="w">
+</span><span class="w">            </span>port<span class="p">:</span><span class="w"> </span><span class="m">3000</span><span class="w">
+</span><span class="w">        </span>env<span class="p">:</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>ATHENS_GOGET_WORKERS<span class="w">
+</span><span class="w">            </span>value<span class="p">:</span><span class="w"> </span><span class="s2">&#34;3&#34;</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>ATHENS_STORAGE_TYPE<span class="w">
+</span><span class="w">            </span>value<span class="p">:</span><span class="w"> </span><span class="s2">&#34;disk&#34;</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>ATHENS_DISK_STORAGE_ROOT<span class="w">
+</span><span class="w">            </span>value<span class="p">:</span><span class="w"> </span>/var/lib/athens<span class="w">
+</span><span class="w">        </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>containerPort<span class="p">:</span><span class="w"> </span><span class="m">3000</span><span class="w">
+</span><span class="w">            </span>name<span class="p">:</span><span class="w"> </span>athens-http<span class="w">
+</span><span class="w">        </span>volumeMounts<span class="p">:</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>athens-data<span class="w">
+</span><span class="w">            </span>mountPath<span class="p">:</span><span class="w"> </span>/var/lib/athens<span class="w">
+</span><span class="w">            </span>subPath<span class="p">:</span><span class="w"> </span>athens<span class="w">
+</span><span class="w">      </span>volumes<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>athens-data<span class="w">
+</span><span class="w">          </span>persistentVolumeClaim<span class="p">:</span><span class="w">
+</span><span class="w">            </span>claimName<span class="p">:</span><span class="w"> </span>athens-storage</code></pre></div>
+<p>Fun fact. The name of the app must not be just plain <code>athens</code> because that will result in an error: <code>too many colons in address</code>.</p>
+
+<p>The issue is here: <a href="https://github.com/gomods/athens/issues/1038#issuecomment-457145658">https://github.com/gomods/athens/issues/1038#issuecomment-457145658</a> Basically it&rsquo;s because of the name used for the environment properties inside the container.</p>
+
+<h2 id="service">Service<a href="#service" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Now, let&rsquo;s expose it.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
+</span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>powerhouse<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>athens-service<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>athens-proxy<span class="w">
+</span><span class="w">  </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>port<span class="p">:</span><span class="w"> </span><span class="m">80</span><span class="w">
+</span><span class="w">    </span>targetPort<span class="p">:</span><span class="w"> </span><span class="m">3000</span></code></pre></div>
+<h2 id="ingress">Ingress<a href="#ingress" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>I&rsquo;m using port 80 here because it&rsquo;s convenient. But if you use any other port, don&rsquo;t forget to alter your ingress to forward to that port and service.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>extensions/v1beta1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Ingress<span class="w">
+</span><span class="w"></span>...<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>tls<span class="p">:</span><span class="w">
+</span><span class="w"></span>...<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>hosts<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>athens.powerhouse.com<span class="w">
+</span><span class="w">    </span>secretName<span class="p">:</span><span class="w"> </span>athens-cronohub-tls<span class="w">
+</span><span class="w">  </span>rules<span class="p">:</span><span class="w">
+</span><span class="w"></span>...<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>host<span class="p">:</span><span class="w"> </span>athens.powerhouse.com<span class="w">
+</span><span class="w">    </span>http<span class="p">:</span><span class="w">
+</span><span class="w">      </span>paths<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>backend<span class="p">:</span><span class="w">
+</span><span class="w">          </span>serviceName<span class="p">:</span><span class="w"> </span>athens-service<span class="w">
+</span><span class="w">          </span>servicePort<span class="p">:</span><span class="w"> </span><span class="m">1234</span><span class="w">
+</span><span class="w">        </span>path<span class="p">:</span><span class="w"> </span>/</code></pre></div>
+<p>And that&rsquo;s it! If you now visit <code>https://athens.powerhouse.com</code> it should say <code>&quot;Welcome to The Athens Proxy&quot;</code>.</p>
+
+<p>Now, if you set this proxy with <code>export GOPROXY=https://athens.powerhouse.com</code> it should start to cache modules. It&rsquo;s a fantastic proxy with a lot of capabilities. I encourage you to check it out and drop by it&rsquo;s slack channel on Gopher slack called Athens.</p>
+
+<h1 id="monitoring">Monitoring<a href="#monitoring" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>Monitoring is a huge topic so I&rsquo;m not going to talk about how to monitor or what. That is described in great many of posts. I especially recommend reading sysdig&rsquo;s 6 part post on doing monitoring with Prometheus and Grafana and what to monitor and the four golden signals and whatnot. Starting <a href="https://sysdig.com/blog/kubernetes-monitoring-prometheus/">here</a> and <a href="https://sysdig.com/blog/monitoring-kubernetes-with-sysdig-cloud/">here</a>.</p>
+
+<h2 id="prometheus">Prometheus<a href="#prometheus" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>I&rsquo;m going to deploy <a href="https://prometheus.io">Prometheus</a>. Prometheus is a monitoring tool which sits inside your cluster and gathers data about running pods, nodes, services, whatever you expose and wants to send data to it. It can also alert on things and can be integrated with tools like Graphana for nice front-end and metrics. Prometheus itself uses PromQL as its query language to gather data from different sources and do time series analytics and much much more.</p>
+
+<p>Please visit the website and documentation for more details. It&rsquo;s the defacto monitoring tool for Kubernetes. Again, I&rsquo;m going to do a very basic installation of Prometheus. So basic in fact, that I don&rsquo;t even have a PVC for it, because I don&rsquo;t care at this point about retaining data.</p>
+
+<h3 id="namespace">Namespace<a href="#namespace" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>Let&rsquo;s create it&rsquo;s own namespace.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Namespace<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>monitoring<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>name<span class="p">:</span><span class="w"> </span>monitoring</code></pre></div>
+<h3 id="config">Config<a href="#config" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>Prometheus Server config is massive. I don&rsquo;t expect you to pick up on everything in this thing, but I would encourage you to at least try to find out what these setting do&hellip; Our config yaml file contains the configuration file for Prometheus which we&rsquo;ll later set up via a command line argument. It&rsquo;s called <code>prometheus.yml</code>.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>ConfigMap<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>prometheus-server-conf<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>name<span class="p">:</span><span class="w"> </span>prometheus-server-conf<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>monitoring<span class="w">
+</span><span class="w"></span>data<span class="p">:</span><span class="w">
+</span><span class="w">  </span>prometheus.yml<span class="p">:</span><span class="w"> </span>|<span class="sd">-
+</span><span class="sd">    global:</span><span class="w">
+</span><span class="w">      </span>scrape_interval<span class="p">:</span><span class="w"> </span>5s<span class="w">
+</span><span class="w">      </span>evaluation_interval<span class="p">:</span><span class="w"> </span>5s<span class="w">
+</span><span class="w">
+</span><span class="w">    </span>scrape_configs<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>job_name<span class="p">:</span><span class="w"> </span><span class="s1">&#39;kubernetes-apiservers&#39;</span><span class="w">
+</span><span class="w">        </span>kubernetes_sd_configs<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>role<span class="p">:</span><span class="w"> </span>endpoints<span class="w">
+</span><span class="w">        </span>scheme<span class="p">:</span><span class="w"> </span>https<span class="w">
+</span><span class="w">        </span>tls_config<span class="p">:</span><span class="w">
+</span><span class="w">          </span>ca_file<span class="p">:</span><span class="w"> </span>/var/run/secrets/kubernetes.io/serviceaccount/ca.crt<span class="w">
+</span><span class="w">        </span>bearer_token_file<span class="p">:</span><span class="w"> </span>/var/run/secrets/kubernetes.io/serviceaccount/token<span class="w">
+</span><span class="w">        </span>relabel_configs<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_namespace<span class="p">,</span><span class="w"> </span>__meta_kubernetes_service_name<span class="p">,</span><span class="w"> </span>__meta_kubernetes_endpoint_port_name<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>keep<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>default;kubernetes;https<span class="w">
+</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>job_name<span class="p">:</span><span class="w"> </span><span class="s1">&#39;kubernetes-nodes&#39;</span><span class="w">
+</span><span class="w">        </span>scheme<span class="p">:</span><span class="w"> </span>https<span class="w">
+</span><span class="w">        </span>tls_config<span class="p">:</span><span class="w">
+</span><span class="w">          </span>ca_file<span class="p">:</span><span class="w"> </span>/var/run/secrets/kubernetes.io/serviceaccount/ca.crt<span class="w">
+</span><span class="w">        </span>bearer_token_file<span class="p">:</span><span class="w"> </span>/var/run/secrets/kubernetes.io/serviceaccount/token<span class="w">
+</span><span class="w">        </span>kubernetes_sd_configs<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>role<span class="p">:</span><span class="w"> </span>node<span class="w">
+</span><span class="w">        </span>relabel_configs<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>action<span class="p">:</span><span class="w"> </span>labelmap<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>__meta_kubernetes_node_label_(.+)<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>target_label<span class="p">:</span><span class="w"> </span>__address__<span class="w">
+</span><span class="w">          </span>replacement<span class="p">:</span><span class="w"> </span>kubernetes.default.svc<span class="p">:</span><span class="m">443</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_node_name<span class="p">]</span><span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>(.+)<span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>__metrics_path__<span class="w">
+</span><span class="w">          </span>replacement<span class="p">:</span><span class="w"> </span>/api/v1/nodes/${<span class="m">1</span>}/proxy/metrics<span class="w">
+</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>job_name<span class="p">:</span><span class="w"> </span><span class="s1">&#39;kubernetes-pods&#39;</span><span class="w">
+</span><span class="w">        </span>kubernetes_sd_configs<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>role<span class="p">:</span><span class="w"> </span>pod<span class="w">
+</span><span class="w">        </span>relabel_configs<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_pod_annotation_prometheus_io_scrape<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>keep<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_pod_annotation_prometheus_io_path<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>replace<span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>__metrics_path__<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>(.+)<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__address__<span class="p">,</span><span class="w"> </span>__meta_kubernetes_pod_annotation_prometheus_io_port<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>replace<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>(<span class="p">[</span>^<span class="p">:]</span>+)(<span class="p">?::</span>\d+)<span class="p">?</span>;(\d+)<span class="w">
+</span><span class="w">          </span>replacement<span class="p">:</span><span class="w"> </span>$<span class="m">1</span><span class="p">:</span>$<span class="m">2</span><span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>__address__<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>action<span class="p">:</span><span class="w"> </span>labelmap<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>__meta_kubernetes_pod_label_(.+)<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_namespace<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>replace<span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>kubernetes_namespace<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_pod_name<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>replace<span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>kubernetes_pod_name<span class="w">
+</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>job_name<span class="p">:</span><span class="w"> </span><span class="s1">&#39;kubernetes-cadvisor&#39;</span><span class="w">
+</span><span class="w">        </span>scheme<span class="p">:</span><span class="w"> </span>https<span class="w">
+</span><span class="w">        </span>tls_config<span class="p">:</span><span class="w">
+</span><span class="w">          </span>ca_file<span class="p">:</span><span class="w"> </span>/var/run/secrets/kubernetes.io/serviceaccount/ca.crt<span class="w">
+</span><span class="w">        </span>bearer_token_file<span class="p">:</span><span class="w"> </span>/var/run/secrets/kubernetes.io/serviceaccount/token<span class="w">
+</span><span class="w">        </span>kubernetes_sd_configs<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>role<span class="p">:</span><span class="w"> </span>node<span class="w">
+</span><span class="w">        </span>relabel_configs<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>action<span class="p">:</span><span class="w"> </span>labelmap<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>__meta_kubernetes_node_label_(.+)<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>target_label<span class="p">:</span><span class="w"> </span>__address__<span class="w">
+</span><span class="w">          </span>replacement<span class="p">:</span><span class="w"> </span>kubernetes.default.svc<span class="p">:</span><span class="m">443</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_node_name<span class="p">]</span><span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>(.+)<span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>__metrics_path__<span class="w">
+</span><span class="w">          </span>replacement<span class="p">:</span><span class="w"> </span>/api/v1/nodes/${<span class="m">1</span>}/proxy/metrics/cadvisor<span class="w">
+</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>job_name<span class="p">:</span><span class="w"> </span><span class="s1">&#39;kubernetes-service-endpoints&#39;</span><span class="w">
+</span><span class="w">        </span>kubernetes_sd_configs<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>role<span class="p">:</span><span class="w"> </span>endpoints<span class="w">
+</span><span class="w">        </span>relabel_configs<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_service_annotation_prometheus_io_scrape<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>keep<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_service_annotation_prometheus_io_scheme<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>replace<span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>__scheme__<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>(https<span class="p">?</span>)<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_service_annotation_prometheus_io_path<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>replace<span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>__metrics_path__<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>(.+)<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__address__<span class="p">,</span><span class="w"> </span>__meta_kubernetes_service_annotation_prometheus_io_port<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>replace<span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>__address__<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>(<span class="p">[</span>^<span class="p">:]</span>+)(<span class="p">?::</span>\d+)<span class="p">?</span>;(\d+)<span class="w">
+</span><span class="w">          </span>replacement<span class="p">:</span><span class="w"> </span>$<span class="m">1</span><span class="p">:</span>$<span class="m">2</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>action<span class="p">:</span><span class="w"> </span>labelmap<span class="w">
+</span><span class="w">          </span>regex<span class="p">:</span><span class="w"> </span>__meta_kubernetes_service_label_(.+)<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_namespace<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>replace<span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>kubernetes_namespace<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>source_labels<span class="p">:</span><span class="w"> </span><span class="p">[</span>__meta_kubernetes_service_name<span class="p">]</span><span class="w">
+</span><span class="w">          </span>action<span class="p">:</span><span class="w"> </span>replace<span class="w">
+</span><span class="w">          </span>target_label<span class="p">:</span><span class="w"> </span>kubernetes_name</code></pre></div>
+<p>Mostly it&rsquo;s just setting up what Prometheus should monitor and how. The important bits are the <code>labels</code>. How this is going to work is, that we will <code>annotate</code> the resources we want Prometheus to see. Which is pretty cool. Basically we will just alter a pod to include an annotation and it will begin monitoring it. No need to install anything anywhere or restart anything. Just add an annotation and bamm, you&rsquo;re done.</p>
+
+<h2 id="rbac">RBAC<a href="#rbac" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Prometheus needs permissions to access resources in the cluster such as API end-points and gathering data about the cluster itself. We will provide it with this permission through <a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/">Role Based Access Control</a>.</p>
+
+<p>We&rsquo;ll create a service account which Prometheus can use. We want it to access the whole cluster so we&rsquo;ll use a <code>ClusterRole</code>.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>rbac.authorization.k8s.io/v1beta1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>ClusterRole<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>prometheus<span class="w">
+</span><span class="w"></span>rules<span class="p">:</span><span class="w">
+</span><span class="w"></span>-<span class="w"> </span>apiGroups<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w">  </span>resources<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>nodes<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>nodes/proxy<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>services<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>endpoints<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>pods<span class="w">
+</span><span class="w">  </span>verbs<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;get&#34;</span><span class="p">,</span><span class="w"> </span><span class="s2">&#34;list&#34;</span><span class="p">,</span><span class="w"> </span><span class="s2">&#34;watch&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w"></span>-<span class="w"> </span>apiGroups<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>extensions<span class="w">
+</span><span class="w">  </span>resources<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>ingresses<span class="w">
+</span><span class="w">  </span>verbs<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;get&#34;</span><span class="p">,</span><span class="w"> </span><span class="s2">&#34;list&#34;</span><span class="p">,</span><span class="w"> </span><span class="s2">&#34;watch&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w"></span>-<span class="w"> </span>nonResourceURLs<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;/metrics&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w">  </span>verbs<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;get&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w"></span>---<span class="w">
+</span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>rbac.authorization.k8s.io/v1beta1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>ClusterRoleBinding<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>prometheus<span class="w">
+</span><span class="w"></span>roleRef<span class="p">:</span><span class="w">
+</span><span class="w">  </span>apiGroup<span class="p">:</span><span class="w"> </span>rbac.authorization.k8s.io<span class="w">
+</span><span class="w">  </span>kind<span class="p">:</span><span class="w"> </span>ClusterRole<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>prometheus<span class="w">
+</span><span class="w"></span>subjects<span class="p">:</span><span class="w">
+</span><span class="w"></span>-<span class="w"> </span>kind<span class="p">:</span><span class="w"> </span>ServiceAccount<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>default<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>monitoring</code></pre></div>
+<p>This will give access to monitor the following resources: nodes, nodes/proxy, services, endpoints and pods. The action are get, list, watch. No modifications.</p>
+
+<p>We&rsquo;ll also allow Prometheus to watch ingresses for data traffic and allow it to do get requests to non-resource endpoint <code>/metrics</code>.</p>
+
+<h2 id="deployment-1">Deployment<a href="#deployment-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Now, the deployment is actually pretty easy.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>extensions/v1beta1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Deployment<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>prometheus-deployment<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>monitoring<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>replicas<span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w">  </span>template<span class="p">:</span><span class="w">
+</span><span class="w">    </span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">      </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">        </span>app<span class="p">:</span><span class="w"> </span>prometheus-server<span class="w">
+</span><span class="w">    </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">      </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>prometheus<span class="w">
+</span><span class="w">          </span>image<span class="p">:</span><span class="w"> </span>prom/prometheus<span class="p">:</span>v2.<span class="m">2.1</span><span class="w">
+</span><span class="w">          </span>args<span class="p">:</span><span class="w">
+</span><span class="w">            </span>-<span class="w"> </span><span class="s2">&#34;--config.file=/etc/prometheus/prometheus.yml&#34;</span><span class="w">
+</span><span class="w">            </span>-<span class="w"> </span><span class="s2">&#34;--storage.tsdb.path=/prometheus/&#34;</span><span class="w">
+</span><span class="w">          </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">            </span>-<span class="w"> </span>containerPort<span class="p">:</span><span class="w"> </span><span class="m">9090</span><span class="w">
+</span><span class="w">          </span>volumeMounts<span class="p">:</span><span class="w">
+</span><span class="w">            </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>prometheus-config-volume<span class="w">
+</span><span class="w">              </span>mountPath<span class="p">:</span><span class="w"> </span>/etc/prometheus/<span class="w">
+</span><span class="w">            </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>prometheus-storage-volume<span class="w">
+</span><span class="w">              </span>mountPath<span class="p">:</span><span class="w"> </span>/prometheus/<span class="w">
+</span><span class="w">      </span>volumes<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>prometheus-config-volume<span class="w">
+</span><span class="w">          </span>configMap<span class="p">:</span><span class="w">
+</span><span class="w">            </span>defaultMode<span class="p">:</span><span class="w"> </span><span class="m">420</span><span class="w">
+</span><span class="w">            </span>name<span class="p">:</span><span class="w"> </span>prometheus-server-conf<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>prometheus-storage-volume<span class="w">
+</span><span class="w">          </span>emptyDir<span class="p">:</span><span class="w"> </span>{}</code></pre></div>
+<p>The two interesting things here are the two arguments. The config file, which we include through the <code>configMap</code> and the storage. Which I&rsquo;m not bind mounting.</p>
+
+<h2 id="service-1">Service<a href="#service-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Let&rsquo;s expose Prometheus. Now, this may come as a surprise if you don&rsquo;t know anything about Prometheus, but this is an in cluster monitoring tool. It&rsquo;s usually not supposed to be accessed directly, but through tools like Graphana or used by tools like Alerting or traefik as a reverse proxy. As such, Prometheus does not support authentication or authorization or user management of any kind. That is usually taken care of by a reverse proxy or other means written about <a href="https://prometheus.io/docs/operating/security/#authentication-authorization-and-encryption">here</a> and <a href="https://prometheus.io/docs/guides/basic-auth/">here</a>.</p>
+
+<p>As such, we can do a number of things. We can expose it as a NodePort service for example:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>prometheus-service<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>monitoring<span class="w">
+</span><span class="w">  </span>annotations<span class="p">:</span><span class="w">
+</span><span class="w">      </span>prometheus.io/scrape<span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
+</span><span class="w">      </span>prometheus.io/port<span class="p">:</span><span class="w">   </span><span class="s1">&#39;9090&#39;</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>prometheus-server<span class="w">
+</span><span class="w">  </span>type<span class="p">:</span><span class="w"> </span>NodePort<span class="w">
+</span><span class="w">  </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>port<span class="p">:</span><span class="w"> </span><span class="m">8080</span><span class="w">
+</span><span class="w">      </span>targetPort<span class="p">:</span><span class="w"> </span><span class="m">9090</span><span class="w">
+</span><span class="w">      </span>nodePort<span class="p">:</span><span class="w"> </span><span class="m">30000</span></code></pre></div>
+<p>Or we just port forward the pod like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">k port-forward pods/prometheus-deployment-6bf45557bd-qc6t6 <span class="m">9090</span>:9090 -n monitoring</code></pre></div>
+<p>And access it by simply opening the url: <a href="http://127.0.0.1:9090">http://127.0.0.1:9090</a>.</p>
+
+<h2 id="prometheus-1">Prometheus<a href="#prometheus-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Once you open it, you should see something like this, after running a small query:</p>
+
+<p><img src="/img/hosting/prometheus.png" alt="prometheus.png" /></p>
+
+<h2 id="adding-in-resources-to-monitor">Adding in Resources to monitor<a href="#adding-in-resources-to-monitor" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>In order to add a resource to monitor simply insert these annotations:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">  </span>annotations<span class="p">:</span><span class="w">
+</span><span class="w">      </span>prometheus.io/scrape<span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
+</span><span class="w">      </span>prometheus.io/port<span class="p">:</span><span class="w">   </span><span class="s1">&#39;9090&#39;</span></code></pre></div>
+<p>Done.</p>
+
+<h1 id="bonus-round-graphana">Bonus Round &ndash; Graphana<a href="#bonus-round-graphana" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>We deployed Athens and Prometheus to monitor our cluster. We don&rsquo;t have anything before Prometheus that would be fancy, but installing Graphana is actually pretty easy. You can follow the instructions <a href="https://prometheus.io/docs/visualization/grafana/">here</a>.</p>
+
+<p>A very easy way of looking at some nice metrics without worrying about anything like users and such, is running a Graphana instance in docker on your local machine with:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">docker run -d -p <span class="m">3000</span>:3000 grafana/grafana</code></pre></div>
+<p>&hellip; and while you are forwarding the Prometheus end-point you navigate to your Graphana instance by opening <code>127.0.0.1:3000</code> and install a Prometheus data-point like this:</p>
+
+<p><img src="/img/hosting/graphana_config.png" alt="graphana config" /></p>
+
+<p>After that navigate to a new dashboard and select a simple PromQL metric to see if it&rsquo;s working. You should see something like this:</p>
+
+<p><img src="/img/hosting/graphana.png" alt="graphana" /></p>
+
+<p>Now you can create a new dashboard add a PVC to our Prometheus instance and enjoy all the metrics you can store!</p>
+
+<h1 id="conclusion">Conclusion<a href="#conclusion" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>And this is it folks. Everything is installed and we can monitor things now. If you give Prometheus a PVC you can build some pretty awesome time series graphs too and see how your cluster behaves over time.</p>
+
+<p>Thank you for reading!
+Gergely.</p>
+
+		</div>
+		<div id="comments" class="thin">
+			
+<div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2019 <a href="https://skarlso.github.io/">Gergely Brautigam</a> &#183; <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-69463020-2', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>
