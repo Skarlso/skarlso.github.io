@@ -16,7 +16,7 @@ The Application TL;DR The application itself consists of six parts.">
 
 <meta itemprop="datePublished" content="2018-03-15T23:01:00&#43;01:00" />
 <meta itemprop="dateModified" content="2018-03-15T23:01:00&#43;01:00" />
-<meta itemprop="wordCount" content="6279">
+<meta itemprop="wordCount" content="6284">
 
 
 
@@ -75,14 +75,10 @@ The Application TL;DR The application itself consists of six parts."/>
 	</div>
 
 
-	<main class="site-main section-inner animated fadeIn faster">
-		<article class="thin">
-			<header class="post-header">
-				<div class="post-meta"><span>Mar 15, 2018</span></div>
-				<h1>Kubernetes distributed application deployment with sample Face Recognition App</h1>
-			</header>
-			<div class="content">
-				
+	<main class="site-main section-inner thin animated fadeIn faster">
+		<h1>Kubernetes distributed application deployment with sample Face Recognition App</h1>
+		<div class="content">
+			
 
 <h1 id="intro">Intro<a href="#intro" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
 
@@ -480,12 +476,12 @@ mysql&gt;</code></pre></div>
 
 <p>Headless services are described in detail here: <a href="https://kubernetes.io/docs/concepts/services-networking/service/#headless-services">Headless Service</a>.</p>
 
-<p>Basically it&rsquo;s the same as MySQL just with slight modifications. As stated earlier, I&rsquo;m using NSQ&rsquo;s own Docker Image called <code>nsqio/nsq</code>. All nsq commands are there, so nsqd will also use this image just with a different command. For nsqlookupd the command is:</p>
+<p>Basically it&rsquo;s the same as MySQL, just with slight modifications. As stated earlier, I&rsquo;m using NSQ&rsquo;s own Docker Image called <code>nsqio/nsq</code>. All nsq commands are there, so nsqd will also use this image just with a different command. For nsqlookupd, the command is:</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">command<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;/nsqlookupd&#34;</span><span class="p">]</span><span class="w">
 </span><span class="w"></span>args<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;--broadcast-address=nsqlookup.default.svc.cluster.local&#34;</span><span class="p">]</span></code></pre></div>
-<p>What&rsquo;s the <code>--broadcast-address</code> for, you might ask? By default, nsqlookup will use the <code>hostname</code> as broadcast address. When the consumer runs a callback it will try to connect to something like <code>http://nsqlookup-234kf-asdf:4161/lookup?topics=image</code>. Note that <code>nsqlookup-234kf-asdf</code> is the hostname of the container. By setting the broadcast-address to the internal DNS that callback will be: <code>http://nsqlookup.default.svc.cluster.local:4161/lookup?topic=images</code>. Which will work as expected.</p>
+<p>What&rsquo;s the <code>--broadcast-address</code> for, you might ask? By default, nsqlookup will use the <code>hostname</code> as broadcast address. When the consumer runs a callback it will try to connect to something like: <code>http://nsqlookup-234kf-asdf:4161/lookup?topics=image</code>. Please note that <code>nsqlookup-234kf-asdf</code> is the hostname of the container. By setting the broadcast-address to the internal DNS, the callback will be: <code>http://nsqlookup.default.svc.cluster.local:4161/lookup?topic=images</code>. Which will work as expected.</p>
 
-<p>NSQ Lookup also requires two ports forwarded. One for broadcasting and one for nsqd callback. These are exposed in the Dockerfile and then utilized in the Kubernetes template like this:</p>
+<p>NSQ Lookup also requires two ports forwarded: One for broadcasting and one for nsqd callback. These are exposed in the Dockerfile, and then utilized in the Kubernetes template. Like this:</p>
 
 <p>In the container template:</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">        </span>ports<span class="p">:</span><span class="w">
@@ -508,25 +504,25 @@ mysql&gt;</code></pre></div>
 
 <p>To create this service, I&rsquo;m using the same command as before:</p>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">kubectl apply -f nsqlookup.yaml</code></pre></div>
-<p>This concludes nsqlookupd. Two of the major players are in the sack.</p>
+<p>This concludes nsqlookupd. Two of the major players are in the sack!</p>
 
 <h3 id="receiver-1">Receiver<a href="#receiver-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
-<p>This is a more complex one. The receiver will do three things.</p>
+<p>This is a more complex one. The receiver will do three things:</p>
 
 <ul>
-<li>Create some deployments</li>
-<li>Create the nsq daemon</li>
-<li>Expose the service to the public</li>
+<li>Create some deployments;</li>
+<li>Create the nsq daemon;</li>
+<li>Expose the service to the public.</li>
 </ul>
 
 <h4 id="deployments-1">Deployments<a href="#deployments-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
-<p>The first deployment it creates is it&rsquo;s own. The receiver’s container is <code>skarlso/kube-receiver-alpine</code>.</p>
+<p>The first deployment it creates is its own. The receiver’s container is <code>skarlso/kube-receiver-alpine</code>.</p>
 
 <h4 id="nsq-daemon">Nsq Daemon<a href="#nsq-daemon" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
-<p>The receiver starts an nsq daemon. Like stated earlier, the receiver runs an nsqd with it-self. It does that so talking to it can happen locally and not over the network. By making receiver do this, they will end up on the same node.</p>
+<p>The receiver starts an nsq daemon. As stated earlier, the receiver runs an nsqd with it-self. It does this so talking to it can happen locally and not over the network. By making the receiver do this, they will end up on the same node.</p>
 
 <p>NSQ daemon also needs some adjustments and parameters.</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">        </span>ports<span class="p">:</span><span class="w">
@@ -541,17 +537,17 @@ mysql&gt;</code></pre></div>
 </span><span class="w">          </span>value<span class="p">:</span><span class="w"> </span>nsqd.default.svc.cluster.local<span class="w">
 </span><span class="w">        </span>command<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;/nsqd&#34;</span><span class="p">]</span><span class="w">
 </span><span class="w">        </span>args<span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;--lookupd-tcp-address=$(NSQLOOKUP_ADDRESS):4160&#34;</span><span class="p">,</span><span class="w"> </span><span class="s2">&#34;--broadcast-address=$(NSQ_BROADCAST_ADDRESS)&#34;</span><span class="p">]</span></code></pre></div>
-<p>You can see that the lookup-tcp-address and the broadcast-address are set. Lookup tcp address is the DNS for the nsqlookupd service. And the broadcast address is necessary just like with nsqlookupd so the callbacks are working properly.</p>
+<p>You can see that the lookup-tcp-address and the broadcast-address are set. Lookup tcp address is the DNS for the nsqlookupd service. And the broadcast address is necessary, just like with nsqlookupd, so the callbacks are working properly.</p>
 
 <h4 id="public-facing">Public facing<a href="#public-facing" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
-<p>Now, this is the first time I&rsquo;m deploying a public facing service. There are two options. I could use a LoadBalancer because this API will be under heavy load. And if this would be deployed anywhere in production, then it should be using one.</p>
+<p>Now, this is the first time I&rsquo;m deploying a public facing service. There are two options. I could use a LoadBalancer since this API will be under heavy load. And if this would be deployed anywhere in production, then it should be using one.</p>
 
-<p>I&rsquo;m doing this locally though- with one node- so something called a <code>NodePort</code> is enough. A <code>NodePort</code> exposes a service on each node&rsquo;s IP at a static port. If not specified, it will assign a random port on the host between 30000-32767. But it can also be configured to be a specific port, using <code>nodePort</code> in the template file. To reach this service, use <code>&lt;NodeIP&gt;:&lt;NodePort&gt;</code>. If more than one node is configured a LoadBalancer can multiplex them to a single IP.</p>
+<p>I&rsquo;m doing this locally though- with one node- so something called a <code>NodePort</code> is enough. A <code>NodePort</code> exposes a service on each node&rsquo;s IP at a static port. If not specified, it will assign a random port on the host between 30000-32767. But it can also be configured to be a specific port, using <code>nodePort</code> in the template file. To reach this service, use <code>&lt;NodeIP&gt;:&lt;NodePort&gt;</code>. If more than one node is configured, a LoadBalancer can multiplex them to a single IP.</p>
 
-<p>For further information check out this document: <a href="https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services---service-types">Publishing Services</a>.</p>
+<p>For further information, check out this document: <a href="https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services---service-types">Publishing Services</a>.</p>
 
-<p>Putting this all together, we&rsquo;ll get a receiver-service for which the template is as follows:</p>
+<p>Putting this all together, we&rsquo;ll get a receiver-service for which the template for is as follows:</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
 </span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
 </span><span class="w"></span>metadata<span class="p">:</span><span class="w">
@@ -580,7 +576,7 @@ mysql&gt;</code></pre></div>
 </span><span class="w">  </span>nodePort<span class="p">:</span><span class="w"> </span><span class="m">8000</span></code></pre></div>
 <h3 id="image-processor-1">Image processor<a href="#image-processor-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
-<p>The Image Processor is where I&rsquo;m handling passing off images to be identified. It should have access to nsqlookupd, mysql and the gRPC endpoint of the face recognition service. This is actually a boring service. In fact, it&rsquo;s not a service at all. It doesn&rsquo;t expose anything and thus it&rsquo;s the first deployment only component. For brevity, here is the whole template:</p>
+<p>The Image Processor is where I&rsquo;m handling passing off images to be identified. It should have access to nsqlookupd, mysql and the gRPC endpoint of the face recognition service. This is actually quite a boring service. In fact, it&rsquo;s not even a service at all. It doesn&rsquo;t expose anything, and thus it&rsquo;s the first deployment only component. For brevity, here is the whole template:</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">---<span class="w">
 </span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>apps/v1<span class="w">
 </span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Deployment<span class="w">
@@ -622,7 +618,7 @@ mysql&gt;</code></pre></div>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">kubectl apply -f image_processor.yaml</code></pre></div>
 <h3 id="face-recognition-1">Face - Recognition<a href="#face-recognition-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
-<p>The face recognition service does have a service. It&rsquo;s a simple one, only needed by image-processor. It&rsquo;s template is as follows:</p>
+<p>The face recognition service does have a service. It&rsquo;s a simple one. Only needed by image-processor. It&rsquo;s template is as follows:</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
 </span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
 </span><span class="w"></span>metadata<span class="p">:</span><span class="w">
@@ -635,13 +631,13 @@ mysql&gt;</code></pre></div>
 </span><span class="w">  </span>selector<span class="p">:</span><span class="w">
 </span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>face-recog<span class="w">
 </span><span class="w">  </span>clusterIP<span class="p">:</span><span class="w"> </span>None</code></pre></div>
-<p>The more interesting part is that it requires two volumes. The two volumes are <code>known_people</code> and <code>unknown_people</code>. Can you guess what they will contain? Yep, images. The <code>known_people</code> volume contains all the images associated to the known people in the database. The <code>unknown_people</code> volume will contain all the new images. And that&rsquo;s the path we will need to use when sending images from the receiver. That is, wherever the mount point points too. Which in my case is <code>/unknown_people</code>. Basically the path needs to be one that the face recognition service can access.</p>
+<p>The more interesting part is that it requires two volumes. The two volumes are <code>known_people</code> and <code>unknown_people</code>. Can you guess what they will contain? Yep, images. The <code>known_people</code> volume contains all the images associated to the known people in the database. The <code>unknown_people</code> volume will contain all new images. And that&rsquo;s the path we will need to use when sending images from the receiver; that is wherever the mount point points too, which in my case is <code>/unknown_people</code>. Basically, the path needs to be one that the face recognition service can access.</p>
 
-<p>Now, with Kubernetes and Docker this is easy. It could be a mounted S3 or some kind of nfs or a local mount from host to guest. The possibilities are endless (around a dozen or so). I&rsquo;m going to use a local mount for the sake of simplicity.</p>
+<p>Now, with Kubernetes and Docker, this is easy. It can be a mounted S3 or some kind of nfs or a local mount from host to guest. The possibilities are endless (around a dozen or so). I&rsquo;m going to use a local mount for the sake of simplicity.</p>
 
-<p>Mounting a volume has two parts. First, the Dockerfile has to specify volumes:</p>
+<p>Mounting a volume is done in two parts. Firstly, the Dockerfile has to specify volumes:</p>
 <div class="highlight"><pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="k">VOLUME</span><span class="s"> [ &#34;/unknown_people&#34;, &#34;/known_people&#34; ]</span></code></pre></div>
-<p>Second, the Kubernetes template needs add <code>volumeMounts</code> as seen in the MySQL service; the difference being <code>hostPath</code> instead of a claimed volume:</p>
+<p>Secondly, the Kubernetes template needs add <code>volumeMounts</code> as seen in the MySQL service; the difference being <code>hostPath</code> instead of claimed volume:</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">        </span>volumeMounts<span class="p">:</span><span class="w">
 </span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>known-people-storage<span class="w">
 </span><span class="w">          </span>mountPath<span class="p">:</span><span class="w"> </span>/known_people<span class="w">
@@ -656,11 +652,11 @@ mysql&gt;</code></pre></div>
 </span><span class="w">        </span>hostPath<span class="p">:</span><span class="w">
 </span><span class="w">          </span>path<span class="p">:</span><span class="w"> </span>/Users/hannibal/Temp/<span class="w">
 </span><span class="w">          </span>type<span class="p">:</span><span class="w"> </span>Directory</code></pre></div>
-<p>We also have to set the <code>known_people</code> folder config setting for face recognition. This is done via an environment property:</p>
+<p>We also need to set the <code>known_people</code> folder config setting for the face recognition service. This is done via an environment property:</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">        </span>env<span class="p">:</span><span class="w">
 </span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>KNOWN_PEOPLE<span class="w">
 </span><span class="w">          </span>value<span class="p">:</span><span class="w"> </span><span class="s2">&#34;/known_people&#34;</span></code></pre></div>
-<p>Then the Python code will look up images like this:</p>
+<p>Then the Python code will look up images, like this:</p>
 <div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python">        <span class="n">known_people</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;KNOWN_PEOPLE&#39;</span><span class="p">,</span> <span class="s1">&#39;known_people&#39;</span><span class="p">)</span>
         <span class="k">print</span><span class="p">(</span><span class="s2">&#34;Known people images location is: </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="n">known_people</span><span class="p">)</span>
         <span class="n">images</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_files_in_folder</span><span class="p">(</span><span class="n">known_people</span><span class="p">)</span></code></pre></div>
@@ -669,11 +665,11 @@ mysql&gt;</code></pre></div>
         <span class="k">return</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span> <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;.*\.(jpg|jpeg|png)&#39;</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">I</span><span class="p">)]</span></code></pre></div>
 <p>Neat.</p>
 
-<p>Now, if the receiver receives a request (and sends it off further the line) similar to the one below&hellip;</p>
+<p>Now, if the receiver receives a request (and sends it off further down the line) similar to the one below&hellip;</p>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">curl -d <span class="s1">&#39;{&#34;path&#34;:&#34;/unknown_people/unknown220.jpg&#34;}&#39;</span> http://192.168.99.100:30251/image/post</code></pre></div>
-<p>&hellip;it will look for an image called unknown220.jpg under <code>/unknown_people</code>, locate an image in the known_folder that corresponds to the person on the unknown image and return the name of the image that matched.</p>
+<p>&hellip;it will look for an image called unknown220.jpg under <code>/unknown_people</code>, locate an image in the known_folder that corresponds to the person in the unknown image and return the name of the image that matches.</p>
 
-<p>Looking at logs you should see something like this:</p>
+<p>Looking at logs, you should see something like this:</p>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># Receiver</span>
 ❯ curl -d <span class="s1">&#39;{&#34;path&#34;:&#34;/unknown_people/unknown219.jpg&#34;}&#39;</span> http://192.168.99.100:30251/image/post
 got path: <span class="o">{</span>Path:/unknown_people/unknown219.jpg<span class="o">}</span>
@@ -691,7 +687,7 @@ image sent to nsq
 
 <h3 id="frontend">Frontend<a href="#frontend" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
-<p>Last, there is a small web-app which displays the information in the db for convenience. This is also a public facing service with the same parameters as the receiver.</p>
+<p>Lastly, there is a small web-app which displays the information in the db for convenience. This is also a public facing service with the same parameters as the receiver.</p>
 
 <p>It looks like this:</p>
 
@@ -699,16 +695,16 @@ image sent to nsq
 
 <h3 id="recap">Recap<a href="#recap" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
-<p>So what is the situation so far? I deployed a bunch of services all over the place. A recap off the commands I used:</p>
+<p>We are now at the point in which I’ve deployed a bunch of services. A recap off the commands I’ve used so far:</p>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">kubectl apply -f mysql.yaml
 kubectl apply -f nsqlookup.yaml
 kubectl apply -f receiver.yaml
 kubectl apply -f image_processor.yaml
 kubectl apply -f face_recognition.yaml
 kubectl apply -f frontend.yaml</code></pre></div>
-<p>These could be in any order because the application does not allocate connections on start. Except for image_processor&rsquo;s NSQ consumer. But that re-tries.</p>
+<p>These could be in any order since the application does not allocate connections on start. (Except for image_processor&rsquo;s NSQ consumer. But that re-tries.)</p>
 
-<p>Query-ing kube for running pods with <code>kubectl get pods</code> should show something like this:</p>
+<p>Query-ing kube for running pods with <code>kubectl get pods</code> should show something like this if there were no errors:</p>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">❯ kubectl get pods
 NAME                                          READY     STATUS    RESTARTS   AGE
 face-recog-6bf449c6f-qg5tr                    <span class="m">1</span>/1       Running   <span class="m">0</span>          1m
@@ -737,13 +733,13 @@ receiver-deployment-5cb4797598-sf5ds          <span class="m">1</span>/1       R
 
 <p><img src="/img/kube_rotate.png" alt="kube rotate" /></p>
 
-<p>As it happens during software development, change is requested/needed to some parts of the system. What happens to our cluster if I would like to change one of its components without breaking the others? And also whilst maintaining backwards compatibility with no disruption to user experience. Thankfully Kubernetes can help with that.</p>
+<p>As it happens during software development, change is requested/needed to some parts of the system. So what happens to our cluster if I change one of its components without breaking the others whilst also maintaining backwards compatibility with no disruption to user experience? Thankfully Kubernetes can help with that.</p>
 
-<p>What I don&rsquo;t like is that the API only handles one image at a time. There is no option to bulk upload.</p>
+<p>What I don&rsquo;t like is that the API only handles one image at a time. Unfortunately there is no bulk upload option.</p>
 
 <h4 id="code">Code<a href="#code" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
-<p>Right now, we have the following code segment dealing with a single image:</p>
+<p>Currently, we have the following code segment dealing with a single image:</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// PostImage handles a post of an image. Saves it to the database
 </span><span class="c1">// and sends it to NSQ for further processing.
 </span><span class="c1"></span><span class="kd">func</span> <span class="nf">PostImage</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
@@ -755,15 +751,15 @@ receiver-deployment-5cb4797598-sf5ds          <span class="m">1</span>/1       R
     <span class="nx">router</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/image/post&#34;</span><span class="p">,</span> <span class="nx">PostImage</span><span class="p">).</span><span class="nf">Methods</span><span class="p">(</span><span class="s">&#34;POST&#34;</span><span class="p">)</span>
     <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8000&#34;</span><span class="p">,</span> <span class="nx">router</span><span class="p">))</span>
 <span class="p">}</span></code></pre></div>
-<p>We have two options. Add a new endpoint with <code>/images/post</code> and make the client use that, or modify the existing one.</p>
+<p>We have two options: Add a new endpoint with <code>/images/post</code> and make the client use that, or modify the existing one.</p>
 
-<p>The new client code has the advantage that it could fall back to submitting the old way if the new endpoint isn&rsquo;t available. The old client code though doesn&rsquo;t have this advantage so we can&rsquo;t change the way our code works right now. Consider this. You have 90 servers. You do a slow paced rolling update that will take out servers one step at a time doing an update. If an update lasts around a minute, the whole process will take around one and a half hours to complete (not counting any parallel updates).</p>
+<p>The new client code has the advantage in that it can fall back to submitting the old way if the new endpoint isn&rsquo;t available. The old client code, however, doesn&rsquo;t have this advantage so we can&rsquo;t change the way our code works right now. Consider this: You have 90 servers and you do a slow paced rolling update that will take out servers one step at a time whilst doing an update. If an update lasts around a minute, the whole process will take around one and a half hours to complete, (not counting any parallel updates).</p>
 
-<p>During that time, some of your servers will run the new code and some will run the old one. Calls are load balanced, thus you have no control over what server is hit. If a client is trying to do a call the new way but hits an old server the client would fail. The client could try a fallback, but since you eliminated the old version it will not succeed unless it, by chance, hits a server with the new code (assuming no sticky sessions are set).</p>
+<p>During this time, some of your servers will run the new code and some will run the old one. Calls are load balanced, thus you have no control over which servers will be hit. If a client is trying to do a call the new way but hits an old server, the client will fail. The client can try and fallback, but since you eliminated the old version it will not succeed unless it, by mere chance, hits a server with the new code (assuming no sticky sessions are set).</p>
 
-<p>Also, once all your servers are updated, an old client will not be able to use your service any longer at all.</p>
+<p>Also, once all your servers are updated, an old client will not be able to use your service any longer.</p>
 
-<p>Now, you could argue that you don&rsquo;t want to keep old versions of your code forever. And that is true in some sense. That&rsquo;s why what we are going to do is modify the old code to simply call the new one with some slight augmentations. This way once all clients have been migrated, the code can simply be deleted without any problems.</p>
+<p>Now, you can argue that you don&rsquo;t want to keep old versions of your code forever. And that’s true in a sense. That&rsquo;s why we are going to modify the old code to simply call the new one with some slight augmentations. This way, once all clients have been migrated, the code can simply be deleted without any problems.</p>
 
 <h4 id="new-endpoint">New Endpoint<a href="#new-endpoint" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
@@ -771,7 +767,7 @@ receiver-deployment-5cb4797598-sf5ds          <span class="m">1</span>/1       R
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="o">...</span>
 <span class="nx">router</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/images/post&#34;</span><span class="p">,</span> <span class="nx">PostImages</span><span class="p">).</span><span class="nf">Methods</span><span class="p">(</span><span class="s">&#34;POST&#34;</span><span class="p">)</span>
 <span class="o">...</span></code></pre></div>
-<p>And updating the old one to call the new one with a modified body like this:</p>
+<p>Updating the old one to call the new one with a modified body looks like this:</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// PostImage handles a post of an image. Saves it to the database
 </span><span class="c1">// and sends it to NSQ for further processing.
 </span><span class="c1"></span><span class="kd">func</span> <span class="nf">PostImage</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
@@ -796,17 +792,17 @@ receiver-deployment-5cb4797598-sf5ds          <span class="m">1</span>/1       R
     <span class="nx">r</span><span class="p">.</span><span class="nx">ContentLength</span> <span class="p">=</span> <span class="nb">int64</span><span class="p">(</span><span class="nx">pathsJSON</span><span class="p">.</span><span class="nf">Len</span><span class="p">())</span>
     <span class="nf">PostImages</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">r</span><span class="p">)</span>
 <span class="p">}</span></code></pre></div>
-<p>Well, the naming could be better, but you should get the basic idea. I&rsquo;m modifying the incoming single path by wrapping it into the new format and sending it over to the new endpoint handler. And that&rsquo;s it. There are a few more modifications, to check them out take a look at this PR: <a href="https://github.com/Skarlso/kube-cluster-sample/pull/1">Rolling Update Bulk Image Path PR</a>.</p>
+<p>Well, the naming could be better, but you should get the basic idea. I&rsquo;m modifying the incoming single path by wrapping it into the new format and sending it over to the new endpoint handler. And that&rsquo;s it! There are a few more modifications. To check them out, take a look at this PR: <a href="https://github.com/Skarlso/kube-cluster-sample/pull/1">Rolling Update Bulk Image Path PR</a>.</p>
 
-<p>Now, we can call the receiver in two ways:</p>
+<p>Now, the receiver can be called in two ways:</p>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># Single Path:</span>
 curl -d <span class="s1">&#39;{&#34;path&#34;:&#34;unknown4456.jpg&#34;}&#39;</span> http://127.0.0.1:8000/image/post
 
 <span class="c1"># Multiple Paths:</span>
 curl -d <span class="s1">&#39;{&#34;paths&#34;:[{&#34;path&#34;:&#34;unknown4456.jpg&#34;}]}&#39;</span> http://127.0.0.1:8000/images/post</code></pre></div>
-<p>Here, the client is curl. Normally, if the client would be a service, I would modify it that in case the new end-point throws a 404 it would try the old one next.</p>
+<p>Here, the client is curl. Normally, if the client is a service, I would modify it that in case the new end-point throws a 404 it would try the old one next.</p>
 
-<p>For brevity, I&rsquo;m not modifying NSQ and the others to handle bulk image processing. They will still receive it one - by - one. I&rsquo;ll leave that up to you as homework. ;)</p>
+<p>For brevity, I&rsquo;m not modifying NSQ and the others to handle bulk image processing; they will still receive it one by one. I&rsquo;ll leave that up to you as homework ;)</p>
 
 <h4 id="new-image">New Image<a href="#new-image" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
@@ -816,27 +812,27 @@ curl -d <span class="s1">&#39;{&#34;paths&#34;:[{&#34;path&#34;:&#34;unknown4456
 
 <h4 id="rolling-update-1">Rolling update<a href="#rolling-update-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
-<p>In Kubernetes, you can configure your rolling update in multiple ways.</p>
+<p>In Kubernetes, you can configure your rolling update in multiple ways:</p>
 
 <h5 id="manual-update">Manual Update<a href="#manual-update" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h5>
 
-<p>If, say, I was using a container version in my config file called <code>v1.0</code> than doing an update is simply calling:</p>
+<p>If I was using a container version in my config file called <code>v1.0</code>, then doing an update is simply calling:</p>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">kubectl rolling-update receiver --image:skarlso/kube-receiver-alpine:v1.1</code></pre></div>
 <p>If there is a problem during the rollout we can always rollback.</p>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">kubectl rolling-update receiver --rollback</code></pre></div>
-<p>It will set back the previous version no fuss, no muss.</p>
+<p>It will set back the previous version. No fuss, no muss.</p>
 
 <h5 id="apply-a-new-configuration-file">Apply a new configuration file<a href="#apply-a-new-configuration-file" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h5>
 
-<p>The problem with by-hand updates is always that they aren&rsquo;t in source control.</p>
+<p>The problem with by-hand updates is that they aren&rsquo;t in source control.</p>
 
-<p>Consider this. Something changed, a couple of servers got updated by hand to do a quick “patch fix”, but nobody witnessed it and it wasn’t documented. A new person comes along and does a change to the template and applies the template to the cluster. All the servers are updated, but suddenly, there is a service outage.</p>
+<p>Consider this: Something has changed, A couple of servers got updated by hand to do a quick “patch fix”, but nobody witnessed it and it wasn’t documented. A new person comes along and does a change to the template and applies the template to the cluster. All the servers are updated, and then all of a sudden there is a service outage.</p>
 
-<p>Long story short, the servers which got updated are whacked over because the template didn&rsquo;t reflect what has been done by hand. That is bad. Don&rsquo;t do that.</p>
+<p>Long story short, the servers which got updated are written over because the template doesn’t  reflect what has been done manually.</p>
 
-<p>The recommended way is to change the template to use the new version and than apply the template with the <code>apply</code> command.</p>
+<p>The recommended way is to change the template in order to use the new version, and than apply the template with the <code>apply</code> command.</p>
 
-<p>Kubernetes recommends that the Deployment handles the rollout with ReplicaSets. This means however, that there must be at least two replicates present for a rolling update. Otherwise the update won&rsquo;t work (unless <code>maxUnavailable</code> is set to 1). I&rsquo;m increasing the replica count in the yaml and I set the new image version for the receiver container.</p>
+<p>Kubernetes recommends that a Deployment with ReplicaSets should handle a rollout. This means there must be at least two replicates present for a rolling update. If less than two replicates are present then the update won&rsquo;t work (unless <code>maxUnavailable</code> is set to 1). I increase the replica count in yaml. I also set the new image version for the receiver container.</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">  </span>replicas<span class="p">:</span><span class="w"> </span><span class="m">2</span><span class="w">
 </span><span class="w"></span>...<span class="w">
 </span><span class="w">    </span>spec<span class="p">:</span><span class="w">
@@ -844,7 +840,7 @@ curl -d <span class="s1">&#39;{&#34;paths&#34;:[{&#34;path&#34;:&#34;unknown4456
 </span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>receiver<span class="w">
 </span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>skarlso/kube-receiver-alpine<span class="p">:</span>v1.<span class="m">1</span><span class="w">
 </span><span class="w"></span>...</code></pre></div>
-<p>Looking at the progress you should see something like this:</p>
+<p>Looking at the progress, this is what you should see :</p>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">❯ kubectl rollout status deployment/receiver-deployment
 Waiting <span class="k">for</span> rollout to finish: <span class="m">1</span> out of <span class="m">2</span> new replicas have been updated...</code></pre></div>
 <p>You can add in additional rollout configuration settings by specifying the <code>strategy</code> part of the template like this:</p>
@@ -853,68 +849,35 @@ Waiting <span class="k">for</span> rollout to finish: <span class="m">1</span> o
 </span><span class="w">    </span>rollingUpdate<span class="p">:</span><span class="w">
 </span><span class="w">      </span>maxSurge<span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
 </span><span class="w">      </span>maxUnavailable<span class="p">:</span><span class="w"> </span><span class="m">0</span></code></pre></div>
-<p>Additional information on rolling update can be found in these documents: <a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment">Deployment Rolling Update</a>, <a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment">Updating a Deployment</a>, <a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/#updating-your-application-without-a-service-outage">Manage Deployments</a>, <a href="https://kubernetes.io/docs/tasks/run-application/rolling-update-replication-controller/">Rolling Update using ReplicaController</a>.</p>
+<p>Additional information on rolling update can be found in the below documents: <a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment">Deployment Rolling Update</a>, <a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment">Updating a Deployment</a>, <a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/#updating-your-application-without-a-service-outage">Manage Deployments</a>, <a href="https://kubernetes.io/docs/tasks/run-application/rolling-update-replication-controller/">Rolling Update using ReplicaController</a>.</p>
 
-<p><strong>NOTE MINIKUBE USERS</strong>: Since we are doing this on a local machine with one node and 1 replica of an application, we have to set <code>maxUnavailable</code> to <code>1</code>. Otherwise, Kubernetes won&rsquo;t allow the update to happen and the new version will always be in <code>Pending</code> state since we aren&rsquo;t allowing that at any given point in time there is a situation where no containers are present for <code>receiver</code> app.</p>
+<p><strong>NOTE MINIKUBE USERS</strong>: Since we are doing this on a local machine with one node and 1 replica of an application, we have to set <code>maxUnavailable</code> to <code>1</code>; otherwise Kubernetes won&rsquo;t allow the update to happen, and the new version will remain in <code>Pending</code> state. That’s because we aren’t allowing for a services to exist with no running containers; which basically means service outage.</p>
 
 <h3 id="scaling-1">Scaling<a href="#scaling-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
-<p>Scaling is dead easy with Kubernetes. Since it&rsquo;s managing the whole cluster, you basically, just have to put a number into the template of the desired replicas to use.</p>
+<p>Scaling is dead easy with Kubernetes. Since it&rsquo;s managing the whole cluster, you basically just need to put a number into the template of the desired replicas to use.</p>
 
-<p>This has been a great post so far but it&rsquo;s getting too long. I&rsquo;m planning on writing a follow-up where I will be truly scaling things up on AWS with multiple nodes and replicas. Stay tuned.</p>
+<p>This has been a great post so far, but it&rsquo;s getting too long. I&rsquo;m planning on writing a follow-up where I will be truly scaling things up on AWS with multiple nodes and replicas; plus deploying a Kubernetes cluster with <a href="https://github.com/kubernetes/kops">Kops</a>. So stay tuned!</p>
 
 <h3 id="cleanup">Cleanup<a href="#cleanup" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">kubectl delete deployments --all
 kubectl delete services -all</code></pre></div>
 <h1 id="final-words">Final Words<a href="#final-words" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
 
-<p>And that is it ladies and gentleman. We wrote, deployed, updated and scaled (well, not yet really) a distributed application with Kubernetes.</p>
+<p>And that’s it ladies and gentlemen. We wrote, deployed, updated and scaled (well, not yet really) a distributed application with Kubernetes.</p>
 
-<p>Any questions, please feel free to chat in the comments below, I&rsquo;m happy to answer.</p>
+<p>If you have any questions, please feel free to chat in the comments below. I&rsquo;m happy to answer.</p>
 
-<p>I hope you enjoyed reading this. I know, it&rsquo;s quiet long and I was thinking of splitting it up, but having a cohesive, one page guide is sometimes useful and makes it easy to find something or save it for later read or even print as PDF.</p>
+<p>I hope you’ve enjoyed reading this. I know it&rsquo;s quite long; I was thinking of splitting it up multiple posts, but having a cohesive, one page guide is useful and makes it easy to find, save, and print.</p>
 
 <p>Thank you for reading,
 Gergely.</p>
 
-			</div>
-			<hr class="post-end">
-			<footer class="post-info">
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>6279 Words</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2018-03-15 22:01 &#43;0000</p>
-			</footer>
-		</article>
-		<div class="post-nav thin">
-			<a class="prev-post" href="https://skarlso.github.io/2018/02/06/go-budapest-meetup/">
-				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>Go Budapest Meetup</span>
-			</a>
 		</div>
-		<div id="comments" class="thin">
-<div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-</div>
 	</main>
 
 	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2019 <a href="https://skarlso.github.io/">Gergely Brautigam</a> &#183; <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
+		<p>&copy; 2020 <a href="https://skarlso.github.io/">Gergely Brautigam</a> &#183; <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
 		<p>
 			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
 		</p>
