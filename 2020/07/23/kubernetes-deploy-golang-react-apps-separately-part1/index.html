@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+<meta itemprop="name" content="How to deploy a Go (Golang) backend with a React frontend separately on Kubernetes - Part One">
+<meta itemprop="description" content="Intro Welcome. This is a longer post about how to deploy a Go backend with a React frontend on Kubernetes as separate entities. Instead of the usual compiled together single binary Go application, we are going to separate the two. Why? Because usually a React frontend is just a &ldquo;static&rdquo; SPA app with very little requirements in terms of resources, while the Go backend does most of the leg work, requiring a lot more resources.">
+
+
+<meta itemprop="datePublished" content="2020-07-23T21:01:00&#43;01:00" />
+<meta itemprop="dateModified" content="2020-07-23T21:01:00&#43;01:00" />
+<meta itemprop="wordCount" content="2399">
+
+
+
+<meta itemprop="keywords" content="" />
+<meta property="og:title" content="How to deploy a Go (Golang) backend with a React frontend separately on Kubernetes - Part One" />
+<meta property="og:description" content="Intro Welcome. This is a longer post about how to deploy a Go backend with a React frontend on Kubernetes as separate entities. Instead of the usual compiled together single binary Go application, we are going to separate the two. Why? Because usually a React frontend is just a &ldquo;static&rdquo; SPA app with very little requirements in terms of resources, while the Go backend does most of the leg work, requiring a lot more resources." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://skarlso.github.io/2020/07/23/kubernetes-deploy-golang-react-apps-separately-part1/" />
+<meta property="article:published_time" content="2020-07-23T21:01:00&#43;01:00"/>
+<meta property="article:modified_time" content="2020-07-23T21:01:00&#43;01:00"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="How to deploy a Go (Golang) backend with a React frontend separately on Kubernetes - Part One"/>
+<meta name="twitter:description" content="Intro Welcome. This is a longer post about how to deploy a Go backend with a React frontend on Kubernetes as separate entities. Instead of the usual compiled together single binary Go application, we are going to separate the two. Why? Because usually a React frontend is just a &ldquo;static&rdquo; SPA app with very little requirements in terms of resources, while the Go backend does most of the leg work, requiring a lot more resources."/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>How to deploy a Go (Golang) backend with a React frontend separately on Kubernetes - Part One</title>
+	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://skarlso.github.io/blog/">blog</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<span class="hdr-social hide-in-mobile"><a href="https://twitter.com/skarlso" target="_blank" rel="noopener" title="Twitter"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a><a href="https://github.com/Skarlso" target="_blank" rel="noopener" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner thin animated fadeIn faster">
+		<h1>How to deploy a Go (Golang) backend with a React frontend separately on Kubernetes - Part One</h1>
+		<div class="content">
+			
+
+<h1 id="intro">Intro<a href="#intro" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>Welcome. This is a longer post about how to deploy a Go backend with a React frontend
+on Kubernetes as separate entities. Instead of the usual compiled together single binary Go
+application, we are going to separate the two. Why? Because usually a React frontend is just a &ldquo;static&rdquo;
+SPA app with very little requirements in terms of resources, while the Go backend does most of the
+leg work, requiring a lot more resources.</p>
+
+<p>Part two of this will contain scaling, utilization configuration, health probes, readiness probes,
+and how to make sure our application can run multiple instances without stepping on each other&rsquo;s toes.</p>
+
+<p><em>Note</em>: This isn&rsquo;t going to be a Kubernetes guide. Some knowledge is assumed.</p>
+
+<h2 id="summary">Summary<a href="#summary" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p><img src="/img/kube/short-version.png" alt="Give me the short version" /></p>
+
+<p>This post details a complex setup of an infrastructure with a second part coming on scaling and how to make
+your application scalable in the first place by doing idempotent transactions or dealing with locking and
+several instances of the same application not stepping on each other&rsquo;s foot.</p>
+
+<p>This, part one, details how to deploy traditional REST + Frontend based application in Go + React, but not bundled
+together as a single binary, instead having the backend separate from the frontend. They key in doing so is explained
+at the <a href="#ingress">Ingress</a> section when talking about routing specific URIs to the backend and frontend services.</p>
+
+<p>If you are familiar with Kubernetes and infrastructure setup, feel free to skip ahead to that section. Otherwise, enjoy
+the drawings or the writing or both.</p>
+
+<h2 id="technology">Technology<a href="#technology" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>The SPA app will be handled by <a href="https://www.npmjs.com/package/serve">Serve</a> while the Go backend
+will use <a href="https://echo.labstack.com/">Echo</a>. The database will be Postgres.</p>
+
+<p>We are going to apply some best practices using Network Policies to cordon off traffic that we don&rsquo;t
+want to go outside.</p>
+
+<p>We will set up HTTPS using cert-manager and let&rsquo;s encrypt. We&rsquo;ll be using nginx as ingress
+provider.</p>
+
+<h2 id="code">Code<a href="#code" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p><img src="/img/kube/architect.png" alt="Let me show you the code" /></p>
+
+<p>All, or most of the code, including the application can be found here:</p>
+
+<p><a href="https://github.com/staple-org">Staple</a>. The application is a simple reading list manager with
+user handling, email sending and lots of database access.</p>
+
+<p>Let&rsquo;s get to it then!</p>
+
+<h2 id="kubernetes-provider">Kubernetes Provider<a href="#kubernetes-provider" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p><img src="/img/kube/audition.png" alt="Difficult Choice" /></p>
+
+<p>Let&rsquo;s start with the obvious one. Where do you would like to create your Kubernetes cluster?</p>
+
+<p>There are four major providers now-a-days. AWS <a href="https://aws.amazon.com/eks/">EKS</a>, GCP <a href="https://cloud.google.com/kubernetes-engine">GKE</a>,
+Azure <a href="https://azure.microsoft.com/en-us/services/kubernetes-service/">AKS</a> and DigitalOcean <a href="https://www.digitalocean.com/products/kubernetes/">DKE</a>.
+Personally, I prefer DO because, it&rsquo;s a lot cheaper than the others. The downside is that DO only
+provides ReadWriteOnce persistent volumes. This gets to be a problem when we are trying to update
+and the new Pod can&rsquo;t mount the volume because it&rsquo;s already taken by the existing one. This can be
+solved by a good ol NFS instance. But that&rsquo;s another story.</p>
+
+<p>AWS&rsquo; was late to the party and their solution is quite fragile and the API is terrible. GCP is best in terms
+of technicalities, api, handling, and updates. Azure is surprisingly good, however, the documentation is
+most of the times out of date or even plain incorrect at some places.</p>
+
+<h2 id="setup-basics">Setup Basics<a href="#setup-basics" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p><img src="/img/kube/owl.jpg" alt="Owl" /></p>
+
+<p>To setup your Kubernetes instance, follow DigitalOcean&rsquo;s Kubernetes Getting Started guide. It&rsquo;s really simple.
+When you have access to the cluster via kubectl I highly recommend using this tool: <a href="https://github.com/derailed/k9s">k9s</a>.</p>
+
+<p>It&rsquo;s a flexible and quite handy tool for quick observations, logs, shells to pods, edits and generally following what&rsquo;s
+happening to your cluster.</p>
+
+<p>Now that we are all set with our own little cluster, it&rsquo;s time to have some people move in. First, we are going to
+install cert-manager.</p>
+
+<p><em>Note</em>: I&rsquo;m not going to use Helm because I think it&rsquo;s unnecessary in this setting. We aren&rsquo;t going to install
+these things in a highly configurable way and updating with helm is a pain in the butt. For example, for cert-manager
+the update with helm takes several steps, whilst updating with a plain yaml file is just applying the next version
+of the yaml file.</p>
+
+<p>I&rsquo;m not going to explain how to install cert-manager or nginx. I&rsquo;ll link to their respective guides because frankly, they
+are simple to follow and work out of the box.</p>
+
+<p>To install nginx, simply apply the yaml file located here: <a href="https://kubernetes.github.io/ingress-nginx/deploy/#digital-ocean">DigitalOcean Nginx</a>.</p>
+
+<p>To install cert-manager follow this guide: <a href="https://cert-manager.io/docs/installation/kubernetes/">https://cert-manager.io/docs/installation/kubernetes/</a>.
+Follow the regular manifest install part, then ignore the Helm part and proceed with verification and then install
+your issuer. I used a simple ACME/http01 issuer from here: <a href="https://cert-manager.io/docs/configuration/acme/http01/">https://cert-manager.io/docs/configuration/acme/http01/</a></p>
+
+<p><em>Note</em>: That acme configuration contains the <strong>staging</strong> url. This is to test that things are working. Once you are
+sure that everything is wired up correctly, switch that url to this one:
+<code>https://acme-v02.api.letsencrypt.org/directory</code> -&gt; prod url. For example:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>cert-manager.io/v1alpha2<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>ClusterIssuer<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>letsencrypt-prod<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>acme<span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="c"># The ACME server URL</span><span class="w">
+</span><span class="w">    </span>server<span class="p">:</span><span class="w"> </span>https<span class="p">:</span>//acme-v02.api.letsencrypt.org/directory<span class="w">
+</span><span class="w">    </span><span class="c"># Email address used for ACME registration</span><span class="w">
+</span><span class="w">    </span>email<span class="p">:</span><span class="w"> </span>your@email.com<span class="w">
+</span><span class="w">    </span><span class="c"># Name of a secret used to store the ACME account private key</span><span class="w">
+</span><span class="w">    </span>privateKeySecretRef<span class="p">:</span><span class="w">
+</span><span class="w">      </span>name<span class="p">:</span><span class="w"> </span>letsencrypt-prod<span class="w">
+</span><span class="w">    </span><span class="c"># Enable the HTTP-01 challenge provider</span><span class="w">
+</span><span class="w">    </span>solvers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>http01<span class="p">:</span><span class="w">
+</span><span class="w">          </span>ingress<span class="p">:</span><span class="w">
+</span><span class="w">            </span>class<span class="p">:</span><span class="w"> </span>nginx</code></pre></div>
+<p><em>Note</em>: I&rsquo;m using a ClusterIssuer because I have multiple domains and multiple namespaces.</p>
+
+<p>That&rsquo;s it. Cert-manager and nginx should be up and running. Later on, we will create our own
+ingress rules.</p>
+
+<h2 id="domain">Domain<a href="#domain" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Next, you&rsquo;ll need a domain to bind too. There are a gazillion domain providers out there like
+no-ip, GoDaddy, HostGator, Shopify and so on. Choose one which is available to you or has the best
+prices.</p>
+
+<p>There are some good guides on how to choose a domain and where to create it.
+For example: <a href="https://domains.google/learning-center/5-things-to-watch-out-for-when-buying-a-domain/">5 things to watch out for when buying a domain</a>.</p>
+
+<h1 id="the-application">The application<a href="#the-application" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>Alright, let&rsquo;s put together the application.</p>
+
+<p><img src="/img/kube/assemble.png" alt="Assemble" /></p>
+
+<h2 id="structure">Structure<a href="#structure" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Every piece of our infrastructure will be laid out in yaml files. I believe in infrastructure as code.
+If you run a command you will most likely forget about it, unless it&rsquo;s logged and / or is replayable.</p>
+
+<p>This is the structure I&rsquo;m using:</p>
+
+<p>.
+├── LICENSE
+├── README.md
+├── certificate_request
+│   └── certificate_request.yml
+├── configmaps
+│   └── staple_initdb_script.yaml
+├── database
+│   ├── staple_db_deployment.yaml
+│   ├── staple_db_network_policy.yaml
+│   ├── staple_db_pvc.yaml
+│   └── staple_db_service.yaml
+├── namespace
+│   └── staple_namespace.yaml
+├── primer.sql
+├── rbac
+├── secrets
+│   ├── staple_db_password.yaml
+│   └── staple_mg_creds.yaml
+├── staple-backend
+│   ├── staple_deployment.yaml
+│   └── staple_service.yaml
+└── staple-frontend
+    ├── staple_deployment.yaml
+    └── staple_service.yaml</p>
+
+<p>One other possible combination is, if you have multiple applications:</p>
+
+<p>.
+├── README.md
+├── applications
+│   ├── confluence
+│   │   ├── db
+│   │   │   ├── db_deployment.yaml
+│   │   │   └── db_service.yaml
+│   │   ├── deployment
+│   │   │   └── deployment.yaml
+│   │   ├── pvc
+│   │   │   └── confluence_app_pvc.yaml
+│   │   └── service
+│   │       └── service.yaml
+│   ├── gitea
+│   │   ├── config
+│   │   │   ├── app.ini
+│   │   │   └── gitea_config_map.yaml
+│   │   ├── db
+│   │   │   ├── gitea_db_deployment.yaml
+│   │   │   ├── gitea_db_network_policy.yaml
+│   │   │   ├── gitea_db_pvc.yaml
+│   │   │   └── gitea_db_service.yaml
+│   │   ├── deployment
+│   │   │   └── gitea_deployment.yaml
+│   │   ├── pvc
+│   │   │   └── gitea_app_pvc.yaml
+│   │   └── service
+│   │       └── gitea_service.yaml
+├── cronjobs
+│   ├── cronjob1
+│   │   ├── Dockerfile
+│   │   ├── README.md
+│   │   ├── go.mod
+│   │   ├── go.sum
+│   │   ├── cron.yaml
+│   │   └── main.go
+├── ingress
+│   ├── example1
+│   │   ├── example1_ingress_resource.yaml
+│   │   └── gitea_ssh_configmap.yaml
+│   ├── example2
+│   │   └── example2_ingress_resource.yaml
+│   ├── lets-encrypt-issuer.yaml
+│   └── nginx
+│       ├── nginx-ingress-controller-deployment.yaml
+│       └── nginx-ingress-controller-service.yaml
+└── namespaces
+    ├── example1_namespace.yaml
+    ├── example2_namespace.yaml</p>
+
+<h2 id="namespace">Namespace<a href="#namespace" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Before we begin, we&rsquo;ll create a namespace for our application to properly partition all our entities.</p>
+
+<p>To create a namespace we&rsquo;ll use this yaml <code>example_namespace.yaml</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Namespace<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>example</code></pre></div>
+<p>Apply this with <code>kubectl -f apply example_namespace.yaml</code>.</p>
+
+<h2 id="the-database">The Database<a href="#the-database" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Deploying a Postgres database on Kubernetes is actually really easy. You need five things to have a basic, but
+relatively secure installation.</p>
+
+<h3 id="secret">Secret<a href="#secret" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>The secret contains our password and our database user and name. This could come from Vault too, but
+the Kubernetes secret is usually enough since it&rsquo;s in a closed environment anyways. Our secret looks like this:
+database_secret.yaml</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Secret<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-db-password<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w"></span>data<span class="p">:</span><span class="w">
+</span><span class="w">  </span>POSTGRES_PASSWORD<span class="p">:</span><span class="w"> </span>cGFzc3dvcmQxMjM=<span class="w">
+</span><span class="w">  </span><span class="c"># This creates a user and a db with the same name.</span><span class="w">
+</span><span class="w">  </span>POSTGRES_USER<span class="p">:</span><span class="w"> </span>c3RhcGxl</code></pre></div>
+<p>To generate the base64 code for a password and a user, use:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">echo</span> -n <span class="s2">&#34;password123&#34;</span> <span class="p">|</span> base64
+<span class="nb">echo</span> -n <span class="s2">&#34;username&#34;</span> <span class="p">|</span> base64</code></pre></div>
+<p>&hellip;and paste the result in the respective fields. Once done, apply with <code>kubectl -f apply database_secret.yaml</code>.</p>
+
+<h3 id="deployment">Deployment<a href="#deployment" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>The deployment which configures our database. Looks something like this (database_deployment.yaml):</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>apps/v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Deployment<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-db<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>replicas<span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">      </span>app<span class="p">:</span><span class="w"> </span>staple-db<span class="w">
+</span><span class="w">  </span>template<span class="p">:</span><span class="w">
+</span><span class="w">    </span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">      </span>name<span class="p">:</span><span class="w"> </span>staple-db<span class="w">
+</span><span class="w">      </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">        </span>app<span class="p">:</span><span class="w"> </span>staple-db<span class="w">
+</span><span class="w">    </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">      </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>postgres<span class="w">
+</span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>postgres<span class="p">:</span><span class="m">11</span><span class="w">
+</span><span class="w">        </span>env<span class="p">:</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>POSTGRES_USER<span class="w">
+</span><span class="w">            </span>value<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>POSTGRES_PASSWORD<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>secretKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>staple-db-password<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>POSTGRES_PASSWORD<span class="w">
+</span><span class="w">        </span>volumeMounts<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>mountPath<span class="p">:</span><span class="w"> </span>/var/lib/postgresql/data<span class="w">
+</span><span class="w">          </span>subPath<span class="p">:</span><span class="w"> </span>data<span class="w"> </span><span class="c"># important so it gets mounted correctly instead of adding a lost-and-found folder.</span><span class="w">
+</span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>staple-db-data<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>mountPath<span class="p">:</span><span class="w"> </span>/docker-entrypoint-initdb.d/staple_initdb.sql<span class="w">
+</span><span class="w">          </span>subPath<span class="p">:</span><span class="w"> </span>staple_initdb.sql<span class="w">
+</span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>bootstrap-script<span class="w">
+</span><span class="w">      </span>volumes<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>staple-db-data<span class="w">
+</span><span class="w">          </span>persistentVolumeClaim<span class="p">:</span><span class="w">
+</span><span class="w">            </span>claimName<span class="p">:</span><span class="w"> </span>do-storage-staple-db<span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>bootstrap-script<span class="w">
+</span><span class="w">          </span>configMap<span class="p">:</span><span class="w">
+</span><span class="w">            </span>name<span class="p">:</span><span class="w"> </span>staple-initdb-script</code></pre></div>
+<p>The first one makes sure that our data isn&rsquo;t lost when the database pod itself restarts. It creates a mount
+to a persistent volume which is defined a few lines below by <code>persistentVolumeClaim</code>.</p>
+
+<p>Note the volume mounts. The first one will take care of our data.
+The second mount is a postgres specific initialization file. Postgres will run that sql file when it
+starts up. I&rsquo;m using it to create my application&rsquo;s schema.</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">create</span> <span class="k">database</span> <span class="n">staples</span><span class="p">;</span>
+<span class="k">create</span> <span class="k">table</span> <span class="n">users</span> <span class="p">(</span><span class="n">email</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span> <span class="n">password</span> <span class="nb">text</span><span class="p">,</span> <span class="n">confirm_code</span> <span class="nb">text</span><span class="p">,</span> <span class="n">max_staples</span> <span class="nb">int</span><span class="p">);</span>
+<span class="k">create</span> <span class="k">table</span> <span class="n">staples</span> <span class="p">(</span><span class="n">name</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span> <span class="n">id</span> <span class="nb">serial</span><span class="p">,</span> <span class="n">content</span> <span class="nb">text</span><span class="p">,</span> <span class="n">created_at</span> <span class="k">timestamp</span><span class="p">,</span> <span class="n">archived</span> <span class="n">bool</span><span class="p">,</span> <span class="n">user_email</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">255</span><span class="p">));</span></code></pre></div>
+<p>And it comes from a configmap which looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>ConfigMap<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-initdb-script<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w"></span>data<span class="p">:</span><span class="w">
+</span><span class="w">  </span>staple_initdb.sql<span class="p">:</span><span class="w">
+</span><span class="w">    </span>create<span class="w"> </span>table<span class="w"> </span>users<span class="w"> </span>(email<span class="w"> </span>varchar(<span class="m">255</span>)<span class="p">,</span><span class="w"> </span>password<span class="w"> </span>text<span class="p">,</span><span class="w"> </span>confirm_code<span class="w"> </span>text<span class="p">,</span><span class="w"> </span>max_staples<span class="w"> </span>int);<span class="w">
+</span><span class="w">    </span>create<span class="w"> </span>table<span class="w"> </span>staples<span class="w"> </span>(name<span class="w"> </span>varchar(<span class="m">255</span>)<span class="p">,</span><span class="w"> </span>id<span class="w"> </span>serial<span class="p">,</span><span class="w"> </span>content<span class="w"> </span>text<span class="p">,</span><span class="w"> </span>created_at<span class="w"> </span>timestamp<span class="p">,</span><span class="w"> </span>archived<span class="w"> </span>bool<span class="p">,</span><span class="w"> </span>user_email<span class="w"> </span>varchar(<span class="m">255</span>));</code></pre></div>
+<h3 id="network-policy">Network Policy<a href="#network-policy" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>Network policies are important if you value your privacy. They restrict a PODs communication to a certain namespace
+OR even to between applications only. By default I like to deny all traffic and then slowly open the valve until everything works.</p>
+
+<p><img src="/img/kube/szaffi.png" alt="Szaffi" />
+Kudos if you know who this is. (mind my terrible drawing capabilities)</p>
+
+<p>We&rsquo;ll use a basic network policy which will restrict the DB to talk to anything BUT the backend. Nothing else
+will be able to talk to this Pod.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>networking.k8s.io/v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>NetworkPolicy<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-db-network-policy<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>podSelector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">      </span>app<span class="p">:</span><span class="w"> </span>staple-db<span class="w">
+</span><span class="w">  </span>policyTypes<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>Ingress<span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>Egress<span class="w">
+</span><span class="w">  </span>ingress<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>from<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>podSelector<span class="p">:</span><span class="w">
+</span><span class="w">        </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">          </span>app<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">    </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>protocol<span class="p">:</span><span class="w"> </span>TCP<span class="w">
+</span><span class="w">      </span>port<span class="p">:</span><span class="w"> </span><span class="m">5432</span><span class="w">
+</span><span class="w">  </span>egress<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>to<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>podSelector<span class="p">:</span><span class="w">
+</span><span class="w">        </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">          </span>app<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">    </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>protocol<span class="p">:</span><span class="w"> </span>TCP<span class="w">
+</span><span class="w">      </span>port<span class="p">:</span><span class="w"> </span><span class="m">5432</span></code></pre></div>
+<p>The important bit here is the <code>podSelector</code> part. The label will be the label used by the application deployment.
+This will restrict the Pod&rsquo;s incoming and outgoing traffic to that of the application Pod including denying internet
+traffic.</p>
+
+<h3 id="pvc">PVC<a href="#pvc" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>The persistent volume claim definition is straight forward:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>PersistentVolumeClaim<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>do-storage-staple-db<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>accessModes<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>ReadWriteOnce<span class="w">
+</span><span class="w">  </span>resources<span class="p">:</span><span class="w">
+</span><span class="w">    </span>requests<span class="p">:</span><span class="w">
+</span><span class="w">      </span>storage<span class="p">:</span><span class="w"> </span>10Gi<span class="w">
+</span><span class="w">  </span>storageClassName<span class="p">:</span><span class="w"> </span>do-block-storage</code></pre></div>
+<p>10 gigs should be enough anything.</p>
+
+<p><img src="/img/kube/gates.png" alt="Gates" /></p>
+
+<h3 id="service">Service<a href="#service" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>The service will expose the database deployment to our cluster.</p>
+
+<p>Our service is fairly basic:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
+</span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-db-service<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>port<span class="p">:</span><span class="w"> </span><span class="m">5432</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>staple-db<span class="w">
+</span><span class="w">  </span>clusterIP<span class="p">:</span><span class="w"> </span>None</code></pre></div>
+<p>That&rsquo;s done with the database. Next up is the backend.</p>
+
+<h2 id="the-backend">The backend<a href="#the-backend" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>The backend itself is written in a way that it doesn&rsquo;t require a persistent storage so
+we can skip that part. It only needs three pieces. A secret, a deployment definition and the
+service exposing the deployment.</p>
+
+<h3 id="secret-1">Secret<a href="#secret-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>First, we create a secret which contains Mailgun credentials.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Secret<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-mg-creds<span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w"></span>data<span class="p">:</span><span class="w">
+</span><span class="w">  </span>MG_DOMAIN<span class="p">:</span><span class="w"> </span>cGFzc3dvcmQxMjM=<span class="w">
+</span><span class="w">  </span>MG_API_KEY<span class="p">:</span><span class="w"> </span>cGFzc3dvcmQxMjM=</code></pre></div>
+<h3 id="database-connection">Database connection<a href="#database-connection" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>The connection settings are handled through the same secret which is used to spin up the DB itself.
+We have to only mount that here too and we are good.</p>
+
+<h3 id="deployment-1">Deployment<a href="#deployment-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>Which brings us to the deployment. This is a bit more involved.</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>apps/v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Deployment<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-app<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>replicas<span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">      </span>app<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>template<span class="p">:</span><span class="w">
+</span><span class="w">    </span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">      </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">        </span>app<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">        </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">        </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">    </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">      </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>skarlso/staple<span class="p">:</span>v0.<span class="m">1.0</span><span class="w">
+</span><span class="w">        </span>imagePullPolicy<span class="p">:</span><span class="w"> </span>IfNotPresent<span class="w">
+</span><span class="w">        </span>resources<span class="p">:</span><span class="w">
+</span><span class="w">          </span>requests<span class="p">:</span><span class="w">
+</span><span class="w">            </span>memory<span class="p">:</span><span class="w"> </span><span class="s2">&#34;500Mi&#34;</span><span class="w">
+</span><span class="w">            </span>cpu<span class="p">:</span><span class="w"> </span><span class="s2">&#34;250m&#34;</span><span class="w">
+</span><span class="w">          </span>limits<span class="p">:</span><span class="w">
+</span><span class="w">            </span>memory<span class="p">:</span><span class="w"> </span><span class="s2">&#34;1000Mi&#34;</span><span class="w">
+</span><span class="w">            </span>cpu<span class="p">:</span><span class="w"> </span><span class="s2">&#34;500m&#34;</span><span class="w">
+</span><span class="w">        </span>env<span class="p">:</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>POD_NAMESPACE<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>fieldRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>fieldPath<span class="p">:</span><span class="w"> </span>metadata.namespace<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>DB_PASSWORD<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>secretKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>staple-db-password<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>POSTGRES_PASSWORD<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>MG_DOMAIN<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>secretKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>staple-mg-creds<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>MG_DOMAIN<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>MG_API_KEY<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>secretKeyRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>name<span class="p">:</span><span class="w"> </span>staple-mg-creds<span class="w">
+</span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>MG_API_KEY<span class="w">
+</span><span class="w">        </span>args<span class="p">:</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>--staple-db-hostname=staple-db-service.cronohub.svc.cluster.local<span class="p">:</span><span class="m">5432</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>--staple-db-username=staple<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>--staple-db-database=staple<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>--staple-db-password=$(DB_PASSWORD)<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>--mg-domain=$(MG_DOMAIN)<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>--mg-api-key=$(MG_API_KEY)<span class="w">
+</span><span class="w">        </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>staple-port<span class="w">
+</span><span class="w">          </span>containerPort<span class="p">:</span><span class="w"> </span><span class="m">9998</span></code></pre></div>
+<p>There are a few important points here and I won&rsquo;t explain them all, like the resource restrictions,
+which you should be familiar with by now. I&rsquo;m using a mix of 12factor app&rsquo;s environment configuration
+and command line arguments for the application configuration. The app itself is not using os.Environ
+but the args.</p>
+
+<p>The args point to the cluster local dns of the database, some db settings, and the mailgun credentials.</p>
+
+<p>It also exposes the container port 9998 which is Echo&rsquo;s default port.</p>
+
+<p>Now all we need is the service.</p>
+
+<h3 id="service-1">Service<a href="#service-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>Without much fanfare:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
+</span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-service<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>service-port<span class="w">
+</span><span class="w">    </span>port<span class="p">:</span><span class="w"> </span><span class="m">9998</span><span class="w">
+</span><span class="w">    </span>targetPort<span class="p">:</span><span class="w"> </span>staple-port</code></pre></div>
+<p>And with this, the backend is done.</p>
+
+<h2 id="the-frontend">The frontend<a href="#the-frontend" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>The frontend, similarly to the backend, does not require a persistent volume. We can skip that one too.</p>
+
+<p>In fact it only needs two things, a deployment and a service, and that&rsquo;s all. It uses serve to host the
+static files. Honestly, that could also be a Go application serving the static content or anything
+that can serve static files.</p>
+
+<h3 id="deployment-2">Deployment<a href="#deployment-2" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>apps/v1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Deployment<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>replicas<span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>matchLabels<span class="p">:</span><span class="w">
+</span><span class="w">      </span>app<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">  </span>template<span class="p">:</span><span class="w">
+</span><span class="w">    </span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">      </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">        </span>app<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">        </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">        </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">    </span>spec<span class="p">:</span><span class="w">
+</span><span class="w">      </span>containers<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">        </span>image<span class="p">:</span><span class="w"> </span>skarlso/staple-frontend<span class="p">:</span>v0.<span class="m">0.9</span><span class="w">
+</span><span class="w">        </span>imagePullPolicy<span class="p">:</span><span class="w"> </span>IfNotPresent<span class="w">
+</span><span class="w">        </span>resources<span class="p">:</span><span class="w">
+</span><span class="w">          </span>requests<span class="p">:</span><span class="w">
+</span><span class="w">            </span>memory<span class="p">:</span><span class="w"> </span><span class="s2">&#34;500Mi&#34;</span><span class="w">
+</span><span class="w">            </span>cpu<span class="p">:</span><span class="w"> </span><span class="s2">&#34;250m&#34;</span><span class="w">
+</span><span class="w">          </span>limits<span class="p">:</span><span class="w">
+</span><span class="w">            </span>memory<span class="p">:</span><span class="w"> </span><span class="s2">&#34;1000Mi&#34;</span><span class="w">
+</span><span class="w">            </span>cpu<span class="p">:</span><span class="w"> </span><span class="s2">&#34;500m&#34;</span><span class="w">
+</span><span class="w">        </span>env<span class="p">:</span><span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>POD_NAMESPACE<span class="w">
+</span><span class="w">            </span>valueFrom<span class="p">:</span><span class="w">
+</span><span class="w">              </span>fieldRef<span class="p">:</span><span class="w">
+</span><span class="w">                </span>fieldPath<span class="p">:</span><span class="w"> </span>metadata.namespace<span class="w">
+</span><span class="w">          </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>REACT_APP_STAPLE_DEV_HOST<span class="w">
+</span><span class="w">            </span>value<span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
+</span><span class="w">        </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>staple-front<span class="w">
+</span><span class="w">          </span>containerPort<span class="p">:</span><span class="w"> </span><span class="m">5000</span></code></pre></div>
+<h3 id="service-2">Service<a href="#service-2" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>And the service:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">kind<span class="p">:</span><span class="w"> </span>Service<span class="w">
+</span><span class="w"></span>apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-front-service<span class="w">
+</span><span class="w">  </span>labels<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>selector<span class="p">:</span><span class="w">
+</span><span class="w">    </span>app<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/name<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">    </span>app.kubernetes.io/instance<span class="p">:</span><span class="w"> </span>staple-frontend<span class="w">
+</span><span class="w">  </span>ports<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>staple-front<span class="w">
+</span><span class="w">    </span>port<span class="p">:</span><span class="w"> </span><span class="m">5000</span><span class="w">
+</span><span class="w">    </span>targetPort<span class="p">:</span><span class="w"> </span>staple-front</code></pre></div>
+<p>And with that the backend and frontend are wired together and ready to receive traffic.</p>
+
+<p>All pods should be up and running without problems at this point. If you have any trouble deploying
+things, please don&rsquo;t hesitate to leave a question in the comments.</p>
+
+<h2 id="ingress">Ingress<a href="#ingress" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+
+<p>Fantastic. Now, our application is running. We just need to expose it and route traffic to it.
+The backend has the api route <code>/rest/api/v1/</code>. The frontend has the route syntax <code>/login</code>, <code>/register</code>
+and a bunch of others. The key here is that all of them are under the same domain name but based on the URI
+we need to direct one request to the backend the other to the frontend.</p>
+
+<p>This is done via nginx&rsquo;s routing logic using regex. In an nginx config this would be the <code>location</code> part.
+It&rsquo;s imperative that the order of the routing is from more specific towards more general Because we need to catch
+the specific URIs first.</p>
+
+<h3 id="ingress-resource">Ingress Resource<a href="#ingress-resource" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+<p>To do this, we will create something called an <a href="https://docs.nginx.com/nginx-ingress-controller/configuration/ingress-resources/">Ingress Resource</a>.
+Note that this is Nginx&rsquo;s ingress resource and not Kubernetes&rsquo;. There is a difference.</p>
+
+<p>I suggest reading up on that link about the ingress resource because it reads quite well and will explain how it
+works and fits into the Kubernetes environment.</p>
+
+<p>Got it? Good. We&rsquo;ll create one for <code>staple.app</code> domain:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>extensions/v1beta1<span class="w">
+</span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Ingress<span class="w">
+</span><span class="w"></span>metadata<span class="p">:</span><span class="w">
+</span><span class="w">  </span>namespace<span class="p">:</span><span class="w"> </span>staple<span class="w">
+</span><span class="w">  </span>name<span class="p">:</span><span class="w"> </span>staple-app-ingress<span class="w">
+</span><span class="w">  </span>annotations<span class="p">:</span><span class="w">
+</span><span class="w">    </span>kubernetes.io/ingress.class<span class="p">:</span><span class="w"> </span><span class="s2">&#34;nginx&#34;</span><span class="w">
+</span><span class="w">    </span>cert-manager.io/cluster-issuer<span class="p">:</span><span class="w"> </span><span class="s2">&#34;letsencrypt-prod&#34;</span><span class="w">
+</span><span class="w">    </span>cert-manager.io/acme-challenge-type<span class="p">:</span><span class="w"> </span>http01<span class="w">
+</span><span class="w">    </span>nginx.ingress.kubernetes.io/rewrite-target<span class="p">:</span><span class="w"> </span>/$<span class="m">1</span><span class="w"> </span><span class="c"># this is important</span><span class="w">
+</span><span class="w"></span>spec<span class="p">:</span><span class="w">
+</span><span class="w">  </span>tls<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>hosts<span class="p">:</span><span class="w">
+</span><span class="w">    </span>-<span class="w"> </span>staple.app<span class="w">
+</span><span class="w">    </span>secretName<span class="p">:</span><span class="w"> </span>staple-app-tls<span class="w">
+</span><span class="w">  </span>rules<span class="p">:</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>host<span class="p">:</span><span class="w"> </span>staple.app<span class="w">
+</span><span class="w">    </span>http<span class="p">:</span><span class="w">
+</span><span class="w">      </span>paths<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>backend<span class="p">:</span><span class="w">
+</span><span class="w">          </span>serviceName<span class="p">:</span><span class="w"> </span>staple-service<span class="w">
+</span><span class="w">          </span>servicePort<span class="p">:</span><span class="w"> </span>ss-port<span class="w"> </span><span class="c"># 9998</span><span class="w">
+</span><span class="w">        </span>path<span class="p">:</span><span class="w"> </span>/(rest/api/<span class="m">1</span>.<span class="cp">*)</span><span class="w">
+</span><span class="w">  </span>-<span class="w"> </span>host<span class="p">:</span><span class="w"> </span>staple.app<span class="w">
+</span><span class="w">    </span>http<span class="p">:</span><span class="w">
+</span><span class="w">      </span>paths<span class="p">:</span><span class="w">
+</span><span class="w">      </span>-<span class="w"> </span>backend<span class="p">:</span><span class="w">
+</span><span class="w">          </span>serviceName<span class="p">:</span><span class="w"> </span>staple-front-service<span class="w">
+</span><span class="w">          </span>servicePort<span class="p">:</span><span class="w"> </span>sfs-port<span class="w"> </span><span class="c"># 5000</span><span class="w">
+</span><span class="w">        </span>path<span class="p">:</span><span class="w"> </span>/(.<span class="cp">*)</span></code></pre></div>
+<p>Let&rsquo;s take a look at what&rsquo;s going on here. The first thing to catch the eye are the annotations.
+These are configuration settings for nginx, cert-manager and Kubernetes.
+We have the cluster issuer&rsquo;s name. The challenge type, which we decided should be http01,
+and the most important part, the rewrite-target setting. This will use the first capture group
+as a base after the host.</p>
+
+<p>With this rewrite rule in place, the <code>paths</code> values need to provide a capture group. The first in line will see
+everything that goes to the urls like: <code>staple.app/rest/api/1/token</code>, <code>staple.app/rest/api/1/staples</code>,
+<code>staple.app/rest/api/1/user</code>, etc. The first part of the url is the host <code>staple.app</code>, second part is <code>/(rest/api/1/.*)</code>
+for which the result is that group number one ($1) will be <code>rest/api/1/token</code>. Nginx now sees that we
+have a backend route for that and will send this URI along to the service. Our service picks it up
+and will match that URI to the router configuration.</p>
+
+<p><img src="/img/kube/regex.png" alt="Regex" /></p>
+
+<p>If there is a request like, <code>staple.app/login</code>, which is our frontend&rsquo;s job to pick up, the first rule
+will not catch it because the regex isn&rsquo;t matching, so it falls through to the second one, which
+is the frontend service that is using a &ldquo;catch all&rdquo; regex. Like ip tables, we go from
+specific to more general.</p>
+
+<h1 id="ending-words">Ending words<a href="#ending-words" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+
+<p>And that&rsquo;s it. If everything works correctly, then the certificate service wired up the https certs and
+we should be able ping the rest endpoint under <code>https://staple.app/rest/api/1/token</code> and log in to the app
+in the browser using <code>https://staple.app</code>.</p>
+
+<p>Stay tuned for the second part where we&rsquo;ll scale the thing up!</p>
+
+<p>Thanks for reading!
+Gergely.</p>
+
+		</div>
+		<div id="comments" class="thin">
+			
+<div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2020 <a href="https://skarlso.github.io/">Gergely Brautigam</a> &#183; <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-69463020-2', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>
