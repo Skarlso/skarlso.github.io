@@ -12,7 +12,7 @@
 
 <meta itemprop="datePublished" content="2020-07-23T21:01:00&#43;01:00" />
 <meta itemprop="dateModified" content="2020-07-23T21:01:00&#43;01:00" />
-<meta itemprop="wordCount" content="2399">
+<meta itemprop="wordCount" content="2438">
 
 
 
@@ -308,8 +308,12 @@ relatively secure installation.</p>
 
 <h3 id="secret">Secret<a href="#secret" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
-<p>The secret contains our password and our database user and name. This could come from Vault too, but
-the Kubernetes secret is usually enough since it&rsquo;s in a closed environment anyways. Our secret looks like this:
+<p>The secret contains our password and our database user. In postgres, if you define a user using <code>POSTGRES_USER</code>
+postgres will create the user and a database with the user&rsquo;s name. This could come from Vault too, but
+the Kubernetes secret is usually enough since it should be a closed environment anyways. But for important information
+I would definitely use an admission policy and some vault secret goodness. (Maybe another post?)</p>
+
+<p>Our secret looks like this:
 database_secret.yaml</p>
 <div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml">apiVersion<span class="p">:</span><span class="w"> </span>v1<span class="w">
 </span><span class="w"></span>kind<span class="p">:</span><span class="w"> </span>Secret<span class="w">
@@ -357,7 +361,7 @@ database_secret.yaml</p>
 </span><span class="w">                </span>key<span class="p">:</span><span class="w"> </span>POSTGRES_PASSWORD<span class="w">
 </span><span class="w">        </span>volumeMounts<span class="p">:</span><span class="w">
 </span><span class="w">        </span>-<span class="w"> </span>mountPath<span class="p">:</span><span class="w"> </span>/var/lib/postgresql/data<span class="w">
-</span><span class="w">          </span>subPath<span class="p">:</span><span class="w"> </span>data<span class="w"> </span><span class="c"># important so it gets mounted correctly instead of adding a lost-and-found folder.</span><span class="w">
+</span><span class="w">          </span>subPath<span class="p">:</span><span class="w"> </span>data<span class="w"> </span><span class="c"># important so it gets mounted correctly</span><span class="w">
 </span><span class="w">          </span>name<span class="p">:</span><span class="w"> </span>staple-db-data<span class="w">
 </span><span class="w">        </span>-<span class="w"> </span>mountPath<span class="p">:</span><span class="w"> </span>/docker-entrypoint-initdb.d/staple_initdb.sql<span class="w">
 </span><span class="w">          </span>subPath<span class="p">:</span><span class="w"> </span>staple_initdb.sql<span class="w">
@@ -369,11 +373,13 @@ database_secret.yaml</p>
 </span><span class="w">        </span>-<span class="w"> </span>name<span class="p">:</span><span class="w"> </span>bootstrap-script<span class="w">
 </span><span class="w">          </span>configMap<span class="p">:</span><span class="w">
 </span><span class="w">            </span>name<span class="p">:</span><span class="w"> </span>staple-initdb-script</code></pre></div>
-<p>The first one makes sure that our data isn&rsquo;t lost when the database pod itself restarts. It creates a mount
-to a persistent volume which is defined a few lines below by <code>persistentVolumeClaim</code>.</p>
+<p>Note the two volume mounts.</p>
 
-<p>Note the volume mounts. The first one will take care of our data.
-The second mount is a postgres specific initialization file. Postgres will run that sql file when it
+<p>The first one makes sure that our data isn&rsquo;t lost when the database pod itself restarts. It creates a mount
+to a persistent volume which is defined a few lines below by <code>persistentVolumeClaim</code>. <code>subPath</code> is important
+in this case otherwise you&rsquo;ll end up with a lost&amp;found folder.</p>
+
+<p>The second mount is a postgres specific initialization file. Postgres will run that sql file when it
 starts up. I&rsquo;m using it to create my application&rsquo;s schema.</p>
 <div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">create</span> <span class="k">database</span> <span class="n">staples</span><span class="p">;</span>
 <span class="k">create</span> <span class="k">table</span> <span class="n">users</span> <span class="p">(</span><span class="n">email</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span> <span class="n">password</span> <span class="nb">text</span><span class="p">,</span> <span class="n">confirm_code</span> <span class="nb">text</span><span class="p">,</span> <span class="n">max_staples</span> <span class="nb">int</span><span class="p">);</span>
