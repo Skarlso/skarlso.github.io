@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2 | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Intro Hi folks.
+Previously on this blog: Part 1, Part 3, Part 4
+In this part, I’m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.
+AWS SDK Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn’t make it less complex and less cryptic at times. I’m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2017/03/19/building-furnace-part-2/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="intro">Intro</h1>
+<p>Hi folks.</p>
+<p>Previously on this blog: <a href="https://skarlso.github.io/2017/03/16/building-furnace-part-1/">Part 1</a>, <a href="https://skarlso.github.io/2017/03/22/building-furnace-part-3/">Part 3</a>, <a href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/">Part 4</a></p>
+<p>In this part, I&rsquo;m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.</p>
+<h1 id="aws-sdk">AWS SDK</h1>
+<p>Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn&rsquo;t make it less complex
+and less cryptic at times. I&rsquo;m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time.</p>
+<h2 id="getting-started-and-developers-guide">Getting Started and Developers Guide</h2>
+<p>As always, and common from AWS, the documentation is top notch. There is a 141 pages long developer&rsquo;s guide on the SDK containing
+a getting started section and an API reference. Go check it out. I&rsquo;ll wait. <a href="http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/aws-sdk-go-dg.pdf">AWS Go SDK DG PDF</a>. I will only talk about some gotchas and things I encountered, not the basics of the SDK.</p>
+<h2 id="awsstring-and-other-types">aws.String and other types</h2>
+<p>Something which is immediately visible once we take a look at the API is that everything is a pointer. Now, there are a
+tremendous amount of discussions about this, but I&rsquo;m with Amazon. There are various reasons for it, but to list the most prominent
+ones:
+- Type completion and compile time type safety.
+- Values for AWS API calls have valid zero values, in addition to being optional, i.e. not being provided at all.
+- Other option, like, empty interfaces with maps, or using zero values, or struct wrappers around every type, made life much
+harder rather than easier or not possible at all.
+- The AWS API is volatile. You never know when something gets to be optional, or required. Pointers made that decision easy.</p>
+<p>There are good number of other discussions around this topic, for example: <a href="https://github.com/aws/aws-sdk-go/issues/363">AWS Go GitHub #363</a>.</p>
+<p>In order to use primitives, AWS has helper functions like <code>aws.String</code>. Because &amp;&ldquo;asdf&rdquo; is not allowed, you would have to create a
+variable and use its address in situations where a string pointer is needed, for example, name of the stack. These primitive helpers will
+make in-lining possible. We&rsquo;ll see later that they are used to a great extent. Pointers, however, make life a bit difficult when
+constructing Input structs and make for poor aesthetics.</p>
+<p>This is something I&rsquo;m returning in a test for stubbing a client call:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">		<span class="k">return</span> <span class="o">&amp;</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesOutput</span><span class="p">{</span>
+			<span class="nx">StackResourceSummaries</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">StackResourceSummary</span><span class="p">{</span>
+				<span class="p">{</span>
+					<span class="nx">ResourceType</span><span class="p">:</span>       <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;NoASG&#34;</span><span class="p">),</span>
+					<span class="nx">PhysicalResourceId</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;arn::whatever&#34;</span><span class="p">),</span>
+				<span class="p">},</span>
+			<span class="p">},</span>
+		<span class="p">}</span>
+</code></pre></div><p>This doesn&rsquo;t look so appealing, but one gets used to it quickly.</p>
+<h2 id="error-handling">Error handling</h2>
+<p>Errors also have their own types. An AWS error looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="nx">awsErr</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">err</span><span class="p">.(</span><span class="nx">awserr</span><span class="p">.</span><span class="nx">Error</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>First, we check if error is nil, than we type check if the error is an AWS error or something different. In the wild, this will
+look something like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">awsErr</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">err</span><span class="p">.(</span><span class="nx">awserr</span><span class="p">.</span><span class="nx">Error</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="nx">awsErr</span><span class="p">.</span><span class="nf">Code</span><span class="p">()</span> <span class="o">!=</span> <span class="nx">codedeploy</span><span class="p">.</span><span class="nx">ErrCodeDeploymentGroupAlreadyExistsException</span> <span class="p">{</span>
+				<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">awsErr</span><span class="p">.</span><span class="nf">Code</span><span class="p">())</span>
+				<span class="k">return</span> <span class="nx">err</span>
+			<span class="p">}</span>
+			<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;DeploymentGroup already exists. Nothing to do.&#34;</span><span class="p">)</span>
+			<span class="k">return</span> <span class="kc">nil</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="nx">err</span>
+	<span class="p">}</span>
+</code></pre></div><p>If it&rsquo;s an AWS error, we can check further for the error code that it returns in order to identify what to handle, or what to throw
+on to the caller to a potential fatal. Here, I&rsquo;m ignoring the AlreadyExistsException because, if it does, we just go on to a next
+action.</p>
+<h2 id="examples">Examples</h2>
+<p>Luckily the API doc is very mature. In most of the cases, they provide an example to an API call. These examples, however, from
+time to time provide more confusion than clarity. Take CloudFormation. For me, when I first glanced upon the
+description of the API it wasn&rsquo;t immediately clear that the <code>TemplateBody</code> was supposed to be the whole template, and that
+the rest of the fields were almost all optional settings. Or provided overrides in special cases.</p>
+<p>And since the template is not an ordinary JAML or JSON file, I was looking for something that parses it into that the Struct I
+was going to use. After some time, and digging, I realized that I didn&rsquo;t need that, and that I just need to read in the template,
+define some extra parameters, and give the TemplateBody the whole of the template. The parameters defined by the CloudFormation
+template where extracted for me by <code>ValidateTemplate</code> API call which returned all of them in a convenient
+<code>[]*cloudformation.Parameter</code> slice. These things are not described in the document or visible from the examples. I mainly found
+them through playing with the API and focused experimentation.</p>
+<h2 id="waiters">Waiters</h2>
+<p>From other SDK implementations, we got used to Waiters. These handy methods wait for a service to become available or for certain
+situations to take in effect, like a Stage being <code>CREATE_COMPLETE</code>. The Go waiters, however, don&rsquo;t allow for callback to be fired,
+or for running blocks, like the ruby SDK does. For this, I wrote a handy little waiter for myself, which outputs a spinner to see
+that we are currently waiting for something and not frozen in time. This waiter looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// WaitForFunctionWithStatusOutput waits for a function to complete its action.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">WaitForFunctionWithStatusOutput</span><span class="p">(</span><span class="nx">state</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">freq</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">f</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+	<span class="nx">done</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+		<span class="nf">f</span><span class="p">()</span>
+		<span class="nx">done</span> <span class="o">&lt;-</span> <span class="kc">true</span>
+	<span class="p">}()</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">counter</span> <span class="o">:=</span> <span class="mi">0</span>
+		<span class="k">for</span> <span class="p">{</span>
+			<span class="nx">counter</span> <span class="p">=</span> <span class="p">(</span><span class="nx">counter</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">Spinners</span><span class="p">[</span><span class="nx">config</span><span class="p">.</span><span class="nx">SPINNER</span><span class="p">])</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;\r[%s] Waiting for state: %s&#34;</span><span class="p">,</span> <span class="nf">yellow</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">Spinners</span><span class="p">[</span><span class="nx">config</span><span class="p">.</span><span class="nx">SPINNER</span><span class="p">][</span><span class="nx">counter</span><span class="p">])),</span> <span class="nf">red</span><span class="p">(</span><span class="nx">state</span><span class="p">))</span>
+			<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">freq</span><span class="p">)</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+			<span class="k">select</span> <span class="p">{</span>
+			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">done</span><span class="p">:</span>
+				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">()</span>
+				<span class="k">break</span>
+			<span class="k">default</span><span class="p">:</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}()</span>
+
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div><p>And I&rsquo;m calling it with the following method:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">utils</span><span class="p">.</span><span class="nf">WaitForFunctionWithStatusOutput</span><span class="p">(</span><span class="s">&#34;DELETE_COMPLETE&#34;</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">WAITFREQUENCY</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">cfClient</span><span class="p">.</span><span class="nx">Client</span><span class="p">.</span><span class="nf">WaitUntilStackDeleteComplete</span><span class="p">(</span><span class="nx">describeStackInput</span><span class="p">)</span>
+	<span class="p">})</span>
+</code></pre></div><p>This would output these lines to the console:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="o">[</span><span class="se">\]</span> Waiting <span class="k">for</span> state: DELETE_COMPLETE
+</code></pre></div><p>The spinner can be configured to be one of the following types:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="nx">Spinners</span> <span class="p">=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">`←↖↑↗→↘↓↙`</span><span class="p">,</span>
+	<span class="s">`▁▃▄▅▆▇█▇▆▅▄▃`</span><span class="p">,</span>
+	<span class="s">`┤┘┴└├┌┬┐`</span><span class="p">,</span>
+	<span class="s">`◰◳◲◱`</span><span class="p">,</span>
+	<span class="s">`◴◷◶◵`</span><span class="p">,</span>
+	<span class="s">`◐◓◑◒`</span><span class="p">,</span>
+	<span class="s">`⣾⣽⣻⢿⡿⣟⣯⣷`</span><span class="p">,</span>
+	<span class="s">`|/-\`</span><span class="p">}</span>
+</code></pre></div><p>Handy.</p>
+<p>And with that, let&rsquo;s dive into the basics of Furnace.</p>
+<h1 id="furnace">Furnace</h1>
+<h2 id="directory-structure-and-packages">Directory Structure and Packages</h2>
+<p>Furnace is divided into three main packages.</p>
+<h3 id="commands">commands</h3>
+<p>Commands package is where the gist of Furnace lies. These commands represent the commands which are used through the CLI. Each
+file has the implementation for one command. The structure is devised by this library: <a href="https://github.com/Yitsushi/go-commander">Yitsushi&rsquo;s Command Library</a>.
+As of the writing of this post, the following commands are available:</p>
+<ul>
+<li>create - Creates a stack using the CloudFormation template file under ~/.config/go-furnace</li>
+<li>delete - Deletes the created Stack. Doesn&rsquo;t do anything if the stack doesn&rsquo;t exist</li>
+<li>push - Pushes an application to a stack</li>
+<li>status - Displays information about the stack</li>
+<li>delete-application - Deletes the CodeDeploy application and deployment group created by <code>push</code></li>
+</ul>
+<p>These commands represent the heart of furnace. I would like to keep these to a minimum, but I do plan on adding more, like
+<code>update</code> and <code>rollout</code>. Further details and help messages on these commands can be obtained by running: <code>./furnace help</code> or
+<code>./furnace help create</code>.</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">❯ ./furnace <span class="nb">help</span> push
+Usage: furnace push appName <span class="o">[</span>-s3<span class="o">]</span>
+
+Push a version of the application to a stack
+
+Examples:
+  furnace push
+  furnace push appName
+  furnace push appName -s3
+  furnace push -s3
+</code></pre></div><h3 id="config">config</h3>
+<p>Contains the configuration loader and some project wide defaults which are as follows:</p>
+<ul>
+<li>Events for the plugin system - <code>pre-create</code>, <code>post-create</code>, <code>pre-delete</code>, <code>post-delete</code>.</li>
+<li>CodeDeploy role name - <code>CodeDeployServiceRole</code>. This is used if none is provided to locate the CodeDeploy IAM role.</li>
+<li>Wait frequency - Is the setting which controls how long the waiter should sleep in between status updates. Default is <code>1s</code>.</li>
+<li>Spinner - Is just the number of the spinner to use.</li>
+<li>Plugin registry - Is a map of functions to run for the above events.</li>
+</ul>
+<p>Further more, config loads the CloudFormation template and checks if some necessary settings are present in the environment, exp:
+the configuration folder under <code>~/.config/go-furnace</code>.</p>
+<h3 id="utils">utils</h3>
+<p>These are some helper functions which are used throughout the project. To list them:</p>
+<ul>
+<li>error_handler - Is a simple error handler. I&rsquo;m thinking of refactoring this one to some saner version.</li>
+<li>spinner - Sets up which spinner to use in the waiter function.</li>
+<li>waiter - Contains the verbose waiter introduced above under <a href="##Waiters">Waiters</a>.</li>
+</ul>
+<h2 id="configuration-and-environment-variables">Configuration and Environment variables</h2>
+<p>Furnace is a Go application, thus it doesn&rsquo;t have the luxury of Ruby or Python where the configuration files are usually bundled
+with the app. But, it does have a standard for it. Usually, configurations reside in either of these two locations. Environment
+Properties or|and configuration files under a fixed location ( i.e. HOME/.config/app-name ). Furnace employs both.</p>
+<p>Settings like, region, stack name, enable plugin system, are under environment properties ( though this can change ), while the
+CloudFormation template lives under <code>~/.config/go-furnace/</code>. Lastly it assumes some things, like the Deployment IAM role just
+exists under the used AWS account. All these are loaded and handled by the config package described above.</p>
+<h2 id="usage">Usage</h2>
+<p>A typical scenario for Furnace would be the following:</p>
+<ul>
+<li>Setup your CloudFormation template or use the one provided. The one provided sets up a highly available and self healing setting
+using Auto-Scaling and Load-Balancing with a single application instance. Edit this template to your liking than copy it to
+<code>~/.config/go-furnace</code>.</li>
+<li>Create the configured stack with <code>./furnace create</code>.</li>
+<li>Create will ask for the parameters defined in the template. If defaults are setup, simply hitting enter will use these defaults.
+Take note, that the provided template sets up SSH access via a provided key. If that key is not present in CF, you won&rsquo;t be able
+to SSH into the created instance.</li>
+<li>Once the stack is completed, the application is ready to be pushed. To do this, run: <code>./furnace push</code>. This will locate the
+appropriate version of the app from S3 or GitHub and push that version to the instances in the Auto-Scaling group. To all of
+them.</li>
+</ul>
+<h2 id="general-practices-applied-to-the-project">General Practices Applied to the Project</h2>
+<h3 id="commands-1">Commands</h3>
+<p>For each command the main entry point is the <code>execute</code> function. These functions are usually calling out the small chunks of
+distributed methods. Logic was kept to a bare minimum ( probably could be simplified even further ) in the execute functions
+mostly for testability and the likes. We will see that in a followup post.</p>
+<h3 id="errors">Errors</h3>
+<p>Errors are handled immediately and usually through a fatal. If any error occurs than the application is halted. In followup
+versions this might become more granular. I.e. don&rsquo;t immediately stop the world, maybe try to recover, or create a Poller or
+Re-Tryer, which tries a call again for a configured amount of times.</p>
+<h3 id="output-colors">Output colors</h3>
+<p>Not that important, but still&hellip; Aesthetics. Displaying data to the console in a nice way gives it some extra flare.</p>
+<h3 id="makefile">Makefile</h3>
+<p>This project works with a Makefile for various reasons. Later on, once the project might become more complex, a Makefile makes it
+really easy to handle different ways of packaging the application. Currently, for example, it provides a <code>linux</code> target which will
+make Go build the project for Linux architecture on any other Architecture i.e. cross-compiling.</p>
+<p>It also provides an easy way to run unit tests with <code>make test</code> and installing with <code>make &amp;&amp; make install</code>.</p>
+<h1 id="closing-words">Closing Words</h1>
+<p>That is all for Part 2. Join me in Part 3 where I will talk about the experimental Plugin system that Furnace employs.</p>
+<p>Thank you for reading!
+Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

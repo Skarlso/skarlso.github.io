@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>Replacing Eval with Object.send and a self written Parser | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It’s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
+You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">Replacing Eval with Object.send and a self written Parser</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="intro">Intro</h1>
+<p>A while ago, I was added as a curator for a Gem called <a href="https://github.com/joshbuddy/jsonpath">JsonPath</a>. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.</p>
+<p>You could opt in using <code>eval</code> with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like <a href="https://github.com/huginn/huginn">Huginn</a> they had to opt out by default, thus missing out on sweet parsing like this: <code>$..book[?(@['price'] &gt; 20)]</code>.</p>
+<h2 id="eval">Eval</h2>
+<p>In order to remove eval, first I had to understand what it is actually doing. I had to take it apart.</p>
+<p><img src="/img/takeevalapart.jpg" alt="apart"></p>
+<p>After much digging and understanding the code, I found, all it does is perform the given operations on the current node. And if the operation is true, it will select that node, otherwise, return false, and ignore that node.</p>
+<p>For example <code>$..book[?(@['price'] &gt; 20)]</code> could be translated to:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">return</span> <span class="vi">@_current_node</span><span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> <span class="o">&gt;</span> <span class="mi">20</span>
+</code></pre></div><p>Checking first if <code>'price'</code> is even a key in <code>@_current_node</code>. Once I&rsquo;ve understood this part, I set on trying to fix eval.</p>
+<h3 id="safe--4">SAFE = 4</h3>
+<p>In ruby, you could extract the part where you Eval and put it into its own proc and set <code>SAFE = 4</code> which will disable some things like system calls.</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="nb">proc</span> <span class="k">do</span>
+  <span class="no">SAFE</span> <span class="o">=</span> <span class="mi">4</span>
+  <span class="nb">eval</span><span class="p">(</span><span class="n">some_expression</span><span class="p">)</span>
+<span class="k">end</span><span class="o">.</span><span class="n">call</span>
+</code></pre></div><p>SAFE levels:</p>
+<p>$SAFE	Description
+0	No checking of the use of externally supplied (tainted) data is performed. This is Ruby&rsquo;s default mode.</p>
+<blockquote>
+<p>= 1	Ruby disallows the use of tainted data by potentially dangerous operations.
+= 2	Ruby prohibits the loading of program files from globally writable locations.
+= 3	All newly created objects are considered tainted.
+= 4	Ruby effectively partitions the running program in two. None - tainted objects may not be modified. Typically, this will be used to create a sandbox: the program sets up an environment using a lower $SAFE level, then resets $SAFE to 4 to prevent subsequent changes to that environment.</p>
+</blockquote>
+<p>This has the disadvantage that anything below 4 is just, meh. But nothing above 1 will actually work with JsonPath so&hellip; scratch that.</p>
+<h3 id="sandboxing">Sandboxing</h3>
+<p>We could technically try and sandbox eval into it&rsquo;s own process with a PID and whitelist methods which are allowed to be called.</p>
+<p>Not bad, and there are a few gems out there which are trying to do that like <a href="https://github.com/ukutaht/safe_ruby">SafeRuby</a>. But all of these project have been abandoned years ago for a good reason.</p>
+<h3 id="objectsend">Object.send</h3>
+<p><img src="/img/nobodylikesyou.jpg" alt="nobodylikesyou"></p>
+<p><code>Object.send</code> is the best way to get some flexibility while still being safe. You basically just call methods on objects by describing said method on an object and giving parameters to it, like:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="mi">1</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="ss">:+</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="mi">3</span>
+</code></pre></div><p>This is a very powerful tool in our toolbox which we will exploit immensely.</p>
+<p>So let&rsquo;s get to it.</p>
+<h1 id="writing-a-parser">Writing a parser</h1>
+<p>Writing a parser in Ruby is a very fluid experience. It has nice tools which support that, and the one I used is <code>StringScanner</code>. It has the ability to track where you are currently at in a string and move a pointer along with regex matches. In fact, JsonPath already employs this method when parsing a json expression. So reusing that logic was in fact&hellip; elementary.</p>
+<h2 id="the-expression">The expression</h2>
+<p>How do we get from this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">$..book<span class="o">[</span>?<span class="o">(</span>@<span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> &lt; 20<span class="o">)]</span>
+</code></pre></div><p>To this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="vi">@_current_node</span><span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> <span class="o">&lt;</span> <span class="mi">20</span>
+</code></pre></div><p>Well. By simple elimination. There are a couple of problems along the way of course. Because this wouldn&rsquo;t be a parser if it couldn&rsquo;t handle ALL the other cases&hellip;</p>
+<h3 id="removing-clutter">Removing Clutter</h3>
+<p>Some of this we don&rsquo;t need. Like, <code>$..book</code> part.</p>
+<p><img src="/img/dontneed1.jpg" alt="dontneed1"></p>
+<p>The other things we don&rsquo;t need are all the <code>'[]?()</code></p>
+<p><img src="/img/dontneed2.jpg" alt="dontneed2"></p>
+<p>Once this is done, we can move to isolating the important bits.</p>
+<p><img src="/img/takingaim.jpg" alt="takingaim"></p>
+<h3 id="breakdown">BreakDown</h3>
+<h4 id="elements">Elements</h4>
+<p>How does an expression actually look like?</p>
+<p>Let&rsquo;s break it down.</p>
+<p><img src="/img/confused.jpg" alt="confused"></p>
+<p>So, this is a handful. Operations can be <code>&lt;=,&gt;=,&lt;,&gt;,==,!=</code> and operands can be either numbers, or words, and element accessor can be nested since something like this is perfectly valid: <code>$..book[?(@.written.year == 1997)]</code>.</p>
+<p><img src="/img/feedline.jpg" alt="feedline"></p>
+<p>To avoid being overwhelmed, ruby has our back with a method called <code>dig</code>.</p>
+<p><img src="/img/dig.jpg" alt="dig"></p>
+<p>This, basically lets us pass in some parameters into a dig function on a hash or an array with variadic parameters, which will go on and access those elements in order how they were supplied. Until it either returns a <code>nil</code> or an end result.</p>
+<p>For example:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="mi">2</span><span class="o">.</span><span class="mi">3</span><span class="o">.</span><span class="mi">1</span> <span class="p">:</span><span class="mo">001</span> <span class="o">&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="p">{</span><span class="ss">a</span><span class="p">:</span> <span class="p">{</span><span class="ss">b</span><span class="p">:</span> <span class="s1">&#39;c&#39;</span><span class="p">}}</span>
+ <span class="o">=&gt;</span> <span class="p">{</span><span class="ss">:a</span><span class="o">=&gt;</span><span class="p">{</span><span class="ss">:b</span><span class="o">=&gt;</span><span class="s2">&#34;c&#34;</span><span class="p">}}</span>
+<span class="mi">2</span><span class="o">.</span><span class="mi">3</span><span class="o">.</span><span class="mi">1</span> <span class="p">:</span><span class="mo">002</span> <span class="o">&gt;</span> <span class="n">a</span><span class="o">.</span><span class="n">dig</span><span class="p">(</span><span class="ss">:a</span><span class="p">,</span> <span class="ss">:b</span><span class="p">)</span>
+ <span class="o">=&gt;</span> <span class="s2">&#34;c&#34;</span>
+</code></pre></div><p>Easy. However&hellip; Dig was only added after ruby 2.3 thus, I had to write my own dig for now, until I stop supporting anything below 2.3.</p>
+<p>At first, I wanted to add it to the hash class, but it proved to be a futile attempt if I wanted to do it nicely, thus the parser got it as a private method.</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby">    <span class="k">def</span> <span class="nf">dig</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="nb">hash</span><span class="p">)</span>
+      <span class="k">return</span> <span class="nb">hash</span> <span class="k">unless</span> <span class="nb">hash</span><span class="o">.</span><span class="n">is_a?</span> <span class="no">Hash</span>
+      <span class="k">return</span> <span class="kp">nil</span> <span class="k">unless</span> <span class="nb">hash</span><span class="o">.</span><span class="n">key?</span><span class="p">(</span><span class="n">keys</span><span class="o">.</span><span class="n">first</span><span class="p">)</span>
+      <span class="k">return</span> <span class="nb">hash</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">keys</span><span class="o">.</span><span class="n">first</span><span class="p">)</span> <span class="k">if</span> <span class="n">keys</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span>
+      <span class="n">prev</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="n">shift</span>
+      <span class="n">dig</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="nb">hash</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">prev</span><span class="p">))</span>
+    <span class="k">end</span>
+</code></pre></div><p>And the corresponding regex behind getting a multitude of elements is as follows:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="o">...</span>
+<span class="k">if</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\[&#39;\w+&#39;\]+/</span><span class="p">)</span>
+<span class="o">...</span>
+</code></pre></div><h4 id="operator">Operator</h4>
+<p>Selecting the operator is another interesting part as it can be a single one or multiple and all sorts. Until I realized that no&hellip; it can actually be only a couple.</p>
+<p><img src="/img/whatone.jpg" alt="whatone"></p>
+<p><img src="/img/whattwo.jpg" alt="whattwo"></p>
+<p>Also, after a bit of fiddling and doing and doing a silly case statement first:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">case</span> <span class="n">op</span>
+<span class="k">when</span> <span class="s1">&#39;&gt;&#39;</span>
+  <span class="n">dig</span><span class="p">(</span><span class="vi">@_current_node</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">operand</span>
+<span class="k">when</span> <span class="s1">&#39;&lt;&#39;</span>
+  <span class="n">dig</span><span class="p">(</span><span class="vi">@_current_node</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">operand</span>
+<span class="o">...</span>
+<span class="k">end</span>
+</code></pre></div><p>&hellip;I promptly saw that this is not how it should be done.</p>
+<p>And here comes Object.send.</p>
+<p><img src="/img/send.jpg" alt="send"></p>
+<p>This gave me the opportunity to write this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">dig</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="vi">@_current_node</span><span class="p">)</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">operator</span><span class="p">,</span> <span class="n">operand</span><span class="p">)</span>
+</code></pre></div><p>Much better. Now I could send all the things in the way of a node.</p>
+<p><img src="/img/sendtwo.jpg" alt="send"></p>
+<p>Parsing an op be like:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\s+[&lt;&gt;=][&lt;&gt;=]?\s+?/</span><span class="p">)</span>
+</code></pre></div><h4 id="operand">Operand</h4>
+<p>Now comes the final piece. The value which we are comparing. This could either be a simple integer, a floating number, or a word. Hah. So coming up with a regex which fits this tightly took a little fiddling, but eventually I ended up with this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?&#39;?(\w+)?[.,]?(\w+)?&#39;?(\s+)?/</span><span class="p">)</span>
+</code></pre></div><p>Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because an this expression <code>$..book[?(@.price)]</code> is valid. Which is basically just asserting if a given node has a price element.</p>
+<h4 id="logical-operators">Logical Operators</h4>
+<p>The last thing that remains is logical operators, which if you are using eval, is pretty straight forward. It takes care of anything that you might add in like <code>&amp;&amp;, ||, |, &amp;, ^</code> etc etc.</p>
+<p>Now, that&rsquo;s something I did with a case though. Until I find a nicer solution. Since we can already parse a single expression it&rsquo;s just a question of breaking down a multi structure expression as the following one: <code>$..book[?(@['price'] &gt; 20 &amp;&amp; @.written.year == 1998)]</code>.</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">exps</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sr">/(&amp;&amp;)|(\|\|)/</span><span class="p">)</span>
+</code></pre></div><p>This splits up the string by either <code>&amp;&amp;</code> or <code>||</code> and the usage of groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like <code>[true, '&amp;&amp;', false]</code>. You know what could immediately resolve this? Yep&hellip;</p>
+<p><img src="/img/saynotoeval.jpg" alt="saynotoeval">.</p>
+<p>I&rsquo;d rather just parse it although technically an eval at this stage wouldn&rsquo;t be that big of a problem&hellip;</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+  <span class="n">exps</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sr">/(&amp;&amp;)|(\|\|)/</span><span class="p">)</span>
+  <span class="n">ret</span> <span class="o">=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">.</span><span class="n">shift</span><span class="p">)</span>
+  <span class="n">exps</span><span class="o">.</span><span class="n">each_with_index</span> <span class="k">do</span> <span class="o">|</span><span class="n">item</span><span class="p">,</span> <span class="n">index</span><span class="o">|</span>
+    <span class="k">case</span> <span class="n">item</span>
+    <span class="k">when</span> <span class="s1">&#39;&amp;&amp;&#39;</span>
+      <span class="n">ret</span> <span class="o">&amp;&amp;=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="o">]</span><span class="p">)</span>
+    <span class="k">when</span> <span class="s1">&#39;||&#39;</span>
+      <span class="n">ret</span> <span class="o">||=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="o">]</span><span class="p">)</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+  <span class="n">ret</span>
+<span class="k">end</span>
+</code></pre></div><h1 id="closing-words">Closing words</h1>
+<p>That&rsquo;s it folks. The parser is done. And there is no eval being used. There are some more things here that are interesting. Like, array indexing is allowed in jsonpath which is solved by sending <code>.length</code> to a current node. For example:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">if</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\./</span><span class="p">)</span>
+  <span class="n">sym</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\w+/</span><span class="p">)</span>
+  <span class="n">op</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/./</span><span class="p">)</span>
+  <span class="n">num</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\d+/</span><span class="p">)</span>
+  <span class="k">return</span> <span class="vi">@_current_node</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sym</span><span class="o">.</span><span class="n">to_sym</span><span class="p">)</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">to_sym</span><span class="p">,</span> <span class="n">num</span><span class="o">.</span><span class="n">to_i</span><span class="p">)</span>
+<span class="k">end</span>
+</code></pre></div><p>If an expression begins with a <code>.</code>. So you see that using <code>send</code> will help a lot, and understanding what eval is trying to evaluate and rather writing your own parser, isn&rsquo;t that hard at all using ruby.</p>
+<p>I hope you enjoyed reading this little tid-bit as much as I enjoyed writing and drawing it. Leave a comment if your liked the drawings or if you did not and I should never do them again (( I don&rsquo;t really care, this is my blog haha. )). Note to self: I shouldn&rsquo;t draw on the other side of the drawing because of bleed-through.</p>
+<p>Thank you!
+Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

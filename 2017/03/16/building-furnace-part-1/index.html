@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1 | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Other posts: Part 2, Part 3, Part 4.
+Building Furnace: Part 1 Intro Hi folks.
+This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.
+The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2017/03/16/building-furnace-part-1/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="other-posts">Other posts:</h1>
+<p><a href="https://skarlso.github.io/2017/03/19/building-furnace-part-2/">Part 2</a>, <a href="https://skarlso.github.io/2017/03/22/building-furnace-part-3/">Part 3</a>, <a href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/">Part 4</a>.</p>
+<h1 id="building-furnace-part-1">Building Furnace: Part 1</h1>
+<h1 id="intro">Intro</h1>
+<p>Hi folks.</p>
+<p>This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go,
+with AWS. Including Unit testing and a experimental plugin feature.</p>
+<p>The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar
+with them. The second part will talk about the Go SDK and the project structure itself, how it can be used, improved, and how it can
+help in everyday life. The third part will talk about the experimental plugin system, and finally, we will tackle unit testing AWS
+in Go.</p>
+<p>Let&rsquo;s begin, shall we?</p>
+<h1 id="aws">AWS</h1>
+<h2 id="cloudformation">CloudFormation</h2>
+<p>If you haven&rsquo;t yet read about, or know off, AWS' CloudFormation service, you can either go ahead and read the <a href="https://aws.amazon.com/cloudformation/">Documentation</a>
+or read on for a very quick summary. If you are familiar with CF, you should skip ahead to <a href="##CodeDeploy">CodeDeploy</a> section.</p>
+<p>CF is a service which bundles together other AWS services (for example: EC2, S3, ELB, ASG, RDS) into one, easily manageable stack.
+After a stack has been created, all the resources can be handled as one, located, tagged and used via CF specific console commands.
+It&rsquo;s also possible to define any number of parameters, so a stack can actually be very versatile. A parameter can be anything, from
+SSH IP restriction to KeyPair names and list of tags to create or in what region the stack will be in.</p>
+<p>To describe how these parts fit together, one must use a CloudFormation Template file which is either in JSON or in
+YAML format. A simple example looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">    </span><span class="nt">Parameters</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">KeyName</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">Description</span><span class="p">:</span><span class="w"> </span><span class="l">The EC2 Key Pair to allow SSH access to the instance</span><span class="w">
+</span><span class="w">        </span><span class="nt">Type</span><span class="p">:</span><span class="w"> </span><span class="l">AWS::EC2::KeyPair::KeyName</span><span class="w">
+</span><span class="w">    </span><span class="nt">Resources</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">Ec2Instance</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">Type</span><span class="p">:</span><span class="w"> </span><span class="l">AWS::EC2::Instance</span><span class="w">
+</span><span class="w">        </span><span class="nt">Properties</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">SecurityGroups</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span>- <span class="nt">Ref</span><span class="p">:</span><span class="w"> </span><span class="l">InstanceSecurityGroup</span><span class="w">
+</span><span class="w">          </span>- <span class="l">MyExistingSecurityGroup</span><span class="w">
+</span><span class="w">          </span><span class="nt">KeyName</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span><span class="nt">Ref</span><span class="p">:</span><span class="w"> </span><span class="l">KeyName</span><span class="w">
+</span><span class="w">          </span><span class="nt">ImageId</span><span class="p">:</span><span class="w"> </span><span class="l">ami-7a11e213</span><span class="w">
+</span><span class="w">      </span><span class="nt">InstanceSecurityGroup</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">Type</span><span class="p">:</span><span class="w"> </span><span class="l">AWS::EC2::SecurityGroup</span><span class="w">
+</span><span class="w">        </span><span class="nt">Properties</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">GroupDescription</span><span class="p">:</span><span class="w"> </span><span class="l">Enable SSH access via port 22</span><span class="w">
+</span><span class="w">          </span><span class="nt">SecurityGroupIngress</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span>- <span class="nt">IpProtocol</span><span class="p">:</span><span class="w"> </span><span class="l">tcp</span><span class="w">
+</span><span class="w">            </span><span class="nt">FromPort</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;22&#39;</span><span class="w">
+</span><span class="w">            </span><span class="nt">ToPort</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;22&#39;</span><span class="w">
+</span><span class="w">            </span><span class="nt">CidrIp</span><span class="p">:</span><span class="w"> </span><span class="m">0.0.0.0</span><span class="l">/0</span><span class="w">
+</span></code></pre></div><p>There are a myriad of these template samples <a href="https://aws.amazon.com/cloudformation/aws-cloudformation-templates/">here</a>.</p>
+<p>I&rsquo;m not going to explain this in too much detail. Parameters define the parameters, and resources define all the AWS services which
+we would like to configure. Here we can see, that we are creating an EC2 instance with a custom Security Group plus and already
+existing security group. ImageId is the AMI which will be used for the EC2 instance. The InstanceSecurityGroup is only defining
+some SSH access to the instance.</p>
+<p>That is pretty much it. This can become bloated relatively quickly once, VPCs, ELBs, and ASGs come into play. And CloudFormation
+templates can also contain simple logical switches, like, conditions, ref for variables, maps and other shenanigans.</p>
+<p>For example consider this part in the above example:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">      </span><span class="nt">KeyName</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">Ref</span><span class="p">:</span><span class="w"> </span><span class="l">KeyName</span><span class="w">
+</span></code></pre></div><p>Here, we use the <code>KeyName</code> parameter as a Reference Value which will be interpolated to the real value, or the default one, as the
+template gets processed.</p>
+<h2 id="codedeploy">CodeDeploy</h2>
+<p>If you haven&rsquo;t heard about CodeDeploy yet, please browse the relevant <a href="http://docs.aws.amazon.com/codedeploy/latest/userguide/welcome.html">Documentation</a>
+or follow along for a &ldquo;quick&rdquo; description.</p>
+<p>CodeDeploy just does what the name says. It deploys code. Any kind of code, as long as the deployment process is described in a
+file called <code>appspec.yml</code>. It can be easy as coping a file to a specific location or incredibly complex with builds of various
+kinds.</p>
+<p>For a simple example look at this configuration:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">    </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="m">0.0</span><span class="w">
+</span><span class="w">    </span><span class="nt">os</span><span class="p">:</span><span class="w"> </span><span class="l">linux</span><span class="w">
+</span><span class="w">    </span><span class="nt">files</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l">/index.html</span><span class="w">
+</span><span class="w">        </span><span class="nt">destination</span><span class="p">:</span><span class="w"> </span><span class="l">/var/www/html/</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l">/healthy.html</span><span class="w">
+</span><span class="w">        </span><span class="nt">destination</span><span class="p">:</span><span class="w"> </span><span class="l">/var/www/html/</span><span class="w">
+</span><span class="w">    </span><span class="nt">hooks</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">BeforeInstall</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l">scripts/install_dependencies</span><span class="w">
+</span><span class="w">          </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="m">300</span><span class="w">
+</span><span class="w">          </span><span class="nt">runas</span><span class="p">:</span><span class="w"> </span><span class="l">root</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l">scripts/clean_up</span><span class="w">
+</span><span class="w">          </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="m">300</span><span class="w">
+</span><span class="w">          </span><span class="nt">runas</span><span class="p">:</span><span class="w"> </span><span class="l">root</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l">scripts/start_server</span><span class="w">
+</span><span class="w">          </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="m">300</span><span class="w">
+</span><span class="w">          </span><span class="nt">runas</span><span class="p">:</span><span class="w"> </span><span class="l">root</span><span class="w">
+</span><span class="w">      </span><span class="nt">ApplicationStop</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l">scripts/stop_server</span><span class="w">
+</span><span class="w">          </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="m">300</span><span class="w">
+</span><span class="w">          </span><span class="nt">runas</span><span class="p">:</span><span class="w"> </span><span class="l">root</span><span class="w">
+</span></code></pre></div><p>CodeDeploy applications have hooks and life-cycle events which can be used to control the deployment process of an like, starting
+the WebServer; making sure files are in the right location; copying files, running configuration management software like puppet,
+ansible or chef; etc, etc.</p>
+<p>What can be done in an <code>appspec.yml</code> file is described here: <a href="http://docs.aws.amazon.com/codedeploy/latest/userguide/app-spec-ref.html">Appspec Reference Documentation</a>.</p>
+<p>Deployment happens in one of two ways:</p>
+<h3 id="github">GitHub</h3>
+<p>If the preferred way to deploy the application is from GitHub a commit hash must be used to identify which &ldquo;version&rdquo; of the
+application is to be deployed. For example:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">    <span class="nx">rev</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">RevisionLocation</span><span class="p">{</span>
+        <span class="nx">GitHubLocation</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">GitHubLocation</span><span class="p">{</span>
+            <span class="nx">CommitId</span><span class="p">:</span>   <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;kajdf94j0f9k309klksjdfkj&#34;</span><span class="p">),</span>
+            <span class="nx">Repository</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;Skarlso/furnace-codedeploy-app&#34;</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="nx">RevisionType</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;GitHub&#34;</span><span class="p">),</span>
+    <span class="p">}</span>
+</code></pre></div><p>Commit Id is the hash of the latest release and repository is the full account/repository pointing to the application.</p>
+<h3 id="s3">S3</h3>
+<p>The second way is to use an S3 bucket. The bucket will contain an archived version of the application with a given extension. I&rsquo;m
+saying given extension, because it has to be specified like this (and can be either &lsquo;zip&rsquo;, or &lsquo;tar&rsquo; or &lsquo;tgz&rsquo;):</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">    <span class="nx">rev</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">RevisionLocation</span><span class="p">{</span>
+        <span class="nx">S3Location</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">S3Location</span><span class="p">{</span>
+            <span class="nx">Bucket</span><span class="p">:</span>     <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;my_codedeploy_bucket&#34;</span><span class="p">),</span>
+            <span class="nx">BundleType</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;zip&#34;</span><span class="p">),</span>
+            <span class="nx">Key</span><span class="p">:</span>        <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;my_awesome_app&#34;</span><span class="p">),</span>
+            <span class="nx">Version</span><span class="p">:</span>    <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;VersionId&#34;</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="nx">RevisionType</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;S3&#34;</span><span class="p">),</span>
+    <span class="p">}</span>
+</code></pre></div><p>Here, we specify the bucket name, the extension, the name of the file and an optional version id, which can be ignored.</p>
+<h3 id="deploying">Deploying</h3>
+<p>So how does code deploy get either of the applications to our EC2 instances? It uses an agent which is running on all of the
+instances that we create. In order to do this, the agent needs to be present on our instance. For linux this can be achieved with
+the following UserData (UserData in CF is the equivalent of a bootsrap script):</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">    <span class="s2">&#34;UserData&#34;</span> : <span class="o">{</span>
+        <span class="s2">&#34;Fn::Base64&#34;</span> : <span class="o">{</span> <span class="s2">&#34;Fn::Join&#34;</span> : <span class="o">[</span> <span class="s2">&#34;\n&#34;</span>, <span class="o">[</span>
+            <span class="s2">&#34;#!/bin/bash -v&#34;</span>,
+            <span class="s2">&#34;sudo yum -y update&#34;</span>,
+            <span class="s2">&#34;sudo yum -y install ruby wget&#34;</span>,
+            <span class="s2">&#34;cd /home/ec2-user/&#34;</span>,
+            <span class="s2">&#34;wget https://aws-codedeploy-eu-central-1.s3.amazonaws.com/latest/install&#34;</span>,
+            <span class="s2">&#34;chmod +x ./install&#34;</span>,
+            <span class="s2">&#34;sudo ./install auto&#34;</span>,
+            <span class="s2">&#34;sudo service codedeploy-agent start&#34;</span>,
+        <span class="o">]</span> <span class="o">]</span> <span class="o">}</span>
+    <span class="o">}</span>
+</code></pre></div><p>A simple user data configuration in the CloudFormation template will make sure that every instance that we create will have the
+CodeDeploy agent running and waiting for instructions. This agent is self updating. Which can cause some trouble if AWS releases a
+broken agent. However unlikely, it can happen. Never the less, once installed, it&rsquo;s no longer a concern to be bothered with.</p>
+<p>It communications on HTTPS port 443.</p>
+<p>CodeDeploy identifies instances which need to be updated according to our preferences, by tagging the EC2 and Auto Scaling groups.
+Tagging happens in the CloudFormation template through the AutoScalingGroup settings like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json">    <span class="s2">&#34;Tags&#34;</span> <span class="err">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&#34;Key&#34;</span> <span class="p">:</span> <span class="s2">&#34;fu_stage&#34;</span><span class="p">,</span>
+            <span class="nt">&#34;Value&#34;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;Ref&#34;</span><span class="p">:</span> <span class="s2">&#34;AWS::StackName&#34;</span> <span class="p">},</span>
+            <span class="nt">&#34;PropagateAtLaunch&#34;</span> <span class="p">:</span> <span class="kc">true</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+</code></pre></div><p>This will give the EC2 instance a tag called <code>fu_stage</code> with value equaling to the name of the stack. Once this is done, CodeDeploy
+looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">    <span class="nx">params</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">CreateDeploymentInput</span><span class="p">{</span>
+        <span class="nx">ApplicationName</span><span class="p">:</span>               <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="nx">appName</span><span class="p">),</span>
+        <span class="nx">IgnoreApplicationStopFailures</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">Bool</span><span class="p">(</span><span class="kc">true</span><span class="p">),</span>
+        <span class="nx">DeploymentGroupName</span><span class="p">:</span>           <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="nx">appName</span> <span class="o">+</span> <span class="s">&#34;DeploymentGroup&#34;</span><span class="p">),</span>
+        <span class="nx">Revision</span><span class="p">:</span>                      <span class="nf">revisionLocation</span><span class="p">(),</span>
+        <span class="nx">TargetInstances</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">TargetInstances</span><span class="p">{</span>
+            <span class="nx">AutoScalingGroups</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="kt">string</span><span class="p">{</span>
+                <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;AutoScalingGroupPhysicalID&#34;</span><span class="p">),</span>
+            <span class="p">},</span>
+            <span class="nx">TagFilters</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">EC2TagFilter</span><span class="p">{</span>
+                <span class="p">{</span>
+                    <span class="nx">Key</span><span class="p">:</span>   <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;fu_stage&#34;</span><span class="p">),</span>
+                    <span class="nx">Type</span><span class="p">:</span>  <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;KEY_AND_VALUE&#34;</span><span class="p">),</span>
+                    <span class="nx">Value</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="nx">config</span><span class="p">.</span><span class="nx">STACKNAME</span><span class="p">),</span>
+                <span class="p">},</span>
+            <span class="p">},</span>
+        <span class="p">},</span>
+        <span class="nx">UpdateOutdatedInstancesOnly</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">Bool</span><span class="p">(</span><span class="kc">false</span><span class="p">),</span>
+    <span class="p">}</span>
+</code></pre></div><p>CreateDeploymentInput is the entire parameter list that is needed in order to identify instances to deploy code to. We can see
+here that it looks for an AutoScalingGroup by Physical Id and the tag labeled <code>fu_stage</code>. Once found, it will use
+<code>UpdateOutdatedInstancesOnly</code> to determine if an instance needs to be updated or not. Set to false means, it always updates.</p>
+<h1 id="furnace">Furnace</h1>
+<p>Where does <a href="https://github.com/Skarlso/go-furnace">Furnace</a> fit in, in all of this? Furnace provides a very easy mechanism to create,
+delete and push code to a CloudFormation stack using CodeDeploy, and a couple of environment properties. Furnace <code>create</code> will
+create a CloudFormation stack according to the provided template, all the while asking for the parameters defined in it for
+flexibility. <code>delete</code> will remove the stack and all affiliated resources except for the created CodeDeploy application. For that,
+there is <code>delete-application</code>. <code>status</code> will display information about the stack: Outputs, Parameters, Id, Name, and status.
+Something like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">    2017/03/16 21:14:37 Stack state is:  <span class="o">{</span>
+      Capabilities: <span class="o">[</span><span class="s2">&#34;CAPABILITY_IAM&#34;</span><span class="o">]</span>,
+      CreationTime: 2017-03-16 20:09:38.036 +0000 UTC,
+      DisableRollback: false,
+      Outputs: <span class="o">[{</span>
+          Description: <span class="s2">&#34;URL of the website&#34;</span>,
+          OutputKey: <span class="s2">&#34;URL&#34;</span>,
+          OutputValue: <span class="s2">&#34;http://FurnaceSt-ElasticL-ID.eu-central-1.elb.amazonaws.com&#34;</span>
+        <span class="o">}]</span>,
+      Parameters: <span class="o">[</span>
+        <span class="o">{</span>
+          ParameterKey: <span class="s2">&#34;KeyName&#34;</span>,
+          ParameterValue: <span class="s2">&#34;UserKeyPair&#34;</span>
+        <span class="o">}</span>,
+        <span class="o">{</span>
+          ParameterKey: <span class="s2">&#34;SSHLocation&#34;</span>,
+          ParameterValue: <span class="s2">&#34;0.0.0.0/0&#34;</span>
+        <span class="o">}</span>,
+        <span class="o">{</span>
+          ParameterKey: <span class="s2">&#34;CodeDeployBucket&#34;</span>,
+          ParameterValue: <span class="s2">&#34;None&#34;</span>
+        <span class="o">}</span>,
+        <span class="o">{</span>
+          ParameterKey: <span class="s2">&#34;InstanceType&#34;</span>,
+          ParameterValue: <span class="s2">&#34;t2.nano&#34;</span>
+        <span class="o">}</span>
+      <span class="o">]</span>,
+      StackId: <span class="s2">&#34;arn:aws:cloudformation:eu-central-1:9999999999999:stack/FurnaceStack/asdfadsf-adsfa3-432d-a-fdasdf&#34;</span>,
+      StackName: <span class="s2">&#34;FurnaceStack&#34;</span>,
+      StackStatus: <span class="s2">&#34;CREATE_COMPLETE&#34;</span>
+    <span class="o">}</span>
+</code></pre></div><p>( This will later be improved to include created resources as well. )</p>
+<p>Once the stack is <code>CREATE_COMPLETE</code> a simple <code>push</code> will deliver our application on each instance in the stack. We will get into
+more detail about how these commands are working in Part 2 of this series.</p>
+<h1 id="final-words">Final Words</h1>
+<p>This is it for now.</p>
+<p>Join me next time when I will talk about the AWS Go SDK and its intricacies and we will start to look at the basics of Furnace.</p>
+<p>As always,
+Thanks for reading!
+Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

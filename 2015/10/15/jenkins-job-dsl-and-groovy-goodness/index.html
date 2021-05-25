@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>Jenkins Job DSL and Groovy goodness | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Hi Folks.
+Ever used Job DSL pluginfor Jenkins? What is that you say? Well, it’s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.
+Today, however, I’m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.
+Today, I would like to write about a part of it which is even more interesting." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2015/10/15/jenkins-job-dsl-and-groovy-goodness/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">Jenkins Job DSL and Groovy goodness</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <p>Hi Folks.</p>
+<p>Ever used <!-- raw HTML omitted -->Job DSL plugin<!-- raw HTML omitted --> for Jenkins? What is that you say? Well, it’s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.</p>
+<p>Today, however, I’m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.</p>
+<p>Today, I would like to write about a part of it which is even more interesting. And that is, extracting re-occurring parts in your job configurations.</p>
+<p>If you have jobs, which have a common part that is repeated everywhere, you usually have an urge to extracted that into one place, lest it changes and you have to go an apply the change everywhere. That’s not very efficient. But how do you do that in something which looks like a JSON descriptor?</p>
+<p>Fret not, it is just Groovy. And being just groovy, you can use Groovy to implement parts of the job description and then apply that implementation to the job in the DSL.</p>
+<p>Suppose you have an email which you send after every job for which the DSL looks like this:</p>
+<!-- raw HTML omitted -->
+<p>Now, that big chunk of email setting is copied into a bunch of files, which is pretty ugly. And once you try to change it, you’ll have to change it everywhere. Also, the interesting bits here are those readFileFromWorkspace parts. Those allow us to export even larger chunks of the script into external files. Now, because the slave might be located somewhere else, you should not use new File(‘file’).text in your job DSL. readFileFromWorkspace in the background does that, but applies correct way to the PATH it looks on for the file specified.</p>
+<p>Let’s put this into a groovy script, shall we? Create a utilities folder where the DSL is and create a groovy file in it like this one:</p>
+<!-- raw HTML omitted -->
+<p>The function addEmailTemplate gets two parameters. A job, which is an implementation of a Job, and a dslFactory which is a DslFactory. That factory is an interface which defines our readFileFromWorkspace. Where do we get the implementation from then? That will be from the Job. Let’s alter our job to apply this Groovy script.</p>
+<!-- raw HTML omitted -->
+<p>Notice three things here.</p>
+<p>#1 =&gt; <strong>import</strong>. We import the script from utilities folder which we created and placed the script into it.</p>
+<p>#2 =&gt; <strong>def myJob</strong>. We create a variable which will contain our job’s description.</p>
+<p>#3 =&gt; <strong>this</strong>. ‘this’ will be the DslFactory. That’s where we get our readFileFromWorkspace implementation.</p>
+<p>And that’s it. We have extracted a part of our job which is re-occurring and we found our implementation for our readFileFromWorkspace. DslFactory has most of the things which you need in a job description, would you want to expand on this and extract other bits and pieces.</p>
+<p>Have fun, and happy coding!</p>
+<p>As always,</p>
+<p>Thanks for reading!</p>
+<p>Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

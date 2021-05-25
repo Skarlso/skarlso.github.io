@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 4 | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Intro Hi folks.
+Previously on this blog: Part 1. Part 2. Part 3.
+In this part we are going to talk about Unit Testing Furnace and how to work some magic with AWS and Go.
+Mock Stub Fake Dummy Canned  Unit testing in Go usually follows the Dependency Injection model of dealing with Mocks and Stubs.
+## DI
+Dependency Inject in short is one object supplying the dependencies of another object." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 4</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="intro">Intro</h1>
+<p>Hi folks.</p>
+<p>Previously on this blog: <a href="https://skarlso.github.io/2017/03/16/building-furnace-part-1/">Part 1</a>. <a href="https://skarlso.github.io/2017/03/19/building-furnace-part-2/">Part 2</a>. <a href="https://skarlso.github.io/2017/03/22/building-furnace-part-3/">Part 3</a>.</p>
+<p>In this part we are going to talk about Unit Testing Furnace and how to work some magic with AWS and Go.</p>
+<h1 id="mock-stub-fake-dummy-canned-insert-name-here">Mock Stub Fake Dummy Canned <!-- raw HTML omitted --></h1>
+<p>Unit testing in Go usually follows the Dependency Injection model of dealing with Mocks and Stubs.</p>
+<p>## DI</p>
+<p>Dependency Inject in short is one object supplying the dependencies of another object. In a longer description, it&rsquo;s ideal to be used
+for removing the lock on a third party library, like the AWS client. Imaging having code which solely depends on the AWS client. How
+would you unit test that code without having to ACTUALLY connect to AWS? You couldn&rsquo;t. Every time you try to test the code it would run
+the live code and it would try and connect to AWS and perform the operations it&rsquo;s design to do. The Ruby library with it&rsquo;s metaprogramming
+allows you to set the client globally to stub responses, but, alas, this is not the world of Ruby.</p>
+<p>Here is where DI comes to the rescue. If you have control over the AWS client on a very high level, and would pass it around as a function
+parameter, or create that client in an <code>init()</code> function and have it globally defined; you would be able to implement your own client, and
+have your code use that with stubbed responses which your tests need. For example, you would like a CreateApplication call to fail, or you
+would like a DescribeStack which returns an aws.Error(&ldquo;StackAlreadyExists&rdquo;).</p>
+<p>For this, however, you need the API of the AWS client. Which is provided by AWS.</p>
+<h2 id="aws-client-api">AWS Client API</h2>
+<p>In order for DI to work, the injected object needs to be of a certain type for us to inject our own. Luckily, AWS provides an Interface for
+all of it&rsquo;s clients. Meaning, we can implement our own version for all of the clients, like S3, CloudFormation, CodeDeploy etc.</p>
+<p>For each client you want to mock out, an <em>*iface</em> package should be present like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">  <span class="s">&#34;github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface&#34;</span>
+</code></pre></div><p>In this package you find and use the interface like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">fakeCloudFormationClient</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">cloudformationiface</span><span class="p">.</span><span class="nx">CloudFormationAPI</span>
+	<span class="nx">err</span> <span class="kt">error</span>
+<span class="p">}</span>
+</code></pre></div><p>And with this, we have our own CloudFormation client. The real code uses the real clients as function parameters, like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Execute defines what this command does.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Create</span><span class="p">)</span> <span class="nf">Execute</span><span class="p">(</span><span class="nx">opts</span> <span class="o">*</span><span class="nx">commander</span><span class="p">.</span><span class="nx">CommandHelper</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Creating cloud formation session.&#34;</span><span class="p">)</span>
+	<span class="nx">sess</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="nx">config</span><span class="p">.</span><span class="nx">REGION</span><span class="p">)})</span>
+	<span class="nx">cfClient</span> <span class="o">:=</span> <span class="nx">cloudformation</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">sess</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nx">CFClient</span><span class="p">{</span><span class="nx">cfClient</span><span class="p">}</span>
+	<span class="nf">createExecute</span><span class="p">(</span><span class="nx">opts</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">client</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>We can&rsquo;t test Execute itself, as it&rsquo;s using the real client here (or you could have a global from some library, thus allowing you to tests
+even <code>Execute</code> here) but there is very little logic in this function for this very reason. All the logic is in small functions for which
+the main starting point and our testing opportunity is, <code>createExecute</code>.</p>
+<h2 id="stubbing-calls">Stubbing Calls</h2>
+<p>Now, that we have our own client, and with the power of Go&rsquo;s interface embedding as seen above with CloudFormationAPI, we have to only stub
+the functions which we are actually using, instead of every function of the given interface. This looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">cfClient</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">CFClient</span><span class="p">)</span>
+	<span class="nx">cfClient</span><span class="p">.</span><span class="nx">Client</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">fakeCloudFormationClient</span><span class="p">{</span><span class="nx">err</span><span class="p">:</span> <span class="kc">nil</span><span class="p">}</span>
+</code></pre></div><p>Where cfClient is a struct like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// CFClient abstraction for cloudFormation client.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">CFClient</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Client</span> <span class="nx">cloudformationiface</span><span class="p">.</span><span class="nx">CloudFormationAPI</span>
+<span class="p">}</span>
+</code></pre></div><p>And a stubbed call can than be written as follows:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">fc</span> <span class="o">*</span><span class="nx">fakeCreateCFClient</span><span class="p">)</span> <span class="nf">WaitUntilStackCreateComplete</span><span class="p">(</span><span class="nx">input</span> <span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">DescribeStacksInput</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div><p>This can range from a very trivial example, like the one above, to intricate ones as well, like this gem:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">fc</span> <span class="o">*</span><span class="nx">fakePushCFClient</span><span class="p">)</span> <span class="nf">ListStackResources</span><span class="p">(</span><span class="nx">input</span> <span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesInput</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesOutput</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="s">&#34;NoASG&#34;</span> <span class="o">==</span> <span class="o">*</span><span class="nx">input</span><span class="p">.</span><span class="nx">StackName</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="o">&amp;</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesOutput</span><span class="p">{</span>
+			<span class="nx">StackResourceSummaries</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">StackResourceSummary</span><span class="p">{</span>
+				<span class="p">{</span>
+					<span class="nx">ResourceType</span><span class="p">:</span>       <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;NoASG&#34;</span><span class="p">),</span>
+					<span class="nx">PhysicalResourceId</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;arn::whatever&#34;</span><span class="p">),</span>
+				<span class="p">},</span>
+			<span class="p">},</span>
+		<span class="p">},</span> <span class="nx">fc</span><span class="p">.</span><span class="nx">err</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesOutput</span><span class="p">{</span>
+		<span class="nx">StackResourceSummaries</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">StackResourceSummary</span><span class="p">{</span>
+			<span class="p">{</span>
+				<span class="nx">ResourceType</span><span class="p">:</span>       <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;AWS::AutoScaling::AutoScalingGroup&#34;</span><span class="p">),</span>
+				<span class="nx">PhysicalResourceId</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;arn::whatever&#34;</span><span class="p">),</span>
+			<span class="p">},</span>
+		<span class="p">},</span>
+	<span class="p">},</span> <span class="nx">fc</span><span class="p">.</span><span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></div><p>This ListStackResources stub lets us test two scenarios based on the stackname. If the test stackname is &lsquo;NoASG&rsquo; it will return a result
+which equals to a result containing no AutoScaling Group. Otherwise, it will return the correct ResourceType for an ASG.</p>
+<p>It is a common practice to line up several scenario based stubbed responses in order to test the robustness of your code.</p>
+<p>Unfortunately, this also means that your tests will be a bit cluttered with stubs and mock structs and whatnots. For that, I&rsquo;m partially
+using a package available struct file in which I&rsquo;m defining most of the mock structs at least. And from there on, the tests will only contain
+specific stubs for that particular file. This can be further fine grained by having defaults and than only override in case you need something
+else.</p>
+<h1 id="testing-fatals">Testing fatals</h1>
+<p>Now, the other point which is not really AWS related, but still comes to mind when dealing with Furnace, is testing error scenarios.</p>
+<p>Because Furnace is a CLI application it uses Fatals to signal if something is wrong and it doesn&rsquo;t want to continue or recover because, frankly
+it can&rsquo;t. If AWS throws an error, that&rsquo;s it. You can retry, but in 90% of the cases, it&rsquo;s usually something that you messed up.</p>
+<p>So, how do we test for a fatal or an <code>os.Exit</code>? There are a number of points on that if you do a quick search. You may end up on this talk:
+<a href="https://talks.golang.org/2014/testing.slide#23">GoTalk 2014 Testing Slide #23</a>. Which does an interesting thing. It calls the test binary in a
+separate process and tests the exit code.</p>
+<p>Others, and me as well, will say that you have to have your own logger implemented and use a different logger / os.Exit in your test environment.</p>
+<p>Others others will tell you to not to have tests around os.Exit and fatal things, rather return an error and only the main should pop a world
+ending event. I leave it up to you which you want to use. Either is fine.</p>
+<p>In Furnace, I&rsquo;m using a global logger in my error handling util like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// HandleFatal handler fatal errors in Furnace.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">HandleFatal</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nf">LogFatalf</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>And <code>LogFatalf</code> is an exported variable <code>var LogFatalf = log.Fatalf</code>. Than in a test, I just override this variable with a local anonymous
+function:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">TestCreateExecuteEmptyStack</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">failed</span> <span class="o">:=</span> <span class="kc">false</span>
+	<span class="nx">utils</span><span class="p">.</span><span class="nx">LogFatalf</span> <span class="p">=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">a</span> <span class="o">...</span><span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+		<span class="nx">failed</span> <span class="p">=</span> <span class="kc">true</span>
+	<span class="p">}</span>
+	<span class="nx">config</span><span class="p">.</span><span class="nx">WAITFREQUENCY</span> <span class="p">=</span> <span class="mi">0</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">CFClient</span><span class="p">)</span>
+	<span class="nx">stackname</span> <span class="o">:=</span> <span class="s">&#34;EmptyStack&#34;</span>
+	<span class="nx">client</span><span class="p">.</span><span class="nx">Client</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">fakeCreateCFClient</span><span class="p">{</span><span class="nx">err</span><span class="p">:</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">stackname</span><span class="p">:</span> <span class="nx">stackname</span><span class="p">}</span>
+	<span class="nx">opts</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">commander</span><span class="p">.</span><span class="nx">CommandHelper</span><span class="p">{}</span>
+	<span class="nf">createExecute</span><span class="p">(</span><span class="nx">opts</span><span class="p">,</span> <span class="nx">client</span><span class="p">)</span>
+	<span class="k">if</span> <span class="p">!</span><span class="nx">failed</span> <span class="p">{</span>
+		<span class="nx">t</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;expected outcome to fail during create&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>It can get even more granular by testing for the error message to make sure that it actually fails at the point we think we are
+testing:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">TestCreateStackReturnsWithError</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">failed</span> <span class="o">:=</span> <span class="kc">false</span>
+	<span class="nx">expectedMessage</span> <span class="o">:=</span> <span class="s">&#34;failed to create stack&#34;</span>
+	<span class="kd">var</span> <span class="nx">message</span> <span class="kt">string</span>
+	<span class="nx">utils</span><span class="p">.</span><span class="nx">LogFatalf</span> <span class="p">=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">a</span> <span class="o">...</span><span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+		<span class="nx">failed</span> <span class="p">=</span> <span class="kc">true</span>
+		<span class="k">if</span> <span class="nx">err</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">a</span><span class="p">[</span><span class="mi">0</span><span class="p">].(</span><span class="kt">error</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+			<span class="nx">message</span> <span class="p">=</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">()</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="nx">config</span><span class="p">.</span><span class="nx">WAITFREQUENCY</span> <span class="p">=</span> <span class="mi">0</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">CFClient</span><span class="p">)</span>
+	<span class="nx">stackname</span> <span class="o">:=</span> <span class="s">&#34;NotEmptyStack&#34;</span>
+	<span class="nx">client</span><span class="p">.</span><span class="nx">Client</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">fakeCreateCFClient</span><span class="p">{</span><span class="nx">err</span><span class="p">:</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">expectedMessage</span><span class="p">),</span> <span class="nx">stackname</span><span class="p">:</span> <span class="nx">stackname</span><span class="p">}</span>
+	<span class="nx">config</span> <span class="o">:=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;{}&#34;</span><span class="p">)</span>
+	<span class="nf">create</span><span class="p">(</span><span class="nx">stackname</span><span class="p">,</span> <span class="nx">config</span><span class="p">,</span> <span class="nx">client</span><span class="p">)</span>
+	<span class="k">if</span> <span class="p">!</span><span class="nx">failed</span> <span class="p">{</span>
+		<span class="nx">t</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;expected outcome to fail&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="nx">message</span> <span class="o">!=</span> <span class="nx">expectedMessage</span> <span class="p">{</span>
+		<span class="nx">t</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;message did not equal expected message of &#39;%s&#39;, was:%s&#34;</span><span class="p">,</span> <span class="nx">expectedMessage</span><span class="p">,</span> <span class="nx">message</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><h1 id="conclusion">Conclusion</h1>
+<p>This is it. That&rsquo;s all it took to write Furnace. I hope you enjoyed reading it as much as I enjoyed writing all these thoughts down.</p>
+<p>I hope somebody might learn from my journey and also improve upon it.</p>
+<p>Any comments are much appreciated and welcomed. Also, PRs and Issues can be submitted on the GitHub page of <a href="https://github.com/Skarlso/go-furnace">Furnace</a>.</p>
+<p>Thank you for reading!
+Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

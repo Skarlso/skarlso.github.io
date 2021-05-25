@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Hello folks.
+Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.
+So I’m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <p>Hello folks.</p>
+<p>Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.</p>
+<p>So I’m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work. So here is how, I fixed the issue.</p>
+<h1 id="connection">Connection</h1>
+<p>In order for the aggregation to work, there needs to be an <strong>artifact connection</strong> between the upstream and downstream projects. And that is the key. But if you don’t have that, well, let’s create one. I have a parent job configured like this one. =&gt;</p>
+<!-- raw HTML omitted -->
+<p>As you can see, it’s pretty basic. It isn’t much. It’s supposed to be a trigger job for downstream projects. You could have this one at anything. Maybe scheduled, or have some kind of gathering here of some results, and so on and so forth. The end part of the configuration is the interesting bit.</p>
+<p>Aggregation is setup, but it won’t work, because despite there being an upstream/downstream relationship, there also needs to be an artifact connection which uses <strong>fingerprinting</strong>. Fingerprinting for Jenkins is needed in oder to make the physical connection between the jobs via hashes. This is what you will get if that is not setup:</p>
+<p>But if there is no artifact between them, what do you do? You create one.</p>
+<h1 id="the-artifact-which-binds-us">The Artifact which Binds Us</h1>
+<p>Adding a simple <strong>timestamp file</strong> is enough to make a connection. So let’s do that. This is how it will look like =&gt;</p>
+<p>The important bits about this picture are the small echo which simply creates a file which will contain some time stamp data, and after that the archive artifact, which also fingerprints that file, marking it with a hash which identifies this job as using that particular artifact.</p>
+<p>Now, the next step is to create the connection. For that, you need the artifact copy plugin =&gt; <!-- raw HTML omitted -->Copy Artifact Plugin<!-- raw HTML omitted -->.</p>
+<p>With this, we create the childs configuration like this:</p>
+<!-- raw HTML omitted -->
+<p>Again, the improtant bit is this:</p>
+<p>After the copy is setup, we launch our parent job and if everything is correct, you should see something like this:</p>
+<h1 id="wrapping-it-up">Wrapping it Up</h1>
+<p>For final words, important bit to take away from this is that you need an <strong>artifact connection between the jobs</strong> to make this work. Whatever your downstream / upstream connection is, it doesn’t matter. Also, there can be a problem that you have everything set up, and there are artifacts which bind the jobs together but you still can’t see the results, then your best option is to specify the jobs BY NAME in the aggregate test plug-in like this:</p>
+<p>I know this is a pain if there are multiple jobs, but at least, jenkins is providing you with Autoexpande once you start typing.</p>
+<p>Of course this also works with multiple downstream jobs if they copy the artifact to themselves.</p>
+<p>Any questions, please feel free to comment and I will answer to the best of my knowledge.</p>
+<p>Cheers,
+Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

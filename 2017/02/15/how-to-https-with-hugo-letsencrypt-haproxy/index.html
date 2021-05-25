@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>How to HTTPS with Hugo LetsEncrypt and HAProxy | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Intro Hi folks.
+Today, I would like to write about how to do HTTPS for a website, without the need to buy a certificate and set it up via your DNS provider. Let’s begin.
+Abstract What you will achieve by the end of this post:
+ Every call to HTTP will be redirected to HTTPS via haproxy. HTTPS will be served with Haproxy and LetsEncrypt as the Certificate provider. Automatically update the certificate before its expiration." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2017/02/15/how-to-https-with-hugo-letsencrypt-haproxy/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">How to HTTPS with Hugo LetsEncrypt and HAProxy</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="intro">Intro</h1>
+<p>Hi folks.</p>
+<p>Today, I would like to write about how to do HTTPS for a website, without the need to buy a certificate and set it up via your DNS provider. Let&rsquo;s begin.</p>
+<h2 id="abstract">Abstract</h2>
+<p>What you will achieve by the end of this post:</p>
+<ul>
+<li>Every call to HTTP will be redirected to HTTPS via <a href="https://www.haproxy.com">haproxy</a>.</li>
+<li>HTTPS will be served with Haproxy and <a href="https://letsencrypt.org">LetsEncrypt</a> as the Certificate provider.</li>
+<li>Automatically update the certificate before its expiration.</li>
+<li>No need for IPTable rules to route 8080 to 80.</li>
+<li>Traffic to and from your page will be encrypted.</li>
+<li>This all will cost you nothing.</li>
+</ul>
+<p>I will use a static website generator for this called <a href="https://gohugo.io">Hugo</a> which, if you know me, is my favorite generator tool. These instructions
+are for haproxy and hugo, if you wish to use apache and nginx for example, you&rsquo;ll have to dig for the corresponding settings for letsencrypt and certbot.</p>
+<h1 id="what-you-will-need">What You Will Need</h1>
+<h2 id="hugo">Hugo</h2>
+<p>You will need hugo, which can be downloaded from here: <a href="https://gohugo.io">Hugo</a>. A simple website will be enough. For themes, you can take a look
+at the humongous list located here: <a href="http://themes.gohugo.io/">HugoThemes</a>.</p>
+<h2 id="haproxy">Haproxy</h2>
+<p>Haproxy can be found here: <a href="https://www.haproxy.com">Haproxy</a>. There are a number of options to install haproxy. I chose a simple
+<code>apt-get install haproxy</code>.</p>
+<h2 id="lets-encrypt">Let&rsquo;s Encrypt</h2>
+<p>Information about Let&rsquo;s Encrypt can be found on their website here: <a href="https://letsencrypt.org">Let&rsquo;s Encrypt</a>.
+Let&rsquo;s Encrypt&rsquo;s client is now called <a href="https://certbot.eff.org/">Certbot</a> which is used to generate the certificates. To get the latest code
+you either clone the repository <a href="https://github.com/certbot/certbot">Certbot</a>, or use an auto downloader:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">user@webserver:~$ wget https://dl.eff.org/certbot-auto
+user@webserver:~$ chmod a+x ./certbot-auto
+user@webserver:~$ ./certbot-auto --help
+</code></pre></div><p>Either way, I&rsquo;m using the current latest version: <em>v0.11.1</em>.</p>
+<h2 id="sudo">Sudo</h2>
+<p>This goes without saying, but that these operations will require you to have sudo privileges. I suggest staying in sudo for ease of use.
+This means that the commands, I&rsquo;ll write here, will assume you are in <code>sudo su</code> mode thus no <code>sudo</code> prefix will be used.</p>
+<h2 id="portforwarding">Portforwarding</h2>
+<p>In order for your website to work under https this guide assumes that you have port <em>80</em> and <em>443</em> open on your router / network security group.</p>
+<h1 id="setup">Setup</h1>
+<h2 id="single-server-environment">Single Server Environment</h2>
+<p>It is possible for haproxy, certbot and your website to run on designated servers. Haproxy&rsquo;s abilities allows to define multiple server sources.
+In this guide, my haproxy, website and certbot will all run on the same server; thus redirecting to 127.0.0.1 and local ips. This is more
+convenient, because otherwise the haproxy IP would have to be a permanent local/remote ip. Or an automated script would have to be setup which is
+notified upon IP change and updates the ip records.</p>
+<h2 id="creating-a-certificate">Creating a Certificate</h2>
+<p>Diving in, the first thing you will require is a certificate. A certificate will allow for encrypted traffic and an authenticated website.
+Let&rsquo;s Encrypt which is basically functioning as an independent, free, automated CA (Certificate Authority). Usually,
+the process would be to pay a CA to give you a signed, generated certificate for your website, and you would have to set that up with your DNS
+provider. Let&rsquo;s Encrypt has that all automated, and free of any charge. Neat.</p>
+<h3 id="certbot">Certbot</h3>
+<p>So let&rsquo;s get started. Clone the repository into <code>/opt/letsencrypt</code> for further usage.</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">git clone https://github.com/certbot/certbot /opt/letsencrypt
+</code></pre></div><h3 id="generating-the-certificate">Generating the certificate</h3>
+<p>Make sure that there is nothing listening on ports: 80, 443. To list usage:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">netstat -nlt <span class="p">|</span> grep <span class="s1">&#39;:80\s&#39;</span>
+netstat -nlt <span class="p">|</span> grep <span class="s1">&#39;:443\s&#39;</span>
+</code></pre></div><p>Kill everything that might be on these ports, like apache2 and httpd. These will be used by haproxy and certbot for challenges
+and redirecting traffic.</p>
+<p>You will be creating a <a href="https://certbot.eff.org/docs/using.html#standalone">standalone</a> certificate. This is the reason we need port 80 and 443 open.
+Run certbot by defining the <code>certonly</code> and <code>--standalone</code> flags. For domain validation you are going to use port 443, tls-sni-01 challenge.
+The whole command looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">cd</span> /opt/letsencrypt
+./certbot-auto certonly --standalone -d example.com -d www.example.com
+</code></pre></div><p>If this displays something like, &ldquo;couldn&rsquo;t connect&rdquo; you probably still have something running on a port it tries to use. The
+generated certificate will be located under <code>/etc/letsencrypt/archive</code> and <code>/etc/letsencrypt/keys</code> while <code>/etc/letsencrypt/live</code> is
+a symlink to the latest version of the cert. It&rsquo;s wise to not copy these away from here, since the live link is always updated to the latest version.
+Our script will handle haproxy, which requires one cert file made from privkey + fullchain|.pem files.</p>
+<h3 id="setup-auto-renewal">Setup Auto-Renewal</h3>
+<p>Let&rsquo;s Encrypt issues short lived certificates (90 days). In order to not have to do this procedure every 89 days, certbot provides a nifty
+command called <code>renew</code>. However, for the cert to be generated, the port 443 has to be open. This means, haproxy needs to be stopped before
+doing the renew. Now, you COULD write a script which stops it, and after the certificate has been renewed, starts it again, but certbot has
+you covered again in that department. It provides hooks called <code>pre-hook</code> and <code>post-hook</code>. Thus, all you have to write is the following:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/bash
+</span><span class="cp"></span>
+<span class="nb">cd</span> /opt/letsencrypt
+./certbot-auto renew --pre-hook <span class="s2">&#34;service haproxy stop&#34;</span> --post-hook <span class="s2">&#34;service haproxy start&#34;</span>
+<span class="nv">DOMAIN</span><span class="o">=</span><span class="s1">&#39;example.com&#39;</span> sudo -E bash -c <span class="s1">&#39;cat /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/letsencrypt/live/$DOMAIN/privkey.pem &gt; /etc/haproxy/certs/$DOMAIN.pem&#39;</span>
+</code></pre></div><p>If you would like to test it first, just include the switch <code>--dry-run</code>.</p>
+<p>In case of success you should see something like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">root@raspberrypi:/opt/letsencrypt# ./certbot-auto renew --pre-hook <span class="s2">&#34;service haproxy stop&#34;</span> --post-hook <span class="s2">&#34;service haproxy start&#34;</span> --dry-run
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+-------------------------------------------------------------------------------
+Processing /etc/letsencrypt/renewal/example.com.conf
+-------------------------------------------------------------------------------
+Cert not due <span class="k">for</span> renewal, but simulating renewal <span class="k">for</span> dry run
+Running pre-hook command: service haproxy stop
+Renewing an existing certificate
+Performing the following challenges:
+tls-sni-01 challenge <span class="k">for</span> example.com
+Waiting <span class="k">for</span> verification...
+Cleaning up challenges
+Generating key <span class="o">(</span><span class="m">2048</span> bits<span class="o">)</span>: /etc/letsencrypt/keys/0002_key-certbot.pem
+Creating CSR: /etc/letsencrypt/csr/0002_csr-certbot.pem
+** DRY RUN: simulating <span class="s1">&#39;certbot renew&#39;</span> close to cert expiry
+**          <span class="o">(</span>The <span class="nb">test</span> certificates below have not been saved.<span class="o">)</span>
+
+Congratulations, all renewals succeeded. The following certs have been renewed:
+  /etc/letsencrypt/live/example.com/fullchain.pem <span class="o">(</span>success<span class="o">)</span>
+** DRY RUN: simulating <span class="s1">&#39;certbot renew&#39;</span> close to cert expiry
+**          <span class="o">(</span>The <span class="nb">test</span> certificates above have not been saved.<span class="o">)</span>
+Running post-hook command: service haproxy start
+</code></pre></div><p>Put this script into a crontab to run every 89 days like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">crontab -e
+<span class="c1"># Open crontab for edit and paste in this line</span>
+* * */89 * * /root/renew-cert.sh
+</code></pre></div><p>And you should be all set. Now we move on the configure haproxy to redirect and to use our newly generated certificate.</p>
+<h2 id="haproxy-1">Haproxy</h2>
+<p>Like I said, haproxy requires a single file certificate in order to encrypt traffic to and from the website. To do this, we need to combine
+<code>privkey.pem</code> and <code>fullchain.pem</code>. As of this writing, there are a couple of solutions to automate this via a post hook on renewal. And also,
+there is an open ticket with certbot to implement a simpler solution located here: <a href="https://github.com/certbot/certbot/issues/1201">https://github.com/certbot/certbot/issues/1201</a>. I, for now,
+have chosen to simply concatenate the two files together with <code>cat</code> like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="nv">DOMAIN</span><span class="o">=</span><span class="s1">&#39;example.com&#39;</span> sudo -E bash -c <span class="s1">&#39;cat /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/letsencrypt/live/$DOMAIN/privkey.pem &gt; /etc/haproxy/certs/$DOMAIN.pem&#39;</span>
+</code></pre></div><p>It will create a combined cert under <code>/etc/haproxy/certs/example.com.pem</code>.</p>
+<h3 id="haproxy-configuration">Haproxy configuration</h3>
+<p>If haproxy happens to be running, stop it with <code>service haproxy stop</code>.</p>
+<p>First, save the default configuration file: <code>cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.old</code>. Now, overwrite the old one with this
+new one (comments about what each setting does, are in-lined; they are safe to copy):</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">global
+    daemon
+    <span class="c1"># Set this to your desired maximum connection count.</span>
+    maxconn <span class="m">2048</span>
+    <span class="c1"># https://cbonte.github.io/haproxy-dconv/configuration-1.5.html#3.2-tune.ssl.default-dh-param</span>
+    <span class="c1"># bit setting for Diffie - Hellman key size.</span>
+    tune.ssl.default-dh-param <span class="m">2048</span>
+
+defaults
+    option forwardfor
+    option http-server-close
+
+    log     global
+    mode    http
+    option  httplog
+    option  dontlognull
+    timeout connect <span class="m">5000</span>
+    timeout client  <span class="m">50000</span>
+    timeout server  <span class="m">50000</span>
+    errorfile <span class="m">400</span> /etc/haproxy/errors/400.http
+    errorfile <span class="m">403</span> /etc/haproxy/errors/403.http
+    errorfile <span class="m">408</span> /etc/haproxy/errors/408.http
+    errorfile <span class="m">500</span> /etc/haproxy/errors/500.http
+    errorfile <span class="m">502</span> /etc/haproxy/errors/502.http
+    errorfile <span class="m">503</span> /etc/haproxy/errors/503.http
+    errorfile <span class="m">504</span> /etc/haproxy/errors/504.http
+
+<span class="c1"># In case it&#39;s a simple http call, we redirect to the basic backend server</span>
+<span class="c1"># which in turn, if it isn&#39;t an SSL call, will redirect to HTTPS that is</span>
+<span class="c1"># handled by the frontend setting called &#39;www-https&#39;.</span>
+frontend www-http
+    <span class="c1"># Redirect HTTP to HTTPS</span>
+    <span class="nb">bind</span> *:80
+    <span class="c1"># Adds http header to end of end of the HTTP request</span>
+    reqadd X-Forwarded-Proto:<span class="se">\ </span>http
+    <span class="c1"># Sets the default backend to use which is defined below with name &#39;www-backend&#39;</span>
+    default_backend www-backend
+
+<span class="c1"># If the call is HTTPS we set a challenge to letsencrypt backend which</span>
+<span class="c1"># verifies our certificate and than direct traffic to the backend server</span>
+<span class="c1"># which is the running hugo site that is served under https if the challenge succeeds.</span>
+frontend www-https
+    <span class="c1"># Bind 443 with the generated letsencrypt cert.</span>
+    <span class="nb">bind</span> *:443 ssl crt /etc/haproxy/certs/skarlso.com.pem
+    <span class="c1"># set x-forward to https</span>
+    reqadd X-Forwarded-Proto:<span class="se">\ </span>https
+    <span class="c1"># set X-SSL in case of ssl_fc &lt;- explained below</span>
+    http-request set-header X-SSL %<span class="o">[</span>ssl_fc<span class="o">]</span>
+    <span class="c1"># Select a Challenge</span>
+    acl letsencrypt-acl path_beg /.well-known/acme-challenge/
+    <span class="c1"># Use the challenge backend if the challenge is set</span>
+    use_backend letsencrypt-backend <span class="k">if</span> letsencrypt-acl
+    default_backend www-backend
+
+backend www-backend
+   <span class="c1"># Redirect with code 301 so the browser understands it is a redirect. If it&#39;s not SSL_FC.</span>
+   <span class="c1"># ssl_fc: Returns true when the front connection was made via an SSL/TLS transport</span>
+   <span class="c1"># layer and is locally deciphered. This means it has matched a socket declared</span>
+   <span class="c1"># with a &#34;bind&#34; line having the &#34;ssl&#34; option.</span>
+   redirect scheme https code <span class="m">301</span> <span class="k">if</span> !<span class="o">{</span> ssl_fc <span class="o">}</span>
+   <span class="c1"># Server for the running hugo site.</span>
+   server www-1 192.168.0.17:8080 check
+
+backend letsencrypt-backend
+   <span class="c1"># Lets encrypt backend server</span>
+   server letsencrypt 127.0.0.1:54321
+</code></pre></div><p>Save this, and start haproxy with <code>services haproxy start</code>. If you did everything right, it should say nothing.
+If, however, there went something wrong with starting the proxy, it usually displays something like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">Job <span class="k">for</span> haproxy.service failed. See <span class="s1">&#39;systemctl status haproxy.service&#39;</span> and <span class="s1">&#39;journalctl -xn&#39;</span> <span class="k">for</span> details.
+</code></pre></div><p>You can also gather some more information on what went wrong from <code>less /var/log/haproxy.log</code>.</p>
+<h1 id="starting-the-server">Starting the Server</h1>
+<p>Everything should be ready to go. Hugo has the concept of a baseUrl. Everything that it loads, and tries to access
+will be prefixed with it. You can either set it through it&rsquo;s <code>config.yaml</code> file, or from the command line.</p>
+<p>To start the server, call this from the site&rsquo;s root folder:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">hugo server --bind<span class="o">=</span>192.168.x.x --port<span class="o">=</span><span class="m">8080</span> --baseUrl<span class="o">=</span>https://example.com --appendPort<span class="o">=</span><span class="nb">false</span>
+</code></pre></div><p>Interesting thing here to note is <code>https</code> and the port. The IP could be 127.0.0.1 as well. I experienced problems though
+with not binding to network IP when I was debugging the site from a different laptop on the same network.</p>
+<p>Once the server is started, you should be able to open up your website from a different browser, not on your local network,
+and see that it has a valid certificate installed. In Chrome you should see a green icon telling you that the cert is valid.</p>
+<h1 id="last-words">Last Words</h1>
+<p>And that is all. The site should be up and running and the proxy should auto-renew your site&rsquo;s certificate. If you happened to
+change DNS or change the server, you&rsquo;ll have to reissue the certificate.</p>
+<p>Thanks for reading!
+Any questions or trouble setting something up, please feel free to leave a comment.</p>
+<p>Cheers,
+Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

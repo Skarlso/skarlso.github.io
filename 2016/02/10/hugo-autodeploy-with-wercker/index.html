@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>Hugo Autodeploy with Wercker and Github - Pages | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="There already is a nice tutorial on how to create github-pages with Hugo Here if you prefer deplying your pages to a different branch on the same repo. There is also a post about Wercker and Hugo Here deploying pages to said separate branch.
+However, I took an easier approach on the matter with a completely separate branch for my blog source and my compiled github pages.
+This blog sits here: https://github." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2016/02/10/hugo-autodeploy-with-wercker/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">Hugo Autodeploy with Wercker and Github - Pages</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <p>There already is a nice tutorial on how to create github-pages with Hugo <a href="https://gohugo.io/tutorials/github-pages-blog/">Here</a> if you prefer deplying your pages to a different branch on the same repo. There is also a post about Wercker and Hugo <a href="https://gohugo.io/tutorials/automated-deployments/">Here</a> deploying pages to said separate branch.</p>
+<p>However, I took an easier approach on the matter with a completely separate branch for my blog source and my compiled github pages.</p>
+<p>This blog sits here: <a href="https://github.com/Skarlso/skarlso.github.io">https://github.com/Skarlso/skarlso.github.io</a>. In order to deploy to it, I just have to commit a new blog post to this repository: <a href="https://github.com/Skarlso/blogsource">Blog Source</a>. After that, <a href="http://wercker.com/">Wercker</a> takes care of the rest. It builds my blog, and pushes the generated pages to my blog&rsquo;s repository to the master branch without creating the gh-pages branch.</p>
+<p>The Wercker yml for that looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-yml" data-lang="yml"><span class="nt">box</span><span class="p">:</span><span class="w"> </span><span class="l">debian</span><span class="w">
+</span><span class="w"></span><span class="nt">build</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">steps</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">arjen/hugo-build</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span><span class="nt">theme</span><span class="p">:</span><span class="w"> </span><span class="l">redlounge</span><span class="w">
+</span><span class="w"></span><span class="nt">deploy</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">steps</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">install-packages</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span><span class="nt">packages</span><span class="p">:</span><span class="w"> </span><span class="l">git ssh-client</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">leipert/git-push</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span><span class="nt">gh_oauth</span><span class="p">:</span><span class="w"> </span><span class="l">$GIT_TOKEN</span><span class="w">
+</span><span class="w">            </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="l">skarlso/skarlso.github.io</span><span class="w">
+</span><span class="w">            </span><span class="nt">branch</span><span class="p">:</span><span class="w"> </span><span class="l">master</span><span class="w">
+</span><span class="w">            </span><span class="nt">basedir</span><span class="p">:</span><span class="w"> </span><span class="l">public</span><span class="w">
+</span></code></pre></div><p>Pretty easy. The $GIT_TOKEN is a variable set-up on Wercker containing a restricted token which is only good for pushing. And note that you have to use an explicit package name with git-push or else Wercker will not find that step. Hugo-build will build my blog with a simple command using redlounge theme.</p>
+<p>And that&rsquo;s it. No other setup is necessary and no new branch will be made. Any questions, please feel free to leave a comment.</p>
+<p>Thanks for reading!</p>
+<p>Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

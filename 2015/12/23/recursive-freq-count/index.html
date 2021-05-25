@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>Recursive Letter Frequency Count | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Hello everybody!
+I wanted to do a sort post about word frequency count. I did it many times now and I was curious as how a recursive solution would perform as opposed to looping.
+So I wrote it up quickly and added a few benchmarks with different sized data.
+First…. The code:
+var freqMap = make(map[string]int, 0) func countLettersRecursive(s string) string { if len(s) == 0 { return s } freqMap[string(s[0])]&#43;&#43; return countLettersRecursive(s[1:]) } func countLettersLoop(s string) { for _, v := range s { freqMap[string(v)]&#43;&#43; } } Very simple." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2015/12/23/recursive-freq-count/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">Recursive Letter Frequency Count</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <p>Hello everybody!</p>
+<p>I wanted to do a sort post about word frequency count. I did it many times now and I was curious as how a recursive solution would perform as opposed to looping.</p>
+<p>So I wrote it up quickly and added a few benchmarks with different sized data.</p>
+<p>First&hellip;. The code:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="nx">freqMap</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">countLettersRecursive</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">s</span>
+    <span class="p">}</span>
+    <span class="nx">freqMap</span><span class="p">[</span><span class="nb">string</span><span class="p">(</span><span class="nx">s</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span><span class="o">++</span>
+    <span class="k">return</span> <span class="nf">countLettersRecursive</span><span class="p">(</span><span class="nx">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">countLettersLoop</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span> <span class="p">{</span>
+        <span class="nx">freqMap</span><span class="p">[</span><span class="nb">string</span><span class="p">(</span><span class="nx">v</span><span class="p">)]</span><span class="o">++</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>Very simple. The first run with a small sample: &ldquo;asdfasdfasdfasdfasdf&rdquo;</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">BenchmarkLoopFrequencyCount  <span class="m">5000000</span>           <span class="m">377</span> ns/op
+BenchmarkRecursiveFrequencyCount     <span class="m">5000000</span>           <span class="m">380</span> ns/op
+</code></pre></div><p>They almost equal but Recursive seems to be lagging behind. So I increased the sample size to a text which was 496 long.</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">PASS
+BenchmarkLoopFrequencyCount    <span class="m">30000</span>         <span class="m">53336</span> ns/op
+BenchmarkRecursiveFrequencyCount       <span class="m">20000</span>         <span class="m">61780</span> ns/op
+</code></pre></div><p>And, as expected, recursing is less performant than looping. Also, I think my machine would die from a larger data size&hellip;</p>
+<p>But the recursive looks so much cooler though.</p>
+<p>Thanks for reading!
+Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

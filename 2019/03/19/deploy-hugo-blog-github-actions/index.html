@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>Deploy a Hugo Blog Github Actions | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Intro Hi folks.
+Today I thought I show you how you can use Github Actions to deploy a hugo based blog like this one.
+Let’s dive in.
+Actions What are actions? If you read the above linked document they are basically steps performed in containers based on some events that happened with your repository. Events can be such as pushing, creating a PR or creating/closing an issue etc.
+We need an even on a push." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2019/03/19/deploy-hugo-blog-github-actions/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="post">
+
+            <h1 class="post-title p-name">Deploy a Hugo Blog Github Actions</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="intro">Intro</h1>
+<p>Hi folks.</p>
+<p>Today I thought I show you how you can use <a href="https://github.com/features/actions">Github Actions</a> to deploy a hugo based blog like this one.</p>
+<p>Let&rsquo;s dive in.</p>
+<h1 id="actions">Actions</h1>
+<p>What are actions? If you read the above linked document they are basically steps performed in containers based on some events that happened with your repository. Events can be such as pushing, creating a PR or creating/closing an issue etc.</p>
+<p>We need an even on a push.</p>
+<p>Actions is in beta right now so much of the documentation has some gaps but they are fairly okay. I recommend reading through this one carefully: <a href="https://developer.github.com/actions/">Developer Guide</a>. This describes for example accessing the environment. That is important because we will need to access the generated content from one action in the next action.</p>
+<h1 id="dockerfile">Dockerfile</h1>
+<p>Each action requires a Dockerfile which will be used to create a container to run this particular action in. The Dockerfile uses LABELS to mark a container. It is recommended to create an ENTRYPOINT in the Dockerfile that can work with CMDs passed in from the action.</p>
+<p>For example my pusher container has the ability to push into any repository thanks to using arguments for the entrypoint.sh script.</p>
+<p>We&rsquo;ll see that later on.</p>
+<h1 id="blog-actions">Blog actions</h1>
+<p>Let&rsquo;s look at the two actions in detail which we&rsquo;ll be using.</p>
+<h2 id="builder">Builder</h2>
+<p>First, we need to build the blog. This is accomplished pretty much the same as I wrote earlier in the travis blog part but with a little extra information.</p>
+<p>This is the Dockerfile:</p>
+<div class="highlight"><pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="k">FROM</span><span class="s"> golang:latest</span><span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;name&#34;</span><span class="o">=</span><span class="s2">&#34;Hugo Builder&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;maintainer&#34;</span><span class="o">=</span><span class="s2">&#34;Gergely Brautigam &lt;gergely@gergelybrautigam.com&gt;&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;version&#34;</span><span class="o">=</span><span class="s2">&#34;0.1.0&#34;</span><span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;com.github.actions.name&#34;</span><span class="o">=</span><span class="s2">&#34;Go Builder&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;com.github.actions.description&#34;</span><span class="o">=</span><span class="s2">&#34;Build a hugo blog&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;com.github.actions.icon&#34;</span><span class="o">=</span><span class="s2">&#34;package&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;com.github.actions.color&#34;</span><span class="o">=</span><span class="s2">&#34;#E0EBF5&#34;</span><span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> <span class="se">\
+</span><span class="se"></span>  apt-get update <span class="o">&amp;&amp;</span> <span class="se">\
+</span><span class="se"></span>  apt-get install -y ca-certificates openssl git <span class="o">&amp;&amp;</span> <span class="se">\
+</span><span class="se"></span>  update-ca-certificates <span class="o">&amp;&amp;</span> <span class="se">\
+</span><span class="se"></span>  rm -rf /var/lib/apt<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> go get github.com/gohugoio/hugo<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">COPY</span> entrypoint.sh /entrypoint.sh<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">ENTRYPOINT</span> <span class="p">[</span><span class="s2">&#34;/entrypoint.sh&#34;</span><span class="p">]</span><span class="err">
+</span></code></pre></div><p>Pretty simple. The entrypoint script looks like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/bash
+</span><span class="cp"></span>
+<span class="nb">set</span> -e
+<span class="nb">set</span> -x
+<span class="nb">set</span> -o pipefail
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&#34;</span><span class="nv">$GITHUB_WORKSPACE</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">echo</span> <span class="s2">&#34;Set the GITHUB_WORKSPACE env variable.&#34;</span>
+  <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&#34;</span><span class="nv">$GITHUB_REPOSITORY</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">echo</span> <span class="s2">&#34;Set the GITHUB_REPOSITORY env variable.&#34;</span>
+  <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="nv">root_path</span><span class="o">=</span><span class="s2">&#34;</span><span class="nv">$GITHUB_WORKSPACE</span><span class="s2">&#34;</span>
+<span class="nb">echo</span> <span class="s2">&#34;Root path is: </span><span class="si">${</span><span class="nv">root_path</span><span class="si">}</span><span class="s2">&#34;</span>
+<span class="nv">blog_path</span><span class="o">=</span><span class="s2">&#34;</span><span class="nv">$GITHUB_WORKSPACE</span><span class="s2">/.blog&#34;</span>
+<span class="nb">echo</span> <span class="s2">&#34;Blog path is: </span><span class="si">${</span><span class="nv">blog_path</span><span class="si">}</span><span class="s2">&#34;</span>
+mkdir -p <span class="s2">&#34;</span><span class="nv">$blog_path</span><span class="s2">&#34;</span>
+mkdir -p <span class="s2">&#34;</span><span class="nv">$root_path</span><span class="s2">&#34;</span>
+<span class="nb">cd</span> <span class="s2">&#34;</span><span class="nv">$root_path</span><span class="s2">&#34;</span>
+<span class="nb">echo</span> <span class="s2">&#34;Preparing to build blog&#34;</span>
+hugo --theme hermit
+<span class="nb">echo</span> <span class="s2">&#34;Building is done. Copying over generated files&#34;</span>
+cp -R public/* <span class="s2">&#34;</span><span class="nv">$blog_path</span><span class="s2">&#34;</span>/
+<span class="nb">echo</span> <span class="s2">&#34;Copy is done.&#34;</span>
+
+<span class="nb">exit</span> <span class="m">0</span>
+</code></pre></div><p>The interesting parts here are <code>GITHUB_WORKSPACE</code> and <code>GITHUB_REPOSITORY</code>. The workspace is where the repository is located at.</p>
+<p>This is the place where we will copy our built blog files. Since this is a mount basically on the local build machine the next action which comes along will see the folder <code>.blog</code>. This is how we pass artifacts between actions.</p>
+<p>This action can be found here: <a href="https://github.com/Skarlso/blog-builder">Hugo Blog Builder Action</a>.</p>
+<h2 id="publisher">Publisher</h2>
+<p>Once the building finishes successfully we can push it to the new location.</p>
+<p>Dockerfile is similar to the one above in every regard. Except for the name and that it doesn&rsquo;t need Hugo and the command&hellip;</p>
+<div class="highlight"><pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="k">FROM</span><span class="s"> golang:latest</span><span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;name&#34;</span><span class="o">=</span><span class="s2">&#34;Hugo Pusher&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;maintainer&#34;</span><span class="o">=</span><span class="s2">&#34;Gergely Brautigam &lt;gergely@gergelybrautigam.com&gt;&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;version&#34;</span><span class="o">=</span><span class="s2">&#34;0.1.0&#34;</span><span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;com.github.actions.name&#34;</span><span class="o">=</span><span class="s2">&#34;Go Pusher&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;com.github.actions.description&#34;</span><span class="o">=</span><span class="s2">&#34;Push a hugo blog&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;com.github.actions.icon&#34;</span><span class="o">=</span><span class="s2">&#34;package&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">LABEL</span> <span class="s2">&#34;com.github.actions.color&#34;</span><span class="o">=</span><span class="s2">&#34;#E0EBF5&#34;</span><span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> <span class="se">\
+</span><span class="se"></span>  apt-get update <span class="o">&amp;&amp;</span> <span class="se">\
+</span><span class="se"></span>  apt-get install -y ca-certificates openssl git <span class="o">&amp;&amp;</span> <span class="se">\
+</span><span class="se"></span>  update-ca-certificates <span class="o">&amp;&amp;</span> <span class="se">\
+</span><span class="se"></span>  rm -rf /var/lib/apt<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">COPY</span> entrypoint.sh /entrypoint.sh<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">ENTRYPOINT</span> <span class="p">[</span><span class="s2">&#34;/entrypoint.sh&#34;</span><span class="p">]</span><span class="err">
+</span><span class="err"></span><span class="k">CMD</span> <span class="p">[</span><span class="s2">&#34;Skarlso/skarlso.github.io.git&#34;</span><span class="p">]</span><span class="err">
+</span></code></pre></div><p>Why do we require the CMD? Let&rsquo;s take a look at the script.</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/bash
+</span><span class="cp"></span>
+<span class="nb">set</span> -e
+<span class="nb">set</span> -x
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&#34;</span><span class="nv">$GITHUB_WORKSPACE</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">echo</span> <span class="s2">&#34;Set the GITHUB_WORKSPACE env variable.&#34;</span>
+  <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&#34;</span><span class="nv">$GITHUB_REPOSITORY</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">echo</span> <span class="s2">&#34;Set the GITHUB_REPOSITORY env variable.&#34;</span>
+  <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+setup_git<span class="o">()</span> <span class="o">{</span>
+  <span class="nv">repo</span><span class="o">=</span><span class="nv">$1</span>
+  git config --global user.email <span class="s2">&#34;bot@github.com&#34;</span>
+  git config --global user.name <span class="s2">&#34;Github Actions&#34;</span>
+  git init
+  <span class="nb">echo</span> <span class="s2">&#34;Starting to clone blog repository&#34;</span>
+  git remote add origin https://<span class="s2">&#34;</span><span class="si">${</span><span class="nv">PUSH_TOKEN</span><span class="si">}</span><span class="s2">&#34;</span>@github.com/<span class="s2">&#34;</span><span class="si">${</span><span class="nv">repo</span><span class="si">}</span><span class="s2">&#34;</span> &gt; /dev/null 2&gt;<span class="p">&amp;</span><span class="m">1</span>
+  git pull origin master
+  <span class="nb">echo</span> <span class="s2">&#34;Cloning is done&#34;</span>
+  ls -l
+<span class="o">}</span>
+
+commit_website_files<span class="o">()</span> <span class="o">{</span>
+  git add .
+  git commit -am <span class="s2">&#34;Github Action Build </span><span class="si">${</span><span class="nv">GITHUB_SHA</span><span class="si">}</span><span class="s2">&#34;</span>
+<span class="o">}</span>
+
+upload_files<span class="o">()</span> <span class="o">{</span>
+  git push --quiet --set-upstream origin master
+<span class="o">}</span>
+
+<span class="nb">echo</span> <span class="s2">&#34;Beginning publishing workflow&#34;</span>
+<span class="nv">repo</span><span class="o">=</span><span class="nv">$1</span>
+<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&#34;</span><span class="si">${</span><span class="nv">repo</span><span class="si">}</span><span class="s2">&#34;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Repo must be defined.&#34;</span>
+    <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+<span class="nb">echo</span> <span class="s2">&#34;Using repository </span><span class="si">${</span><span class="nv">repo</span><span class="si">}</span><span class="s2"> to push to&#34;</span>
+mkdir /opt/publish <span class="o">&amp;&amp;</span> <span class="nb">cd</span> /opt/publish
+<span class="nv">blog_path</span><span class="o">=</span><span class="s2">&#34;</span><span class="nv">$GITHUB_WORKSPACE</span><span class="s2">/.blog&#34;</span>
+<span class="nb">echo</span> <span class="s2">&#34;Blog is located at: </span><span class="si">${</span><span class="nv">blog_path</span><span class="si">}</span><span class="s2">&#34;</span>
+ls -l <span class="s2">&#34;</span><span class="si">${</span><span class="nv">blog_path</span><span class="si">}</span><span class="s2">&#34;</span>
+<span class="nb">echo</span> <span class="s2">&#34;Setting up git&#34;</span>
+setup_git <span class="s2">&#34;</span><span class="si">${</span><span class="nv">repo</span><span class="si">}</span><span class="s2">&#34;</span>
+cp -R <span class="s2">&#34;</span><span class="si">${</span><span class="nv">blog_path</span><span class="si">}</span><span class="s2">&#34;</span>/* .
+<span class="nb">echo</span> <span class="s2">&#34;Copied over generated content from blog path. Committing.&#34;</span>
+commit_website_files
+<span class="nb">echo</span> <span class="s2">&#34;Committed. Pushing.&#34;</span>
+upload_files
+<span class="nb">echo</span> <span class="s2">&#34;All done.&#34;</span>
+<span class="nb">exit</span> <span class="m">0</span>
+</code></pre></div><p>Now this is a lot more involved. I&rsquo;m leaving as many echos in here as possible for esae of debugging.</p>
+<p>The interesting part in here is the <code>repo=$1</code>. This is why we need CMD specified. But this is what makes this Action a bit more flexible too. It can push anywhere it has access to.</p>
+<p>This action can be found here: <a href="https://github.com/Skarlso/blog-publisher">Hugo Blog Publisher Action</a>.</p>
+<h2 id="the-workflow-file">The Workflow file</h2>
+<p>How does this all fit together? You have to create a workflow file which looks something like this:</p>
+<pre><code>workflow &quot;Publish Blog&quot; {
+  on = &quot;push&quot;
+  resolves = [&quot;blog-publisher&quot;]
+}
+
+action &quot;blog-builder&quot; {
+  uses = &quot;skarlso/blog-builder@master&quot;
+  secrets = [&quot;GITHUB_TOKEN&quot;]
+}
+
+action &quot;blog-publisher&quot; {
+  uses = &quot;skarlso/blog-publisher@master&quot;
+  needs = [&quot;blog-builder&quot;]
+  secrets = [&quot;GITHUB_TOKEN&quot;, &quot;PUSH_TOKEN&quot;]
+}
+</code></pre><p>This is located in your repositroy under <code>.github/main.workdflow</code>. Notice the secrets. GITHUB_TOKEN is created for you by Github. This is a basic token which lets you access the github API. But it can&rsquo;t be used for pushing code. Thus, we need another token. This can be defined under your repository / settings / secrets. Once you have a token, add a new secret called PUSH_TOKEN and&hellip; done.</p>
+<p>Everything should be ready to go.</p>
+<h2 id="location-of-the-actions">Location of the actions</h2>
+<p>Now, I read the doc and should have been possible to have these actions in the repositroy itself. However, I faced some problems with that setup so I ended up having actions in their respectice repository. That&rsquo;s why <code>uses</code> is set up to be <code>skarlso/&lt;action-name&gt;@branch</code>.</p>
+<h1 id="conclusion">Conclusion</h1>
+<p>On a push now the blog is built and published. If a step fails it won&rsquo;t be published. It&rsquo;s actually a lot faster than my travis build was.</p>
+<p>Thank you for reading,</p>
+<p>Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>
