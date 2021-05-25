@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="en-GB">
     <head>
     <meta charset="UTF-8" />
 
-    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="#494f5c" />
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
@@ -75,7 +75,7 @@ Go Experimental Plugins Since Go 1.8 was released, an exciting and new feature w
 
         
 
-        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+        <article class="content post h-entry" data-align="default" data-type="post">
 
             <h1 class="post-title p-name">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 3</h1>
 
@@ -108,14 +108,14 @@ Furnace, but only how to write and use them.</p>
 <p>To use a plugin, create a go file called: <code>0001_mailer.go</code>. The <code>0001</code> before it will define WHEN it&rsquo;s executed.
 Having multiple plugins is completely okay. Execution of order however, depends on the names of the files.</p>
 <p>Now, in 0001_mailer.post_create we would have something like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 
-<span class="kn">import</span> <span class="s">&#34;log&#34;</span>
+<span style="color:#f92672">import</span> <span style="color:#e6db74">&#34;log&#34;</span>
 
-<span class="c1">// RunPlugin runs the plugin.
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">RunPlugin</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;My Awesome Pre Create Plugin.&#34;</span><span class="p">)</span>
-<span class="p">}</span>
+<span style="color:#75715e">// RunPlugin runs the plugin.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">RunPlugin</span>() {
+	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;My Awesome Pre Create Plugin.&#34;</span>)
+}
 </code></pre></div><p>Next step is the build this file to be a plugin library. Note: Right now, this only works on Linux!</p>
 <p>To build this file run the following:</p>
 <pre><code>go build -buildmode=plugin -o 0001_mailer.pre_create 0001_mailer.go
@@ -125,26 +125,26 @@ what plugins it has to run.</p>
 <h2 id="slack-notification-plugin">Slack notification Plugin</h2>
 <p>To demonstrate how a plugin could be used is if you need some kind of notification once a Stack is completed. For example, you
 might want to send a message to a Slack room. To do this, your plugin would look something like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;os&#34;</span>
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;fmt&#34;</span>
+	<span style="color:#e6db74">&#34;os&#34;</span>
 
-	<span class="s">&#34;github.com/nlopes/slack&#34;</span>
-<span class="p">)</span>
+	<span style="color:#e6db74">&#34;github.com/nlopes/slack&#34;</span>
+)
 
-<span class="kd">func</span> <span class="nf">RunPlugin</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">stackname</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;FURNACE_STACKNAME&#34;</span><span class="p">)</span>
-	<span class="nx">api</span> <span class="o">:=</span> <span class="nx">slack</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;YOUR_TOKEN_HERE&#34;</span><span class="p">)</span>
-	<span class="nx">params</span> <span class="o">:=</span> <span class="nx">slack</span><span class="p">.</span><span class="nx">PostMessageParameters</span><span class="p">{}</span>
-	<span class="nx">channelID</span><span class="p">,</span> <span class="nx">timestamp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">api</span><span class="p">.</span><span class="nf">PostMessage</span><span class="p">(</span><span class="s">&#34;#general&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;Stack with name &#39;%s&#39; is Done.&#34;</span><span class="p">,</span> <span class="nx">stackname</span><span class="p">),</span> <span class="nx">params</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%s\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Message successfully sent to channel %s at %s&#34;</span><span class="p">,</span> <span class="nx">channelID</span><span class="p">,</span> <span class="nx">timestamp</span><span class="p">)</span>
-<span class="p">}</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">RunPlugin</span>() {
+	<span style="color:#a6e22e">stackname</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getenv</span>(<span style="color:#e6db74">&#34;FURNACE_STACKNAME&#34;</span>)
+	<span style="color:#a6e22e">api</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">slack</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;YOUR_TOKEN_HERE&#34;</span>)
+	<span style="color:#a6e22e">params</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">slack</span>.<span style="color:#a6e22e">PostMessageParameters</span>{}
+	<span style="color:#a6e22e">channelID</span>, <span style="color:#a6e22e">timestamp</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">api</span>.<span style="color:#a6e22e">PostMessage</span>(<span style="color:#e6db74">&#34;#general&#34;</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;Stack with name &#39;%s&#39; is Done.&#34;</span>, <span style="color:#a6e22e">stackname</span>), <span style="color:#a6e22e">params</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;%s\n&#34;</span>, <span style="color:#a6e22e">err</span>)
+		<span style="color:#66d9ef">return</span>
+	}
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;Message successfully sent to channel %s at %s&#34;</span>, <span style="color:#a6e22e">channelID</span>, <span style="color:#a6e22e">timestamp</span>)
+}
 </code></pre></div><p>Currently, Furnace has no ability to share information of the stack with an outside plugin. Thus &lsquo;Done&rsquo; could be anything from
 Rollback to Failed to CreateComplete.</p>
 <h1 id="closing-words">Closing Words</h1>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="en-GB">
     <head>
     <meta charset="UTF-8" />
 
-    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="#494f5c" />
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
@@ -98,8 +98,8 @@
 <h1 id="the-first-problems">The first problems</h1>
 <p><img src="/img/parser/infinity.jpg" alt="infinity"></p>
 <p>What was then the first trouble that arose after I replaced eval? The parser back then was dumbed down a lot. The bug I faced was a simple infinite loop. The parser works like a lexer. It identifies tokens of certain type and tries to parse them into variables. This lexing had an error.</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="o">-</span>        <span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?&#39;?(\w+)?[.,]?(\w+)?&#39;?(\s+)?/</span><span class="p">)</span> <span class="c1"># @TODO: At this point I should trim somewhere...</span>
-<span class="o">+</span>        <span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?&#39;?.*&#39;?(\s+)?/</span><span class="p">)</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby"><span style="color:#f92672">-</span>        <span style="color:#66d9ef">elsif</span> t <span style="color:#f92672">=</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/(\s+)?&#39;?(\w+)?[.,]?(\w+)?&#39;?(\s+)?/</span>) <span style="color:#75715e"># @TODO: At this point I should trim somewhere...</span>
+<span style="color:#f92672">+</span>        <span style="color:#66d9ef">elsif</span> t <span style="color:#f92672">=</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/(\s+)?&#39;?.*&#39;?(\s+)?/</span>)
 </code></pre></div><p>It was caught by this Json Path:</p>
 <pre><code>$.acceptNewTasks.[?(@.taskEndpoint == &quot;mps/awesome&quot;)].lastTaskPollTime
 </code></pre><p>The culprit was the <code>/</code> character. The tokenizer wasn’t prepared…</p>
@@ -107,28 +107,28 @@
 <h1 id="numbers">Numbers</h1>
 <p><img src="/img/parser/twins1.jpg" alt="twins1"></p>
 <p>The second problem was the fact that the parser is using strings. Who would have thought that the string <code>2.0</code> in fact does not equal to string <code>2</code>? In Ruby the simplest way of making sure a variable is a Number is by casting the variable to Number or Float. In case it’s not a Number we rescue and move on.</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">el</span> <span class="o">=</span> <span class="nb">Float</span><span class="p">(</span><span class="n">el</span><span class="p">)</span> <span class="k">rescue</span> <span class="n">el</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby">el <span style="color:#f92672">=</span> Float(el) <span style="color:#66d9ef">rescue</span> el
 </code></pre></div><p>Incidentally this also solved the problem where the json path contained a number but since everything is a string this, also did not equal: <code>'1' == 1</code>.</p>
 <p>Since first the string needed to be a Number.</p>
 <h1 id="supporting-regexes">Supporting regexes</h1>
 <p><img src="/img/parser/bouncer1.jpg" alt="bouncer1"></p>
 <p>Next came supported operators. The parser only supported the basic operators: <code>&lt;&gt;=</code>. It was missing <code>=~</code> from this. Which meant people who would use regexes to filter JSON would no longer be able to do so. This was only a tiny modification actually:</p>
 <p>First, the operator filter needed to be aware&hellip;</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="o">-</span> <span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?[&lt;&gt;=][=&lt;&gt;]?(\s+)?/</span><span class="p">)</span>
-<span class="o">+</span> <span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?[&lt;&gt;=][=~]?(\s+)?/</span><span class="p">)</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby"><span style="color:#f92672">-</span> <span style="color:#66d9ef">elsif</span> t <span style="color:#f92672">=</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/(\s+)?[&lt;&gt;=][=&lt;&gt;]?(\s+)?/</span>)
+<span style="color:#f92672">+</span> <span style="color:#66d9ef">elsif</span> t <span style="color:#f92672">=</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/(\s+)?[&lt;&gt;=][=~]?(\s+)?/</span>)
 </code></pre></div><p>With that done, we just <code>.to_regexp</code> it with the power of ruby and <code>send</code> would automatically pick it up. And of course test coverage.</p>
 <h1 id="regression">Regression</h1>
 <p>Once the parser was introduced I knew that it would create problems, since eval did many things that the parser could not handle. And they started to arrive slowly. One-by-one.</p>
 <h2 id="booleans">Booleans</h2>
 <p><img src="/img/parser/twins2.jpg" alt="twins2"></p>
 <p>Aka, the story of <code>true == 'true'</code>&hellip; Inherently working with strings here makes it difficult to detect when the type boolean is meant or a string which happens to say <code>true</code>. This one was easy to solve as well in the end:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">operand</span> <span class="o">=</span> <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="s1">&#39;true&#39;</span>
-            <span class="kp">true</span>
-        <span class="k">elsif</span> <span class="n">t</span> <span class="o">==</span> <span class="s1">&#39;false&#39;</span>
-            <span class="kp">false</span>
-        <span class="k">else</span>
-            <span class="n">operator</span><span class="o">.</span><span class="n">to_s</span><span class="o">.</span><span class="n">strip</span> <span class="o">==</span> <span class="s1">&#39;=~&#39;</span> <span class="p">?</span> <span class="n">t</span><span class="o">.</span><span class="n">to_regexp</span> <span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">gsub</span><span class="p">(</span><span class="sr">%r{^&#39;|&#39;$}</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span> <span class="c1"># We also handle regexp here.</span>
-        <span class="k">end</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby">operand <span style="color:#f92672">=</span> <span style="color:#66d9ef">if</span> t <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;true&#39;</span>
+            <span style="color:#66d9ef">true</span>
+        <span style="color:#66d9ef">elsif</span> t <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;false&#39;</span>
+            <span style="color:#66d9ef">false</span>
+        <span style="color:#66d9ef">else</span>
+            operator<span style="color:#f92672">.</span>to_s<span style="color:#f92672">.</span>strip <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;=~&#39;</span> ? t<span style="color:#f92672">.</span>to_regexp : t<span style="color:#f92672">.</span>gsub(<span style="color:#e6db74">%r{^&#39;|&#39;$}</span>, <span style="color:#e6db74">&#39;&#39;</span>)<span style="color:#f92672">.</span>strip <span style="color:#75715e"># We also handle regexp here.</span>
+        <span style="color:#66d9ef">end</span>
 </code></pre></div><p>Ignoring the regex part, this was all it needed.</p>
 <h2 id="syntax">Syntax</h2>
 <p><img src="/img/parser/bouncer3.jpg" alt="bouncer3"></p>
@@ -136,23 +136,23 @@
 <h2 id="number-formatting">Number formatting</h2>
 <p>Formatting and comparing numbers gave me a lot of headache. I had to detect whether I’m dealing with a number or a string parsed as a number or a number but that was converted into string or a string that happened to be a number. Geez…</p>
 <p>I ended up making it simple like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">el</span> <span class="o">=</span> <span class="nb">Float</span><span class="p">(</span><span class="n">el</span><span class="p">)</span> <span class="k">rescue</span> <span class="n">el</span>
-<span class="n">operand</span> <span class="o">=</span> <span class="nb">Float</span><span class="p">(</span><span class="n">operand</span><span class="p">)</span> <span class="k">rescue</span> <span class="n">operand</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby">el <span style="color:#f92672">=</span> Float(el) <span style="color:#66d9ef">rescue</span> el
+operand <span style="color:#f92672">=</span> Float(operand) <span style="color:#66d9ef">rescue</span> operand
 </code></pre></div><p>Basically everything is a number. Doesn’t matter where it came from, what it was in the past… It’s a number if it can be converted. This, of course, also means that a test like this one fails:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby">  <span class="k">def</span> <span class="nf">test_number_match</span>
-    <span class="n">json</span> <span class="o">=</span> <span class="p">{</span>
-      <span class="ss">channels</span><span class="p">:</span><span class="o">[</span>
-        <span class="p">{</span>
-          <span class="ss">elem</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="ss">elem</span><span class="p">:</span> <span class="s1">&#39;1&#39;</span>
-        <span class="p">}</span>
-      <span class="o">]</span>
-    <span class="p">}</span><span class="o">.</span><span class="n">to_json</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby">  <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_number_match</span>
+    json <span style="color:#f92672">=</span> {
+      <span style="color:#e6db74">channels</span>:<span style="color:#f92672">[</span>
+        {
+          <span style="color:#e6db74">elem</span>: <span style="color:#ae81ff">1</span>,
+        },
+        {
+          <span style="color:#e6db74">elem</span>: <span style="color:#e6db74">&#39;1&#39;</span>
+        }
+      <span style="color:#f92672">]</span>
+    }<span style="color:#f92672">.</span>to_json
 
-    <span class="n">assert_equal</span> <span class="o">[</span><span class="p">{</span> <span class="s1">&#39;elem&#39;</span> <span class="o">=&gt;</span> <span class="mi">1</span> <span class="p">}</span><span class="o">]</span><span class="p">,</span> <span class="no">JsonPath</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="n">json</span><span class="p">,</span> <span class="s2">&#34;$..channels[?(@.elem == 1)]&#34;</span><span class="p">)</span>
-  <span class="k">end</span>
+    assert_equal <span style="color:#f92672">[</span>{ <span style="color:#e6db74">&#39;elem&#39;</span> <span style="color:#f92672">=&gt;</span> <span style="color:#ae81ff">1</span> }<span style="color:#f92672">]</span>, <span style="color:#66d9ef">JsonPath</span><span style="color:#f92672">.</span>on(json, <span style="color:#e6db74">&#34;$..channels[?(@.elem == 1)]&#34;</span>)
+  <span style="color:#66d9ef">end</span>
 </code></pre></div><p>Both will match… Even though you’d expect it only to match one. Luckily though… this is exactly how <a href="http://jsonpath.com/">http://jsonpath.com/</a> works as well. An AST would detect that it’s a number type… But since I’m parsing strings here, that would be almost impossible a feat to accomplish in a nice manner.</p>
 <h2 id="groups">Groups</h2>
 <p><img src="/img/parser/bouncer2.jpg" alt="bouncer2"></p>
@@ -161,18 +161,18 @@
 </code></pre><p>Something like this was never parsed correctly. Since the parser didn’t understand grouping and order of evaluation. Let’s break it down. How do we get from a monstrous like that one above to something that can be handled? We take it one group at a time.</p>
 <h3 id="parentheses">Parentheses</h3>
 <p>As a first step, we make sure that the parentheses match. It’s possible that someone didn’t pay attention and left out a closing parentheses. Now, there are a couple of way of doing that in Ruby, but I went for the most plain blatant one.</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby">    <span class="k">def</span> <span class="nf">check_parenthesis_count</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
-      <span class="k">return</span> <span class="kp">true</span> <span class="k">unless</span> <span class="n">exp</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&#34;(&#34;</span><span class="p">)</span>
-      <span class="n">depth</span> <span class="o">=</span> <span class="mi">0</span>
-      <span class="n">exp</span><span class="o">.</span><span class="n">chars</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">c</span><span class="o">|</span>
-        <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s1">&#39;(&#39;</span>
-          <span class="n">depth</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="k">elsif</span> <span class="n">c</span> <span class="o">==</span> <span class="s1">&#39;)&#39;</span>
-          <span class="n">depth</span> <span class="o">-=</span> <span class="mi">1</span>
-        <span class="k">end</span>
-      <span class="k">end</span>
-      <span class="n">depth</span> <span class="o">==</span> <span class="mi">0</span>
-    <span class="k">end</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby">    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">check_parenthesis_count</span>(exp)
+      <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span> <span style="color:#66d9ef">unless</span> exp<span style="color:#f92672">.</span>include?(<span style="color:#e6db74">&#34;(&#34;</span>)
+      depth <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+      exp<span style="color:#f92672">.</span>chars<span style="color:#f92672">.</span>each <span style="color:#66d9ef">do</span> <span style="color:#f92672">|</span>c<span style="color:#f92672">|</span>
+        <span style="color:#66d9ef">if</span> c <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;(&#39;</span>
+          depth <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+        <span style="color:#66d9ef">elsif</span> c <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;)&#39;</span>
+          depth <span style="color:#f92672">-=</span> <span style="color:#ae81ff">1</span>
+        <span style="color:#66d9ef">end</span>
+      <span style="color:#66d9ef">end</span>
+      depth <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>
+    <span style="color:#66d9ef">end</span>
 </code></pre></div><p>A basic depth counter. We do this first, to avoid parsing an invalid query.</p>
 <h3 id="breaking-it-down">Breaking it down</h3>
 <p>Next we break down this complex thing into a query that makes more sense to the parser. To do that, we take each group and extract the operation in them and replace it with the value they provide. Meaning a query like the one above essentially should look like this:</p>
@@ -190,18 +190,18 @@
 <p>Right now there are two outstanding issues. The one mentioned above, where you can’t nest indexes and true/false notations. And the other is a submitted issue in which it’s described that it’s not possible to use something like this:</p>
 <pre><code>$.phoneNumbers[?(@[0].type == 'home')]
 </code></pre><p>Which basically boils down to the fact that Jsonpath can’t handle nested lists like these:</p>
-<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
-  <span class="nt">&#34;phoneNumbers&#34;</span><span class="p">:</span> <span class="p">[</span>
-    <span class="p">[{</span>
-      <span class="nt">&#34;type&#34;</span>  <span class="p">:</span> <span class="s2">&#34;iPhone&#34;</span><span class="p">,</span>
-      <span class="nt">&#34;number&#34;</span><span class="p">:</span> <span class="s2">&#34;0123-4567-8888&#34;</span>
-    <span class="p">}],</span>
-    <span class="p">[{</span>
-      <span class="nt">&#34;type&#34;</span>  <span class="p">:</span> <span class="s2">&#34;home&#34;</span><span class="p">,</span>
-      <span class="nt">&#34;number&#34;</span><span class="p">:</span> <span class="s2">&#34;0123-4567-8910&#34;</span>
-    <span class="p">}]</span>
-  <span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  <span style="color:#f92672">&#34;phoneNumbers&#34;</span>: [
+    [{
+      <span style="color:#f92672">&#34;type&#34;</span>  : <span style="color:#e6db74">&#34;iPhone&#34;</span>,
+      <span style="color:#f92672">&#34;number&#34;</span>: <span style="color:#e6db74">&#34;0123-4567-8888&#34;</span>
+    }],
+    [{
+      <span style="color:#f92672">&#34;type&#34;</span>  : <span style="color:#e6db74">&#34;home&#34;</span>,
+      <span style="color:#f92672">&#34;number&#34;</span>: <span style="color:#e6db74">&#34;0123-4567-8910&#34;</span>
+    }]
+  ]
+}
 </code></pre></div><p>That isn’t actually the problem of the parser, but Jsonpath itself.</p>
 <h1 id="conclusion">Conclusion</h1>
 <p>Like a good marriage, living with a Parser is a lot of compromise and ironing out edges and working on making it better for both parties involved. I have no doubt that there are more bugs in this code, but I&rsquo;m trying to keep it concise and clear to read as much as possible.</p>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="en-GB">
     <head>
     <meta charset="UTF-8" />
 
-    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="#494f5c" />
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
@@ -144,30 +144,30 @@ What What services am I running exactly? Here is a list I’m running at the tim
 </code></pre><p><code>/etc/secret</code> will be the destination of the ssh key we create.</p>
 <p>And we also need to have a known_hosts file, otherwise git clone will complain. We also bake this into the container. Why? Why not generate that on the fly? Because I want it to fail in case there is something wrong or there is a MIMA going on etc.</p>
 <p>All this translated into a Dockerfile looks like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="c"># We are using alpine for a minimalistic image</span><span class="err">
-</span><span class="err"></span><span class="k">FROM</span><span class="s"> alpine:latest</span><span class="err">
-</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> apk --no-cache add ca-certificates<span class="err">
-</span><span class="err"></span><span class="k">RUN</span> apk update<span class="err">
-</span><span class="err"></span><span class="c"># Openssh is needed for the SSH command</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> apk --no-cache add ruby vim curl git build-base ruby-dev openssh openssh-client<span class="err">
-</span><span class="err">
-</span><span class="err"></span><span class="c"># Setup dependencies for the fork ruby file</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> gem install octokit logger multi_json json --no-ri --no-rdoc<span class="err">
-</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> mkdir /data<span class="err">
-</span><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /data</span><span class="err">
-</span><span class="err"></span><span class="c"># Setup some data about the committer</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> git config --global user.name <span class="s2">&#34;Fork Updater&#34;</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> git config --global user.email <span class="s2">&#34;email@email.com&#34;</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> mkdir -p /root/.ssh<span class="err">
-</span><span class="err"></span><span class="c"># Get the host config for github.com</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> ssh-keyscan github.com &gt;&gt; /root/.ssh/known_hosts<span class="err">
-</span><span class="err">
-</span><span class="err"></span><span class="c"># Setup the SSH config</span><span class="err">
-</span><span class="err"></span><span class="k">COPY</span> ./config /root/.ssh<span class="err">
-</span><span class="err"></span><span class="k">COPY</span> ./fork_updater.rb .<span class="err">
-</span><span class="err"></span><span class="k">CMD</span> <span class="p">[</span><span class="s2">&#34;ruby&#34;</span><span class="p">,</span> <span class="s2">&#34;/data/fork_updater.rb&#34;</span><span class="p">]</span><span class="err">
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Dockerfile" data-lang="Dockerfile"><span style="color:#75715e"># We are using alpine for a minimalistic image</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">FROM</span><span style="color:#e6db74"> alpine:latest</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> apk --no-cache add ca-certificates<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> apk update<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># Openssh is needed for the SSH command</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> apk --no-cache add ruby vim curl git build-base ruby-dev openssh openssh-client<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># Setup dependencies for the fork ruby file</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> gem install octokit logger multi_json json --no-ri --no-rdoc<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> mkdir /data<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">WORKDIR</span><span style="color:#e6db74"> /data</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># Setup some data about the committer</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> git config --global user.name <span style="color:#e6db74">&#34;Fork Updater&#34;</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> git config --global user.email <span style="color:#e6db74">&#34;email@email.com&#34;</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> mkdir -p /root/.ssh<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># Get the host config for github.com</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> ssh-keyscan github.com &gt;&gt; /root/.ssh/known_hosts<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># Setup the SSH config</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">COPY</span> ./config /root/.ssh<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">COPY</span> ./fork_updater.rb .<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">CMD</span> [<span style="color:#e6db74">&#34;ruby&#34;</span>, <span style="color:#e6db74">&#34;/data/fork_updater.rb&#34;</span>]<span style="color:#960050;background-color:#1e0010">
 </span></code></pre></div><p>That&rsquo;s it. Now our updater is containerized and ready to be deployed as a cronjob on a kube cluster. Oh, and we also need to create the SSH key like this:</p>
 <pre><code>kubectl create secret generic ssh-key-secret --from-file=ssh-privatekey=/path/to/.ssh/id_rsa
 </code></pre><h1 id="before-we-begin">Before we Begin</h1>
@@ -184,94 +184,94 @@ What What services am I running exactly? Here is a list I’m running at the tim
 <h2 id="my-website">My Website</h2>
 <p>The site, located here: <a href="https://gergelybrautigam.com">Gergely&rsquo;s Domain</a>; is a really simple, static, <a href="https://gohugo.io">Hugo</a> based website. It contains nothing fancy, no real Javascript magic, has a simple list of things I&rsquo;ve done and who I am.</p>
 <p>It&rsquo;s powered / served by an nginx instance running on port 9090 define by a very simple Dockerfile:</p>
-<div class="highlight"><pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="k">FROM</span><span class="s"> golang:latest as builder</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> apt-get update <span class="o">&amp;&amp;</span> apt install -y git make vim hugo<span class="err">
-</span><span class="err"></span><span class="k">RUN</span> mkdir -p /opt/website<span class="err">
-</span><span class="err"></span><span class="k">RUN</span> git clone https://github.com/Skarlso/gergelybrautigam /opt/website<span class="err">
-</span><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /opt/website</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> make<span class="err">
-</span><span class="err">
-</span><span class="err"></span><span class="k">FROM</span><span class="s"> nginx:latest</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> mkdir -p /var/www/html/gergelybrautigam<span class="err">
-</span><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /var/www/html/gergelybrautigam</span><span class="err">
-</span><span class="err"></span><span class="k">COPY</span> --from<span class="o">=</span>builder /opt/website/public .<span class="err">
-</span><span class="err"></span><span class="k">COPY</span> 01_gergelybrautigam /etc/nginx/sites-available/<span class="err">
-</span><span class="err"></span><span class="k">RUN</span> mkdir -p /etc/nginx/sites-enabled/<span class="err">
-</span><span class="err"></span><span class="k">RUN</span> ln -s /etc/nginx/sites-available/01_gergelybrautigam /etc/nginx/sites-enabled/01_gergelybrautigam<span class="err">
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Dockerfile" data-lang="Dockerfile"><span style="color:#66d9ef">FROM</span><span style="color:#e6db74"> golang:latest as builder</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> apt-get update <span style="color:#f92672">&amp;&amp;</span> apt install -y git make vim hugo<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> mkdir -p /opt/website<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> git clone https://github.com/Skarlso/gergelybrautigam /opt/website<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">WORKDIR</span><span style="color:#e6db74"> /opt/website</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> make<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">FROM</span><span style="color:#e6db74"> nginx:latest</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> mkdir -p /var/www/html/gergelybrautigam<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">WORKDIR</span><span style="color:#e6db74"> /var/www/html/gergelybrautigam</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">COPY</span> --from<span style="color:#f92672">=</span>builder /opt/website/public .<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">COPY</span> 01_gergelybrautigam /etc/nginx/sites-available/<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> mkdir -p /etc/nginx/sites-enabled/<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> ln -s /etc/nginx/sites-available/01_gergelybrautigam /etc/nginx/sites-enabled/01_gergelybrautigam<span style="color:#960050;background-color:#1e0010">
 </span></code></pre></div><p>Easy as goblin pie. Nginx has a command set like this <code>CMD [&quot;nginx&quot;, &quot;-g&quot;, &quot;daemon off;&quot;]</code> and exposes port 80.</p>
 <h3 id="the-deployment">The deployment</h3>
 <p>In order to deploy this in the cluster, I created a deployment as follows:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Deployment</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gb-deployment</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">gergely-brautigam</span><span class="w">
-</span><span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gergelybrautigam</span><span class="w">
-</span><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">prometheus.io/scrape</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
-</span><span class="w">      </span><span class="nt">prometheus.io/port</span><span class="p">:</span><span class="w">   </span><span class="s1">&#39;9090&#39;</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
-</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gergelybrautigam</span><span class="w">
-</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gergelybrautigam</span><span class="w">
-</span><span class="w">      </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span><span class="nt">prometheus.io/scrape</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
-</span><span class="w">          </span><span class="nt">prometheus.io/port</span><span class="p">:</span><span class="w">   </span><span class="s1">&#39;9090&#39;</span><span class="w">
-</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gergelybrautigam</span><span class="w">
-</span><span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">skarlso/gergelybrautigam:v0.0.26</span><span class="w">
-</span><span class="w">        </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">9090</span><span class="w">
-</span></code></pre></div><p>The metadata section defines information about the deployment. It&rsquo;s name is gb-deployment. The namespace in which this sits is called gergely-brautigam and it has some labels to it so Prometheus monitoring tool can discover the pod.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">apps/v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Deployment</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gb-deployment</span>
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">gergely-brautigam</span>
+  <span style="color:#f92672">labels</span>:
+    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gergelybrautigam</span>
+  <span style="color:#f92672">annotations</span>:
+      <span style="color:#f92672">prometheus.io/scrape</span>: <span style="color:#e6db74">&#39;true&#39;</span>
+      <span style="color:#f92672">prometheus.io/port</span>:   <span style="color:#e6db74">&#39;9090&#39;</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">replicas</span>: <span style="color:#ae81ff">1</span>
+  <span style="color:#f92672">selector</span>:
+    <span style="color:#f92672">matchLabels</span>:
+      <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gergelybrautigam</span>
+  <span style="color:#f92672">template</span>:
+    <span style="color:#f92672">metadata</span>:
+      <span style="color:#f92672">labels</span>:
+        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gergelybrautigam</span>
+      <span style="color:#f92672">annotations</span>:
+          <span style="color:#f92672">prometheus.io/scrape</span>: <span style="color:#e6db74">&#39;true&#39;</span>
+          <span style="color:#f92672">prometheus.io/port</span>:   <span style="color:#e6db74">&#39;9090&#39;</span>
+    <span style="color:#f92672">spec</span>:
+      <span style="color:#f92672">containers</span>:
+      - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gergelybrautigam</span>
+        <span style="color:#f92672">image</span>: <span style="color:#ae81ff">skarlso/gergelybrautigam:v0.0.26</span>
+        <span style="color:#f92672">ports</span>:
+        - <span style="color:#f92672">containerPort</span>: <span style="color:#ae81ff">9090</span>
+</code></pre></div><p>The metadata section defines information about the deployment. It&rsquo;s name is gb-deployment. The namespace in which this sits is called gergely-brautigam and it has some labels to it so Prometheus monitoring tool can discover the pod.</p>
 <p>It&rsquo;s running a single replica, has a bunch of more metadata and template settings, and finally the container spec which defines the image, and the exposed container port on which the application is running.</p>
 <p>Now we need a service to expose this deployment.</p>
 <h3 id="the-service">The service</h3>
 <p>The service is also simple. It looks like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Service</span><span class="w">
-</span><span class="w"></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">gergely-brautigam</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gb-service</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gergelybrautigam</span><span class="w">
-</span><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">80</span><span class="w">
-</span><span class="w">    </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="m">9090</span><span class="w">
-</span></code></pre></div><p>Again, nothing fancy here, just a simple service exposing a port to a different port on the front-end side. This service will be picked up by our previously created routing facility.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Service</span>
+<span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">gergely-brautigam</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gb-service</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">selector</span>:
+    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gergelybrautigam</span>
+  <span style="color:#f92672">ports</span>:
+  - <span style="color:#f92672">port</span>: <span style="color:#ae81ff">80</span>
+    <span style="color:#f92672">targetPort</span>: <span style="color:#ae81ff">9090</span>
+</code></pre></div><p>Again, nothing fancy here, just a simple service exposing a port to a different port on the front-end side. This service will be picked up by our previously created routing facility.</p>
 <h3 id="ingress-1">Ingress</h3>
 <p>Now that we have the service we need to expose it to the domain. I have the domain gergelybrautigam.com and I already pointed it at the LoadBalancer&rsquo;s IP which was created by the nginx ingress controller.</p>
 <p>We only want one LoadBalancer, but we have multiple hostnames. We can achieve that by creating an Ingress resource in the namespace our service is in like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">extensions/v1beta1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Ingress</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">gergely-brautigam</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gergely-brautigam-ingress</span><span class="w">
-</span><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">kubernetes.io/ingress.class</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;nginx&#34;</span><span class="w">
-</span><span class="w">    </span><span class="nt">certmanager.k8s.io/cluster-issuer</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;letsencrypt-prod&#34;</span><span class="w">
-</span><span class="w">    </span><span class="nt">certmanager.k8s.io/acme-challenge-type</span><span class="p">:</span><span class="w"> </span><span class="l">http01</span><span class="w">
-</span><span class="w">    </span><span class="nt">nginx.ingress.kubernetes.io/rewrite-target</span><span class="p">:</span><span class="w"> </span><span class="l">/</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">tls</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">hosts</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="l">gergelybrautigam.com</span><span class="w">
-</span><span class="w">    </span><span class="nt">secretName</span><span class="p">:</span><span class="w"> </span><span class="l">gergelybrautigam-tls</span><span class="w">
-</span><span class="w">  </span><span class="nt">rules</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l">gergelybrautigam.com</span><span class="w">
-</span><span class="w">    </span><span class="nt">http</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">paths</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">backend</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span><span class="nt">serviceName</span><span class="p">:</span><span class="w"> </span><span class="l">gb-service</span><span class="w">
-</span><span class="w">          </span><span class="nt">servicePort</span><span class="p">:</span><span class="w"> </span><span class="m">80</span><span class="w">
-</span></code></pre></div><p>Remember, we already have the nginx ingress resource in the default namespace when we installed the controller previously. That is the main entrypoint. We are taking advantage of the rewrite-target annotation. That is our key to success <code>nginx.ingress.kubernetes.io/rewrite-target: /</code>. The rest is basic routing. We&rsquo;ll have something like this in the other namespace to.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">extensions/v1beta1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Ingress</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">gergely-brautigam</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gergely-brautigam-ingress</span>
+  <span style="color:#f92672">annotations</span>:
+    <span style="color:#f92672">kubernetes.io/ingress.class</span>: <span style="color:#e6db74">&#34;nginx&#34;</span>
+    <span style="color:#f92672">certmanager.k8s.io/cluster-issuer</span>: <span style="color:#e6db74">&#34;letsencrypt-prod&#34;</span>
+    <span style="color:#f92672">certmanager.k8s.io/acme-challenge-type</span>: <span style="color:#ae81ff">http01</span>
+    <span style="color:#f92672">nginx.ingress.kubernetes.io/rewrite-target</span>: <span style="color:#ae81ff">/</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">tls</span>:
+  - <span style="color:#f92672">hosts</span>:
+    - <span style="color:#ae81ff">gergelybrautigam.com</span>
+    <span style="color:#f92672">secretName</span>: <span style="color:#ae81ff">gergelybrautigam-tls</span>
+  <span style="color:#f92672">rules</span>:
+  - <span style="color:#f92672">host</span>: <span style="color:#ae81ff">gergelybrautigam.com</span>
+    <span style="color:#f92672">http</span>:
+      <span style="color:#f92672">paths</span>:
+      - <span style="color:#f92672">backend</span>:
+          <span style="color:#f92672">serviceName</span>: <span style="color:#ae81ff">gb-service</span>
+          <span style="color:#f92672">servicePort</span>: <span style="color:#ae81ff">80</span>
+</code></pre></div><p>Remember, we already have the nginx ingress resource in the default namespace when we installed the controller previously. That is the main entrypoint. We are taking advantage of the rewrite-target annotation. That is our key to success <code>nginx.ingress.kubernetes.io/rewrite-target: /</code>. The rest is basic routing. We&rsquo;ll have something like this in the other namespace to.</p>
 <p>And with that, our website is done and it should be working under HTTPS. Cert-manager should have picked it up and generated a certificate for it. Let&rsquo;s check.</p>
 <p>Running <code>k get certs -n gergely-brautigam</code> you should see something like this:</p>
 <pre><code> $ k get certs -n gergely-brautigam
@@ -289,123 +289,123 @@ gergelybrautigam-tls   True    gergelybrautigam-tls   86d
 <p>It will be mounted into the pod so we can point the bouncer to use that location for data management.</p>
 <h3 id="pvc">PVC</h3>
 <p>With that, this is how our PersistentVolumeClaim will look like:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">PersistentVolumeClaim</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">powerhouse</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">do-storage-irc</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">accessModes</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="l">ReadWriteOnce</span><span class="w">
-</span><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">requests</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l">5Gi</span><span class="w">
-</span><span class="w">  </span><span class="nt">storageClassName</span><span class="p">:</span><span class="w"> </span><span class="l">do-block-storage</span><span class="w">
-</span></code></pre></div><p>DigitalOcean provides a block storage implementation for this claim so we use that storage class <code>do-block-storage</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">PersistentVolumeClaim</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">powerhouse</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">do-storage-irc</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">accessModes</span>:
+  - <span style="color:#ae81ff">ReadWriteOnce</span>
+  <span style="color:#f92672">resources</span>:
+    <span style="color:#f92672">requests</span>:
+      <span style="color:#f92672">storage</span>: <span style="color:#ae81ff">5Gi</span>
+  <span style="color:#f92672">storageClassName</span>: <span style="color:#ae81ff">do-block-storage</span>
+</code></pre></div><p>DigitalOcean provides a block storage implementation for this claim so we use that storage class <code>do-block-storage</code>.</p>
 <h3 id="deployment">Deployment</h3>
 <p>With that, this is how the deployment will look like:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Deployment</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">powerhouse</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">irc-app</span><span class="w">
-</span><span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
-</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">        </span><span class="nt">app.kubernetes.io/name</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">        </span><span class="nt">app.kubernetes.io/instance</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">thelounge/thelounge:3.1.1</span><span class="w">
-</span><span class="w">        </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">9000</span><span class="w">
-</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">irc-http</span><span class="w">
-</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/var/opt/thelounge</span><span class="w">
-</span><span class="w">          </span><span class="nt">subPath</span><span class="p">:</span><span class="w"> </span><span class="l">thelounge</span><span class="w">
-</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">irc-data</span><span class="w">
-</span><span class="w">          </span><span class="nt">readOnly</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span><span class="w">      </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">irc-data</span><span class="w">
-</span><span class="w">          </span><span class="nt">persistentVolumeClaim</span><span class="p">:</span><span class="w">
-</span><span class="w">            </span><span class="nt">claimName</span><span class="p">:</span><span class="w"> </span><span class="l">do-storage-irc</span><span class="w">
-</span></code></pre></div><p>Short and sweet. The important bits are the labels, those are used by cert-manager and ingress to find the right deployment, and the <code>volumeMounts</code>. We mount into the /var/opt/thelounge folder because that&rsquo;s the main configuration location. The subPath is important for a correct mounting.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">apps/v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Deployment</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">powerhouse</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">irc-app</span>
+  <span style="color:#f92672">labels</span>:
+    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">irc</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">replicas</span>: <span style="color:#ae81ff">1</span>
+  <span style="color:#f92672">selector</span>:
+    <span style="color:#f92672">matchLabels</span>:
+      <span style="color:#f92672">app</span>: <span style="color:#ae81ff">irc</span>
+  <span style="color:#f92672">template</span>:
+    <span style="color:#f92672">metadata</span>:
+      <span style="color:#f92672">labels</span>:
+        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">irc</span>
+        <span style="color:#f92672">app.kubernetes.io/name</span>: <span style="color:#ae81ff">irc</span>
+        <span style="color:#f92672">app.kubernetes.io/instance</span>: <span style="color:#ae81ff">irc</span>
+    <span style="color:#f92672">spec</span>:
+      <span style="color:#f92672">containers</span>:
+      - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">irc</span>
+        <span style="color:#f92672">image</span>: <span style="color:#ae81ff">thelounge/thelounge:3.1.1</span>
+        <span style="color:#f92672">ports</span>:
+        - <span style="color:#f92672">containerPort</span>: <span style="color:#ae81ff">9000</span>
+          <span style="color:#f92672">name</span>: <span style="color:#ae81ff">irc-http</span>
+        <span style="color:#f92672">volumeMounts</span>:
+        - <span style="color:#f92672">mountPath</span>: <span style="color:#ae81ff">/var/opt/thelounge</span>
+          <span style="color:#f92672">subPath</span>: <span style="color:#ae81ff">thelounge</span>
+          <span style="color:#f92672">name</span>: <span style="color:#ae81ff">irc-data</span>
+          <span style="color:#f92672">readOnly</span>: <span style="color:#66d9ef">false</span>
+      <span style="color:#f92672">volumes</span>:
+        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">irc-data</span>
+          <span style="color:#f92672">persistentVolumeClaim</span>:
+            <span style="color:#f92672">claimName</span>: <span style="color:#ae81ff">do-storage-irc</span>
+</code></pre></div><p>Short and sweet. The important bits are the labels, those are used by cert-manager and ingress to find the right deployment, and the <code>volumeMounts</code>. We mount into the /var/opt/thelounge folder because that&rsquo;s the main configuration location. The subPath is important for a correct mounting.</p>
 <h3 id="the-service-1">The service</h3>
 <p>Alright, with the deployment in place, let&rsquo;s take a look at the service.</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Service</span><span class="w">
-</span><span class="w"></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">powerhouse</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">    </span><span class="nt">app.kubernetes.io/name</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">    </span><span class="nt">app.kubernetes.io/instance</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">    </span><span class="nt">app.kubernetes.io/name</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">    </span><span class="nt">app.kubernetes.io/instance</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">http</span><span class="w">
-</span><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">9000</span><span class="w">
-</span><span class="w">    </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l">irc-http</span><span class="w">
-</span></code></pre></div><p>Again, very boring stuff. Boring is good. Boring is predictable. We expose port 9000 to the named targetPort called irc-http which we defined in the above deployment.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Service</span>
+<span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">powerhouse</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">irc</span>
+  <span style="color:#f92672">labels</span>:
+    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">irc</span>
+    <span style="color:#f92672">app.kubernetes.io/name</span>: <span style="color:#ae81ff">irc</span>
+    <span style="color:#f92672">app.kubernetes.io/instance</span>: <span style="color:#ae81ff">irc</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">selector</span>:
+    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">irc</span>
+    <span style="color:#f92672">app.kubernetes.io/name</span>: <span style="color:#ae81ff">irc</span>
+    <span style="color:#f92672">app.kubernetes.io/instance</span>: <span style="color:#ae81ff">irc</span>
+  <span style="color:#f92672">ports</span>:
+  - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">http</span>
+    <span style="color:#f92672">port</span>: <span style="color:#ae81ff">9000</span>
+    <span style="color:#f92672">targetPort</span>: <span style="color:#ae81ff">irc-http</span>
+</code></pre></div><p>Again, very boring stuff. Boring is good. Boring is predictable. We expose port 9000 to the named targetPort called irc-http which we defined in the above deployment.</p>
 <p>Now, I have a domain in which these things are running, let&rsquo;s call it <code>powerhouse.com</code> (because I&rsquo;m tired of example.com). And I have multiple services in this namespace too, so I&rsquo;ll call the namespace here, powerhouse and put this irc service in there. This also means that the ingress resource for this namespace will contain a couple more routings, because my powerhouse namespace will also contain my gitea and Athens proxy installation.</p>
 <p>We can, however, take a peak at the ingress resource here and now&hellip; because I hate suspense.</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">extensions/v1beta1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Ingress</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">powerhouse</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">powerhouse-ingress</span><span class="w">
-</span><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">kubernetes.io/ingress.class</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;nginx&#34;</span><span class="w">
-</span><span class="w">    </span><span class="nt">certmanager.k8s.io/cluster-issuer</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;letsencrypt-prod&#34;</span><span class="w">
-</span><span class="w">    </span><span class="nt">certmanager.k8s.io/acme-challenge-type</span><span class="p">:</span><span class="w"> </span><span class="l">http01</span><span class="w">
-</span><span class="w">    </span><span class="nt">nginx.ingress.kubernetes.io/rewrite-target</span><span class="p">:</span><span class="w"> </span><span class="l">/</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">tls</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">hosts</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="l">irc.powerhouse.com</span><span class="w">
-</span><span class="w">    </span><span class="nt">secretName</span><span class="p">:</span><span class="w"> </span><span class="l">irc-powerhouse-tls</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">hosts</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="l">gitea.powerhouse.com</span><span class="w">
-</span><span class="w">    </span><span class="nt">secretName</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-powerhouse-tls</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">hosts</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="l">athens.powerhouse.com</span><span class="w">
-</span><span class="w">    </span><span class="nt">secretName</span><span class="p">:</span><span class="w"> </span><span class="l">athens-powerhouse-tls</span><span class="w">
-</span><span class="w">  </span><span class="nt">rules</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l">irc.powerhouse.com</span><span class="w">
-</span><span class="w">    </span><span class="nt">http</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">paths</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">backend</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span><span class="nt">serviceName</span><span class="p">:</span><span class="w"> </span><span class="l">irc</span><span class="w">
-</span><span class="w">          </span><span class="nt">servicePort</span><span class="p">:</span><span class="w"> </span><span class="m">9000</span><span class="w">
-</span><span class="w">        </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l">gitea.powerhouse.com</span><span class="w">
-</span><span class="w">    </span><span class="nt">http</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">paths</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">backend</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span><span class="nt">serviceName</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">          </span><span class="nt">servicePort</span><span class="p">:</span><span class="w"> </span><span class="m">3000</span><span class="w">
-</span><span class="w">        </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l">athens.powerhouse.com</span><span class="w">
-</span><span class="w">    </span><span class="nt">http</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">paths</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">backend</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span><span class="nt">serviceName</span><span class="p">:</span><span class="w"> </span><span class="l">athens-service</span><span class="w">
-</span><span class="w">          </span><span class="nt">servicePort</span><span class="p">:</span><span class="w"> </span><span class="m">80</span><span class="w">
-</span><span class="w">        </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/</span><span class="w">
-</span></code></pre></div><p>We can see that I have multiple paths pointing to three different subdomains with different ports. These ports will be routed to by nginx ingress. Meaning you <strong>DO NOT OPEN THESE ON YOUR LOADBALANCER</strong>. These will all be accessible from 443/HTTPS. Expect for gitea&rsquo;s SSH port later on.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">extensions/v1beta1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Ingress</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">powerhouse</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">powerhouse-ingress</span>
+  <span style="color:#f92672">annotations</span>:
+    <span style="color:#f92672">kubernetes.io/ingress.class</span>: <span style="color:#e6db74">&#34;nginx&#34;</span>
+    <span style="color:#f92672">certmanager.k8s.io/cluster-issuer</span>: <span style="color:#e6db74">&#34;letsencrypt-prod&#34;</span>
+    <span style="color:#f92672">certmanager.k8s.io/acme-challenge-type</span>: <span style="color:#ae81ff">http01</span>
+    <span style="color:#f92672">nginx.ingress.kubernetes.io/rewrite-target</span>: <span style="color:#ae81ff">/</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">tls</span>:
+  - <span style="color:#f92672">hosts</span>:
+    - <span style="color:#ae81ff">irc.powerhouse.com</span>
+    <span style="color:#f92672">secretName</span>: <span style="color:#ae81ff">irc-powerhouse-tls</span>
+  - <span style="color:#f92672">hosts</span>:
+    - <span style="color:#ae81ff">gitea.powerhouse.com</span>
+    <span style="color:#f92672">secretName</span>: <span style="color:#ae81ff">gitea-powerhouse-tls</span>
+  - <span style="color:#f92672">hosts</span>:
+    - <span style="color:#ae81ff">athens.powerhouse.com</span>
+    <span style="color:#f92672">secretName</span>: <span style="color:#ae81ff">athens-powerhouse-tls</span>
+  <span style="color:#f92672">rules</span>:
+  - <span style="color:#f92672">host</span>: <span style="color:#ae81ff">irc.powerhouse.com</span>
+    <span style="color:#f92672">http</span>:
+      <span style="color:#f92672">paths</span>:
+      - <span style="color:#f92672">backend</span>:
+          <span style="color:#f92672">serviceName</span>: <span style="color:#ae81ff">irc</span>
+          <span style="color:#f92672">servicePort</span>: <span style="color:#ae81ff">9000</span>
+        <span style="color:#f92672">path</span>: <span style="color:#ae81ff">/</span>
+  - <span style="color:#f92672">host</span>: <span style="color:#ae81ff">gitea.powerhouse.com</span>
+    <span style="color:#f92672">http</span>:
+      <span style="color:#f92672">paths</span>:
+      - <span style="color:#f92672">backend</span>:
+          <span style="color:#f92672">serviceName</span>: <span style="color:#ae81ff">gitea</span>
+          <span style="color:#f92672">servicePort</span>: <span style="color:#ae81ff">3000</span>
+        <span style="color:#f92672">path</span>: <span style="color:#ae81ff">/</span>
+  - <span style="color:#f92672">host</span>: <span style="color:#ae81ff">athens.powerhouse.com</span>
+    <span style="color:#f92672">http</span>:
+      <span style="color:#f92672">paths</span>:
+      - <span style="color:#f92672">backend</span>:
+          <span style="color:#f92672">serviceName</span>: <span style="color:#ae81ff">athens-service</span>
+          <span style="color:#f92672">servicePort</span>: <span style="color:#ae81ff">80</span>
+        <span style="color:#f92672">path</span>: <span style="color:#ae81ff">/</span>
+</code></pre></div><p>We can see that I have multiple paths pointing to three different subdomains with different ports. These ports will be routed to by nginx ingress. Meaning you <strong>DO NOT OPEN THESE ON YOUR LOADBALANCER</strong>. These will all be accessible from 443/HTTPS. Expect for gitea&rsquo;s SSH port later on.</p>
 <p>With these in place, cert-manager should pick it up and provide a certificate for it.</p>
 <h3 id="side-track----debugging">Side track &ndash; debugging</h3>
 <p>If there is a problem and we can&rsquo;t reach TheLounge we need to debug. I use the following tool to access Kubernetes resources: <a href="https://github.com/derailed/k9s">K9S</a>. It&rsquo;s a neat CLI tool to look at kube resources in an interactive way and not having to type in a bunch of commands. Never the less, I will also paste those in here.</p>
@@ -441,131 +441,131 @@ root@irc-app-5f87688f98-dqsvb:/#
 <p>In fact the only thing that should be able to access the DB is the Gitea application itself which we will be able to restrict via the usage of&hellip; Labels!</p>
 <h5 id="deployment-1">Deployment</h5>
 <p>But first, take a look at the deployment of a Postgres 11 pod:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Deployment</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">powerhouse</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
-</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db</span><span class="w">
-</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db</span><span class="w">
-</span><span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db</span><span class="w">
-</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">postgres</span><span class="w">
-</span><span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">postgres:11</span><span class="w">
-</span><span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">POSTGRES_USER</span><span class="w">
-</span><span class="w">            </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">          </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">POSTGRES_PASSWORD</span><span class="w">
-</span><span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db-password</span><span class="w">
-</span><span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">password</span><span class="w">
-</span><span class="w">          </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">POSTGRES_DB</span><span class="w">
-</span><span class="w">            </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/var/lib/postgresql/data</span><span class="w">
-</span><span class="w">          </span><span class="nt">subPath</span><span class="p">:</span><span class="w"> </span><span class="l">data</span><span class="w"> </span><span class="c"># important so it gets mounted properly</span><span class="w">
-</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">git-db-data</span><span class="w">
-</span><span class="w">      </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">git-db-data</span><span class="w">
-</span><span class="w">          </span><span class="nt">persistentVolumeClaim</span><span class="p">:</span><span class="w">
-</span><span class="w">            </span><span class="nt">claimName</span><span class="p">:</span><span class="w"> </span><span class="l">do-storage-gitea-db</span><span class="w">
-</span></code></pre></div><p>Okay, there are a lot of things going on here, but the three things we need to note are the following:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db</span><span class="w">
-</span></code></pre></div><p>Our network policy will look for this label to identify the pods which fell under its rule.</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">          </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">POSTGRES_PASSWORD</span><span class="w">
-</span><span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db-password</span><span class="w">
-</span><span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">password</span><span class="w">
-</span></code></pre></div><p>The database password will come from a secret.</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/var/lib/postgresql/data</span><span class="w">
-</span><span class="w">          </span><span class="nt">subPath</span><span class="p">:</span><span class="w"> </span><span class="l">data</span><span class="w"> </span><span class="c"># important so it gets mounted properly</span><span class="w">
-</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">git-db-data</span><span class="w">
-</span><span class="w">      </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">git-db-data</span><span class="w">
-</span><span class="w">          </span><span class="nt">persistentVolumeClaim</span><span class="p">:</span><span class="w">
-</span><span class="w">            </span><span class="nt">claimName</span><span class="p">:</span><span class="w"> </span><span class="l">do-storage-gitea-db</span><span class="w">
-</span></code></pre></div><p>We also need a persistent volume otherwise the data will be lost on each pod restart.</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nn">---</span><span class="w">
-</span><span class="w"></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">PersistentVolumeClaim</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">powerhouse</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">do-storage-gitea-db</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">accessModes</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="l">ReadWriteOnce</span><span class="w">
-</span><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">requests</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l">10Gi</span><span class="w">
-</span><span class="w">  </span><span class="nt">storageClassName</span><span class="p">:</span><span class="w"> </span><span class="l">do-block-storage</span><span class="w">
-</span></code></pre></div><h5 id="service">Service</h5>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">apps/v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Deployment</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">powerhouse</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-db</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">replicas</span>: <span style="color:#ae81ff">1</span>
+  <span style="color:#f92672">selector</span>:
+    <span style="color:#f92672">matchLabels</span>:
+      <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea-db</span>
+  <span style="color:#f92672">template</span>:
+    <span style="color:#f92672">metadata</span>:
+      <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-db</span>
+      <span style="color:#f92672">labels</span>:
+        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea-db</span>
+    <span style="color:#f92672">spec</span>:
+      <span style="color:#f92672">containers</span>:
+      - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">postgres</span>
+        <span style="color:#f92672">image</span>: <span style="color:#ae81ff">postgres:11</span>
+        <span style="color:#f92672">env</span>:
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">POSTGRES_USER</span>
+            <span style="color:#f92672">value</span>: <span style="color:#ae81ff">gitea</span>
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">POSTGRES_PASSWORD</span>
+            <span style="color:#f92672">valueFrom</span>:
+              <span style="color:#f92672">secretKeyRef</span>:
+                <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-db-password</span>
+                <span style="color:#f92672">key</span>: <span style="color:#ae81ff">password</span>
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">POSTGRES_DB</span>
+            <span style="color:#f92672">value</span>: <span style="color:#ae81ff">gitea</span>
+        <span style="color:#f92672">volumeMounts</span>:
+        - <span style="color:#f92672">mountPath</span>: <span style="color:#ae81ff">/var/lib/postgresql/data</span>
+          <span style="color:#f92672">subPath</span>: <span style="color:#ae81ff">data</span> <span style="color:#75715e"># important so it gets mounted properly</span>
+          <span style="color:#f92672">name</span>: <span style="color:#ae81ff">git-db-data</span>
+      <span style="color:#f92672">volumes</span>:
+        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">git-db-data</span>
+          <span style="color:#f92672">persistentVolumeClaim</span>:
+            <span style="color:#f92672">claimName</span>: <span style="color:#ae81ff">do-storage-gitea-db</span>
+</code></pre></div><p>Okay, there are a lot of things going on here, but the three things we need to note are the following:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">      <span style="color:#f92672">labels</span>:
+        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea-db</span>
+</code></pre></div><p>Our network policy will look for this label to identify the pods which fell under its rule.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">POSTGRES_PASSWORD</span>
+            <span style="color:#f92672">valueFrom</span>:
+              <span style="color:#f92672">secretKeyRef</span>:
+                <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-db-password</span>
+                <span style="color:#f92672">key</span>: <span style="color:#ae81ff">password</span>
+</code></pre></div><p>The database password will come from a secret.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">        <span style="color:#f92672">volumeMounts</span>:
+        - <span style="color:#f92672">mountPath</span>: <span style="color:#ae81ff">/var/lib/postgresql/data</span>
+          <span style="color:#f92672">subPath</span>: <span style="color:#ae81ff">data</span> <span style="color:#75715e"># important so it gets mounted properly</span>
+          <span style="color:#f92672">name</span>: <span style="color:#ae81ff">git-db-data</span>
+      <span style="color:#f92672">volumes</span>:
+        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">git-db-data</span>
+          <span style="color:#f92672">persistentVolumeClaim</span>:
+            <span style="color:#f92672">claimName</span>: <span style="color:#ae81ff">do-storage-gitea-db</span>
+</code></pre></div><p>We also need a persistent volume otherwise the data will be lost on each pod restart.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">---
+<span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">PersistentVolumeClaim</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">powerhouse</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">do-storage-gitea-db</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">accessModes</span>:
+  - <span style="color:#ae81ff">ReadWriteOnce</span>
+  <span style="color:#f92672">resources</span>:
+    <span style="color:#f92672">requests</span>:
+      <span style="color:#f92672">storage</span>: <span style="color:#ae81ff">10Gi</span>
+  <span style="color:#f92672">storageClassName</span>: <span style="color:#ae81ff">do-block-storage</span>
+</code></pre></div><h5 id="service">Service</h5>
 <p>We also need a Service so Gitea will be able to reach it. This isn&rsquo;t public though so a NodePort is enough with no clusterIP.</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Service</span><span class="w">
-</span><span class="w"></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">powerhouse</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db-service</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">5432</span><span class="w">
-</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db</span><span class="w">
-</span><span class="w">  </span><span class="nt">clusterIP</span><span class="p">:</span><span class="w"> </span><span class="l">None</span><span class="w">
-</span></code></pre></div><p>In order to reach this DB we can use a URL like this now from the Gitea app: <code>gitea-db-service.powerhouse.svc.cluster.local:5432</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Service</span>
+<span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">powerhouse</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-db-service</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">ports</span>:
+  - <span style="color:#f92672">port</span>: <span style="color:#ae81ff">5432</span>
+  <span style="color:#f92672">selector</span>:
+    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea-db</span>
+  <span style="color:#f92672">clusterIP</span>: <span style="color:#ae81ff">None</span>
+</code></pre></div><p>In order to reach this DB we can use a URL like this now from the Gitea app: <code>gitea-db-service.powerhouse.svc.cluster.local:5432</code>.</p>
 <h5 id="networkpolicy">NetworkPolicy</h5>
 <p>We want the Gitea app to be able to reach it. Which means in-out to the Gitea app and nothing else.</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">networking.k8s.io/v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">NetworkPolicy</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db-network-policy</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">powehouse</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">podSelector</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db</span><span class="w">
-</span><span class="w">  </span><span class="nt">policyTypes</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="l">Ingress</span><span class="w">
-</span><span class="w">  </span>- <span class="l">Egress</span><span class="w">
-</span><span class="w">  </span><span class="nt">ingress</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">from</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="nt">podSelector</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">    </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l">TCP</span><span class="w">
-</span><span class="w">      </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">5432</span><span class="w">
-</span><span class="w">  </span><span class="nt">egress</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">to</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="nt">podSelector</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">    </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l">TCP</span><span class="w">
-</span><span class="w">      </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">5432</span><span class="w">
-</span></code></pre></div><p>We can test this now by exec-ing into the Pod of the DB deployment and trying to ping google.com for example. It should be denied. Yet later, when we deploy our Gitea app, that should be able to talk to the DB instance.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">networking.k8s.io/v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">NetworkPolicy</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-db-network-policy</span>
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">powehouse</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">podSelector</span>:
+    <span style="color:#f92672">matchLabels</span>:
+      <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea-db</span>
+  <span style="color:#f92672">policyTypes</span>:
+  - <span style="color:#ae81ff">Ingress</span>
+  - <span style="color:#ae81ff">Egress</span>
+  <span style="color:#f92672">ingress</span>:
+  - <span style="color:#f92672">from</span>:
+    - <span style="color:#f92672">podSelector</span>:
+        <span style="color:#f92672">matchLabels</span>:
+          <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea</span>
+    <span style="color:#f92672">ports</span>:
+    - <span style="color:#f92672">protocol</span>: <span style="color:#ae81ff">TCP</span>
+      <span style="color:#f92672">port</span>: <span style="color:#ae81ff">5432</span>
+  <span style="color:#f92672">egress</span>:
+  - <span style="color:#f92672">to</span>:
+    - <span style="color:#f92672">podSelector</span>:
+        <span style="color:#f92672">matchLabels</span>:
+          <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea</span>
+    <span style="color:#f92672">ports</span>:
+    - <span style="color:#f92672">protocol</span>: <span style="color:#ae81ff">TCP</span>
+      <span style="color:#f92672">port</span>: <span style="color:#ae81ff">5432</span>
+</code></pre></div><p>We can test this now by exec-ing into the Pod of the DB deployment and trying to ping google.com for example. It should be denied. Yet later, when we deploy our Gitea app, that should be able to talk to the DB instance.</p>
 <h5 id="secret">Secret</h5>
 <p>Finally, we have a Secret which contains our db password base64 encoded.</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Secret</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">cronohub</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db-password</span><span class="w">
-</span><span class="w"></span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">Opaque</span><span class="w">
-</span><span class="w"></span><span class="nt">data</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l">Z2l0ZWE=</span><span class="w">
-</span></code></pre></div><p>That says password123. To get it, you can run something like <code>echo -n &quot;password123&quot; | base64</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Secret</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">cronohub</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-db-password</span>
+<span style="color:#f92672">type</span>: <span style="color:#ae81ff">Opaque</span>
+<span style="color:#f92672">data</span>:
+  <span style="color:#f92672">password</span>: <span style="color:#ae81ff">Z2l0ZWE=</span>
+</code></pre></div><p>That says password123. To get it, you can run something like <code>echo -n &quot;password123&quot; | base64</code>.</p>
 <h4 id="gitea-app-ini">Gitea App ini</h4>
 <p>Huh, with that done, we can go on with the application ini file. This can be configured via environment properties but once you get over a dozen configuration entries, it&rsquo;s just easier to use an app.ini. My app ini is large, so I won&rsquo;t post it here. I could mount it in as a file, but that proved to be difficult or not work at all properly because Gitea is running under a different user than root. Also, once the mount happened the fact the gitea was trying to write into it caused problems. Mounting as a different user didn&rsquo;t work out either, so I&rsquo;m using an <a href="https://kubernetes.io/docs/concepts/workloads/pods/init-containers/">InitContainer</a> to do the job. They are there for that reason. And it was actually a hell of a lot simpler than doing file mounting.</p>
 <p>The app.ini is defined as a ConfigMap like this:</p>
@@ -573,160 +573,160 @@ root@irc-app-5f87688f98-dqsvb:/#
 </code></pre><p>This was done from the folder where my app.ini was residing.</p>
 <h4 id="deployment-2">Deployment</h4>
 <p>Now comes the big gun. The Gitea deployment file. This is how it looks like in all its glory:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Deployment</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">cronohub</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-app</span><span class="w">
-</span><span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
-</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">        </span><span class="nt">app.kubernetes.io/name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">        </span><span class="nt">app.kubernetes.io/instance</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">initContainers</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">init-disk</span><span class="w">
-</span><span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">busybox:latest</span><span class="w">
-</span><span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="l">/bin/chown</span><span class="w">
-</span><span class="w">        </span>- <span class="m">1000</span><span class="p">:</span><span class="m">1000</span><span class="w"> </span><span class="c"># we set the gid and uid of the user for gitea.</span><span class="w">
-</span><span class="w">        </span>- <span class="l">/data</span><span class="w">
-</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">git-data</span><span class="w">
-</span><span class="w">          </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;/data&#34;</span><span class="w">
-</span><span class="w">          </span><span class="nt">readOnly</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">init-app-ini</span><span class="w">
-</span><span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">busybox:latest</span><span class="w">
-</span><span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;sh&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;-c&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;mkdir -p /data/gitea/conf/; cp /data/app.ini /data/gitea/conf&#39;</span><span class="p">]</span><span class="w">
-</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">git-data</span><span class="w">
-</span><span class="w">          </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;/data&#34;</span><span class="w">
-</span><span class="w">          </span><span class="nt">readOnly</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-app-ini-conf</span><span class="w">
-</span><span class="w">          </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/data/app.ini</span><span class="w">
-</span><span class="w">          </span><span class="nt">subPath</span><span class="p">:</span><span class="w"> </span><span class="l">app.ini</span><span class="w">
-</span><span class="w">          </span><span class="nt">readOnly</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">gitea/gitea:1.9.2</span><span class="w">
-</span><span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">DB_PASSWD</span><span class="w">
-</span><span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-db-password</span><span class="w">
-</span><span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">password</span><span class="w">
-</span><span class="w">          </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">DB_TYPE</span><span class="w">
-</span><span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="w">              </span><span class="nt">configMapKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-config-map</span><span class="w">
-</span><span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">DB_TYPE</span><span class="w">
-</span><span class="w">          </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">DB_HOST</span><span class="w">
-</span><span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="w">              </span><span class="nt">configMapKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-config-map</span><span class="w">
-</span><span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">DB_HOST</span><span class="w">
-</span><span class="w">          </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">DB_NAME</span><span class="w">
-</span><span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="w">              </span><span class="nt">configMapKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-config-map</span><span class="w">
-</span><span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">DB_NAME</span><span class="w">
-</span><span class="w">          </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">DB_USER</span><span class="w">
-</span><span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="w">              </span><span class="nt">configMapKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-config-map</span><span class="w">
-</span><span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">DB_USER</span><span class="w">
-</span><span class="w">        </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">3000</span><span class="w">
-</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-http</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">22</span><span class="w">
-</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-ssh</span><span class="w">
-</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/data</span><span class="w">
-</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">git-data</span><span class="w">
-</span><span class="w">          </span><span class="nt">readOnly</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span><span class="w">      </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">git-data</span><span class="w">
-</span><span class="w">          </span><span class="nt">persistentVolumeClaim</span><span class="p">:</span><span class="w">
-</span><span class="w">            </span><span class="nt">claimName</span><span class="p">:</span><span class="w"> </span><span class="l">do-storage-gitea</span><span class="w">
-</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-app-ini-conf</span><span class="w">
-</span><span class="w">          </span><span class="nt">configMap</span><span class="p">:</span><span class="w">
-</span><span class="w">            </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-app-ini</span><span class="w">
-</span><span class="w">
-</span></code></pre></div><p>The important bit is the initContainer section. What&rsquo;s happening here? We mount the app.ini file to the init container under /data. The awesome part about the initContainer is that the real container will have access to the file system the init container created.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">apps/v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Deployment</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">cronohub</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-app</span>
+  <span style="color:#f92672">labels</span>:
+    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">replicas</span>: <span style="color:#ae81ff">1</span>
+  <span style="color:#f92672">selector</span>:
+    <span style="color:#f92672">matchLabels</span>:
+      <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea</span>
+  <span style="color:#f92672">template</span>:
+    <span style="color:#f92672">metadata</span>:
+      <span style="color:#f92672">labels</span>:
+        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea</span>
+        <span style="color:#f92672">app.kubernetes.io/name</span>: <span style="color:#ae81ff">gitea</span>
+        <span style="color:#f92672">app.kubernetes.io/instance</span>: <span style="color:#ae81ff">gitea</span>
+    <span style="color:#f92672">spec</span>:
+      <span style="color:#f92672">initContainers</span>:
+      - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">init-disk</span>
+        <span style="color:#f92672">image</span>: <span style="color:#ae81ff">busybox:latest</span>
+        <span style="color:#f92672">command</span>:
+        - <span style="color:#ae81ff">/bin/chown</span>
+        - <span style="color:#ae81ff">1000</span>:<span style="color:#ae81ff">1000</span> <span style="color:#75715e"># we set the gid and uid of the user for gitea.</span>
+        - <span style="color:#ae81ff">/data</span>
+        <span style="color:#f92672">volumeMounts</span>:
+        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">git-data</span>
+          <span style="color:#f92672">mountPath</span>: <span style="color:#e6db74">&#34;/data&#34;</span>
+          <span style="color:#f92672">readOnly</span>: <span style="color:#66d9ef">false</span>
+      - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">init-app-ini</span>
+        <span style="color:#f92672">image</span>: <span style="color:#ae81ff">busybox:latest</span>
+        <span style="color:#f92672">command</span>: [<span style="color:#e6db74">&#39;sh&#39;</span>, <span style="color:#e6db74">&#39;-c&#39;</span>, <span style="color:#e6db74">&#39;mkdir -p /data/gitea/conf/; cp /data/app.ini /data/gitea/conf&#39;</span>]
+        <span style="color:#f92672">volumeMounts</span>:
+        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">git-data</span>
+          <span style="color:#f92672">mountPath</span>: <span style="color:#e6db74">&#34;/data&#34;</span>
+          <span style="color:#f92672">readOnly</span>: <span style="color:#66d9ef">false</span>
+        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-app-ini-conf</span>
+          <span style="color:#f92672">mountPath</span>: <span style="color:#ae81ff">/data/app.ini</span>
+          <span style="color:#f92672">subPath</span>: <span style="color:#ae81ff">app.ini</span>
+          <span style="color:#f92672">readOnly</span>: <span style="color:#66d9ef">false</span>
+      <span style="color:#f92672">containers</span>:
+      - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea</span>
+        <span style="color:#f92672">image</span>: <span style="color:#ae81ff">gitea/gitea:1.9.2</span>
+        <span style="color:#f92672">env</span>:
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">DB_PASSWD</span>
+            <span style="color:#f92672">valueFrom</span>:
+              <span style="color:#f92672">secretKeyRef</span>:
+                <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-db-password</span>
+                <span style="color:#f92672">key</span>: <span style="color:#ae81ff">password</span>
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">DB_TYPE</span>
+            <span style="color:#f92672">valueFrom</span>:
+              <span style="color:#f92672">configMapKeyRef</span>:
+                <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-config-map</span>
+                <span style="color:#f92672">key</span>: <span style="color:#ae81ff">DB_TYPE</span>
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">DB_HOST</span>
+            <span style="color:#f92672">valueFrom</span>:
+              <span style="color:#f92672">configMapKeyRef</span>:
+                <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-config-map</span>
+                <span style="color:#f92672">key</span>: <span style="color:#ae81ff">DB_HOST</span>
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">DB_NAME</span>
+            <span style="color:#f92672">valueFrom</span>:
+              <span style="color:#f92672">configMapKeyRef</span>:
+                <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-config-map</span>
+                <span style="color:#f92672">key</span>: <span style="color:#ae81ff">DB_NAME</span>
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">DB_USER</span>
+            <span style="color:#f92672">valueFrom</span>:
+              <span style="color:#f92672">configMapKeyRef</span>:
+                <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-config-map</span>
+                <span style="color:#f92672">key</span>: <span style="color:#ae81ff">DB_USER</span>
+        <span style="color:#f92672">ports</span>:
+        - <span style="color:#f92672">containerPort</span>: <span style="color:#ae81ff">3000</span>
+          <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-http</span>
+        - <span style="color:#f92672">containerPort</span>: <span style="color:#ae81ff">22</span>
+          <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-ssh</span>
+        <span style="color:#f92672">volumeMounts</span>:
+        - <span style="color:#f92672">mountPath</span>: <span style="color:#ae81ff">/data</span>
+          <span style="color:#f92672">name</span>: <span style="color:#ae81ff">git-data</span>
+          <span style="color:#f92672">readOnly</span>: <span style="color:#66d9ef">false</span>
+      <span style="color:#f92672">volumes</span>:
+        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">git-data</span>
+          <span style="color:#f92672">persistentVolumeClaim</span>:
+            <span style="color:#f92672">claimName</span>: <span style="color:#ae81ff">do-storage-gitea</span>
+        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-app-ini-conf</span>
+          <span style="color:#f92672">configMap</span>:
+            <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-app-ini</span>
+
+</code></pre></div><p>The important bit is the initContainer section. What&rsquo;s happening here? We mount the app.ini file to the init container under /data. The awesome part about the initContainer is that the real container will have access to the file system the init container created.</p>
 <p>So we take that file, fix the permissions on it and copy it to the right location under <code>/data/gitea/conf</code> for the Gitea app to work with.</p>
 <p>Done!</p>
 <p>And the configMap is simple:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ConfigMap</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">powerhouse</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-config-map</span><span class="w">
-</span><span class="w"></span><span class="nt">data</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">APP_COLOR</span><span class="p">:</span><span class="w"> </span><span class="l">blue</span><span class="w">
-</span><span class="w">  </span><span class="nt">APP_MOD</span><span class="p">:</span><span class="w"> </span><span class="l">prod</span><span class="w">
-</span><span class="w">  </span><span class="nt">DB_TYPE</span><span class="p">:</span><span class="w"> </span><span class="l">postgres</span><span class="w">
-</span><span class="w">  </span><span class="nt">DB_HOST</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;gitea-db-service.cronohub.svc.cluster.local:5432&#34;</span><span class="w">
-</span><span class="w">  </span><span class="nt">DB_NAME</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">  </span><span class="nt">DB_USER</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span></code></pre></div><h4 id="ssh">SSH</h4>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">ConfigMap</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">powerhouse</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-config-map</span>
+<span style="color:#f92672">data</span>:
+  <span style="color:#f92672">APP_COLOR</span>: <span style="color:#ae81ff">blue</span>
+  <span style="color:#f92672">APP_MOD</span>: <span style="color:#ae81ff">prod</span>
+  <span style="color:#f92672">DB_TYPE</span>: <span style="color:#ae81ff">postgres</span>
+  <span style="color:#f92672">DB_HOST</span>: <span style="color:#e6db74">&#34;gitea-db-service.cronohub.svc.cluster.local:5432&#34;</span>
+  <span style="color:#f92672">DB_NAME</span>: <span style="color:#ae81ff">gitea</span>
+  <span style="color:#f92672">DB_USER</span>: <span style="color:#ae81ff">gitea</span>
+</code></pre></div><h4 id="ssh">SSH</h4>
 <p>Normally, Ingress only allows HTTP based traffic control. But what would an ingress be without also regular TCP based routing?</p>
 <p>But it&rsquo;s not trivial. Nginx Ingress provides a documentation for this here: <a href="https://kubernetes.github.io/ingress-nginx/user-guide/exposing-tcp-udp-services/">Exposing TCP and UDP services</a>. What does that mean in practice?</p>
 <p>You see we are also exposing port 22 on the container:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">        </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">22</span><span class="w">
-</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-ssh</span><span class="w">
-</span></code></pre></div><p>I choose to differentiate my SSH port for Gitea from port 22 because that&rsquo;s just cumbersome to get done right. Gitea provides an explanation on how to do port 22 forwarding in a docker container with a custom git command which forwards commands to the container itself. This is all just plain too much to worry about.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">        - <span style="color:#f92672">containerPort</span>: <span style="color:#ae81ff">22</span>
+          <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea-ssh</span>
+</code></pre></div><p>I choose to differentiate my SSH port for Gitea from port 22 because that&rsquo;s just cumbersome to get done right. Gitea provides an explanation on how to do port 22 forwarding in a docker container with a custom git command which forwards commands to the container itself. This is all just plain too much to worry about.</p>
 <p>I have this in the app.ini:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ini" data-lang="ini"><span class="na">SSH_PORT</span>         <span class="o">=</span> <span class="s">&lt;port of my choosing&gt;</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ini" data-lang="ini"><span style="color:#a6e22e">SSH_PORT</span>         <span style="color:#f92672">=</span> <span style="color:#e6db74">&lt;port of my choosing&gt;</span>
 </code></pre></div><p>And then this in the Service definition:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Service</span><span class="w">
-</span><span class="w"></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">powerhouse</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">    </span><span class="nt">app.kubernetes.io/name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">    </span><span class="nt">app.kubernetes.io/instance</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">    </span><span class="nt">app.kubernetes.io/name</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">    </span><span class="nt">app.kubernetes.io/instance</span><span class="p">:</span><span class="w"> </span><span class="l">gitea</span><span class="w">
-</span><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">http</span><span class="w">
-</span><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">3000</span><span class="w">
-</span><span class="w">    </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-http</span><span class="w">
-</span><span class="w">  </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">ssh</span><span class="w">
-</span><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;port of my choosing&gt;</span><span class="w">
-</span><span class="w">    </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l">gitea-ssh</span><span class="w">
-</span><span class="w">    </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l">TCP</span><span class="w">
-</span></code></pre></div><p>And then, we edit the nginx-controller deployment like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Service</span>
+<span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">powerhouse</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">gitea</span>
+  <span style="color:#f92672">labels</span>:
+    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea</span>
+    <span style="color:#f92672">app.kubernetes.io/name</span>: <span style="color:#ae81ff">gitea</span>
+    <span style="color:#f92672">app.kubernetes.io/instance</span>: <span style="color:#ae81ff">gitea</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">selector</span>:
+    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">gitea</span>
+    <span style="color:#f92672">app.kubernetes.io/name</span>: <span style="color:#ae81ff">gitea</span>
+    <span style="color:#f92672">app.kubernetes.io/instance</span>: <span style="color:#ae81ff">gitea</span>
+  <span style="color:#f92672">ports</span>:
+  - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">http</span>
+    <span style="color:#f92672">port</span>: <span style="color:#ae81ff">3000</span>
+    <span style="color:#f92672">targetPort</span>: <span style="color:#ae81ff">gitea-http</span>
+  - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">ssh</span>
+    <span style="color:#f92672">port</span>: <span style="color:#ae81ff">&lt;port of my choosing&gt;</span>
+    <span style="color:#f92672">targetPort</span>: <span style="color:#ae81ff">gitea-ssh</span>
+    <span style="color:#f92672">protocol</span>: <span style="color:#ae81ff">TCP</span>
+</code></pre></div><p>And then, we edit the nginx-controller deployment like this:</p>
 <pre><code>kubectl edit deployment.apps/nginx-ingress-controller
 </code></pre><p>And add this line <code>--tcp-services-configmap=cronohub/gitea-ssh-service</code> to the container&rsquo;s args field:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="nt">args</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span>- <span class="l">/nginx-ingress-controller</span><span class="w">
-</span><span class="w">        </span>- --<span class="l">default-backend-service=default/nginx-ingress-default-backend</span><span class="w">
-</span><span class="w">        </span>- --<span class="l">election-id=ingress-controller-leader</span><span class="w">
-</span><span class="w">        </span>- --<span class="l">ingress-class=nginx</span><span class="w">
-</span><span class="w">        </span>- --<span class="l">configmap=default/nginx-ingress-controller</span><span class="w">
-</span><span class="w">        </span>- --<span class="l">tcp-services-configmap=powerhouse/gitea-ssh-service</span><span class="w">
-</span></code></pre></div><p>One more thing is that we have to open that port on the load balancer as well to get traffic to it. To that end, edit the nginx ingress service as well:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">      <span style="color:#f92672">containers</span>:
+      - <span style="color:#f92672">args</span>:
+        - <span style="color:#ae81ff">/nginx-ingress-controller</span>
+        - --<span style="color:#ae81ff">default-backend-service=default/nginx-ingress-default-backend</span>
+        - --<span style="color:#ae81ff">election-id=ingress-controller-leader</span>
+        - --<span style="color:#ae81ff">ingress-class=nginx</span>
+        - --<span style="color:#ae81ff">configmap=default/nginx-ingress-controller</span>
+        - --<span style="color:#ae81ff">tcp-services-configmap=powerhouse/gitea-ssh-service</span>
+</code></pre></div><p>One more thing is that we have to open that port on the load balancer as well to get traffic to it. To that end, edit the nginx ingress service as well:</p>
 <pre><code>kubectl edit services/nginx-ingress-controller
 </code></pre><p>And add the exposed port:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">  </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">ssh</span><span class="w">
-</span><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;port of my choosing&gt;</span><span class="w">
-</span><span class="w">    </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l">TCP</span><span class="w">
-</span><span class="w">    </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;port of my choosing&gt;</span><span class="w">
-</span></code></pre></div><p>There will probably be a nodePort section in there on the other ports. Ignore that for your change.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">  - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">ssh</span>
+    <span style="color:#f92672">port</span>: <span style="color:#ae81ff">&lt;port of my choosing&gt;</span>
+    <span style="color:#f92672">protocol</span>: <span style="color:#ae81ff">TCP</span>
+    <span style="color:#f92672">targetPort</span>: <span style="color:#ae81ff">&lt;port of my choosing&gt;</span>
+</code></pre></div><p>There will probably be a nodePort section in there on the other ports. Ignore that for your change.</p>
 <p>Also, if you are doing the nginx installation by hand, just add this or save the yaml file from those deployments like this:</p>
 <pre><code>kubectl get service/nginx-ingress-controller -o yaml &gt; nginx-ingress-controller.yaml
 </code></pre><p>So you can deploy / modify it later on.</p>
@@ -750,59 +750,59 @@ root@irc-app-5f87688f98-dqsvb:/#
 </code></pre><p>It could happen that by some misfortune the bouncer gets restarted and it doesn&rsquo;t log you back in. Or you simply just lose connection and you don&rsquo;t re-connect. That is unacceptable because the point is to be present. Otherwise you don&rsquo;t play. So you need an early warning in case you are offline. Luckily, IdleRPG provides an XML based endpoint to get which contains your status.</p>
 <p>From there, I&rsquo;m using mailgun with a registered domain to send me an email in case my status is offline. For that, here is a small Go program <a href="https://gist.github.com/Skarlso/318ddd6f8d71dbda8fbbd1a908fdb159">IdleRPG Checker Go Code</a>.</p>
 <p>To put that into a Docker container, here is a Dockerfile:</p>
-<div class="highlight"><pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="k">FROM</span><span class="s"> golang:latest as build</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> go get -v github.com/sirupsen/logrus <span class="o">&amp;&amp;</span> <span class="se">\
-</span><span class="se"></span>    go get -v github.com/mailgun/mailgun-go<span class="err">
-</span><span class="err"></span><span class="k">COPY</span> ./main.go /code/<span class="err">
-</span><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /code</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> <span class="nv">CGO_ENABLED</span><span class="o">=</span><span class="m">0</span> <span class="nv">GOOS</span><span class="o">=</span>linux go build -a -installsuffix cgo -o /idlerpg-checker .<span class="err">
-</span><span class="err">
-</span><span class="err"></span><span class="k">FROM</span><span class="s"> alpine:latest</span><span class="err">
-</span><span class="err"></span><span class="k">RUN</span> apk --no-cache add ca-certificates<span class="err">
-</span><span class="err"></span><span class="k">COPY</span> --from<span class="o">=</span>build /idlerpg-checker /idlerpg-checker<span class="err">
-</span><span class="err"></span><span class="k">RUN</span> <span class="nb">echo</span> <span class="s2">&#34;v0.0.1&#34;</span> &gt;&gt; .version<span class="err">
-</span><span class="err"></span><span class="k">ENTRYPOINT</span> <span class="p">[</span><span class="s2">&#34;/idlerpg-checker&#34;</span><span class="p">]</span><span class="err">
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Dockerfile" data-lang="Dockerfile"><span style="color:#66d9ef">FROM</span><span style="color:#e6db74"> golang:latest as build</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> go get -v github.com/sirupsen/logrus <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    go get -v github.com/mailgun/mailgun-go<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">COPY</span> ./main.go /code/<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">WORKDIR</span><span style="color:#e6db74"> /code</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> CGO_ENABLED<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> GOOS<span style="color:#f92672">=</span>linux go build -a -installsuffix cgo -o /idlerpg-checker .<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">FROM</span><span style="color:#e6db74"> alpine:latest</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> apk --no-cache add ca-certificates<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">COPY</span> --from<span style="color:#f92672">=</span>build /idlerpg-checker /idlerpg-checker<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> echo <span style="color:#e6db74">&#34;v0.0.1&#34;</span> &gt;&gt; .version<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">ENTRYPOINT</span> [<span style="color:#e6db74">&#34;/idlerpg-checker&#34;</span>]<span style="color:#960050;background-color:#1e0010">
 </span></code></pre></div><p>And the corresponding cronjob resource definition:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">batch/v1beta1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">CronJob</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">idle-checker</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">idle-checker</span><span class="w">
-</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">schedule</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;*/20 * * * *&#34;</span><span class="w">
-</span><span class="w">  </span><span class="nt">jobTemplate</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span><span class="nt">template</span><span class="p">:</span><span class="w">
-</span><span class="w">        </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="w">          </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">idle-checker</span><span class="w">
-</span><span class="w">            </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">skarlso/idle-checker</span><span class="w">
-</span><span class="w">            </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">IfNotPresent</span><span class="w">
-</span><span class="w">            </span><span class="nt">env</span><span class="p">:</span><span class="w">
-</span><span class="w">              </span>- <span class="nt">name</span><span class="p">:</span><span class="w">  </span><span class="l">MG_API_KEY</span><span class="w">
-</span><span class="w">                </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="w">                  </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="w">                    </span><span class="nt">name</span><span class="p">:</span><span class="w">  </span><span class="l">idle-rpg-secret</span><span class="w">
-</span><span class="w">                    </span><span class="nt">key</span><span class="p">:</span><span class="w">  </span><span class="l">MG_API_KEY</span><span class="w">
-</span><span class="w">              </span>- <span class="nt">name</span><span class="p">:</span><span class="w">  </span><span class="l">MG_DOMAIN</span><span class="w">
-</span><span class="w">                </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="w">                  </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="w">                    </span><span class="nt">name</span><span class="p">:</span><span class="w">  </span><span class="l">idle-rpg-secret</span><span class="w">
-</span><span class="w">                    </span><span class="nt">key</span><span class="p">:</span><span class="w">  </span><span class="l">MG_DOMAIN</span><span class="w">
-</span><span class="w">            </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;-username&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;username&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;-email&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;user@powerhouse.com&#39;</span><span class="p">]</span><span class="w">
-</span><span class="w">          </span><span class="nt">restartPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">OnFailure</span><span class="w">
-</span></code></pre></div><p>Aaaand, the secret for the API key:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Secret</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">idle-checker</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">idle-rpg-secret</span><span class="w">
-</span><span class="w"></span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">Opaque</span><span class="w">
-</span><span class="w"></span><span class="nt">data</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">MG_API_KEY</span><span class="p">:</span><span class="w"> </span><span class="l">asdf=</span><span class="w">
-</span><span class="w">  </span><span class="nt">MG_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="l">asdf==</span><span class="w">
-</span><span class="w">
-</span></code></pre></div><p>Done. Huh. This will run every 20 minutes and check if the user with username <code>username</code> is online. If not, it will send an email to the given email address. Your levels are safe.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">batch/v1beta1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">CronJob</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">idle-checker</span>
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">idle-checker</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">schedule</span>: <span style="color:#e6db74">&#34;*/20 * * * *&#34;</span>
+  <span style="color:#f92672">jobTemplate</span>:
+    <span style="color:#f92672">spec</span>:
+      <span style="color:#f92672">template</span>:
+        <span style="color:#f92672">spec</span>:
+          <span style="color:#f92672">containers</span>:
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">idle-checker</span>
+            <span style="color:#f92672">image</span>: <span style="color:#ae81ff">skarlso/idle-checker</span>
+            <span style="color:#f92672">imagePullPolicy</span>: <span style="color:#ae81ff">IfNotPresent</span>
+            <span style="color:#f92672">env</span>:
+              - <span style="color:#f92672">name</span>:  <span style="color:#ae81ff">MG_API_KEY</span>
+                <span style="color:#f92672">valueFrom</span>:
+                  <span style="color:#f92672">secretKeyRef</span>:
+                    <span style="color:#f92672">name</span>:  <span style="color:#ae81ff">idle-rpg-secret</span>
+                    <span style="color:#f92672">key</span>:  <span style="color:#ae81ff">MG_API_KEY</span>
+              - <span style="color:#f92672">name</span>:  <span style="color:#ae81ff">MG_DOMAIN</span>
+                <span style="color:#f92672">valueFrom</span>:
+                  <span style="color:#f92672">secretKeyRef</span>:
+                    <span style="color:#f92672">name</span>:  <span style="color:#ae81ff">idle-rpg-secret</span>
+                    <span style="color:#f92672">key</span>:  <span style="color:#ae81ff">MG_DOMAIN</span>
+            <span style="color:#f92672">args</span>: [<span style="color:#e6db74">&#39;-username&#39;</span>, <span style="color:#e6db74">&#39;username&#39;</span>, <span style="color:#e6db74">&#39;-email&#39;</span>, <span style="color:#e6db74">&#39;user@powerhouse.com&#39;</span>]
+          <span style="color:#f92672">restartPolicy</span>: <span style="color:#ae81ff">OnFailure</span>
+</code></pre></div><p>Aaaand, the secret for the API key:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Secret</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">idle-checker</span>
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">idle-rpg-secret</span>
+<span style="color:#f92672">type</span>: <span style="color:#ae81ff">Opaque</span>
+<span style="color:#f92672">data</span>:
+  <span style="color:#f92672">MG_API_KEY</span>: <span style="color:#ae81ff">asdf=</span>
+  <span style="color:#f92672">MG_DOMAIN</span>: <span style="color:#ae81ff">asdf==</span>
+
+</code></pre></div><p>Done. Huh. This will run every 20 minutes and check if the user with username <code>username</code> is online. If not, it will send an email to the given email address. Your levels are safe.</p>
 <h1 id="closing-words">Closing words</h1>
 <p>Phew. This has been quite the ride. The post is now really long, so I will split the rest out into a Part 2. That is, Athens and Monitoring.</p>
 <p>Thank you for reading this far!</p>

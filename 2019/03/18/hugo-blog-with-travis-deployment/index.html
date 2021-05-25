@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="en-GB">
     <head>
     <meta charset="UTF-8" />
 
-    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="#494f5c" />
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
@@ -107,31 +107,31 @@ using), I&rsquo;ll be able to switch away from this build platform easily. For e
 <p>Sounds simple&hellip; In fact it&rsquo;s so simple, it&rsquo;s three files.</p>
 <h3 id="travis">Travis</h3>
 <p>The travis modification is such:</p>
-<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">language</span><span class="p">:</span><span class="w"> </span><span class="l">go</span><span class="w">
-</span><span class="w">
-</span><span class="w"></span><span class="nt">install</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="l">go get github.com/gohugoio/hugo</span><span class="w">
-</span><span class="w">    </span>- <span class="l">sudo apt-get install -y git</span><span class="w">
-</span><span class="w">
-</span><span class="w"></span><span class="nt">script</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="l">.travis/build.sh</span><span class="w">
-</span><span class="w">
-</span><span class="w"></span><span class="nt">after_success</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="l">cd ${TRAVIS_BUILD_DIR} &amp;&amp; .travis/push.sh</span><span class="w">
-</span></code></pre></div><p>Easy, it&rsquo;s a standard Go based travis file. There are two things here which stand out. The <code>scripts</code> section and the
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">language</span>: <span style="color:#ae81ff">go</span>
+
+<span style="color:#f92672">install</span>:
+    - <span style="color:#ae81ff">go get github.com/gohugoio/hugo</span>
+    - <span style="color:#ae81ff">sudo apt-get install -y git</span>
+
+<span style="color:#f92672">script</span>:
+    - <span style="color:#ae81ff">.travis/build.sh</span>
+
+<span style="color:#f92672">after_success</span>:
+    - <span style="color:#ae81ff">cd ${TRAVIS_BUILD_DIR} &amp;&amp; .travis/push.sh</span>
+</code></pre></div><p>Easy, it&rsquo;s a standard Go based travis file. There are two things here which stand out. The <code>scripts</code> section and the
 <code>after_success</code> section. Why <code>after_success</code>? Because if we made a mistake, we don&rsquo;t want to destroy the website. Thus we only
 push in case build.sh was successful.</p>
 <h3 id="building">Building</h3>
 <p>In this light, building the blog is simple. In fact the whole script is such:</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/sh
-</span><span class="cp"></span>
-<span class="nb">set</span> -e
-<span class="nb">set</span> -x
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/sh
+</span><span style="color:#75715e"></span>
+set -e
+set -x
 
 mkdir /opt/blog
 git clone --recurse-submodules https://github.com/Skarlso/blogsource.git /opt/app
-<span class="nb">echo</span> Build started on <span class="sb">`</span>date<span class="sb">`</span>
-<span class="nb">cd</span> /opt/app
+echo Build started on <span style="color:#e6db74">`</span>date<span style="color:#e6db74">`</span>
+cd /opt/app
 hugo --theme hermit
 cp -R public/* /opt/blog
 </code></pre></div><p>For clone, <code>--recurse-submodules</code> is required because the theme is a submodule. Once this script runs successfull,
@@ -140,27 +140,27 @@ we can push the new version of the site.</p>
 <p>Pushing is a bit more involved. There are four steps involved in this process.</p>
 <h4 id="setup-git">Setup git</h4>
 <p>First, we set up git to use some specific name so we know where the push came from.</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">setup_git<span class="o">()</span> <span class="o">{</span>
-  git config --global user.email <span class="s2">&#34;travis@travis-ci.org&#34;</span>
-  git config --global user.name <span class="s2">&#34;Travis CI&#34;</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">setup_git<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+  git config --global user.email <span style="color:#e6db74">&#34;travis@travis-ci.org&#34;</span>
+  git config --global user.name <span style="color:#e6db74">&#34;Travis CI&#34;</span>
   git init
-  git remote add origin https://<span class="si">${</span><span class="nv">GITHUB_TOKEN</span><span class="si">}</span>@github.com/Skarlso/skarlso.github.io.git &gt; /dev/null 2&gt;<span class="p">&amp;</span><span class="m">1</span>
+  git remote add origin https://<span style="color:#e6db74">${</span>GITHUB_TOKEN<span style="color:#e6db74">}</span>@github.com/Skarlso/skarlso.github.io.git &gt; /dev/null 2&gt;&amp;<span style="color:#ae81ff">1</span>
   git pull origin master
-<span class="o">}</span>
+<span style="color:#f92672">}</span>
 </code></pre></div><p>Github token is a secret environment property. We also pull the blog source in this step.</p>
 <h4 id="copy">Copy</h4>
 <p>Then copy everything from the built site&rsquo;s public folder (which was we already copied to /opt/blog) to this folder.</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">cp -R /opt/blog/* .
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cp -R /opt/blog/* .
 </code></pre></div><h4 id="commit-the-changes">Commit the changes</h4>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">commit_website_files<span class="o">()</span> <span class="o">{</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">commit_website_files<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
   git add .
-  git commit -am <span class="s2">&#34;Travis build: </span><span class="nv">$TRAVIS_BUILD_NUMBER</span><span class="s2">&#34;</span>
-<span class="o">}</span>
+  git commit -am <span style="color:#e6db74">&#34;Travis build: </span>$TRAVIS_BUILD_NUMBER<span style="color:#e6db74">&#34;</span>
+<span style="color:#f92672">}</span>
 </code></pre></div><p>This is extracted for clarity.</p>
 <h4 id="pushing-the-changes">Pushing the changes</h4>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">upload_files<span class="o">()</span> <span class="o">{</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">upload_files<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
   git push --quiet --set-upstream origin master
-<span class="o">}</span>
+<span style="color:#f92672">}</span>
 </code></pre></div><p>The script in it&rsquo;s entirety here: <a href="#push-sh">push.sh</a></p>
 <p>And that&rsquo;s it. The site is changed and updated. This can be executed in any environment and the only requirement is hugo and git being present. If you still prefer the branch method of Github pages, this is easily altered to checkout the right branch and push the changes from there.</p>
 <p>No dependency on anything. Just how I like my build processes.</p>
@@ -168,29 +168,29 @@ we can push the new version of the site.</p>
 <p>Gergely.</p>
 <h1 id="appendix">Appendix</h1>
 <h2 id="pushsh">push.sh</h2>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/sh
-</span><span class="cp"></span>
-<span class="nb">set</span> -e
-<span class="nb">set</span> -x
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/sh
+</span><span style="color:#75715e"></span>
+set -e
+set -x
 
-setup_git<span class="o">()</span> <span class="o">{</span>
-  git config --global user.email <span class="s2">&#34;travis@travis-ci.org&#34;</span>
-  git config --global user.name <span class="s2">&#34;Travis CI&#34;</span>
+setup_git<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+  git config --global user.email <span style="color:#e6db74">&#34;travis@travis-ci.org&#34;</span>
+  git config --global user.name <span style="color:#e6db74">&#34;Travis CI&#34;</span>
   git init
-  git remote add origin https://<span class="si">${</span><span class="nv">GITHUB_TOKEN</span><span class="si">}</span>@github.com/Skarlso/skarlso.github.io.git &gt; /dev/null 2&gt;<span class="p">&amp;</span><span class="m">1</span>
+  git remote add origin https://<span style="color:#e6db74">${</span>GITHUB_TOKEN<span style="color:#e6db74">}</span>@github.com/Skarlso/skarlso.github.io.git &gt; /dev/null 2&gt;&amp;<span style="color:#ae81ff">1</span>
   git pull origin master
-<span class="o">}</span>
+<span style="color:#f92672">}</span>
 
-commit_website_files<span class="o">()</span> <span class="o">{</span>
+commit_website_files<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
   git add .
-  git commit -am <span class="s2">&#34;Travis build: </span><span class="nv">$TRAVIS_BUILD_NUMBER</span><span class="s2">&#34;</span>
-<span class="o">}</span>
+  git commit -am <span style="color:#e6db74">&#34;Travis build: </span>$TRAVIS_BUILD_NUMBER<span style="color:#e6db74">&#34;</span>
+<span style="color:#f92672">}</span>
 
-upload_files<span class="o">()</span> <span class="o">{</span>
+upload_files<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
   git push --quiet --set-upstream origin master
-<span class="o">}</span>
+<span style="color:#f92672">}</span>
 
-mkdir /opt/publish <span class="o">&amp;&amp;</span> <span class="nb">cd</span> /opt/publish
+mkdir /opt/publish <span style="color:#f92672">&amp;&amp;</span> cd /opt/publish
 setup_git
 cp -R /opt/blog/* .
 commit_website_files

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="en-GB">
     <head>
     <meta charset="UTF-8" />
 
-    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="#494f5c" />
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
@@ -76,7 +76,7 @@ package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;math&#34; &#34;os&#34; 
 
         
 
-        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+        <article class="content post h-entry" data-align="default" data-type="post">
 
             <h1 class="post-title p-name">Improving performance with byte slice and int map</h1>
 
@@ -91,259 +91,259 @@ package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;math&#34; &#34;os&#34; 
 <p>Today I would like to share with you my little tale of refactoring my solution to <a href="http://adventofcode.com/day/13">Advent Of Code Day 13</a>.</p>
 <p>It&rsquo;s a lovely tale of action, adventure, drama, and comedy.</p>
 <p>Let&rsquo;s being with my first iteration of the problem.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;bufio&#34;</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;math&#34;</span>
-	<span class="s">&#34;os&#34;</span>
-	<span class="s">&#34;strconv&#34;</span>
-	<span class="s">&#34;strings&#34;</span>
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;bufio&#34;</span>
+	<span style="color:#e6db74">&#34;fmt&#34;</span>
+	<span style="color:#e6db74">&#34;math&#34;</span>
+	<span style="color:#e6db74">&#34;os&#34;</span>
+	<span style="color:#e6db74">&#34;strconv&#34;</span>
+	<span style="color:#e6db74">&#34;strings&#34;</span>
 
-	<span class="s">&#34;github.com/skarlso/goutils/arrayutils&#34;</span>
-<span class="p">)</span>
+	<span style="color:#e6db74">&#34;github.com/skarlso/goutils/arrayutils&#34;</span>
+)
 
-<span class="kd">var</span> <span class="nx">seatingCombinations</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([][]</span><span class="kt">string</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-<span class="kd">var</span> <span class="nx">table</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
-<span class="kd">var</span> <span class="nx">keys</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">string</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">seatingCombinations</span> = make([][]<span style="color:#66d9ef">string</span>, <span style="color:#ae81ff">0</span>)
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">table</span> = make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>][]<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">int</span>)
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">keys</span> = make([]<span style="color:#66d9ef">string</span>, <span style="color:#ae81ff">0</span>)
 
-<span class="c1">//Person a person
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Person</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="c1">// neighbour *Person
-</span><span class="c1"></span>	<span class="nx">name</span> <span class="kt">string</span>
-	<span class="nx">like</span> <span class="kt">int</span>
-<span class="p">}</span>
+<span style="color:#75715e">//Person a person
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Person</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#75715e">// neighbour *Person
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">like</span> <span style="color:#66d9ef">int</span>
+}
 
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">file</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="s">&#34;input.txt&#34;</span><span class="p">)</span>
-	<span class="k">defer</span> <span class="nx">file</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-	<span class="nx">scanner</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewScanner</span><span class="p">(</span><span class="nx">file</span><span class="p">)</span>
-	<span class="k">for</span> <span class="nx">scanner</span><span class="p">.</span><span class="nf">Scan</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">line</span> <span class="o">:=</span> <span class="nx">scanner</span><span class="p">.</span><span class="nf">Text</span><span class="p">()</span>
-		<span class="nx">split</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span> <span class="s">&#34; &#34;</span><span class="p">)</span>
-		<span class="nx">like</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nf">Atoi</span><span class="p">(</span><span class="nx">split</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="c1">//If lose -&gt; * -1
-</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">split</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#34;lose&#34;</span> <span class="p">{</span>
-			<span class="nx">like</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
-		<span class="p">}</span>
-		<span class="nx">table</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">table</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="nx">strings</span><span class="p">.</span><span class="nf">Trim</span><span class="p">(</span><span class="nx">split</span><span class="p">[</span><span class="mi">10</span><span class="p">],</span> <span class="s">&#34;.&#34;</span><span class="p">):</span> <span class="nx">like</span><span class="p">})</span>
-		<span class="k">if</span> <span class="p">!</span><span class="nx">arrayutils</span><span class="p">.</span><span class="nf">ContainsString</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">{</span>
-			<span class="nx">keys</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-	<span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">keys</span><span class="p">))</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Best seating efficiency:&#34;</span><span class="p">,</span> <span class="nf">calculateSeatingEfficiancy</span><span class="p">())</span>
-<span class="p">}</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	<span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#e6db74">&#34;input.txt&#34;</span>)
+	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">file</span>.<span style="color:#a6e22e">Close</span>()
+	<span style="color:#a6e22e">scanner</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">NewScanner</span>(<span style="color:#a6e22e">file</span>)
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">scanner</span>.<span style="color:#a6e22e">Scan</span>() {
+		<span style="color:#a6e22e">line</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">scanner</span>.<span style="color:#a6e22e">Text</span>()
+		<span style="color:#a6e22e">split</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strings</span>.<span style="color:#a6e22e">Split</span>(<span style="color:#a6e22e">line</span>, <span style="color:#e6db74">&#34; &#34;</span>)
+		<span style="color:#a6e22e">like</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">Atoi</span>(<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">3</span>]) <span style="color:#75715e">//If lose -&gt; * -1
+</span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;lose&#34;</span> {
+			<span style="color:#a6e22e">like</span> <span style="color:#f92672">*=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+		}
+		<span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]] = append(<span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]], <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">int</span>{<span style="color:#a6e22e">strings</span>.<span style="color:#a6e22e">Trim</span>(<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">10</span>], <span style="color:#e6db74">&#34;.&#34;</span>): <span style="color:#a6e22e">like</span>})
+		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">arrayutils</span>.<span style="color:#a6e22e">ContainsString</span>(<span style="color:#a6e22e">keys</span>, <span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]) {
+			<span style="color:#a6e22e">keys</span> = append(<span style="color:#a6e22e">keys</span>, <span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>])
+		}
+	}
+	<span style="color:#a6e22e">generatePermutation</span>(<span style="color:#a6e22e">keys</span>, len(<span style="color:#a6e22e">keys</span>))
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Best seating efficiency:&#34;</span>, <span style="color:#a6e22e">calculateSeatingEfficiancy</span>())
+}
 
-<span class="kd">func</span> <span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">s</span> <span class="p">[]</span><span class="kt">string</span><span class="p">,</span> <span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">if</span> <span class="nx">n</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">{</span>
-		<span class="nx">news</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">string</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">))</span>
-		<span class="nb">copy</span><span class="p">(</span><span class="nx">news</span><span class="p">,</span> <span class="nx">s</span><span class="p">)</span>
-		<span class="nx">seatingCombinations</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">seatingCombinations</span><span class="p">,</span> <span class="nx">news</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">n</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-		<span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">=</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
-		<span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-		<span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">=</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
-	<span class="p">}</span>
-<span class="p">}</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">generatePermutation</span>(<span style="color:#a6e22e">s</span> []<span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">n</span> <span style="color:#66d9ef">int</span>) {
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">n</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> {
+		<span style="color:#a6e22e">news</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">string</span>, len(<span style="color:#a6e22e">s</span>))
+		copy(<span style="color:#a6e22e">news</span>, <span style="color:#a6e22e">s</span>)
+		<span style="color:#a6e22e">seatingCombinations</span> = append(<span style="color:#a6e22e">seatingCombinations</span>, <span style="color:#a6e22e">news</span>)
+	}
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#a6e22e">n</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+		<span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>] = <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>], <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">i</span>]
+		<span style="color:#a6e22e">generatePermutation</span>(<span style="color:#a6e22e">s</span>, <span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)
+		<span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>] = <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>], <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">i</span>]
+	}
+}
 
-<span class="kd">func</span> <span class="nf">calculateSeatingEfficiancy</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
-	<span class="nx">bestSeating</span> <span class="o">:=</span> <span class="nx">math</span><span class="p">.</span><span class="nx">MinInt64</span>
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">seatingCombinations</span> <span class="p">{</span>
-		<span class="nx">calculatedOrder</span> <span class="o">:=</span> <span class="mi">0</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">calculateSeatingEfficiancy</span>() <span style="color:#66d9ef">int</span> {
+	<span style="color:#a6e22e">bestSeating</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">math</span>.<span style="color:#a6e22e">MinInt64</span>
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">seatingCombinations</span> {
+		<span style="color:#a6e22e">calculatedOrder</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>
 
-		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">v</span> <span class="p">{</span>
-			<span class="nx">left</span> <span class="o">:=</span> <span class="p">(</span><span class="nx">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
-			<span class="c1">//This is to work around the fact that in Go
-</span><span class="c1"></span>			<span class="c1">//modulo of a negative number will not return a positive number.
-</span><span class="c1"></span>			<span class="c1">//So -1 % 4 will not return 3 but -1. In that case we add length.
-</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">left</span> <span class="p">&lt;</span> <span class="mi">0</span> <span class="p">{</span>
-				<span class="nx">left</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
-			<span class="p">}</span>
-			<span class="nx">right</span> <span class="o">:=</span> <span class="p">(</span><span class="nx">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
-			<span class="c1">// fmt.Printf(&#34;Left: %d; Right: %d\n&#34;, left, right)
-</span><span class="c1"></span>			<span class="nx">leftLike</span> <span class="o">:=</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">v</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">v</span><span class="p">[</span><span class="nx">left</span><span class="p">])</span>
-			<span class="nx">rightLike</span> <span class="o">:=</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">v</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">v</span><span class="p">[</span><span class="nx">right</span><span class="p">])</span>
-			<span class="c1">// fmt.Printf(&#34;Name: %s; Left:%d; Right:%d\n&#34;, v[i], leftLike, rightLike)
-</span><span class="c1"></span>			<span class="nx">calculatedOrder</span> <span class="o">+=</span> <span class="nx">leftLike</span> <span class="o">+</span> <span class="nx">rightLike</span>
-		<span class="p">}</span>
-		<span class="c1">// fmt.Printf(&#34;Order for: %v; Calc:%d\n&#34;, v, calculatedOrder)
-</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">calculatedOrder</span> <span class="p">&gt;</span> <span class="nx">bestSeating</span> <span class="p">{</span>
-			<span class="nx">bestSeating</span> <span class="p">=</span> <span class="nx">calculatedOrder</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
+		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">v</span> {
+			<span style="color:#a6e22e">left</span> <span style="color:#f92672">:=</span> (<span style="color:#a6e22e">i</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> len(<span style="color:#a6e22e">v</span>)
+			<span style="color:#75715e">//This is to work around the fact that in Go
+</span><span style="color:#75715e"></span>			<span style="color:#75715e">//modulo of a negative number will not return a positive number.
+</span><span style="color:#75715e"></span>			<span style="color:#75715e">//So -1 % 4 will not return 3 but -1. In that case we add length.
+</span><span style="color:#75715e"></span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">left</span> &lt; <span style="color:#ae81ff">0</span> {
+				<span style="color:#a6e22e">left</span> <span style="color:#f92672">+=</span> len(<span style="color:#a6e22e">v</span>)
+			}
+			<span style="color:#a6e22e">right</span> <span style="color:#f92672">:=</span> (<span style="color:#a6e22e">i</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> len(<span style="color:#a6e22e">v</span>)
+			<span style="color:#75715e">// fmt.Printf(&#34;Left: %d; Right: %d\n&#34;, left, right)
+</span><span style="color:#75715e"></span>			<span style="color:#a6e22e">leftLike</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">getLikeForTargetConnect</span>(<span style="color:#a6e22e">v</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">v</span>[<span style="color:#a6e22e">left</span>])
+			<span style="color:#a6e22e">rightLike</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">getLikeForTargetConnect</span>(<span style="color:#a6e22e">v</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">v</span>[<span style="color:#a6e22e">right</span>])
+			<span style="color:#75715e">// fmt.Printf(&#34;Name: %s; Left:%d; Right:%d\n&#34;, v[i], leftLike, rightLike)
+</span><span style="color:#75715e"></span>			<span style="color:#a6e22e">calculatedOrder</span> <span style="color:#f92672">+=</span> <span style="color:#a6e22e">leftLike</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">rightLike</span>
+		}
+		<span style="color:#75715e">// fmt.Printf(&#34;Order for: %v; Calc:%d\n&#34;, v, calculatedOrder)
+</span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">calculatedOrder</span> &gt; <span style="color:#a6e22e">bestSeating</span> {
+			<span style="color:#a6e22e">bestSeating</span> = <span style="color:#a6e22e">calculatedOrder</span>
+		}
+	}
 
-	<span class="k">return</span> <span class="nx">bestSeating</span>
-<span class="p">}</span>
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">bestSeating</span>
+}
 
-<span class="kd">func</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">name</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">neighbour</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
-	<span class="nx">neighbours</span> <span class="o">:=</span> <span class="nx">table</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span>
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">t</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">neighbours</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="nx">v</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">[</span><span class="nx">neighbour</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="nx">v</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-	<span class="k">return</span> <span class="mi">0</span>
-<span class="p">}</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">getLikeForTargetConnect</span>(<span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">neighbour</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">int</span> {
+	<span style="color:#a6e22e">neighbours</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">name</span>]
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">t</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">neighbours</span> {
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">t</span>[<span style="color:#a6e22e">neighbour</span>]; <span style="color:#a6e22e">ok</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">v</span>
+		}
+	}
+	<span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>
+}
 </code></pre></div><p>This is quiet large. And takes a bit of explaining. So what is happening here? We are putting the names which correspond with numbers and neighbours into a map which has a map as a value. The map contains seating information for a person. For example, next to Alice, a bunch of people can sit, and they have a certain relationship to Alice, represented by a number.</p>
 <p>We could, at this point, represent it with a graph, but that would be overkill.</p>
 <p>Permutation is simple because I choose to represent a Table with a Circular Slice. This means that a slice like this =&gt; Alice, Bob, Tom; means that Alice is sitting next to Bob and Tom. So Alice&rsquo;s neighbour of -1 (left) is in fact i-1 % 3. And Bob is i + 1. For Tom, Alice is i + 1 % 3. After we got this, we just permutate the possible combinations into slices of slices and iterate over them.</p>
 <p>The benchmark for this is terrible.</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">
-<span class="o">================</span>With <span class="nv">Strings</span><span class="o">================</span>
-20	 <span class="m">589571259</span> ns/op
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">
+<span style="color:#f92672">================</span>With Strings<span style="color:#f92672">================</span>
+20	 <span style="color:#ae81ff">589571259</span> ns/op
 ok  	github.com/skarlso/goprojects/advent/day13/part1	11.873s
 </code></pre></div><p>So, my first thought was, convert everything I can to []byte. But because slices cannot be map keys, because map keys need to be comparable, we are still stuck with the same ns/ops.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">//var seatingCombinations = make([][]string, 0)
-</span><span class="c1">//var keys = make([]string, 0)
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">seatingCombinations</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([][][]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-<span class="kd">var</span> <span class="nx">keys</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([][]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">//var seatingCombinations = make([][]string, 0)
+</span><span style="color:#75715e">//var keys = make([]string, 0)
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">seatingCombinations</span> = make([][][]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">0</span>)
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">keys</span> = make([][]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">0</span>)
 </code></pre></div><p>And I adjusted the code to work with []byte instead. What can we do to fix the map though? One obvious gain is, not to use string as a key. Because strings are immutable, working with them always means copy-ing and that&rsquo;s why they get to be very slow. So removing them from Keys and using Numbers instead will mean a huge gain for us.</p>
 <p>To do this, I created a map which maps names with numbers. I could hardcode them with iota, but that is a very bad thing to do. It would mean, that when I add a new name, I would have to go, and re-compile my code, because data changed. That&rsquo;s not what we want.</p>
 <p>So, I added this little tid-bit into the for cycle when I&rsquo;m reading in the file lines =&gt;</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="o">...</span>
-<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]];</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-    <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="p">=</span> <span class="nx">id</span>
-    <span class="nx">id</span><span class="o">++</span>
-<span class="p">}</span>
-<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">];</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-    <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">]</span> <span class="p">=</span> <span class="nx">id</span>
-    <span class="nx">id</span><span class="o">++</span>
-<span class="p">}</span>
-<span class="o">...</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">...</span>
+<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]]; !<span style="color:#a6e22e">ok</span> {
+    <span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]] = <span style="color:#a6e22e">id</span>
+    <span style="color:#a6e22e">id</span><span style="color:#f92672">++</span>
+}
+<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">trimmedNeighbour</span>]; !<span style="color:#a6e22e">ok</span> {
+    <span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">trimmedNeighbour</span>] = <span style="color:#a6e22e">id</span>
+    <span style="color:#a6e22e">id</span><span style="color:#f92672">++</span>
+}
+<span style="color:#f92672">...</span>
 </code></pre></div><p>Id starts as Zero. And nameMapping is a simple map[string]int. After this, we fix all the map calls, from <code>table[split[0]]</code> to <code>table[nameMapping[split[0]]]</code>. Table&rsquo;s map will now work with int, but we can still work with strings otherwise.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">table</span><span class="p">[</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]]</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">table</span><span class="p">[</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]],</span> <span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">]:</span> <span class="nx">like</span><span class="p">})</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]]] = append(<span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]]], <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>]<span style="color:#66d9ef">int</span>{<span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">trimmedNeighbour</span>]: <span style="color:#a6e22e">like</span>})
 </code></pre></div><p>This has now a marginally better performance as before:</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">BenchmarkCalculateSeating	      50	  <span class="m">32637879</span> ns/op
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">BenchmarkCalculateSeating	      50	  <span style="color:#ae81ff">32637879</span> ns/op
 ok  	github.com/skarlso/goprojects/advent/day13/part1	1.698s
 </code></pre></div><p>But, we can still do a HUGE one better. Can you notice the other bottleneck? See, how keys are still []byte? That&rsquo;s, now completely unnecessary. We can use int, since our keys are ints! <em>Permutation</em> changes, and the retrieve.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="o">...</span>
-<span class="kd">func</span> <span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">s</span> <span class="p">[]</span><span class="kt">int</span><span class="p">,</span> <span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
-<span class="o">...</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">...</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">generatePermutation</span>(<span style="color:#a6e22e">s</span> []<span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">n</span> <span style="color:#66d9ef">int</span>) {
+<span style="color:#f92672">...</span>
 
-<span class="o">...</span>
-<span class="kd">func</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">name</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">neighbour</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
-	<span class="nx">neighbours</span> <span class="o">:=</span> <span class="nx">table</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span>
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">t</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">neighbours</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="nx">v</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">[</span><span class="nx">neighbour</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="nx">v</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-	<span class="k">return</span> <span class="mi">0</span>
-<span class="p">}</span>
-<span class="o">...</span>
+<span style="color:#f92672">...</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">getLikeForTargetConnect</span>(<span style="color:#a6e22e">name</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">neighbour</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">int</span> {
+	<span style="color:#a6e22e">neighbours</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">name</span>]
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">t</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">neighbours</span> {
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">t</span>[<span style="color:#a6e22e">neighbour</span>]; <span style="color:#a6e22e">ok</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">v</span>
+		}
+	}
+	<span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>
+}
+<span style="color:#f92672">...</span>
 </code></pre></div><p>Permutation was the Other huge performance consumption. Now, our run time is&hellip;. drum rolls&hellip;</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">BenchmarkCalculateSeating	   10000	    <span class="m">166431</span> ns/op
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">BenchmarkCalculateSeating	   10000	    <span style="color:#ae81ff">166431</span> ns/op
 ok  	github.com/skarlso/goprojects/advent/day13/part1	1.695s
 </code></pre></div><p>Down to 166431 ns/op!!! From 32637879 ns/op!! And notice how suddenly, go&rsquo;s benchmark jumped up in sample count. Our code is now blazing fast. It&rsquo;s 0.05% of the previous run! It&rsquo;s almost <strong>200 times faster</strong>!</p>
 <p>We could still improve it here and there. I&rsquo;m sure I&rsquo;m doing some extra stuff which is not needed or could be made easier somehow. But I&rsquo;m actually quiet happy with this solution right now.</p>
 <p>The full code:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;bufio&#34;</span>
-	<span class="s">&#34;math&#34;</span>
-	<span class="s">&#34;os&#34;</span>
-	<span class="s">&#34;strconv&#34;</span>
-	<span class="s">&#34;strings&#34;</span>
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;bufio&#34;</span>
+	<span style="color:#e6db74">&#34;math&#34;</span>
+	<span style="color:#e6db74">&#34;os&#34;</span>
+	<span style="color:#e6db74">&#34;strconv&#34;</span>
+	<span style="color:#e6db74">&#34;strings&#34;</span>
 
-	<span class="s">&#34;github.com/skarlso/goutils/arrayutils&#34;</span>
-<span class="p">)</span>
+	<span style="color:#e6db74">&#34;github.com/skarlso/goutils/arrayutils&#34;</span>
+)
 
-<span class="kd">var</span> <span class="nx">seatingCombinations</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([][]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-<span class="kd">var</span> <span class="nx">table</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">][]</span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
-<span class="kd">var</span> <span class="nx">keys</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-<span class="kd">var</span> <span class="nx">nameMapping</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">seatingCombinations</span> = make([][]<span style="color:#66d9ef">int</span>, <span style="color:#ae81ff">0</span>)
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">table</span> = make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>][]<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>]<span style="color:#66d9ef">int</span>)
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">keys</span> = make([]<span style="color:#66d9ef">int</span>, <span style="color:#ae81ff">0</span>)
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">nameMapping</span> = make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">int</span>)
 
-<span class="c1">//Person a person
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Person</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="c1">// neighbour *Person
-</span><span class="c1"></span>	<span class="nx">name</span> <span class="kt">string</span>
-	<span class="nx">like</span> <span class="kt">int</span>
-<span class="p">}</span>
+<span style="color:#75715e">//Person a person
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Person</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#75715e">// neighbour *Person
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">like</span> <span style="color:#66d9ef">int</span>
+}
 
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nf">CalculatePerfectSeating</span><span class="p">()</span>
-<span class="p">}</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	<span style="color:#a6e22e">CalculatePerfectSeating</span>()
+}
 
-<span class="c1">//CalculatePerfectSeating returns the perfect seating order based on Love/Hate relations
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">CalculatePerfectSeating</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">file</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="s">&#34;input.txt&#34;</span><span class="p">)</span>
-	<span class="k">defer</span> <span class="nx">file</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-	<span class="nx">scanner</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewScanner</span><span class="p">(</span><span class="nx">file</span><span class="p">)</span>
-	<span class="nx">id</span> <span class="o">:=</span> <span class="mi">0</span>
-	<span class="k">for</span> <span class="nx">scanner</span><span class="p">.</span><span class="nf">Scan</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">line</span> <span class="o">:=</span> <span class="nx">scanner</span><span class="p">.</span><span class="nf">Text</span><span class="p">()</span>
-		<span class="nx">split</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span> <span class="s">&#34; &#34;</span><span class="p">)</span>
-		<span class="nx">trimmedNeighbour</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Trim</span><span class="p">(</span><span class="nx">split</span><span class="p">[</span><span class="mi">10</span><span class="p">],</span> <span class="s">&#34;.&#34;</span><span class="p">)</span>
-		<span class="nx">like</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nf">Atoi</span><span class="p">(</span><span class="nx">split</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="c1">//If lose -&gt; * -1
-</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]];</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-			<span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="p">=</span> <span class="nx">id</span>
-			<span class="nx">id</span><span class="o">++</span>
-		<span class="p">}</span>
-		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">];</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-			<span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">]</span> <span class="p">=</span> <span class="nx">id</span>
-			<span class="nx">id</span><span class="o">++</span>
-		<span class="p">}</span>
-		<span class="k">if</span> <span class="nx">split</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#34;lose&#34;</span> <span class="p">{</span>
-			<span class="nx">like</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
-		<span class="p">}</span>
-		<span class="nx">table</span><span class="p">[</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]]</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">table</span><span class="p">[</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]],</span> <span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">]:</span> <span class="nx">like</span><span class="p">})</span>
-		<span class="k">if</span> <span class="p">!</span><span class="nx">arrayutils</span><span class="p">.</span><span class="nf">ContainsInt</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span> <span class="p">{</span>
-			<span class="nx">keys</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-	<span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">keys</span><span class="p">))</span>
-	<span class="c1">// fmt.Println(&#34;Best seating efficiency:&#34;, calculateSeatingEfficiancy())
-</span><span class="c1"></span><span class="p">}</span>
+<span style="color:#75715e">//CalculatePerfectSeating returns the perfect seating order based on Love/Hate relations
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">CalculatePerfectSeating</span>() {
+	<span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#e6db74">&#34;input.txt&#34;</span>)
+	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">file</span>.<span style="color:#a6e22e">Close</span>()
+	<span style="color:#a6e22e">scanner</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">NewScanner</span>(<span style="color:#a6e22e">file</span>)
+	<span style="color:#a6e22e">id</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">scanner</span>.<span style="color:#a6e22e">Scan</span>() {
+		<span style="color:#a6e22e">line</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">scanner</span>.<span style="color:#a6e22e">Text</span>()
+		<span style="color:#a6e22e">split</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strings</span>.<span style="color:#a6e22e">Split</span>(<span style="color:#a6e22e">line</span>, <span style="color:#e6db74">&#34; &#34;</span>)
+		<span style="color:#a6e22e">trimmedNeighbour</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strings</span>.<span style="color:#a6e22e">Trim</span>(<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">10</span>], <span style="color:#e6db74">&#34;.&#34;</span>)
+		<span style="color:#a6e22e">like</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">Atoi</span>(<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">3</span>]) <span style="color:#75715e">//If lose -&gt; * -1
+</span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]]; !<span style="color:#a6e22e">ok</span> {
+			<span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]] = <span style="color:#a6e22e">id</span>
+			<span style="color:#a6e22e">id</span><span style="color:#f92672">++</span>
+		}
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">trimmedNeighbour</span>]; !<span style="color:#a6e22e">ok</span> {
+			<span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">trimmedNeighbour</span>] = <span style="color:#a6e22e">id</span>
+			<span style="color:#a6e22e">id</span><span style="color:#f92672">++</span>
+		}
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;lose&#34;</span> {
+			<span style="color:#a6e22e">like</span> <span style="color:#f92672">*=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+		}
+		<span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]]] = append(<span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]]], <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>]<span style="color:#66d9ef">int</span>{<span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">trimmedNeighbour</span>]: <span style="color:#a6e22e">like</span>})
+		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">arrayutils</span>.<span style="color:#a6e22e">ContainsInt</span>(<span style="color:#a6e22e">keys</span>, <span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]]) {
+			<span style="color:#a6e22e">keys</span> = append(<span style="color:#a6e22e">keys</span>, <span style="color:#a6e22e">nameMapping</span>[<span style="color:#a6e22e">split</span>[<span style="color:#ae81ff">0</span>]])
+		}
+	}
+	<span style="color:#a6e22e">generatePermutation</span>(<span style="color:#a6e22e">keys</span>, len(<span style="color:#a6e22e">keys</span>))
+	<span style="color:#75715e">// fmt.Println(&#34;Best seating efficiency:&#34;, calculateSeatingEfficiancy())
+</span><span style="color:#75715e"></span>}
 
-<span class="kd">func</span> <span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">s</span> <span class="p">[]</span><span class="kt">int</span><span class="p">,</span> <span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">if</span> <span class="nx">n</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">{</span>
-		<span class="nx">news</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">))</span>
-		<span class="nb">copy</span><span class="p">(</span><span class="nx">news</span><span class="p">,</span> <span class="nx">s</span><span class="p">)</span>
-		<span class="nx">seatingCombinations</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">seatingCombinations</span><span class="p">,</span> <span class="nx">news</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">n</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-		<span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">=</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
-		<span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-		<span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">=</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
-	<span class="p">}</span>
-<span class="p">}</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">generatePermutation</span>(<span style="color:#a6e22e">s</span> []<span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">n</span> <span style="color:#66d9ef">int</span>) {
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">n</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> {
+		<span style="color:#a6e22e">news</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">int</span>, len(<span style="color:#a6e22e">s</span>))
+		copy(<span style="color:#a6e22e">news</span>, <span style="color:#a6e22e">s</span>)
+		<span style="color:#a6e22e">seatingCombinations</span> = append(<span style="color:#a6e22e">seatingCombinations</span>, <span style="color:#a6e22e">news</span>)
+	}
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#a6e22e">n</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+		<span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>] = <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>], <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">i</span>]
+		<span style="color:#a6e22e">generatePermutation</span>(<span style="color:#a6e22e">s</span>, <span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)
+		<span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>] = <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>], <span style="color:#a6e22e">s</span>[<span style="color:#a6e22e">i</span>]
+	}
+}
 
-<span class="kd">func</span> <span class="nf">calculateSeatingEfficiancy</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
-	<span class="nx">bestSeating</span> <span class="o">:=</span> <span class="nx">math</span><span class="p">.</span><span class="nx">MinInt64</span>
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">seatingCombinations</span> <span class="p">{</span>
-		<span class="nx">calculatedOrder</span> <span class="o">:=</span> <span class="mi">0</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">calculateSeatingEfficiancy</span>() <span style="color:#66d9ef">int</span> {
+	<span style="color:#a6e22e">bestSeating</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">math</span>.<span style="color:#a6e22e">MinInt64</span>
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">seatingCombinations</span> {
+		<span style="color:#a6e22e">calculatedOrder</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>
 
-		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">v</span> <span class="p">{</span>
-			<span class="nx">left</span> <span class="o">:=</span> <span class="p">(</span><span class="nx">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
-			<span class="c1">//This is to work around the fact that in Go
-</span><span class="c1"></span>			<span class="c1">//modulo of a negative number will not return a positive number.
-</span><span class="c1"></span>			<span class="c1">//So -1 % 4 will not return 3 but -1. In that case we add length.
-</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">left</span> <span class="p">&lt;</span> <span class="mi">0</span> <span class="p">{</span>
-				<span class="nx">left</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
-			<span class="p">}</span>
-			<span class="nx">right</span> <span class="o">:=</span> <span class="p">(</span><span class="nx">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
-			<span class="nx">calculatedOrder</span> <span class="o">+=</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">v</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">v</span><span class="p">[</span><span class="nx">left</span><span class="p">])</span> <span class="o">+</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">v</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">v</span><span class="p">[</span><span class="nx">right</span><span class="p">])</span>
-		<span class="p">}</span>
-		<span class="k">if</span> <span class="nx">calculatedOrder</span> <span class="p">&gt;</span> <span class="nx">bestSeating</span> <span class="p">{</span>
-			<span class="nx">bestSeating</span> <span class="p">=</span> <span class="nx">calculatedOrder</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
+		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">v</span> {
+			<span style="color:#a6e22e">left</span> <span style="color:#f92672">:=</span> (<span style="color:#a6e22e">i</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> len(<span style="color:#a6e22e">v</span>)
+			<span style="color:#75715e">//This is to work around the fact that in Go
+</span><span style="color:#75715e"></span>			<span style="color:#75715e">//modulo of a negative number will not return a positive number.
+</span><span style="color:#75715e"></span>			<span style="color:#75715e">//So -1 % 4 will not return 3 but -1. In that case we add length.
+</span><span style="color:#75715e"></span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">left</span> &lt; <span style="color:#ae81ff">0</span> {
+				<span style="color:#a6e22e">left</span> <span style="color:#f92672">+=</span> len(<span style="color:#a6e22e">v</span>)
+			}
+			<span style="color:#a6e22e">right</span> <span style="color:#f92672">:=</span> (<span style="color:#a6e22e">i</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> len(<span style="color:#a6e22e">v</span>)
+			<span style="color:#a6e22e">calculatedOrder</span> <span style="color:#f92672">+=</span> <span style="color:#a6e22e">getLikeForTargetConnect</span>(<span style="color:#a6e22e">v</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">v</span>[<span style="color:#a6e22e">left</span>]) <span style="color:#f92672">+</span> <span style="color:#a6e22e">getLikeForTargetConnect</span>(<span style="color:#a6e22e">v</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">v</span>[<span style="color:#a6e22e">right</span>])
+		}
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">calculatedOrder</span> &gt; <span style="color:#a6e22e">bestSeating</span> {
+			<span style="color:#a6e22e">bestSeating</span> = <span style="color:#a6e22e">calculatedOrder</span>
+		}
+	}
 
-	<span class="k">return</span> <span class="nx">bestSeating</span>
-<span class="p">}</span>
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">bestSeating</span>
+}
 
-<span class="kd">func</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">name</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">neighbour</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
-	<span class="nx">neighbours</span> <span class="o">:=</span> <span class="nx">table</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span>
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">t</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">neighbours</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="nx">v</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">[</span><span class="nx">neighbour</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="nx">v</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-	<span class="k">return</span> <span class="mi">0</span>
-<span class="p">}</span>
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">getLikeForTargetConnect</span>(<span style="color:#a6e22e">name</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">neighbour</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">int</span> {
+	<span style="color:#a6e22e">neighbours</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">name</span>]
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">t</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">neighbours</span> {
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">t</span>[<span style="color:#a6e22e">neighbour</span>]; <span style="color:#a6e22e">ok</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">v</span>
+		}
+	}
+	<span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>
+}
 </code></pre></div><p>Also, on github =&gt; <a href="https://github.com/Skarlso/goprojects/tree/master/advent/day13">Advent Of Code Day 13</a>.</p>
 <p>Thank you very much for reading, this has been a massive fun to write and to refactor.</p>
 <p>Have something to say? Please don&rsquo;t hesitate.</p>
