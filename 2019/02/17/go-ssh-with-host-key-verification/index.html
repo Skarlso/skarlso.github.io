@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>Go SSH with Host Key Verification | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Go SSH with Host Key Verification" />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2019/02/17/go-ssh-with-host-key-verification/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="post">
+
+            <h1 class="post-title p-name">Go SSH with Host Key Verification</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <p>Hi folks.</p>
+<p>Following a long search and reading lots of debates and possibilities of doing SSH within Go, I was shocked to see that not a great many tools and people use SSH with host key verification. What I usually see is this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">HostKeyCallback</span>: <span style="color:#a6e22e">ssh</span>.<span style="color:#a6e22e">InsecureIgnoreHostKey</span>()
+</code></pre></div><p>This is terrible. Now, I realise that doing HostKeyVerification can be tedious, but don&rsquo;t fear. It&rsquo;s actually easy
+now that the Go team provided the knownhosts subpackage in their crypto SSH package located here:
+<a href="https://godoc.org/golang.org/x/crypto/ssh/knownhosts">KnownHosts</a>.</p>
+<p>This part in particular is interesting: <a href="https://godoc.org/golang.org/x/crypto/ssh/knownhosts#New">New</a>.</p>
+<p>Using new with a known_hosts file a code can be written like this one to verify host keys:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;bytes&#34;</span>
+	<span style="color:#e6db74">&#34;fmt&#34;</span>
+	<span style="color:#e6db74">&#34;io/ioutil&#34;</span>
+	<span style="color:#e6db74">&#34;log&#34;</span>
+
+	<span style="color:#e6db74">&#34;golang.org/x/crypto/ssh&#34;</span>
+	<span style="color:#a6e22e">kh</span> <span style="color:#e6db74">&#34;golang.org/x/crypto/ssh/knownhosts&#34;</span>
+)
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	<span style="color:#a6e22e">user</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;user&#34;</span>
+	<span style="color:#a6e22e">address</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;192.168.0.17&#34;</span>
+	<span style="color:#a6e22e">command</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;uptime&#34;</span>
+	<span style="color:#a6e22e">port</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;9999&#34;</span>
+
+	<span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ioutil</span>.<span style="color:#a6e22e">ReadFile</span>(<span style="color:#e6db74">&#34;/Users/user/.ssh/id_rsa&#34;</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;unable to read private key: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+
+	<span style="color:#75715e">// Create the Signer for this private key.
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">signer</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ssh</span>.<span style="color:#a6e22e">ParsePrivateKey</span>(<span style="color:#a6e22e">key</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;unable to parse private key: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+
+	<span style="color:#a6e22e">hostKeyCallback</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">kh</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;/Users/user/.ssh/known_hosts&#34;</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;could not create hostkeycallback function: &#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+
+	<span style="color:#a6e22e">config</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">ssh</span>.<span style="color:#a6e22e">ClientConfig</span>{
+		<span style="color:#a6e22e">User</span>: <span style="color:#a6e22e">user</span>,
+		<span style="color:#a6e22e">Auth</span>: []<span style="color:#a6e22e">ssh</span>.<span style="color:#a6e22e">AuthMethod</span>{
+			<span style="color:#75715e">// Add in password check here for moar security.
+</span><span style="color:#75715e"></span>			<span style="color:#a6e22e">ssh</span>.<span style="color:#a6e22e">PublicKeys</span>(<span style="color:#a6e22e">signer</span>),
+		},
+		<span style="color:#a6e22e">HostKeyCallback</span>: <span style="color:#a6e22e">hostKeyCallback</span>,
+	}
+	<span style="color:#75715e">// Connect to the remote server and perform the SSH handshake.
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">client</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ssh</span>.<span style="color:#a6e22e">Dial</span>(<span style="color:#e6db74">&#34;tcp&#34;</span>, <span style="color:#a6e22e">address</span><span style="color:#f92672">+</span><span style="color:#e6db74">&#34;:&#34;</span><span style="color:#f92672">+</span><span style="color:#a6e22e">port</span>, <span style="color:#a6e22e">config</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;unable to connect: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Close</span>()
+	<span style="color:#a6e22e">ss</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">NewSession</span>()
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;unable to create SSH session: &#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">ss</span>.<span style="color:#a6e22e">Close</span>()
+	<span style="color:#75715e">// Creating the buffer which will hold the remotly executed command&#39;s output.
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">stdoutBuf</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>
+	<span style="color:#a6e22e">ss</span>.<span style="color:#a6e22e">Stdout</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">stdoutBuf</span>
+	<span style="color:#a6e22e">ss</span>.<span style="color:#a6e22e">Run</span>(<span style="color:#a6e22e">command</span>)
+	<span style="color:#75715e">// Let&#39;s print out the result of command.
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">stdoutBuf</span>.<span style="color:#a6e22e">String</span>())
+}
+</code></pre></div><p>Here is the whole thing as a <a href="https://gist.github.com/Skarlso/34321a230cf0245018288686c9e70b2d">Gist</a>.</p>
+<p>Please try and avoid using Insecure host keys. It is easier, but can harm so much. Software like these:
+<a href="https://mitmproxy.org/">Man in The Middle Proxy</a> thrive in an environment that doesn&rsquo;t do it, or doesn&rsquo;t in other ways
+mitigate this problem.</p>
+<p>Be wise and be safe.
+Thanks for reading,
+Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

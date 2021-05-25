@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>How I killed my entire Kubernetes cluster | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Intro One morning I woke up and tried to access my gitea just to find that it wasn’t running.
+I checked my cluster and found that the whole thing was dead as meat. I quickly jumped in and ran k get pods -A to see what’s going on. None of my services worked.
+What immediately struck my eye was a 100&#43; pods of my fork_updater cronjob. The fork_updater cronjob which runs once a month, looks like this:" />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2019/10/01/killing-kubernetes-cluster/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="post">
+
+            <h1 class="post-title p-name">How I killed my entire Kubernetes cluster</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="intro">Intro</h1>
+<p>One morning I woke up and tried to access my gitea just to find that it wasn&rsquo;t running.</p>
+<p><img src="/img/kube_dead.png" alt="dead kube"></p>
+<p>I checked my cluster and found that the whole thing was dead as meat. I quickly jumped in and ran <code>k get pods -A</code> to see what&rsquo;s
+going on. None of my services worked.</p>
+<p>What immediately struck my eye was a 100+ pods of my fork_updater cronjob. The fork_updater cronjob which runs once a month, looks
+like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">batch/v1beta1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">CronJob</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">fork-updater</span>
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">fork-updater</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">schedule</span>: <span style="color:#e6db74">&#34;* * 1 * *&#34;</span>
+  <span style="color:#f92672">jobTemplate</span>:
+    <span style="color:#f92672">spec</span>:
+      <span style="color:#f92672">template</span>:
+        <span style="color:#f92672">spec</span>:
+          <span style="color:#f92672">volumes</span>:
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">fork-updater-ssh-key</span>
+            <span style="color:#f92672">secret</span>:
+              <span style="color:#f92672">secretName</span>: <span style="color:#ae81ff">fork-updater-ssh-key</span>
+              <span style="color:#f92672">defaultMode</span>: <span style="color:#ae81ff">256</span> <span style="color:#75715e"># yaml spec does not support octal mode</span>
+          <span style="color:#f92672">containers</span>:
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">fork-updater</span>
+            <span style="color:#f92672">imagePullPolicy</span>: <span style="color:#ae81ff">IfNotPresent</span>
+            <span style="color:#f92672">image</span>: <span style="color:#ae81ff">skarlso/repo-updater:1.0.4</span>
+            <span style="color:#f92672">env</span>:
+              - <span style="color:#f92672">name</span>:  <span style="color:#ae81ff">GIT_TOKEN</span>
+                <span style="color:#f92672">valueFrom</span>:
+                  <span style="color:#f92672">secretKeyRef</span>:
+                    <span style="color:#f92672">name</span>:  <span style="color:#ae81ff">fork-updater-secret</span>
+                    <span style="color:#f92672">key</span>:  <span style="color:#ae81ff">GIT_TOKEN</span>
+            <span style="color:#f92672">volumeMounts</span>:
+            - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">fork-updater-ssh-key</span>
+              <span style="color:#f92672">mountPath</span>: <span style="color:#e6db74">&#34;/etc/secret&#34;</span>
+              <span style="color:#f92672">readOnly</span>: <span style="color:#66d9ef">true</span>
+          <span style="color:#f92672">restartPolicy</span>: <span style="color:#ae81ff">OnFailure</span>
+</code></pre></div><p>Inherently there is nothing wrong with this at first glance. But on a second glance, the problem is <code>restartPolicy: Always</code>.
+For whatever the reason, the cronjob died when it started up. The restart policy then&hellip; restarted the cronjob, which failed again
+really fast. Then it scheduled a new one and a new one and a new one&hellip; and I had 100+ containers pending and running and
+creating.</p>
+<p>At that point the cluster was basically DDOSd into oblivion. Once the other resources started to die ( since this was a private
+cluster and I didn&rsquo;t bother to set up restrictions on resources ) the cronjob hogged even more and it basically blocked everything
+else from being able to run. It overwhelmed the scheduler.</p>
+<p>Lovevly that.</p>
+<p>This is how you could potentionally kill a cluster which doesn&rsquo;t have any resource limits and restrictions set up.</p>
+<p>Gergely.</p>
+
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+    
+
+        
+            <div class="load-comments">
+                <div id="load-comments">Load Comments?</div>
+            </div>
+        
+
+        
+
+        
+
+        
+
+        
+    
+
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+    
+
+        
+
+        
+
+        
+
+        
+
+    
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>

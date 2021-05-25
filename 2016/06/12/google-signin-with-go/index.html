@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+    <head>
+    <meta charset="UTF-8" />
+
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <title>How to do Google sign-in with Go | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Hi folks.
+Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.
+" />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2016/06/12/google-signin-with-go/" />
+    
+
+    
+    
+
+    
+    
+
+    
+</head>
+
+    <body>
+        <div class="container">
+            
+
+
+
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="post">
+
+            <h1 class="post-title p-name">How to do Google sign-in with Go</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <p>Hi folks.</p>
+<p>Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.</p>
+<p>Let&rsquo;s get started.</p>
+<p><strong>EDIT</strong>: A sample project of this, and <a href="http://skarlso.github.io/2016/11/02/google-signin-with-go-part2/">Part 2</a>, can be found
+<a href="https://github.com/Skarlso/goquestwebapp">here</a> or <a href="https://github.com/Skarlso/google-oauth-go-sample">here</a>.</p>
+<h1 id="setup">Setup</h1>
+<h2 id="google-oauth-token">Google OAuth token</h2>
+<p>First what you need is, to register your application with Google, so you&rsquo;ll get a Token that you can use to authorize later calls to Google services.</p>
+<p>You can do that here: <a href="https://console.developers.google.com/iam-admin/projects">Google Developer Console</a>. You&rsquo;ll have to create a new project. Once it&rsquo;s done, click on <code>Credentials</code> and create an OAuth token. You should see something like this: &ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&rdquo;. Go through the questions, like, what type your application is, and once you arrive at stage where it&rsquo;s asking for your application&rsquo;s name &ndash; there is a section asking for redirect URLs; there, write the url you wish to use when authorising your user. If you don&rsquo;t know this yet, don&rsquo;t fret, you can come back and change it later. Do NOT use <code>localhost</code>. If you are running on your own, use http://127.0.0.1:port/whatever.</p>
+<p>This will get you a <code>client ID</code> and a <code>client secret</code>. I&rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth.</p>
+<p>Your application can now be identified through Google services.</p>
+<h1 id="the-application">The Application</h1>
+<h2 id="libraries">Libraries</h2>
+<p>Google has a nice library to use with OAuth 2.0. The library is available here: <a href="https://github.com/golang/oauth2">Google OAth 2.0</a>. It&rsquo;s a bit cryptic at first, but not to worry. After a bit of fiddling you&rsquo;ll understand fast what it does. I&rsquo;m also using <a href="https://github.com/gin-gonic/gin">Gin</a>, and Gin&rsquo;s session handling middleware <a href="https://github.com/gin-gonic/contrib/tree/master/sessions">Gin-Session</a>.</p>
+<h2 id="setup---credentials">Setup - Credentials</h2>
+<p>Let&rsquo;s create a setup which configures your credentials from the file you saved earlier. This is pretty straightforward.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// Credentials which stores google ids.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Credentials</span> <span style="color:#66d9ef">struct</span> {
+    <span style="color:#a6e22e">Cid</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;cid&#34;`</span>
+    <span style="color:#a6e22e">Csecret</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;csecret&#34;`</span>
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">init</span>() {
+    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">c</span> <span style="color:#a6e22e">Credentials</span>
+    <span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ioutil</span>.<span style="color:#a6e22e">ReadFile</span>(<span style="color:#e6db74">&#34;./creds.json&#34;</span>)
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;File error: %v\n&#34;</span>, <span style="color:#a6e22e">err</span>)
+        <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(<span style="color:#ae81ff">1</span>)
+    }
+    <span style="color:#a6e22e">json</span>.<span style="color:#a6e22e">Unmarshal</span>(<span style="color:#a6e22e">file</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">c</span>)
+}
+</code></pre></div><p>Once you have the creds loaded, you can now go on to construct the OAuth client.</p>
+<h2 id="setup---oauth-client">Setup - OAuth client</h2>
+<p>Construct the OAuth config like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">conf</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">oauth2</span>.<span style="color:#a6e22e">Config</span>{
+  <span style="color:#a6e22e">ClientID</span>:     <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Cid</span>,
+  <span style="color:#a6e22e">ClientSecret</span>: <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Csecret</span>,
+  <span style="color:#a6e22e">RedirectURL</span>:  <span style="color:#e6db74">&#34;http://localhost:9090/auth&#34;</span>,
+  <span style="color:#a6e22e">Scopes</span>: []<span style="color:#66d9ef">string</span>{
+    <span style="color:#e6db74">&#34;https://www.googleapis.com/auth/userinfo.email&#34;</span>, <span style="color:#75715e">// You have to select your own scope from here -&gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+</span><span style="color:#75715e"></span>  },
+  <span style="color:#a6e22e">Endpoint</span>: <span style="color:#a6e22e">google</span>.<span style="color:#a6e22e">Endpoint</span>,
+}
+</code></pre></div><p>It will give you a struct which you can then use to Authorize the user in the google domain. Next, all you need to do is call <code>AuthCodeURL</code> on this config. It will give you a URL which redirects to a Google Sign-In form. Once the user fills that out and clicks &lsquo;Allow&rsquo;, you&rsquo;ll get back a TOKEN in the <code>code</code> query parameter and a <code>state</code> which helps protect against CSRF attacks. Always check if the provided state is the same which you provided with AuthCodeURL. This will look something like this <code>http://127.0.0.1:9090/auth?code=4FLKFskdjflf3343d4f&amp;state=lhfu3f983j;asdf</code>. Small function for this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">getLoginURL</span>(<span style="color:#a6e22e">state</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">string</span> {
+    <span style="color:#75715e">// State can be some kind of random generated hash string.
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// See relevant RFC: http://tools.ietf.org/html/rfc6749#section-10.12
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">AuthCodeURL</span>(<span style="color:#a6e22e">state</span>)
+}
+</code></pre></div><p>Construct a button which the user can click and be redirected to the Google Sign-In form. When constructing the url, we must do one more thing. Create a secure state token and save it in the form of a cookie for the current user.</p>
+<h2 id="random-state-and-button-construction">Random State and Button construction</h2>
+<p>Small piece of code random token:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">randToken</span>() <span style="color:#66d9ef">string</span> {
+	<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">32</span>)
+	<span style="color:#a6e22e">rand</span>.<span style="color:#a6e22e">Read</span>(<span style="color:#a6e22e">b</span>)
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">base64</span>.<span style="color:#a6e22e">StdEncoding</span>.<span style="color:#a6e22e">EncodeToString</span>(<span style="color:#a6e22e">b</span>)
+}
+</code></pre></div><p>Storing it in a session and constructing the button:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">loginHandler</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Context</span>) {
+    <span style="color:#a6e22e">state</span> = <span style="color:#a6e22e">randToken</span>()
+    <span style="color:#a6e22e">session</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sessions</span>.<span style="color:#a6e22e">Default</span>(<span style="color:#a6e22e">c</span>)
+    <span style="color:#a6e22e">session</span>.<span style="color:#a6e22e">Set</span>(<span style="color:#e6db74">&#34;state&#34;</span>, <span style="color:#a6e22e">state</span>)
+    <span style="color:#a6e22e">session</span>.<span style="color:#a6e22e">Save</span>()
+    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Writer</span>.<span style="color:#a6e22e">Write</span>([]byte(<span style="color:#e6db74">&#34;&lt;html&gt;&lt;title&gt;Golang Google&lt;/title&gt; &lt;body&gt; &lt;a href=&#39;&#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">getLoginURL</span>() <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;&#39;&gt;&lt;button&gt;Login with Google!&lt;/button&gt; &lt;/a&gt; &lt;/body&gt;&lt;/html&gt;&#34;</span>))
+}
+</code></pre></div><p>It&rsquo;s not the nicest button I ever come up with, but it will have to do.</p>
+<h1 id="user-information">User Information</h1>
+<p>After you got the token, you can construct an authorised Google HTTP Client, which let&rsquo;s you call Google related services and retrieve information about the user.</p>
+<h2 id="getting-the-client">Getting the Client</h2>
+<p>Before we construct a client, we must check if the retrieved state is still the same compared to the one we provided. I&rsquo;m doing this before constructing the client. Together this looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">authHandler</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Context</span>) {
+    <span style="color:#75715e">// Check state validity.
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">session</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sessions</span>.<span style="color:#a6e22e">Default</span>(<span style="color:#a6e22e">c</span>)
+    <span style="color:#a6e22e">retrievedState</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">session</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#e6db74">&#34;state&#34;</span>)
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">retrievedState</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Query</span>(<span style="color:#e6db74">&#34;state&#34;</span>) {
+        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">AbortWithError</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusUnauthorized</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;Invalid session state: %s&#34;</span>, <span style="color:#a6e22e">retrievedState</span>))
+        <span style="color:#66d9ef">return</span>
+    }
+    <span style="color:#75715e">// Handle the exchange code to initiate a transport.
+</span><span style="color:#75715e"></span>  	<span style="color:#a6e22e">tok</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">Exchange</span>(<span style="color:#a6e22e">oauth2</span>.<span style="color:#a6e22e">NoContext</span>, <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Query</span>(<span style="color:#e6db74">&#34;code&#34;</span>))
+  	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+  		<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">AbortWithError</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusBadRequest</span>, <span style="color:#a6e22e">err</span>)
+          <span style="color:#66d9ef">return</span>
+  	}
+    <span style="color:#75715e">// Construct the client.
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">client</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">Client</span>(<span style="color:#a6e22e">oauth2</span>.<span style="color:#a6e22e">NoContext</span>, <span style="color:#a6e22e">tok</span>)
+    <span style="color:#f92672">...</span>
+</code></pre></div><h2 id="obtaining-information">Obtaining information</h2>
+<p>Our next step is to retrieve information about the user. To achieve this, call Google&rsquo;s API with the authorised client. The code for that is:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">...</span>
+<span style="color:#a6e22e">resp</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#e6db74">&#34;https://www.googleapis.com/oauth2/v3/userinfo&#34;</span>)
+<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">AbortWithError</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusBadRequest</span>, <span style="color:#a6e22e">err</span>)
+    <span style="color:#66d9ef">return</span>
+}
+<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">Body</span>.<span style="color:#a6e22e">Close</span>()
+<span style="color:#a6e22e">data</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ioutil</span>.<span style="color:#a6e22e">ReadAll</span>(<span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">Body</span>)
+<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Resp body: &#34;</span>, string(<span style="color:#a6e22e">data</span>))
+<span style="color:#f92672">...</span>
+</code></pre></div><p>And this will yield a body like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  <span style="color:#f92672">&#34;sub&#34;</span>: <span style="color:#e6db74">&#34;1111111111111111111111&#34;</span>,
+  <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;Your Name&#34;</span>,
+  <span style="color:#f92672">&#34;given_name&#34;</span>: <span style="color:#e6db74">&#34;Your&#34;</span>,
+  <span style="color:#f92672">&#34;family_name&#34;</span>: <span style="color:#e6db74">&#34;Name&#34;</span>,
+  <span style="color:#f92672">&#34;profile&#34;</span>: <span style="color:#e6db74">&#34;https://plus.google.com/1111111111111111111111&#34;</span>,
+  <span style="color:#f92672">&#34;picture&#34;</span>: <span style="color:#e6db74">&#34;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&#34;</span>,
+  <span style="color:#f92672">&#34;email&#34;</span>: <span style="color:#e6db74">&#34;your@gmail.com&#34;</span>,
+  <span style="color:#f92672">&#34;email_verified&#34;</span>: <span style="color:#66d9ef">true</span>,
+  <span style="color:#f92672">&#34;gender&#34;</span>: <span style="color:#e6db74">&#34;male&#34;</span>
+}
+</code></pre></div><p>Parse it, and you&rsquo;ve got an email which you can store somewhere for registration purposes. At this point, your user is not yet Authenticated. For that, I&rsquo;m going to post a second post, which describes how to go on. Retrieving the stored email address, and user session handling with Gin and MongoDB.</p>
+<h1 id="putting-it-all-together">Putting it all together</h1>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+    <span style="color:#e6db74">&#34;crypto/rand&#34;</span>
+    <span style="color:#e6db74">&#34;encoding/base64&#34;</span>
+    <span style="color:#e6db74">&#34;encoding/json&#34;</span>
+    <span style="color:#e6db74">&#34;io/ioutil&#34;</span>
+    <span style="color:#e6db74">&#34;fmt&#34;</span>
+    <span style="color:#e6db74">&#34;log&#34;</span>
+    <span style="color:#e6db74">&#34;os&#34;</span>
+    <span style="color:#e6db74">&#34;net/http&#34;</span>
+
+    <span style="color:#e6db74">&#34;github.com/gin-gonic/contrib/sessions&#34;</span>
+    <span style="color:#e6db74">&#34;github.com/gin-gonic/gin&#34;</span>
+    <span style="color:#e6db74">&#34;golang.org/x/oauth2&#34;</span>
+    <span style="color:#e6db74">&#34;golang.org/x/oauth2/google&#34;</span>
+)
+
+<span style="color:#75715e">// Credentials which stores google ids.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Credentials</span> <span style="color:#66d9ef">struct</span> {
+    <span style="color:#a6e22e">Cid</span>     <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;cid&#34;`</span>
+    <span style="color:#a6e22e">Csecret</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;csecret&#34;`</span>
+}
+
+<span style="color:#75715e">// User is a retrieved and authentiacted user.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">User</span> <span style="color:#66d9ef">struct</span> {
+    <span style="color:#a6e22e">Sub</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;sub&#34;`</span>
+    <span style="color:#a6e22e">Name</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;name&#34;`</span>
+    <span style="color:#a6e22e">GivenName</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;given_name&#34;`</span>
+    <span style="color:#a6e22e">FamilyName</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;family_name&#34;`</span>
+    <span style="color:#a6e22e">Profile</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;profile&#34;`</span>
+    <span style="color:#a6e22e">Picture</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;picture&#34;`</span>
+    <span style="color:#a6e22e">Email</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;email&#34;`</span>
+    <span style="color:#a6e22e">EmailVerified</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;email_verified&#34;`</span>
+    <span style="color:#a6e22e">Gender</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;gender&#34;`</span>
+}
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">cred</span> <span style="color:#a6e22e">Credentials</span>
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">conf</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">oauth2</span>.<span style="color:#a6e22e">Config</span>
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">state</span> <span style="color:#66d9ef">string</span>
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">store</span> = <span style="color:#a6e22e">sessions</span>.<span style="color:#a6e22e">NewCookieStore</span>([]byte(<span style="color:#e6db74">&#34;secret&#34;</span>))
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">randToken</span>() <span style="color:#66d9ef">string</span> {
+	<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">32</span>)
+	<span style="color:#a6e22e">rand</span>.<span style="color:#a6e22e">Read</span>(<span style="color:#a6e22e">b</span>)
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">base64</span>.<span style="color:#a6e22e">StdEncoding</span>.<span style="color:#a6e22e">EncodeToString</span>(<span style="color:#a6e22e">b</span>)
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">init</span>() {
+    <span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ioutil</span>.<span style="color:#a6e22e">ReadFile</span>(<span style="color:#e6db74">&#34;./creds.json&#34;</span>)
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+        <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;File error: %v\n&#34;</span>, <span style="color:#a6e22e">err</span>)
+        <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(<span style="color:#ae81ff">1</span>)
+    }
+    <span style="color:#a6e22e">json</span>.<span style="color:#a6e22e">Unmarshal</span>(<span style="color:#a6e22e">file</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">cred</span>)
+
+    <span style="color:#a6e22e">conf</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">oauth2</span>.<span style="color:#a6e22e">Config</span>{
+        <span style="color:#a6e22e">ClientID</span>:     <span style="color:#a6e22e">cred</span>.<span style="color:#a6e22e">Cid</span>,
+        <span style="color:#a6e22e">ClientSecret</span>: <span style="color:#a6e22e">cred</span>.<span style="color:#a6e22e">Csecret</span>,
+        <span style="color:#a6e22e">RedirectURL</span>:  <span style="color:#e6db74">&#34;http://127.0.0.1:9090/auth&#34;</span>,
+        <span style="color:#a6e22e">Scopes</span>: []<span style="color:#66d9ef">string</span>{
+            <span style="color:#e6db74">&#34;https://www.googleapis.com/auth/userinfo.email&#34;</span>, <span style="color:#75715e">// You have to select your own scope from here -&gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+</span><span style="color:#75715e"></span>        },
+        <span style="color:#a6e22e">Endpoint</span>: <span style="color:#a6e22e">google</span>.<span style="color:#a6e22e">Endpoint</span>,
+    }
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">indexHandler</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Context</span>) {
+    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">HTML</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusOK</span>, <span style="color:#e6db74">&#34;index.tmpl&#34;</span>, <span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">H</span>{})
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">getLoginURL</span>(<span style="color:#a6e22e">state</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">string</span> {
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">AuthCodeURL</span>(<span style="color:#a6e22e">state</span>)
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">authHandler</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Context</span>) {
+    <span style="color:#75715e">// Handle the exchange code to initiate a transport.
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">session</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sessions</span>.<span style="color:#a6e22e">Default</span>(<span style="color:#a6e22e">c</span>)
+    <span style="color:#a6e22e">retrievedState</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">session</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#e6db74">&#34;state&#34;</span>)
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">retrievedState</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Query</span>(<span style="color:#e6db74">&#34;state&#34;</span>) {
+        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">AbortWithError</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusUnauthorized</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;Invalid session state: %s&#34;</span>, <span style="color:#a6e22e">retrievedState</span>))
+        <span style="color:#66d9ef">return</span>
+    }
+
+	<span style="color:#a6e22e">tok</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">Exchange</span>(<span style="color:#a6e22e">oauth2</span>.<span style="color:#a6e22e">NoContext</span>, <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Query</span>(<span style="color:#e6db74">&#34;code&#34;</span>))
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">AbortWithError</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusBadRequest</span>, <span style="color:#a6e22e">err</span>)
+        <span style="color:#66d9ef">return</span>
+	}
+
+	<span style="color:#a6e22e">client</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">Client</span>(<span style="color:#a6e22e">oauth2</span>.<span style="color:#a6e22e">NoContext</span>, <span style="color:#a6e22e">tok</span>)
+	<span style="color:#a6e22e">email</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#e6db74">&#34;https://www.googleapis.com/oauth2/v3/userinfo&#34;</span>)
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">AbortWithError</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusBadRequest</span>, <span style="color:#a6e22e">err</span>)
+        <span style="color:#66d9ef">return</span>
+	}
+    <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">email</span>.<span style="color:#a6e22e">Body</span>.<span style="color:#a6e22e">Close</span>()
+    <span style="color:#a6e22e">data</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ioutil</span>.<span style="color:#a6e22e">ReadAll</span>(<span style="color:#a6e22e">email</span>.<span style="color:#a6e22e">Body</span>)
+    <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Email body: &#34;</span>, string(<span style="color:#a6e22e">data</span>))
+    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Status</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusOK</span>)
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">loginHandler</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Context</span>) {
+    <span style="color:#a6e22e">state</span> = <span style="color:#a6e22e">randToken</span>()
+    <span style="color:#a6e22e">session</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sessions</span>.<span style="color:#a6e22e">Default</span>(<span style="color:#a6e22e">c</span>)
+    <span style="color:#a6e22e">session</span>.<span style="color:#a6e22e">Set</span>(<span style="color:#e6db74">&#34;state&#34;</span>, <span style="color:#a6e22e">state</span>)
+    <span style="color:#a6e22e">session</span>.<span style="color:#a6e22e">Save</span>()
+    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Writer</span>.<span style="color:#a6e22e">Write</span>([]byte(<span style="color:#e6db74">&#34;&lt;html&gt;&lt;title&gt;Golang Google&lt;/title&gt; &lt;body&gt; &lt;a href=&#39;&#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">getLoginURL</span>(<span style="color:#a6e22e">state</span>) <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;&#39;&gt;&lt;button&gt;Login with Google!&lt;/button&gt; &lt;/a&gt; &lt;/body&gt;&lt;/html&gt;&#34;</span>))
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+    <span style="color:#a6e22e">router</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Default</span>()
+    <span style="color:#a6e22e">router</span>.<span style="color:#a6e22e">Use</span>(<span style="color:#a6e22e">sessions</span>.<span style="color:#a6e22e">Sessions</span>(<span style="color:#e6db74">&#34;goquestsession&#34;</span>, <span style="color:#a6e22e">store</span>))
+    <span style="color:#a6e22e">router</span>.<span style="color:#a6e22e">Static</span>(<span style="color:#e6db74">&#34;/css&#34;</span>, <span style="color:#e6db74">&#34;./static/css&#34;</span>)
+    <span style="color:#a6e22e">router</span>.<span style="color:#a6e22e">Static</span>(<span style="color:#e6db74">&#34;/img&#34;</span>, <span style="color:#e6db74">&#34;./static/img&#34;</span>)
+    <span style="color:#a6e22e">router</span>.<span style="color:#a6e22e">LoadHTMLGlob</span>(<span style="color:#e6db74">&#34;templates/*&#34;</span>)
+
+    <span style="color:#a6e22e">router</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#a6e22e">indexHandler</span>)
+    <span style="color:#a6e22e">router</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/login&#34;</span>, <span style="color:#a6e22e">loginHandler</span>)
+    <span style="color:#a6e22e">router</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/auth&#34;</span>, <span style="color:#a6e22e">authHandler</span>)
+
+    <span style="color:#a6e22e">router</span>.<span style="color:#a6e22e">Run</span>(<span style="color:#e6db74">&#34;127.0.0.1:9090&#34;</span>)
+}
+}
+</code></pre></div><p>This is it folks. I hope this helped. Any comments or advices are welcomed.</p>
+<h1 id="google-api-documentation">Google API Documentation</h1>
+<p>The documentation to this whole process, and MUCH more information can be found here: <a href="https://developers.google.com/identity/protocols/OAuth2">Google API Docs</a>.</p>
+<p>Thanks for reading,
+Gergely.</p>
+            </div>
+
+            
+
+
+        </article>
+
+        
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
+</html>
