@@ -1,272 +1,215 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="">
+    <head>
+    <meta charset="UTF-8" />
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
 
-<meta itemprop="name" content="Docker &#43; Java &#43; Vagrant&#43; GO.CD">
-<meta itemprop="description" content="Hello folks.
+    <title>Docker &#43; Java &#43; Vagrant&#43; GO.CD | Ramblings of a cloud engineer</title>
 
-Today, I would like to write about something interesting and close to me at the moment. I&#8217;m going to setup Go.cd with Docker, and I&#8217;m going to get a Ruby Lotus app running. Let&#8217;s get started.">
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Hello folks.
+Today, I would like to write about something interesting and close to me at the moment. I’m going to setup Go.cd with Docker, and I’m going to get a Ruby Lotus app running. Let’s get started.
+" />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/" />
+    
+
+    
+    
+        <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
+
+        
 
 
-<meta itemprop="datePublished" content="2015-06-06T00:00:00&#43;00:00" />
-<meta itemprop="dateModified" content="2015-06-06T00:00:00&#43;00:00" />
-<meta itemprop="wordCount" content="1088">
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-69463020-2"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-69463020-2');
+    </script>
 
 
 
-<meta itemprop="keywords" content="docker,gocd,vagrant," />
-<meta property="og:title" content="Docker &#43; Java &#43; Vagrant&#43; GO.CD" />
-<meta property="og:description" content="Hello folks.
 
-Today, I would like to write about something interesting and close to me at the moment. I&#8217;m going to setup Go.cd with Docker, and I&#8217;m going to get a Ruby Lotus app running. Let&#8217;s get started." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/" />
-<meta property="article:published_time" content="2015-06-06T00:00:00&#43;00:00"/>
-<meta property="article:modified_time" content="2015-06-06T00:00:00&#43;00:00"/>
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Docker &#43; Java &#43; Vagrant&#43; GO.CD"/>
-<meta name="twitter:description" content="Hello folks.
+    
+    
 
-Today, I would like to write about something interesting and close to me at the moment. I&#8217;m going to setup Go.cd with Docker, and I&#8217;m going to get a Ruby Lotus app running. Let&#8217;s get started."/>
-
-	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-	<link rel="manifest" href="/site.webmanifest">
-	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
-	<link rel="shortcut icon" href="/favicon.ico">
-
-	<title>Docker &#43; Java &#43; Vagrant&#43; GO.CD</title>
-	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
-	
+    
 </head>
 
-<body id="page">
-	
-	<header id="site-header" class="animated slideInUp faster">
-		<div class="hdr-wrapper section-inner">
-			<div class="hdr-left">
-				<div class="site-branding">
-					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
-				</div>
-				<nav class="site-nav hide-in-mobile">
-					<a href="https://skarlso.github.io/blog/">blog</a>
-				</nav>
-			</div>
-			<div class="hdr-right hdr-icons">
-				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
-			</div>
-		</div>
-	</header>
-	<div id="mobile-menu" class="animated fast">
-		<ul>
-			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
-		</ul>
-	</div>
+    <body>
+        <div class="container">
+            
 
 
-	<main class="site-main section-inner thin animated fadeIn faster">
-		<h1>Docker &#43; Java &#43; Vagrant&#43; GO.CD</h1>
-		<div class="content">
-			<p>Hello folks.</p>
 
-<p>Today, I would like to write about something interesting and close to me at the moment. I&#8217;m going to setup Go.cd with Docker, and I&#8217;m going to get a Ruby Lotus app running. Let&#8217;s get started.</p>
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
 
-<h1 id="fluff">Fluff<a href="#fluff" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+        
 
-<p>Now, obviously, you don&#8217;t really need Go.Cd or Docker to setup a Java Gradle application, since it&#8217;s dead easy. But I&#8217;m going to do it just for the heck of it.</p>
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
 
-<h1 id="setup">Setup<a href="#setup" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+            <h1 class="post-title p-name">Docker + Java + Vagrant+ GO.CD</h1>
 
-<p>Okay, lets start with Vagrant. Docker&#8217;s strength is coming from Linux&#8217;s process isolation capabilities it&#8217;s not yet properly working on OSX or Windows. You have a couple of options if you&#8217;d like to try never the less, like boot2docker, or a Tiny Linux kernel, but at that point, I think it&#8217;s easier to use a VM.</p>
+            
 
-<h4 id="vagrant">Vagrant<a href="#vagrant" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+            
 
-<p>So, let&#8217;s start with my small Vagrantfile.</p>
+            
 
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="ruby" style="font-family:monospace;"><span style="color:#008000; font-style:italic;"># -*- mode: ruby -*-</span>
-<span style="color:#008000; font-style:italic;"># vi: set ft=ruby :</span>
-&nbsp;
-<span style="color:#008000; font-style:italic;"># All Vagrant configuration is done below. The "2" in Vagrant.configure</span>
-<span style="color:#008000; font-style:italic;"># configures the configuration version (we support older styles for</span>
-<span style="color:#008000; font-style:italic;"># backwards compatibility). Please don't change it unless you know what</span>
-<span style="color:#008000; font-style:italic;"># you're doing.</span>
-Vagrant.<span style="color:#9900CC;">configure</span><span style="color:#006600; font-weight:bold;">&#40;</span><span style="color:#006666;">2</span><span style="color:#006600; font-weight:bold;">&#41;</span> <span style="color:#9966CC; font-weight:bold;">do</span> <span style="color:#006600; font-weight:bold;">|</span>config<span style="color:#006600; font-weight:bold;">|</span>
-  <span style="color:#008000; font-style:italic;"># The most common configuration options are documented and commented below.</span>
-  <span style="color:#008000; font-style:italic;"># For a complete reference, please see the online documentation at</span>
-  <span style="color:#008000; font-style:italic;"># https://docs.vagrantup.com.</span>
-&nbsp;
-  <span style="color:#008000; font-style:italic;"># Every Vagrant development environment requires a box. You can search for</span>
-  <span style="color:#008000; font-style:italic;"># boxes at https://atlas.hashicorp.com/search.</span>
-  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">box</span> = <span style="color:#996600;">"trusty"</span>
-  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">box_url</span> = <span style="color:#996600;">"https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"</span>
-  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">network</span> <span style="color:#996600;">"forwarded_port"</span>, guest: <span style="color:#006666;">2300</span>, host: <span style="color:#006666;">2300</span>
-  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">network</span> <span style="color:#996600;">"forwarded_port"</span>, guest: <span style="color:#006666;">8153</span>, host: <span style="color:#006666;">8153</span>
-  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">provision</span> <span style="color:#996600;">"shell"</span>, path: <span style="color:#996600;">"setup.sh"</span>
-  config.<span style="color:#9900CC;">vm</span>.<span style="color:#9900CC;">provider</span> <span style="color:#996600;">"virtualbox"</span> <span style="color:#9966CC; font-weight:bold;">do</span> <span style="color:#006600; font-weight:bold;">|</span>v<span style="color:#006600; font-weight:bold;">|</span>
-    v.<span style="color:#9900CC;">memory</span> = <span style="color:#006666;">8192</span>
-    v.<span style="color:#9900CC;">cpus</span> = <span style="color:#006666;">2</span>
-  <span style="color:#9966CC; font-weight:bold;">end</span>
-<span style="color:#9966CC; font-weight:bold;">end</span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>Very simple. I&#8217;m setting up a trusty64(because docker requires 3.10 &lt;= x) box and then doing a simple shell provision. Also, I gave it a bit juice, since go-server requires a raw power. Here is the shell script:</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="bash" style="font-family:monospace;"><span style="color: #000000; font-weight: bold;">!</span><span style="color: #666666; font-style: italic;">#/bin/bash</span>
-<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
-<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> software-properties-common python-software-properties
-<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
-<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> <span style="color: #c20cb9; font-weight: bold;">vim</span>
-<span style="color: #c20cb9; font-weight: bold;">sudo</span> add-apt-repository <span style="color: #660033;">-y</span> <span style="color: #ff0000;">"ppa:webupd8team/java"</span>
-<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
-<span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #c20cb9; font-weight: bold;">debconf</span> shared<span style="color: #000000; font-weight: bold;">/</span>accepted-oracle-license-v1-<span style="color: #000000;">1</span> <span style="color: #000000; font-weight: bold;">select</span> <span style="color: #c20cb9; font-weight: bold;">true</span> <span style="color: #000000; font-weight: bold;">|</span> <span style="color: #c20cb9; font-weight: bold;">sudo</span> debconf-set-selections <span style="color: #000000; font-weight: bold;">&</span>amp;<span style="color: #000000; font-weight: bold;">&</span>amp; <span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #c20cb9; font-weight: bold;">debconf</span> shared<span style="color: #000000; font-weight: bold;">/</span>accepted-oracle-license-v1-<span style="color: #000000;">1</span> seen <span style="color: #c20cb9; font-weight: bold;">true</span> <span style="color: #000000; font-weight: bold;">|</span> <span style="color: #c20cb9; font-weight: bold;">sudo</span> debconf-set-selections
-<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> oracle-java8-installer
-<span style="color: #c20cb9; font-weight: bold;">sudo</span> <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
-<span style="color: #c20cb9; font-weight: bold;">wget</span> <span style="color: #660033;">-qO-</span> https:<span style="color: #000000; font-weight: bold;">//</span>get.docker.com<span style="color: #000000; font-weight: bold;">/</span> <span style="color: #000000; font-weight: bold;">|</span> <span style="color: #c20cb9; font-weight: bold;">sh</span>
-route add <span style="color: #660033;">-net</span> 172.17.0.0 netmask 255.255.255.0 gw 172.17.42.1</pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>The debconf at the end accepts java8&#8217;s terms and conditions. And the last line installs docker in my box. This runs for a little while&#8230;</p>
-
-<p>The routing on the end routes every traffic from 172.17.*.* to my vagrant box, which in turn I&#8217;ll be able to use from my mac local, like 127.0.0.1:8153/go/home.</p>
-
+            <div class="post-body e-content">
+                <p>Hello folks.</p>
+<p>Today, I would like to write about something interesting and close to me at the moment. I’m going to setup Go.cd with Docker, and I’m going to get a Ruby Lotus app running. Let’s get started.</p>
+<h1 id="fluff">Fluff</h1>
+<p>Now, obviously, you don’t really need Go.Cd or Docker to setup a Java Gradle application, since it’s dead easy. But I’m going to do it just for the heck of it.</p>
+<h1 id="setup">Setup</h1>
+<p>Okay, lets start with Vagrant. Docker’s strength is coming from Linux’s process isolation capabilities it’s not yet properly working on OSX or Windows. You have a couple of options if you’d like to try never the less, like boot2docker, or a Tiny Linux kernel, but at that point, I think it’s easier to use a VM.</p>
+<h4 id="vagrant">Vagrant</h4>
+<p>So, let’s start with my small Vagrantfile.</p>
+<!-- raw HTML omitted -->
+<p>Very simple. I’m setting up a trusty64(because docker requires 3.10 &lt;= x) box and then doing a simple shell provision. Also, I gave it a bit juice, since go-server requires a raw power. Here is the shell script:</p>
+<!-- raw HTML omitted -->
+<p>The debconf at the end accepts java8’s terms and conditions. And the last line installs docker in my box. This runs for a little while…</p>
+<p>The routing on the end routes every traffic from 172.17.*.* to my vagrant box, which in turn I’ll be able to use from my mac local, like 127.0.0.1:8153/go/home.</p>
 <p>After a vagrant up, my box is ready to be used.</p>
-
-<h4 id="docker">Docker<a href="#docker" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
-
-<p>When that&#8217;s finished, we can move on to the next part, which is writing a little Dockerfile for our image. Go.cd will require java and a couple of other things, so let&#8217;s automate the installation of that so we don&#8217;t have to do it by hand.</p>
-
+<h4 id="docker">Docker</h4>
+<p>When that’s finished, we can move on to the next part, which is writing a little Dockerfile for our image. Go.cd will require java and a couple of other things, so let’s automate the installation of that so we don’t have to do it by hand.</p>
 <p>Here is a Dockerfile I came up with:</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="bash" style="font-family:monospace;">FROM ubuntu
-MAINTAINER Skarlso
-&nbsp;
-<span style="color: #666666; font-style: italic;">############ SETUP #############</span>
-RUN <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
-RUN <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> software-properties-common python-software-properties
-RUN add-apt-repository <span style="color: #660033;">-y</span> <span style="color: #ff0000;">"ppa:webupd8team/java"</span>
-RUN <span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #c20cb9; font-weight: bold;">debconf</span> shared<span style="color: #000000; font-weight: bold;">/</span>accepted-oracle-license-v1-<span style="color: #000000;">1</span> <span style="color: #000000; font-weight: bold;">select</span> <span style="color: #c20cb9; font-weight: bold;">true</span> <span style="color: #000000; font-weight: bold;">|</span> <span style="color: #c20cb9; font-weight: bold;">sudo</span> debconf-set-selections <span style="color: #000000; font-weight: bold;">&</span>amp;<span style="color: #000000; font-weight: bold;">&</span>amp; <span style="color: #7a0874; font-weight: bold;">echo</span> <span style="color: #c20cb9; font-weight: bold;">debconf</span> shared<span style="color: #000000; font-weight: bold;">/</span>accepted-oracle-license-v1-<span style="color: #000000;">1</span> seen <span style="color: #c20cb9; font-weight: bold;">true</span> <span style="color: #000000; font-weight: bold;">|</span> <span style="color: #c20cb9; font-weight: bold;">sudo</span> debconf-set-selections
-RUN <span style="color: #c20cb9; font-weight: bold;">apt-get update</span>
-RUN <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> oracle-java8-installer
-RUN <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> <span style="color: #c20cb9; font-weight: bold;">vim</span>
-RUN <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> <span style="color: #c20cb9; font-weight: bold;">unzip</span>
-RUN <span style="color: #c20cb9; font-weight: bold;">apt-get install</span> <span style="color: #660033;">-y</span> <span style="color: #c20cb9; font-weight: bold;">git</span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>So, our docker images have to be setup with Java as well for go.cd which I&#8217;m taking care of here, and a little bit extra, to add vim, and unzip, which is required for dpkg later.</p>
-
-<p>At this point run: <strong>docker build -t ubuntu:go .</strong> -&gt; This will use the dockerfile and create the ubuntu:go image. Note the <strong>. </strong>at the end.</p>
-
-<h4 id="go-cd">Go.cd<a href="#go-cd" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
-
-<p>Now, I&#8217;m creating two containers. One, go-server, will be the go server, and the other, go-agent, will be the go agent.</p>
-
+<!-- raw HTML omitted -->
+<p>So, our docker images have to be setup with Java as well for go.cd which I’m taking care of here, and a little bit extra, to add vim, and unzip, which is required for dpkg later.</p>
+<p>At this point run: <strong>docker build -t ubuntu:go .</strong> -&gt; This will use the dockerfile and create the ubuntu:go image. Note the **. **at the end.</p>
+<h4 id="gocd">Go.cd</h4>
+<p>Now, I’m creating two containers. One, go-server, will be the go server, and the other, go-agent, will be the go agent.</p>
 <p>First, go-server:</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="bash" style="font-family:monospace;">docker run <span style="color: #660033;">-i</span> <span style="color: #660033;">-t</span> <span style="color: #660033;">--name</span> go-server <span style="color: #660033;">--hostname</span>=go-server <span style="color: #660033;">-p</span> <span style="color: #000000;">8153</span>:<span style="color: #000000;">8153</span> ubuntu:go <span style="color: #000000; font-weight: bold;">/</span>bin<span style="color: #000000; font-weight: bold;">/</span><span style="color: #c20cb9; font-weight: bold;">bash</span>
-<span style="color: #c20cb9; font-weight: bold;">wget</span> http:<span style="color: #000000; font-weight: bold;">//</span>download.go.cd<span style="color: #000000; font-weight: bold;">/</span>gocd-deb<span style="color: #000000; font-weight: bold;">/</span>go-server-15.1.0-<span style="color: #000000;">1863</span>.deb
-<span style="color: #c20cb9; font-weight: bold;">dpkg</span> <span style="color: #660033;">-i</span> go-server-15.1.0-<span style="color: #000000;">1863</span>.deb</pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>Pretty straight forward, no? We forward 8153 to vagrant (which forwards it to my mac), so after we start go-server service we should be able to visit: <a href="http://127.0.0.1:8153/go/home">http://127.0.0.1:8153/go/home</a>.</p>
-
-<p>Lo&#8217;, and behold, go server. Let&#8217;s add an agent too.</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="bash" style="font-family:monospace;">docker run <span style="color: #660033;">-i</span> <span style="color: #660033;">-t</span> <span style="color: #660033;">--name</span> go-agent <span style="color: #660033;">--hostname</span>=go-agent ubuntu:go <span style="color: #000000; font-weight: bold;">/</span>bin<span style="color: #000000; font-weight: bold;">/</span><span style="color: #c20cb9; font-weight: bold;">bash</span>
-<span style="color: #c20cb9; font-weight: bold;">wget</span> http:<span style="color: #000000; font-weight: bold;">//</span>download.go.cd<span style="color: #000000; font-weight: bold;">/</span>gocd-deb<span style="color: #000000; font-weight: bold;">/</span>go-agent-15.1.0-<span style="color: #000000;">1863</span>.deb
-<span style="color: #c20cb9; font-weight: bold;">dpkg</span> <span style="color: #660033;">-i</span> go-agent-15.1.0-<span style="color: #000000;">1863</span>.deb
-<span style="color: #c20cb9; font-weight: bold;">vim</span> <span style="color: #000000; font-weight: bold;">/</span>etc<span style="color: #000000; font-weight: bold;">/</span>default<span style="color: #000000; font-weight: bold;">/</span>go-agent
-<span style="color: #007800;">GO_SERVER</span>=172.17.0.1
-service go-agent start</pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
+<!-- raw HTML omitted -->
+<p>Pretty straight forward, no? We forward 8153 to vagrant (which forwards it to my mac), so after we start go-server service we should be able to visit: http://127.0.0.1:8153/go/home.</p>
+<p>Lo’, and behold, go server. Let’s add an agent too.</p>
+<!-- raw HTML omitted -->
 <p>No need to forward anything here. And as you can see, my agent was added successfully.</p>
-
-<p>All nice, and dandy. The agent is there, and I enabled it, so it&#8217;s ready to work. Let&#8217;s give it something to do, shall we?</p>
-
-<h1 id="the-app">The App<a href="#the-app" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
-<p>I&#8217;m going to use my gradle project which is on github. This one =&gt; <a href="https://github.com/Skarlso/DataMung.git">https://github.com/Skarlso/DataMung.git</a>.</p>
-
+<p>All nice, and dandy. The agent is there, and I enabled it, so it’s ready to work. Let’s give it something to do, shall we?</p>
+<h1 id="the-app">The App</h1>
+<p>I’m going to use my gradle project which is on github. This one =&gt; https://github.com/Skarlso/DataMung.git.</p>
 <p>Very basic setup. Just check it out and then build &amp; run tests. Easy, right?</p>
-
-<p>First step in this process, define the pipeline. I&#8217;m going to keep it simple. Name the pipeline DataMunger. Group is Linux. Now, in go.cd you have to define something called, an <strong>environment</strong>. Environment can be anything you want, I&#8217;m going to go with Linux. You have to assign <strong>agents</strong> to this environment who fulfil it and the pipeline which will use that environment. More on that you can read in the go.cd documentation. This is how you would handle a pipeline which uses linux, and a windows environment at the same time.</p>
-
+<p>First step in this process, define the pipeline. I’m going to keep it simple. Name the pipeline DataMunger. Group is Linux. Now, in go.cd you have to define something called, an <strong>environment</strong>. Environment can be anything you want, I’m going to go with Linux. You have to assign <strong>agents</strong> to this environment who fulfil it and the pipeline which will use that environment. More on that you can read in the go.cd documentation. This is how you would handle a pipeline which uses linux, and a windows environment at the same time.</p>
 <p>In step one you have to define something called the <strong>Material</strong>. That will be the source on which the agent will work. This can be multiple, in different folders within the confines of the pipeline, or singular.</p>
-
-<p>I defined my git project and tested the connection OK. Next up is the first <strong>Stage </strong>and the initial <strong>Job </strong>to perform. This, for me, will be a compile or an assemble, and later on a test run.</p>
-
-<p>Now, Go is awesome in parallelising jobs. If my project would be large enough, I could have multiple jobs here. But for now, I&#8217;ll use stages because they run subsequently. So, first stage, compile. Next stage, testing and archiving the results.</p>
-
+<p>I defined my git project and tested the connection OK. Next up is the first **Stage **and the initial **Job **to perform. This, for me, will be a compile or an assemble, and later on a test run.</p>
+<p>Now, Go is awesome in parallelising jobs. If my project would be large enough, I could have multiple jobs here. But for now, I’ll use stages because they run subsequently. So, first stage, compile. Next stage, testing and archiving the results.</p>
 <p>I added the next stage and defined the artefact. Go supports test-reports. If you define the path to a test artefact than go will parse it and create a nice report out of it.</p>
-
-<p>Now, let&#8217;s run it. It will probably fail on something. 😉</p>
-
-<p>Well, I&#8217;ll be&#8230; It worked on the first run.</p>
-
+<p>Now, let’s run it. It will probably fail on something. 😉</p>
+<p>Well, I’ll be… It worked on the first run.</p>
 <p>And here are the test results.</p>
-
-<h1 id="wrap-up">Wrap-up<a href="#wrap-up" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
-<p>Well, that&#8217;s it folks. Gradle project, with vagrant, docker, and go.cd. I hope you all enjoyed reading about it as much as I did doing it.</p>
-
+<h1 id="wrap-up">Wrap-up</h1>
+<p>Well, that’s it folks. Gradle project, with vagrant, docker, and go.cd. I hope you all enjoyed reading about it as much as I did doing it.</p>
 <p>Any questions, please feel free to ask it in the comment section below.</p>
-
 <p>Cheers,
 Have a nice weekend,
 Gergely.</p>
-		</div>
-	</main>
+            </div>
 
-	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
-		<p>
-			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
-		</p>
-	</footer>
+            
 
 
-	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
+        </article>
 
-</body>
+        
 
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
 </html>

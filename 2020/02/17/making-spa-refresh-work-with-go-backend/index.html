@@ -1,105 +1,121 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="">
+    <head>
+    <meta charset="UTF-8" />
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
 
-<meta itemprop="name" content="How to Make SPA refresh work with a Go backend">
-<meta itemprop="description" content="Intro Hi folks.
-Today I would like to share a quick &ldquo;fix&rdquo; for a problem I&rsquo;ve seen popping up here and there.
-That is, if you have a react frontend which is a SPA app but you still want refresh to work. What do I mean by that? Consider the following&hellip;
-The problem You have a SPA app with a react router which navigates the user around. The app calls to a backend api which serves content of some kind.">
+    <title>How to Make SPA refresh work with a Go backend | Ramblings of a cloud engineer</title>
 
+    <link rel="stylesheet" href="/css/meme.min.css" />
 
-<meta itemprop="datePublished" content="2020-02-17T21:01:00&#43;01:00" />
-<meta itemprop="dateModified" content="2020-02-17T21:01:00&#43;01:00" />
-<meta itemprop="wordCount" content="742">
+    
+    
+        <script src="/js/meme.min.js"></script>
 
+    
 
+    
 
-<meta itemprop="keywords" content="" />
-<meta property="og:title" content="How to Make SPA refresh work with a Go backend" />
-<meta property="og:description" content="Intro Hi folks.
-Today I would like to share a quick &ldquo;fix&rdquo; for a problem I&rsquo;ve seen popping up here and there.
-That is, if you have a react frontend which is a SPA app but you still want refresh to work. What do I mean by that? Consider the following&hellip;
+    <meta name="author" content="hannibal" /><meta name="description" content="Intro Hi folks.
+Today I would like to share a quick “fix” for a problem I’ve seen popping up here and there.
+That is, if you have a react frontend which is a SPA app but you still want refresh to work. What do I mean by that? Consider the following…
 The problem You have a SPA app with a react router which navigates the user around. The app calls to a backend api which serves content of some kind." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2020/02/17/making-spa-refresh-work-with-go-backend/" />
-<meta property="article:published_time" content="2020-02-17T21:01:00&#43;01:00"/>
-<meta property="article:modified_time" content="2020-02-17T21:01:00&#43;01:00"/>
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="How to Make SPA refresh work with a Go backend"/>
-<meta name="twitter:description" content="Intro Hi folks.
-Today I would like to share a quick &ldquo;fix&rdquo; for a problem I&rsquo;ve seen popping up here and there.
-That is, if you have a react frontend which is a SPA app but you still want refresh to work. What do I mean by that? Consider the following&hellip;
-The problem You have a SPA app with a react router which navigates the user around. The app calls to a backend api which serves content of some kind."/>
 
-	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-	<link rel="manifest" href="/site.webmanifest">
-	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
-	<link rel="shortcut icon" href="/favicon.ico">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
 
-	<title>How to Make SPA refresh work with a Go backend</title>
-	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
-	
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2020/02/17/making-spa-refresh-work-with-go-backend/" />
+    
+
+    
+    
+        <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
+
+        
+
+
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-69463020-2"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-69463020-2');
+    </script>
+
+
+
+
+    
+    
+
+    
 </head>
 
-<body id="page">
-	
-	<header id="site-header" class="animated slideInUp faster">
-		<div class="hdr-wrapper section-inner">
-			<div class="hdr-left">
-				<div class="site-branding">
-					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
-				</div>
-				<nav class="site-nav hide-in-mobile">
-					<a href="https://skarlso.github.io/blog/">blog</a>
-				</nav>
-			</div>
-			<div class="hdr-right hdr-icons">
-				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
-			</div>
-		</div>
-	</header>
-	<div id="mobile-menu" class="animated fast">
-		<ul>
-			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
-		</ul>
-	</div>
+    <body>
+        <div class="container">
+            
 
 
-	<main class="site-main section-inner thin animated fadeIn faster">
-		<h1>How to Make SPA refresh work with a Go backend</h1>
-		<div class="content">
-			
 
-<h1 id="intro">Intro<a href="#intro" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
 
+        
+
+        <article class="content post h-entry" data-align="default" data-type="post">
+
+            <h1 class="post-title p-name">How to Make SPA refresh work with a Go backend</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="intro">Intro</h1>
 <p>Hi folks.</p>
-
 <p>Today I would like to share a quick &ldquo;fix&rdquo; for a problem I&rsquo;ve seen popping up here and there.</p>
-
 <p>That is, if you have a react frontend which is a SPA app but you still want refresh to work.
 What do I mean by that? Consider the following&hellip;</p>
-
-<h1 id="the-problem">The problem<a href="#the-problem" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
+<h1 id="the-problem">The problem</h1>
 <p>You have a SPA app with a react router which navigates the user around. The app calls to a backend
 api which serves content of some kind. You have the following routes&hellip;. login, signup, reset, archive.</p>
-
 <p>If your app is compiled with your backend, as it usually is, then something like: <a href="https://app.com/login">https://app.com/login</a>
 will not work unless it&rsquo;s also defined on the backend serving some content.</p>
-
 <p>So but what should the content be in this case?</p>
-
-<h1 id="the-structre">The structre<a href="#the-structre" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
+<h1 id="the-structre">The structre</h1>
 <p>For that, let&rsquo;s first look at the strucute of the app. Consider the following directory tree:</p>
-
 <pre><code>.
 ├── Dockerfile
 ├── LICENSE
@@ -122,123 +138,205 @@ will not work unless it&rsquo;s also defined on the backend serving some content
 ├── img
 ├── internal
 └── pkg
-</code></pre>
-
-<p>For this, the frontend contains a build dir in which the generated react frontend static files plus
+</code></pre><p>For this, the frontend contains a build dir in which the generated react frontend static files plus
 compiled JavaScript libraries are. In this directory there also is a index.html file which does the actual
 heavy lifting in terms of routing.</p>
-
 <p>The Go backend therefor must only route to index.html on certain endpoints.</p>
-
 <p>In Go to build and deploy a single binary containing the static assets here in, you can use something like
 <a href="https://github.com/GeertJohan/go.rice">go.rice</a> or <a href="https://github.com/elazarl/go-bindata-assetfs">assetfs</a> which
 generate a Go file for you which contains all the data in an easily accessible way.</p>
-
 <p>I&rsquo;ll be using go.rice.</p>
-
-<h1 id="the-solution">The solution<a href="#the-solution" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
+<h1 id="the-solution">The solution</h1>
 <p>To summarize, all you have to do is route every route in your router.js file to index.html in Go. But how? Well, like this&hellip;</p>
-
 <p>Consider this appliction: <a href="https://github.com/staple-org/staple">Staple</a>. This is a react frontend go backend application
 which builds a frontend asset then packages it up with go.rice, builds a Docker container and deploys the whole thing to
 a Kubernetes cluster. But this is the interesting part which handles the index routing:</p>
-
 <p>In routes.go (contains the mapped routes from under Router.js):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">pkg</span>
 
-<pre><code class="language-go">package pkg
-
-// These routes must match the routes under frontend/Routes.js
-var routes = []string{
-	&quot;/login&quot;,
-	&quot;/archive&quot;,
-	&quot;/staples/new&quot;,
-	&quot;/reset&quot;,
-	&quot;/signup&quot;,
-	&quot;/settings&quot;,
+<span style="color:#75715e">// These routes must match the routes under frontend/Routes.js
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">routes</span> = []<span style="color:#66d9ef">string</span>{
+	<span style="color:#e6db74">&#34;/login&#34;</span>,
+	<span style="color:#e6db74">&#34;/archive&#34;</span>,
+	<span style="color:#e6db74">&#34;/staples/new&#34;</span>,
+	<span style="color:#e6db74">&#34;/reset&#34;</span>,
+	<span style="color:#e6db74">&#34;/signup&#34;</span>,
+	<span style="color:#e6db74">&#34;/settings&#34;</span>,
 }
-</code></pre>
-
-<p>Once we have a list of routes to map&hellip;</p>
-
+</code></pre></div><p>Once we have a list of routes to map&hellip;</p>
 <p>In server.go (which is starting up the server and generates the handlers&hellip;)</p>
-
-<pre><code class="language-go">    // ... code which sets up the api routes... after every handler has been estabilished...
-	// Setup front-end if not in production mode.
-	if !config.Opts.DevMode {
-        // This path needs to be relative from this files package's location.
-		staticAssets, err := rice.FindBox(&quot;../frontend/build&quot;)
-		if err != nil {
-			log.Fatal(&quot;Cannot find assets in production&quot;)
-			return err
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#75715e">// ... code which sets up the api routes... after every handler has been estabilished...
+</span><span style="color:#75715e"></span>	<span style="color:#75715e">// Setup front-end if not in production mode.
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">Opts</span>.<span style="color:#a6e22e">DevMode</span> {
+        <span style="color:#75715e">// This path needs to be relative from this files package&#39;s location.
+</span><span style="color:#75715e"></span>		<span style="color:#a6e22e">staticAssets</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rice</span>.<span style="color:#a6e22e">FindBox</span>(<span style="color:#e6db74">&#34;../frontend/build&#34;</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;Cannot find assets in production&#34;</span>)
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
 		}
 
-		// Register handler for static assets
-        assetHandler := http.FileServer(staticAssets.HTTPBox())
-        // Open the index.html file as a *File for reading the content out of it.
-        // This is a virtual file handled by go.rice.
-		index, err := staticAssets.Open(&quot;index.html&quot;)
-		if err != nil {
-			config.Opts.Logger.Error().Err(err).Msg(&quot;Failed to find index.html content.&quot;)
-			return err
+		<span style="color:#75715e">// Register handler for static assets
+</span><span style="color:#75715e"></span>        <span style="color:#a6e22e">assetHandler</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">FileServer</span>(<span style="color:#a6e22e">staticAssets</span>.<span style="color:#a6e22e">HTTPBox</span>())
+        <span style="color:#75715e">// Open the index.html file as a *File for reading the content out of it.
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// This is a virtual file handled by go.rice.
+</span><span style="color:#75715e"></span>		<span style="color:#a6e22e">index</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">staticAssets</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#e6db74">&#34;index.html&#34;</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">Opts</span>.<span style="color:#a6e22e">Logger</span>.<span style="color:#a6e22e">Error</span>().<span style="color:#a6e22e">Err</span>(<span style="color:#a6e22e">err</span>).<span style="color:#a6e22e">Msg</span>(<span style="color:#e6db74">&#34;Failed to find index.html content.&#34;</span>)
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
 		}
 
-        // Set up the main point as a static file server
-		e.GET(&quot;/&quot;, echo.WrapHandler(assetHandler))
-		// Set up routes to index.html for all routes under Routes.js. Index.html will handle the routing any further.
-		for _, r := range routes {
-			e.GET(r, indexServer(r, index))
+        <span style="color:#75715e">// Set up the main point as a static file server
+</span><span style="color:#75715e"></span>		<span style="color:#a6e22e">e</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#a6e22e">echo</span>.<span style="color:#a6e22e">WrapHandler</span>(<span style="color:#a6e22e">assetHandler</span>))
+		<span style="color:#75715e">// Set up routes to index.html for all routes under Routes.js. Index.html will handle the routing any further.
+</span><span style="color:#75715e"></span>		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">r</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">routes</span> {
+			<span style="color:#a6e22e">e</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#a6e22e">r</span>, <span style="color:#a6e22e">indexServer</span>(<span style="color:#a6e22e">r</span>, <span style="color:#a6e22e">index</span>))
 		}
-		e.GET(&quot;/favicon.ico&quot;, echo.WrapHandler(assetHandler))
-		e.GET(&quot;/site.webmanifest&quot;, echo.WrapHandler(assetHandler))
-		e.GET(&quot;/static/css/*&quot;, echo.WrapHandler(http.StripPrefix(&quot;/&quot;, assetHandler)))
-		e.GET(&quot;/static/js/*&quot;, echo.WrapHandler(http.StripPrefix(&quot;/&quot;, assetHandler)))
-		e.GET(&quot;/static/media/*&quot;, echo.WrapHandler(http.StripPrefix(&quot;/&quot;, assetHandler)))
+		<span style="color:#a6e22e">e</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/favicon.ico&#34;</span>, <span style="color:#a6e22e">echo</span>.<span style="color:#a6e22e">WrapHandler</span>(<span style="color:#a6e22e">assetHandler</span>))
+		<span style="color:#a6e22e">e</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/site.webmanifest&#34;</span>, <span style="color:#a6e22e">echo</span>.<span style="color:#a6e22e">WrapHandler</span>(<span style="color:#a6e22e">assetHandler</span>))
+		<span style="color:#a6e22e">e</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/static/css/*&#34;</span>, <span style="color:#a6e22e">echo</span>.<span style="color:#a6e22e">WrapHandler</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StripPrefix</span>(<span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#a6e22e">assetHandler</span>)))
+		<span style="color:#a6e22e">e</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/static/js/*&#34;</span>, <span style="color:#a6e22e">echo</span>.<span style="color:#a6e22e">WrapHandler</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StripPrefix</span>(<span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#a6e22e">assetHandler</span>)))
+		<span style="color:#a6e22e">e</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/static/media/*&#34;</span>, <span style="color:#a6e22e">echo</span>.<span style="color:#a6e22e">WrapHandler</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StripPrefix</span>(<span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#a6e22e">assetHandler</span>)))
     }
-</code></pre>
-
-<p>What is <code>indexServer</code> in this you might ask? Well, fret no longer, I shall show you:</p>
-
-<pre><code class="language-go">// indexServer takes a name and the contents of the virtual file index.html gathered up by go.rice
-// and serves its content via http.ServeContent under the given name.
-func indexServer(name string, file *rice.File) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		stat, _ := file.Stat()
-		http.ServeContent(c.Response().Writer, c.Request(), name, stat.ModTime(), file)
-		return nil
+</code></pre></div><p>What is <code>indexServer</code> in this you might ask? Well, fret no longer, I shall show you:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// indexServer takes a name and the contents of the virtual file index.html gathered up by go.rice
+</span><span style="color:#75715e">// and serves its content via http.ServeContent under the given name.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">indexServer</span>(<span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">file</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">rice</span>.<span style="color:#a6e22e">File</span>) <span style="color:#a6e22e">echo</span>.<span style="color:#a6e22e">HandlerFunc</span> {
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">echo</span>.<span style="color:#a6e22e">Context</span>) <span style="color:#66d9ef">error</span> {
+		<span style="color:#a6e22e">stat</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">file</span>.<span style="color:#a6e22e">Stat</span>()
+		<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ServeContent</span>(<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Response</span>().<span style="color:#a6e22e">Writer</span>, <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Request</span>(), <span style="color:#a6e22e">name</span>, <span style="color:#a6e22e">stat</span>.<span style="color:#a6e22e">ModTime</span>(), <span style="color:#a6e22e">file</span>)
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
 	}
 }
-</code></pre>
-
-<p>The key points are the name, which will be the route and the file which is the index.html content which contains
+</code></pre></div><p>The key points are the name, which will be the route and the file which is the index.html content which contains
 the logic to route based on the request. All that will be handled. And if a new route comes along,
 simple add it to the list, recompile and you are done!</p>
-
-<h1 id="conclusion">Conclusion<a href="#conclusion" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
+<h1 id="conclusion">Conclusion</h1>
 <p>In summary, you let your index.html file handle the routing as you would normally do. Just you need to make your
 backend aware of that fact. Now refreshing the page will work as you&rsquo;d expect.</p>
-
 <p>Thank you for reading,
 Gergely.</p>
 
-		</div>
-		<div id="comments" class="thin">
-			
+            </div>
 
-		</div>
-	</main>
-
-	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
-		<p>
-			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
-		</p>
-	</footer>
+            
 
 
-	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
+        </article>
 
-</body>
+        
 
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+    
+
+        
+            <div class="load-comments">
+                <div id="load-comments">Load Comments?</div>
+            </div>
+        
+
+        
+            <div id="disqus_thread"></div>
+        
+
+        
+
+        
+
+        
+    
+
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+    
+
+        
+            <script>
+    function loadComments() {
+        if (typeof DISQUS === 'undefined') {
+            var disqus_config = function() {
+                this.page.url = 'https:\/\/skarlso.github.io\/2020\/02\/17\/making-spa-refresh-work-with-go-backend\/';
+                this.page.identifier = '\/2020\/02\/17\/making-spa-refresh-work-with-go-backend\/';
+                this.page.title = 'How to Make SPA refresh work with a Go backend';
+            };
+            (function() {
+                var d = document, s = d.createElement('script'); s.async = true;
+                s.src = 'https://hannibalDisqus.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        } else {
+            DISQUS.reset({
+                reload: true,
+                config: function() {
+                    this.page.url = 'https:\/\/skarlso.github.io\/2020\/02\/17\/making-spa-refresh-work-with-go-backend\/';
+                    this.page.identifier = '\/2020\/02\/17\/making-spa-refresh-work-with-go-backend\/';
+                    this.page.title = 'How to Make SPA refresh work with a Go backend';
+                }
+            });
+        }
+    }
+</script>
+
+        
+
+        
+
+        
+
+        
+
+    
+
+
+
+
+
+
+
+
+
+
+    </body>
 </html>

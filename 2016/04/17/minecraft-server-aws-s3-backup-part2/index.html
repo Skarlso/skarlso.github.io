@@ -1,266 +1,311 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="">
+    <head>
+    <meta charset="UTF-8" />
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
 
-<meta itemprop="name" content="Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)">
-<meta itemprop="description" content="Hi folks.
+    <title>Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions) | Ramblings of a cloud engineer</title>
 
-Got an update for the backup script. This time, you&rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.
+    <link rel="stylesheet" href="/css/meme.min.css" />
 
-Here is the script again, now modified and a bit cleaned up. I hope it&rsquo;s helpful.">
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Hi folks.
+Got an update for the backup script. This time, you’ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.
+Here is the script again, now modified and a bit cleaned up. I hope it’s helpful.
+" />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2/" />
+    
+
+    
+    
+        <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
+
+        
 
 
-<meta itemprop="datePublished" content="2016-04-17T00:00:00&#43;00:00" />
-<meta itemprop="dateModified" content="2016-04-17T00:00:00&#43;00:00" />
-<meta itemprop="wordCount" content="535">
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-69463020-2"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-69463020-2');
+    </script>
 
 
 
-<meta itemprop="keywords" content="" />
-<meta property="og:title" content="Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)" />
-<meta property="og:description" content="Hi folks.
 
-Got an update for the backup script. This time, you&rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.
+    
+    
 
-Here is the script again, now modified and a bit cleaned up. I hope it&rsquo;s helpful." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2016/04/17/minecraft-server-aws-s3-backup-part2/" />
-<meta property="article:published_time" content="2016-04-17T00:00:00&#43;00:00"/>
-<meta property="article:modified_time" content="2016-04-17T00:00:00&#43;00:00"/>
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)"/>
-<meta name="twitter:description" content="Hi folks.
-
-Got an update for the backup script. This time, you&rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.
-
-Here is the script again, now modified and a bit cleaned up. I hope it&rsquo;s helpful."/>
-
-	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-	<link rel="manifest" href="/site.webmanifest">
-	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
-	<link rel="shortcut icon" href="/favicon.ico">
-
-	<title>Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</title>
-	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
-	
+    
 </head>
 
-<body id="page">
-	
-	<header id="site-header" class="animated slideInUp faster">
-		<div class="hdr-wrapper section-inner">
-			<div class="hdr-left">
-				<div class="site-branding">
-					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
-				</div>
-				<nav class="site-nav hide-in-mobile">
-					<a href="https://skarlso.github.io/blog/">blog</a>
-				</nav>
-			</div>
-			<div class="hdr-right hdr-icons">
-				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
-			</div>
-		</div>
-	</header>
-	<div id="mobile-menu" class="animated fast">
-		<ul>
-			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
-		</ul>
-	</div>
+    <body>
+        <div class="container">
+            
 
 
-	<main class="site-main section-inner animated fadeIn faster">
-		<article class="thin">
-			<header class="post-header">
-				<div class="post-meta"><span>Apr 17, 2016</span></div>
-				<h1>Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</h1>
-			</header>
-			<div class="content">
-				<p>Hi folks.</p>
 
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
+
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <p>Hi folks.</p>
 <p>Got an update for the backup script. This time, you&rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.</p>
-
 <p>Here is the script again, now modified and a bit cleaned up. I hope it&rsquo;s helpful.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/bash
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> -t <span style="color:#ae81ff">1</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+    colors<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>tput colors<span style="color:#66d9ef">)</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> $colors <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+        RED<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;\033[0;31m&#39;</span>
+        LIGHT_GREEN<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;\033[1;32m&#39;</span>
+        NC<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;\033[0m&#39;</span>
+    <span style="color:#66d9ef">fi</span>
+<span style="color:#66d9ef">fi</span>
 
-<pre><code class="language-bash">#!/bin/bash
+<span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> -z <span style="color:#e6db74">${</span>MINECRAFT_BUCKET<span style="color:#e6db74">}</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+    printf <span style="color:#e6db74">&#34;Please set the env variable %bMINECRAFT_BUCKET%b to the s3 archive bucket name.\n&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+    exit <span style="color:#ae81ff">1</span>
+<span style="color:#66d9ef">fi</span>
 
-if [[ -t 1 ]]; then
-    colors=$(tput colors)
-    if [[ $colors ]]; then
-        RED='\033[0;31m'
-        LIGHT_GREEN='\033[1;32m'
-        NC='\033[0m'
-    fi
-fi
+<span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> -z <span style="color:#e6db74">${</span>MINECRAFT_ARCHIVE_LIMIT<span style="color:#e6db74">}</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+    printf <span style="color:#e6db74">&#34;Please set the env variable %bMINECRAFT_ARCHIVE_LIMIT%b to limit the number of archives to keep.\n&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+    exit <span style="color:#ae81ff">1</span>
+<span style="color:#66d9ef">fi</span>
 
-if [[ -z ${MINECRAFT_BUCKET} ]]; then
-    printf &quot;Please set the env variable %bMINECRAFT_BUCKET%b to the s3 archive bucket name.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
-    exit 1
-fi
+<span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> -z <span style="color:#e6db74">${</span>MINECRAFT_WORLD<span style="color:#e6db74">}</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+    printf <span style="color:#e6db74">&#34;Please set the env variable %bMINECRAFT_WORLD%b to specify what world to back-up.\n&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+    exit <span style="color:#ae81ff">1</span>
+<span style="color:#66d9ef">fi</span>
 
-if [[ -z ${MINECRAFT_ARCHIVE_LIMIT} ]]; then
-    printf &quot;Please set the env variable %bMINECRAFT_ARCHIVE_LIMIT%b to limit the number of archives to keep.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
-    exit 1
-fi
+backup_world<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>MINECRAFT_WORLD<span style="color:#e6db74">}</span>
+backup_bucket<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>MINECRAFT_BUCKET<span style="color:#e6db74">}</span>
+backup_limit<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>MINECRAFT_ARCHIVE_LIMIT<span style="color:#e6db74">}</span>
+archive_name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>backup_world<span style="color:#e6db74">}</span><span style="color:#e6db74">-</span><span style="color:#66d9ef">$(</span>date +<span style="color:#e6db74">&#34;%H-%M-%S-%m-%d-%Y&#34;</span><span style="color:#66d9ef">)</span><span style="color:#e6db74">.zip&#34;</span>
 
-if [[ -z ${MINECRAFT_WORLD} ]]; then
-    printf &quot;Please set the env variable %bMINECRAFT_WORLD%b to specify what world to back-up.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
-    exit 1
-fi
-
-backup_world=${MINECRAFT_WORLD}
-backup_bucket=${MINECRAFT_BUCKET}
-backup_limit=${MINECRAFT_ARCHIVE_LIMIT}
-archive_name=&quot;${backup_world}-$(date +&quot;%H-%M-%S-%m-%d-%Y&quot;).zip&quot;
-
-function create_archive {
-    printf &quot;Creating archive of %b${backup_world}%b\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+<span style="color:#66d9ef">function</span> create_archive <span style="color:#f92672">{</span>
+    printf <span style="color:#e6db74">&#34;Creating archive of %b</span><span style="color:#e6db74">${</span>backup_world<span style="color:#e6db74">}</span><span style="color:#e6db74">%b\n&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
     zip -r $archive_name $backup_world
-}
+<span style="color:#f92672">}</span>
 
-function amazon_bak {
+<span style="color:#66d9ef">function</span> amazon_bak <span style="color:#f92672">{</span>
 
     create_archive
 
-    printf &quot;Checking if bucket has more than %b${backup_limit}%b files already.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
-    content=( $(aws s3 ls s3://$backup_bucket | awk '{print $4}') )
+    printf <span style="color:#e6db74">&#34;Checking if bucket has more than %b</span><span style="color:#e6db74">${</span>backup_limit<span style="color:#e6db74">}</span><span style="color:#e6db74">%b files already.\n&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+    content<span style="color:#f92672">=(</span> <span style="color:#66d9ef">$(</span>aws s3 ls s3://$backup_bucket | awk <span style="color:#e6db74">&#39;{print $4}&#39;</span><span style="color:#66d9ef">)</span> <span style="color:#f92672">)</span>
 
-    if [[ ${#content[@]} -eq $backup_limit || ${#content[@]} -gt $backup_limit  ]]; then
-        echo &quot;There are too many archives. Deleting oldest one.&quot;
-        # We can assume here that the list is in cronological order
-    	printf &quot;%bs3://${backup_bucket}/${content[0]}\n%b&quot; &quot;${RED}&quot; &quot;${NC}&quot;
-        aws s3 rm s3://$backup_bucket/${content[0]}
-    fi
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> <span style="color:#e6db74">${#</span>content[@]<span style="color:#e6db74">}</span> -eq $backup_limit <span style="color:#f92672">||</span> <span style="color:#e6db74">${#</span>content[@]<span style="color:#e6db74">}</span> -gt $backup_limit  <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+        echo <span style="color:#e6db74">&#34;There are too many archives. Deleting oldest one.&#34;</span>
+        <span style="color:#75715e"># We can assume here that the list is in cronological order</span>
+    	printf <span style="color:#e6db74">&#34;%bs3://</span><span style="color:#e6db74">${</span>backup_bucket<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>content[0]<span style="color:#e6db74">}</span><span style="color:#e6db74">\n%b&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+        aws s3 rm s3://$backup_bucket/<span style="color:#e6db74">${</span>content[0]<span style="color:#e6db74">}</span>
+    <span style="color:#66d9ef">fi</span>
 
-    printf &quot;Uploading %b${archive_name}%b to s3 archive bucket.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
-    state=$(aws s3 cp $archive_name s3://$backup_bucket)
+    printf <span style="color:#e6db74">&#34;Uploading %b</span><span style="color:#e6db74">${</span>archive_name<span style="color:#e6db74">}</span><span style="color:#e6db74">%b to s3 archive bucket.\n&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+    state<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>aws s3 cp $archive_name s3://$backup_bucket<span style="color:#66d9ef">)</span>
 
-    if [[ &quot;$state&quot; =~ &quot;upload:&quot; ]]; then
-        printf &quot;File upload %bsuccessful%b.\n&quot; &quot;${LIGHT_GREEN}&quot; &quot;${NC}&quot;
-    else
-        printf &quot;%bError%b occured while uploading archive. Please investigate.\n&quot; &quot;${RED}&quot; &quot;${NC}&quot;
-    fi
-}
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> <span style="color:#e6db74">&#34;</span>$state<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">=</span>~ <span style="color:#e6db74">&#34;upload:&#34;</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+        printf <span style="color:#e6db74">&#34;File upload %bsuccessful%b.\n&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>LIGHT_GREEN<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+    <span style="color:#66d9ef">else</span>
+        printf <span style="color:#e6db74">&#34;%bError%b occured while uploading archive. Please investigate.\n&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+    <span style="color:#66d9ef">fi</span>
+<span style="color:#f92672">}</span>
 
-function custom {
-    if [[ -e custom.sh ]]; then
+<span style="color:#66d9ef">function</span> custom <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> -e custom.sh <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
         source ./custom.sh
-    else
-        echo &quot;custom.sh script not found. Please implement the apropriate functions.&quot;
-        exit 1
-    fi
+    <span style="color:#66d9ef">else</span>
+        echo <span style="color:#e6db74">&#34;custom.sh script not found. Please implement the apropriate functions.&#34;</span>
+        exit <span style="color:#ae81ff">1</span>
+    <span style="color:#66d9ef">fi</span>
 
-    echo &quot;Checking for the number of files. Limit is: $backup_limit.&quot;
-    files=( $(list) )
-    if [[ ${#files[@]} -eq $backup_limit || ${#files[@]} -gt $backup_limit ]]; then
-        echo &quot;Deleting extra file.&quot;
-        delete ${files[0]}
-        if [[ $? != 0 ]]; then
-            printf &quot;%bFailed%b to delete file. Please investigate failure.&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+    echo <span style="color:#e6db74">&#34;Checking for the number of files. Limit is: </span>$backup_limit<span style="color:#e6db74">.&#34;</span>
+    files<span style="color:#f92672">=(</span> <span style="color:#66d9ef">$(</span>list<span style="color:#66d9ef">)</span> <span style="color:#f92672">)</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> <span style="color:#e6db74">${#</span>files[@]<span style="color:#e6db74">}</span> -eq $backup_limit <span style="color:#f92672">||</span> <span style="color:#e6db74">${#</span>files[@]<span style="color:#e6db74">}</span> -gt $backup_limit <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+        echo <span style="color:#e6db74">&#34;Deleting extra file.&#34;</span>
+        delete <span style="color:#e6db74">${</span>files[0]<span style="color:#e6db74">}</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> $? !<span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+            printf <span style="color:#e6db74">&#34;%bFailed%b to delete file. Please investigate failure.&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
             exit $?
-        fi
-    fi
+        <span style="color:#66d9ef">fi</span>
+    <span style="color:#66d9ef">fi</span>
 
-    echo &quot;Zipping world.&quot;
+    echo <span style="color:#e6db74">&#34;Zipping world.&#34;</span>
     create_archive
 
-    echo &quot;Uploading world.&quot;
+    echo <span style="color:#e6db74">&#34;Uploading world.&#34;</span>
     upload $archive_name
 
-    if [[ $? != 0 ]]; then
-        printf &quot;%bFailed%b to upload archive. Please investigate the error.&quot; &quot;${RED}&quot; &quot;${NC}&quot;
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> $? !<span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+        printf <span style="color:#e6db74">&#34;%bFailed%b to upload archive. Please investigate the error.&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
         exit $?
-    fi
+    <span style="color:#66d9ef">fi</span>
 
-    printf &quot;Upload %bsuccessful%b&quot; &quot;${LIGHT_GREEN}&quot; &quot;${NC}&quot;
-}
+    printf <span style="color:#e6db74">&#34;Upload %bsuccessful%b&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>LIGHT_GREEN<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+<span style="color:#f92672">}</span>
 
-function help {
-    echo &quot;Usage:&quot;
-    echo &quot;./backup_world [METHOD]&quot;
-    echo &quot;Exp.: ./backup_world aws|./backup_world custom|./backup_world dropbox&quot;
-    echo &quot;Each method has it's own environment properties that it requires.&quot;
-    echo &quot;Global: MINECRAFT_WORLD|MINECRAFT_BUCKET|MINECRAFT_ARCHIVE_LIMIT&quot;
-    echo &quot;Custom: Have a file, called 'custom.sh' which is sourced.&quot;
-    echo &quot;Implement these three functions: upload | list | delete.&quot;
-    echo &quot;upload -&gt; should return exit code 0 on success, should return exit code 1 on failure.&quot;
-    echo &quot;list -&gt; should return a list of cronologically ordered items.&quot;
-    echo &quot;delete -&gt; should return exit code 0 on success, should return exit code 1 on failure.&quot;
-}
+<span style="color:#66d9ef">function</span> help <span style="color:#f92672">{</span>
+    echo <span style="color:#e6db74">&#34;Usage:&#34;</span>
+    echo <span style="color:#e6db74">&#34;./backup_world [METHOD]&#34;</span>
+    echo <span style="color:#e6db74">&#34;Exp.: ./backup_world aws|./backup_world custom|./backup_world dropbox&#34;</span>
+    echo <span style="color:#e6db74">&#34;Each method has it&#39;s own environment properties that it requires.&#34;</span>
+    echo <span style="color:#e6db74">&#34;Global: MINECRAFT_WORLD|MINECRAFT_BUCKET|MINECRAFT_ARCHIVE_LIMIT&#34;</span>
+    echo <span style="color:#e6db74">&#34;Custom: Have a file, called &#39;custom.sh&#39; which is sourced.&#34;</span>
+    echo <span style="color:#e6db74">&#34;Implement these three functions: upload | list | delete.&#34;</span>
+    echo <span style="color:#e6db74">&#34;upload -&gt; should return exit code 0 on success, should return exit code 1 on failure.&#34;</span>
+    echo <span style="color:#e6db74">&#34;list -&gt; should return a list of cronologically ordered items.&#34;</span>
+    echo <span style="color:#e6db74">&#34;delete -&gt; should return exit code 0 on success, should return exit code 1 on failure.&#34;</span>
+<span style="color:#f92672">}</span>
 
-case $1 in
-    aws )
+<span style="color:#66d9ef">case</span> $1 in
+    aws <span style="color:#f92672">)</span>
         amazon_bak
         ;;
-    custom )
+    custom <span style="color:#f92672">)</span>
         custom
         ;;
-    * )
+    * <span style="color:#f92672">)</span>
         help
         ;;
-esac
-</code></pre>
+<span style="color:#66d9ef">esac</span>
+</code></pre></div><p>And here is the sample implementation for the custom upload functionality.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/bash
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">function</span> upload <span style="color:#f92672">{</span>
+    echo <span style="color:#e6db74">&#34;uploading&#34;</span>
+    local result<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>
+    <span style="color:#66d9ef">return</span> $result
+<span style="color:#f92672">}</span>
 
-<p>And here is the sample implementation for the custom upload functionality.</p>
+<span style="color:#66d9ef">function</span> delete <span style="color:#f92672">{</span>
+    echo <span style="color:#e6db74">&#34;deleting </span>$1<span style="color:#e6db74">&#34;</span>
+    local result<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>
+    <span style="color:#66d9ef">return</span> $result
+<span style="color:#f92672">}</span>
 
-<pre><code class="language-bash">#!/bin/bash
-
-function upload {
-    echo &quot;uploading&quot;
-    local result=0
-    return $result
-}
-
-function delete {
-    echo &quot;deleting $1&quot;
-    local result=0
-    return $result
-}
-
-function list {
-    local arr=(&quot;file1&quot; &quot;file2&quot; &quot;file3&quot;)
-    echo &quot;${arr[@]}&quot;
-}
-</code></pre>
-
-<p>Thanks for reading!</p>
-
+<span style="color:#66d9ef">function</span> list <span style="color:#f92672">{</span>
+    local arr<span style="color:#f92672">=(</span><span style="color:#e6db74">&#34;file1&#34;</span> <span style="color:#e6db74">&#34;file2&#34;</span> <span style="color:#e6db74">&#34;file3&#34;</span><span style="color:#f92672">)</span>
+    echo <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>arr[@]<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>Thanks for reading!</p>
 <p>Gergely.</p>
-			</div>
-			<hr class="post-end">
-			<footer class="post-info">
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>535 Words</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2016-04-17 00:00 &#43;0000</p>
-			</footer>
-		</article>
-		<div class="post-nav thin">
-			<a class="next-post" href="https://skarlso.github.io/2016/06/12/google-signin-with-go/">
-				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>How to do Google sign-in with Go</span>
-			</a>
-			<a class="prev-post" href="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/">
-				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>Minecraft world automatic backup to AWS S3 bucket</span>
-			</a>
-		</div>
-		<div id="comments" class="thin">
-</div>
-	</main>
+            </div>
 
-	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
-		<p>
-			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
-		</p>
-	</footer>
+            
 
 
-	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
+        </article>
 
-</body>
+        
 
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
 </html>

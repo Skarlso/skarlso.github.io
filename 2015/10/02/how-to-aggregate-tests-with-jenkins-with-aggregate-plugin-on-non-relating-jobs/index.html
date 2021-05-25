@@ -1,273 +1,194 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="">
+    <head>
+    <meta charset="UTF-8" />
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
 
-<meta itemprop="name" content="How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs">
-<meta itemprop="description" content="Hello folks.
+    <title>How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Hello folks.
 Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.
-So I&#8217;m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work.">
+So I’m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/" />
+    
+
+    
+    
+        <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
+
+        
 
 
-<meta itemprop="datePublished" content="2015-10-02T00:00:00&#43;00:00" />
-<meta itemprop="dateModified" content="2015-10-02T00:00:00&#43;00:00" />
-<meta itemprop="wordCount" content="648">
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-69463020-2"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-69463020-2');
+    </script>
 
 
 
-<meta itemprop="keywords" content="jenkins," />
-<meta property="og:title" content="How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs" />
-<meta property="og:description" content="Hello folks.
-Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.
-So I&#8217;m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/" />
-<meta property="article:published_time" content="2015-10-02T00:00:00&#43;00:00"/>
-<meta property="article:modified_time" content="2015-10-02T00:00:00&#43;00:00"/>
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs"/>
-<meta name="twitter:description" content="Hello folks.
-Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.
-So I&#8217;m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work."/>
 
-	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-	<link rel="manifest" href="/site.webmanifest">
-	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
-	<link rel="shortcut icon" href="/favicon.ico">
+    
+    
 
-	<title>How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs</title>
-	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
-	
+    
 </head>
 
-<body id="page">
-	
-	<header id="site-header" class="animated slideInUp faster">
-		<div class="hdr-wrapper section-inner">
-			<div class="hdr-left">
-				<div class="site-branding">
-					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
-				</div>
-				<nav class="site-nav hide-in-mobile">
-					<a href="https://skarlso.github.io/blog/">blog</a>
-				</nav>
-			</div>
-			<div class="hdr-right hdr-icons">
-				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
-			</div>
-		</div>
-	</header>
-	<div id="mobile-menu" class="animated fast">
-		<ul>
-			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
-		</ul>
-	</div>
+    <body>
+        <div class="container">
+            
 
 
-	<main class="site-main section-inner animated fadeIn faster">
-		<article class="thin">
-			<header class="post-header">
-				<div class="post-meta"><span>Oct 2, 2015</span></div>
-				<h1>How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs</h1>
-			</header>
-			<div class="content">
-				
 
-<p>Hello folks.</p>
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
 
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <p>Hello folks.</p>
 <p>Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.</p>
-
-<p>So I&#8217;m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work. So here is how, I fixed the issue.</p>
-
-<h1 id="connection">Connection<a href="#connection" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
-<p>In order for the aggregation to work, there needs to be an <strong>artifact connection</strong> between the upstream and downstream projects. And that is the key. But if you don&#8217;t have that, well, let&#8217;s create one. I have a parent job configured like this one. =&gt;</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="xml" style="font-family:monospace;"><span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;?xml</span> <span style="color: #000066;">version</span>=<span style="color: #ff0000;">'1.0'</span> <span style="color: #000066;">encoding</span>=<span style="color: #ff0000;">'UTF-8'</span><span style="color: #000000; font-weight: bold;">?&gt;</span></span>
-<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;project<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;actions</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;description<span style="color: #000000; font-weight: bold;">&gt;</span></span><span style="color: #000000; font-weight: bold;">&lt;/description<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;keepDependencies<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/keepDependencies<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;properties</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;scm</span> <span style="color: #000066;">class</span>=<span style="color: #ff0000;">"hudson.scm.NullSCM"</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;canRoam<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>true<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/canRoam<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;disabled<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/disabled<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;blockBuildWhenDownstreamBuilding<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/blockBuildWhenDownstreamBuilding<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;blockBuildWhenUpstreamBuilding<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/blockBuildWhenUpstreamBuilding<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;triggers</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;concurrentBuild<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/concurrentBuild<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;builders</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;publishers<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;hudson.tasks.test.AggregatedTestResultPublisher</span> <span style="color: #000066;">plugin</span>=<span style="color: #ff0000;">"junit@1.9"</span><span style="color: #000000; font-weight: bold;">&gt;</span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;includeFailedBuilds<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/includeFailedBuilds<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/hudson.tasks.test.AggregatedTestResultPublisher<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;hudson.tasks.BuildTrigger<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;childProjects<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>ChildJob<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/childProjects<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;threshold<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-        <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;name<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>SUCCESS<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/name<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-        <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;ordinal<span style="color: #000000; font-weight: bold;">&gt;</span></span></span><span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/ordinal<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-        <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;color<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>BLUE<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/color<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-        <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;completeBuild<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>true<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/completeBuild<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/threshold<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/hudson.tasks.BuildTrigger<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/publishers<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;buildWrappers</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/project<span style="color: #000000; font-weight: bold;">&gt;</span></span></span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<p>As you can see, it&#8217;s pretty basic. It isn&#8217;t much. It&#8217;s supposed to be a trigger job for downstream projects. You could have this one at anything. Maybe scheduled, or have some kind of gathering here of some results, and so on and so forth. The end part of the configuration is the interesting bit.</p>
-
-<p>Aggregation is setup, but it won&#8217;t work, because despite there being an upstream/downstream relationship, there also needs to be an artifact connection which uses <strong>fingerprinting</strong>. Fingerprinting for Jenkins is needed in oder to make the physical connection between the jobs via hashes. This is what you will get if that is not setup:</p>
-
+<p>So I’m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work. So here is how, I fixed the issue.</p>
+<h1 id="connection">Connection</h1>
+<p>In order for the aggregation to work, there needs to be an <strong>artifact connection</strong> between the upstream and downstream projects. And that is the key. But if you don’t have that, well, let’s create one. I have a parent job configured like this one. =&gt;</p>
+<!-- raw HTML omitted -->
+<p>As you can see, it’s pretty basic. It isn’t much. It’s supposed to be a trigger job for downstream projects. You could have this one at anything. Maybe scheduled, or have some kind of gathering here of some results, and so on and so forth. The end part of the configuration is the interesting bit.</p>
+<p>Aggregation is setup, but it won’t work, because despite there being an upstream/downstream relationship, there also needs to be an artifact connection which uses <strong>fingerprinting</strong>. Fingerprinting for Jenkins is needed in oder to make the physical connection between the jobs via hashes. This is what you will get if that is not setup:</p>
 <p>But if there is no artifact between them, what do you do? You create one.</p>
-
-<h1 id="the-artifact-which-binds-us">The Artifact which Binds Us<a href="#the-artifact-which-binds-us" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
-<p>Adding a simple <strong>timestamp file</strong> is enough to make a connection. So let&#8217;s do that. This is how it will look like =&gt;</p>
-
+<h1 id="the-artifact-which-binds-us">The Artifact which Binds Us</h1>
+<p>Adding a simple <strong>timestamp file</strong> is enough to make a connection. So let’s do that. This is how it will look like =&gt;</p>
 <p>The important bits about this picture are the small echo which simply creates a file which will contain some time stamp data, and after that the archive artifact, which also fingerprints that file, marking it with a hash which identifies this job as using that particular artifact.</p>
-
-<p>Now, the next step is to create the connection. For that, you need the artifact copy plugin =&gt; <a href="https://wiki.jenkins-ci.org/display/JENKINS/Copy+Artifact+Plugin" target="_blank">Copy Artifact Plugin</a>.</p>
-
+<p>Now, the next step is to create the connection. For that, you need the artifact copy plugin =&gt; <!-- raw HTML omitted -->Copy Artifact Plugin<!-- raw HTML omitted -->.</p>
 <p>With this, we create the childs configuration like this:</p>
-
-<div class="wp_syntax">
-  <table>
-    <tr>
-      <td class="code">
-        <pre class="xml" style="font-family:monospace;"><span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;?xml</span> <span style="color: #000066;">version</span>=<span style="color: #ff0000;">'1.0'</span> <span style="color: #000066;">encoding</span>=<span style="color: #ff0000;">'UTF-8'</span><span style="color: #000000; font-weight: bold;">?&gt;</span></span>
-<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;project<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;actions</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;description<span style="color: #000000; font-weight: bold;">&gt;</span></span><span style="color: #000000; font-weight: bold;">&lt;/description<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;keepDependencies<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/keepDependencies<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;properties</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;scm</span> <span style="color: #000066;">class</span>=<span style="color: #ff0000;">"hudson.plugins.git.GitSCM"</span> <span style="color: #000066;">plugin</span>=<span style="color: #ff0000;">"git@2.4.0"</span><span style="color: #000000; font-weight: bold;">&gt;</span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;configVersion<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>2<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/configVersion<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;userRemoteConfigs<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;hudson.plugins.git.UserRemoteConfig<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-        <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;url<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>https://github.com/Skarlso/DataMung.git<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/url<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/hudson.plugins.git.UserRemoteConfig<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/userRemoteConfigs<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;branches<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;hudson.plugins.git.BranchSpec<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-        <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;name<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>*/master<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/name<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/hudson.plugins.git.BranchSpec<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/branches<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;doGenerateSubmoduleConfigurations<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/doGenerateSubmoduleConfigurations<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;submoduleCfg</span> <span style="color: #000066;">class</span>=<span style="color: #ff0000;">"list"</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;extensions</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/scm<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;canRoam<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>true<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/canRoam<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;disabled<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/disabled<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;blockBuildWhenDownstreamBuilding<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/blockBuildWhenDownstreamBuilding<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;blockBuildWhenUpstreamBuilding<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/blockBuildWhenUpstreamBuilding<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;triggers</span><span style="color: #000000; font-weight: bold;">/&gt;</span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;concurrentBuild<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/concurrentBuild<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;builders<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;hudson.plugins.gradle.Gradle</span> <span style="color: #000066;">plugin</span>=<span style="color: #ff0000;">"gradle@1.24"</span><span style="color: #000000; font-weight: bold;">&gt;</span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;description<span style="color: #000000; font-weight: bold;">&gt;</span></span><span style="color: #000000; font-weight: bold;">&lt;/description<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;switches<span style="color: #000000; font-weight: bold;">&gt;</span></span><span style="color: #000000; font-weight: bold;">&lt;/switches<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;tasks<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>assemble check<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/tasks<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;rootBuildScriptDir<span style="color: #000000; font-weight: bold;">&gt;</span></span><span style="color: #000000; font-weight: bold;">&lt;/rootBuildScriptDir<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;buildFile<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>build.gradle<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/buildFile<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;gradleName<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>(Default)<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/gradleName<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;useWrapper<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>true<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/useWrapper<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;makeExecutable<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/makeExecutable<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;fromRootBuildScriptDir<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>true<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/fromRootBuildScriptDir<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;useWorkspaceAsHome<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/useWorkspaceAsHome<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/hudson.plugins.gradle.Gradle<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;hudson.plugins.copyartifact.CopyArtifact</span> <span style="color: #000066;">plugin</span>=<span style="color: #ff0000;">"copyartifact@1.36"</span><span style="color: #000000; font-weight: bold;">&gt;</span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;project<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>ParentJob<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/project<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;filter<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>timestamp.data<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/filter<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;target<span style="color: #000000; font-weight: bold;">&gt;</span></span><span style="color: #000000; font-weight: bold;">&lt;/target<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;excludes<span style="color: #000000; font-weight: bold;">&gt;</span></span><span style="color: #000000; font-weight: bold;">&lt;/excludes<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;selector</span> <span style="color: #000066;">class</span>=<span style="color: #ff0000;">"hudson.plugins.copyartifact.TriggeredBuildSelector"</span><span style="color: #000000; font-weight: bold;">&gt;</span></span>
-        <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;upstreamFilterStrategy<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>UseGlobalSetting<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/upstreamFilterStrategy<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/selector<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;doNotFingerprintArtifacts<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/doNotFingerprintArtifacts<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/hudson.plugins.copyartifact.CopyArtifact<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/builders<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;publishers<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;hudson.tasks.junit.JUnitResultArchiver</span> <span style="color: #000066;">plugin</span>=<span style="color: #ff0000;">"junit@1.9"</span><span style="color: #000000; font-weight: bold;">&gt;</span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;testResults<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>build/test-results/*.xml<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/testResults<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;keepLongStdio<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/keepLongStdio<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;healthScaleFactor<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>1.0<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/healthScaleFactor<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/hudson.tasks.junit.JUnitResultArchiver<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/publishers<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;buildWrappers<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;hudson.plugins.ws__cleanup.PreBuildCleanup</span> <span style="color: #000066;">plugin</span>=<span style="color: #ff0000;">"ws-cleanup@0.28"</span><span style="color: #000000; font-weight: bold;">&gt;</span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;deleteDirs<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>false<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/deleteDirs<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;cleanupParameter<span style="color: #000000; font-weight: bold;">&gt;</span></span><span style="color: #000000; font-weight: bold;">&lt;/cleanupParameter<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-      <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;externalDelete<span style="color: #000000; font-weight: bold;">&gt;</span></span><span style="color: #000000; font-weight: bold;">&lt;/externalDelete<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-    <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/hudson.plugins.ws__cleanup.PreBuildCleanup<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-  <span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/buildWrappers<span style="color: #000000; font-weight: bold;">&gt;</span></span></span>
-<span style="color: #009900;"><span style="color: #000000; font-weight: bold;">&lt;/project<span style="color: #000000; font-weight: bold;">&gt;</span></span></span></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
+<!-- raw HTML omitted -->
 <p>Again, the improtant bit is this:</p>
-
 <p>After the copy is setup, we launch our parent job and if everything is correct, you should see something like this:</p>
-
-<h1 id="wrapping-it-up">Wrapping it Up<a href="#wrapping-it-up" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
-<p>For final words, important bit to take away from this is that you need an <strong>artifact connection between the jobs</strong> to make this work. Whatever your downstream / upstream connection is, it doesn&#8217;t matter. Also, there can be a problem that you have everything set up, and there are artifacts which bind the jobs together but you still can&#8217;t see the results, then your best option is to specify the jobs BY NAME in the aggregate test plug-in like this:</p>
-
+<h1 id="wrapping-it-up">Wrapping it Up</h1>
+<p>For final words, important bit to take away from this is that you need an <strong>artifact connection between the jobs</strong> to make this work. Whatever your downstream / upstream connection is, it doesn’t matter. Also, there can be a problem that you have everything set up, and there are artifacts which bind the jobs together but you still can’t see the results, then your best option is to specify the jobs BY NAME in the aggregate test plug-in like this:</p>
 <p>I know this is a pain if there are multiple jobs, but at least, jenkins is providing you with Autoexpande once you start typing.</p>
-
 <p>Of course this also works with multiple downstream jobs if they copy the artifact to themselves.</p>
-
 <p>Any questions, please feel free to comment and I will answer to the best of my knowledge.</p>
-
 <p>Cheers,
 Gergely.</p>
 
-			</div>
-			<hr class="post-end">
-			<footer class="post-info">
-				<p>
-					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://skarlso.github.io/tags/jenkins">jenkins</a></span>
-				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>648 Words</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2015-10-02 00:00 &#43;0000</p>
-			</footer>
-		</article>
-		<div class="post-nav thin">
-			<a class="next-post" href="https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/">
-				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>DataMunger Kata with Go</span>
-			</a>
-			<a class="prev-post" href="https://skarlso.github.io/2015/09/07/i-used-to-have-great-ideas-on-the-toilet-but-i-no-longer-do/">
-				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>I used to have great ideas on the toilet, but I no longer do.</span>
-			</a>
-		</div>
-		<div id="comments" class="thin">
-</div>
-	</main>
+            </div>
 
-	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
-		<p>
-			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
-		</p>
-	</footer>
+            
 
 
-	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
+        </article>
 
-</body>
+        
 
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
 </html>

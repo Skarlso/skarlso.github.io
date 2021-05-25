@@ -1,267 +1,243 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="">
+    <head>
+    <meta charset="UTF-8" />
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
 
-<meta itemprop="name" content="Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2">
-<meta itemprop="description" content="Intro Hi folks.
+    <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2 | Ramblings of a cloud engineer</title>
+
+    <link rel="stylesheet" href="/css/meme.min.css" />
+
+    
+    
+        <script src="/js/meme.min.js"></script>
+
+    
+
+    
+
+    <meta name="author" content="hannibal" /><meta name="description" content="Intro Hi folks.
 Previously on this blog: Part 1, Part 3, Part 4
-In this part, I&rsquo;m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.
-AWS SDK Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn&rsquo;t make it less complex and less cryptic at times. I&rsquo;m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time.">
+In this part, I’m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.
+AWS SDK Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn’t make it less complex and less cryptic at times. I’m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time." />
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2017/03/19/building-furnace-part-2/" />
+    
+
+    
+    
+        <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
+
+        
 
 
-<meta itemprop="datePublished" content="2017-03-19T12:03:00&#43;01:00" />
-<meta itemprop="dateModified" content="2017-03-19T12:03:00&#43;01:00" />
-<meta itemprop="wordCount" content="1853">
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-69463020-2"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-69463020-2');
+    </script>
 
 
 
-<meta itemprop="keywords" content="" />
-<meta property="og:title" content="Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2" />
-<meta property="og:description" content="Intro Hi folks.
-Previously on this blog: Part 1, Part 3, Part 4
-In this part, I&rsquo;m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.
-AWS SDK Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn&rsquo;t make it less complex and less cryptic at times. I&rsquo;m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2017/03/19/building-furnace-part-2/" />
-<meta property="article:published_time" content="2017-03-19T12:03:00&#43;01:00"/>
-<meta property="article:modified_time" content="2017-03-19T12:03:00&#43;01:00"/>
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2"/>
-<meta name="twitter:description" content="Intro Hi folks.
-Previously on this blog: Part 1, Part 3, Part 4
-In this part, I&rsquo;m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.
-AWS SDK Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn&rsquo;t make it less complex and less cryptic at times. I&rsquo;m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time."/>
 
-	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-	<link rel="manifest" href="/site.webmanifest">
-	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
-	<link rel="shortcut icon" href="/favicon.ico">
+    
+    
 
-	<title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2</title>
-	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
-	
+    
 </head>
 
-<body id="page">
-	
-	<header id="site-header" class="animated slideInUp faster">
-		<div class="hdr-wrapper section-inner">
-			<div class="hdr-left">
-				<div class="site-branding">
-					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
-				</div>
-				<nav class="site-nav hide-in-mobile">
-					<a href="https://skarlso.github.io/blog/">blog</a>
-				</nav>
-			</div>
-			<div class="hdr-right hdr-icons">
-				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
-			</div>
-		</div>
-	</header>
-	<div id="mobile-menu" class="animated fast">
-		<ul>
-			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
-		</ul>
-	</div>
+    <body>
+        <div class="container">
+            
 
 
-	<main class="site-main section-inner animated fadeIn faster">
-		<article class="thin">
-			<header class="post-header">
-				<div class="post-meta"><span>Mar 19, 2017</span></div>
-				<h1>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2</h1>
-			</header>
-			<div class="content">
-				
 
-<h1 id="intro">Intro<a href="#intro" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
 
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="intro">Intro</h1>
 <p>Hi folks.</p>
-
 <p>Previously on this blog: <a href="https://skarlso.github.io/2017/03/16/building-furnace-part-1/">Part 1</a>, <a href="https://skarlso.github.io/2017/03/22/building-furnace-part-3/">Part 3</a>, <a href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/">Part 4</a></p>
-
 <p>In this part, I&rsquo;m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.</p>
-
-<h1 id="aws-sdk">AWS SDK<a href="#aws-sdk" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
+<h1 id="aws-sdk">AWS SDK</h1>
 <p>Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn&rsquo;t make it less complex
 and less cryptic at times. I&rsquo;m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time.</p>
-
-<h2 id="getting-started-and-developers-guide">Getting Started and Developers Guide<a href="#getting-started-and-developers-guide" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
+<h2 id="getting-started-and-developers-guide">Getting Started and Developers Guide</h2>
 <p>As always, and common from AWS, the documentation is top notch. There is a 141 pages long developer&rsquo;s guide on the SDK containing
 a getting started section and an API reference. Go check it out. I&rsquo;ll wait. <a href="http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/aws-sdk-go-dg.pdf">AWS Go SDK DG PDF</a>. I will only talk about some gotchas and things I encountered, not the basics of the SDK.</p>
-
-<h2 id="aws-string-and-other-types">aws.String and other types<a href="#aws-string-and-other-types" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
+<h2 id="awsstring-and-other-types">aws.String and other types</h2>
 <p>Something which is immediately visible once we take a look at the API is that everything is a pointer. Now, there are a
 tremendous amount of discussions about this, but I&rsquo;m with Amazon. There are various reasons for it, but to list the most prominent
 ones:
-    - Type completion and compile time type safety.
-    - Values for AWS API calls have valid zero values, in addition to being optional, i.e. not being provided at all.
-    - Other option, like, empty interfaces with maps, or using zero values, or struct wrappers around every type, made life much
-       harder rather than easier or not possible at all.
-    - The AWS API is volatile. You never know when something gets to be optional, or required. Pointers made that decision easy.</p>
-
+- Type completion and compile time type safety.
+- Values for AWS API calls have valid zero values, in addition to being optional, i.e. not being provided at all.
+- Other option, like, empty interfaces with maps, or using zero values, or struct wrappers around every type, made life much
+harder rather than easier or not possible at all.
+- The AWS API is volatile. You never know when something gets to be optional, or required. Pointers made that decision easy.</p>
 <p>There are good number of other discussions around this topic, for example: <a href="https://github.com/aws/aws-sdk-go/issues/363">AWS Go GitHub #363</a>.</p>
-
 <p>In order to use primitives, AWS has helper functions like <code>aws.String</code>. Because &amp;&ldquo;asdf&rdquo; is not allowed, you would have to create a
 variable and use its address in situations where a string pointer is needed, for example, name of the stack. These primitive helpers will
 make in-lining possible. We&rsquo;ll see later that they are used to a great extent. Pointers, however, make life a bit difficult when
 constructing Input structs and make for poor aesthetics.</p>
-
 <p>This is something I&rsquo;m returning in a test for stubbing a client call:</p>
-
-<pre><code class="language-go">		return &amp;cloudformation.ListStackResourcesOutput{
-			StackResourceSummaries: []*cloudformation.StackResourceSummary{
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">cloudformation</span>.<span style="color:#a6e22e">ListStackResourcesOutput</span>{
+			<span style="color:#a6e22e">StackResourceSummaries</span>: []<span style="color:#f92672">*</span><span style="color:#a6e22e">cloudformation</span>.<span style="color:#a6e22e">StackResourceSummary</span>{
 				{
-					ResourceType:       aws.String(&quot;NoASG&quot;),
-					PhysicalResourceId: aws.String(&quot;arn::whatever&quot;),
+					<span style="color:#a6e22e">ResourceType</span>:       <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;NoASG&#34;</span>),
+					<span style="color:#a6e22e">PhysicalResourceId</span>: <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;arn::whatever&#34;</span>),
 				},
 			},
 		}
-</code></pre>
-
-<p>This doesn&rsquo;t look so appealing, but one gets used to it quickly.</p>
-
-<h2 id="error-handling">Error handling<a href="#error-handling" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
+</code></pre></div><p>This doesn&rsquo;t look so appealing, but one gets used to it quickly.</p>
+<h2 id="error-handling">Error handling</h2>
 <p>Errors also have their own types. An AWS error looks like this:</p>
-
-<pre><code class="language-go">if err != nil {
-    if awsErr, ok := err.(awserr.Error); ok {
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">awsErr</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">err</span>.(<span style="color:#a6e22e">awserr</span>.<span style="color:#a6e22e">Error</span>); <span style="color:#a6e22e">ok</span> {
     }
 }
-</code></pre>
-
-<p>First, we check if error is nil, than we type check if the error is an AWS error or something different. In the wild, this will
+</code></pre></div><p>First, we check if error is nil, than we type check if the error is an AWS error or something different. In the wild, this will
 look something like this:</p>
-
-<pre><code class="language-go">	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			if awsErr.Code() != codedeploy.ErrCodeDeploymentGroupAlreadyExistsException {
-				log.Println(awsErr.Code())
-				return err
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">awsErr</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">err</span>.(<span style="color:#a6e22e">awserr</span>.<span style="color:#a6e22e">Error</span>); <span style="color:#a6e22e">ok</span> {
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">awsErr</span>.<span style="color:#a6e22e">Code</span>() <span style="color:#f92672">!=</span> <span style="color:#a6e22e">codedeploy</span>.<span style="color:#a6e22e">ErrCodeDeploymentGroupAlreadyExistsException</span> {
+				<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">awsErr</span>.<span style="color:#a6e22e">Code</span>())
+				<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
 			}
-			log.Println(&quot;DeploymentGroup already exists. Nothing to do.&quot;)
-			return nil
+			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;DeploymentGroup already exists. Nothing to do.&#34;</span>)
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
 		}
-		return err
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
 	}
-</code></pre>
-
-<p>If it&rsquo;s an AWS error, we can check further for the error code that it returns in order to identify what to handle, or what to throw
+</code></pre></div><p>If it&rsquo;s an AWS error, we can check further for the error code that it returns in order to identify what to handle, or what to throw
 on to the caller to a potential fatal. Here, I&rsquo;m ignoring the AlreadyExistsException because, if it does, we just go on to a next
 action.</p>
-
-<h2 id="examples">Examples<a href="#examples" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
+<h2 id="examples">Examples</h2>
 <p>Luckily the API doc is very mature. In most of the cases, they provide an example to an API call. These examples, however, from
 time to time provide more confusion than clarity. Take CloudFormation. For me, when I first glanced upon the
 description of the API it wasn&rsquo;t immediately clear that the <code>TemplateBody</code> was supposed to be the whole template, and that
 the rest of the fields were almost all optional settings. Or provided overrides in special cases.</p>
-
 <p>And since the template is not an ordinary JAML or JSON file, I was looking for something that parses it into that the Struct I
 was going to use. After some time, and digging, I realized that I didn&rsquo;t need that, and that I just need to read in the template,
 define some extra parameters, and give the TemplateBody the whole of the template. The parameters defined by the CloudFormation
 template where extracted for me by <code>ValidateTemplate</code> API call which returned all of them in a convenient
 <code>[]*cloudformation.Parameter</code> slice. These things are not described in the document or visible from the examples. I mainly found
 them through playing with the API and focused experimentation.</p>
-
-<h2 id="waiters">Waiters<a href="#waiters" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
+<h2 id="waiters">Waiters</h2>
 <p>From other SDK implementations, we got used to Waiters. These handy methods wait for a service to become available or for certain
 situations to take in effect, like a Stage being <code>CREATE_COMPLETE</code>. The Go waiters, however, don&rsquo;t allow for callback to be fired,
 or for running blocks, like the ruby SDK does. For this, I wrote a handy little waiter for myself, which outputs a spinner to see
 that we are currently waiting for something and not frozen in time. This waiter looks like this:</p>
-
-<pre><code class="language-go">// WaitForFunctionWithStatusOutput waits for a function to complete its action.
-func WaitForFunctionWithStatusOutput(state string, freq int, f func()) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	done := make(chan bool)
-	go func() {
-		defer wg.Done()
-		f()
-		done &lt;- true
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// WaitForFunctionWithStatusOutput waits for a function to complete its action.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">WaitForFunctionWithStatusOutput</span>(<span style="color:#a6e22e">state</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">freq</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">f</span> <span style="color:#66d9ef">func</span>()) {
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">wg</span> <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">WaitGroup</span>
+	<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#ae81ff">1</span>)
+	<span style="color:#a6e22e">done</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">bool</span>)
+	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+		<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Done</span>()
+		<span style="color:#a6e22e">f</span>()
+		<span style="color:#a6e22e">done</span> <span style="color:#f92672">&lt;-</span> <span style="color:#66d9ef">true</span>
 	}()
-	go func() {
-		counter := 0
-		for {
-			counter = (counter + 1) % len(Spinners[config.SPINNER])
-			fmt.Printf(&quot;\r[%s] Waiting for state: %s&quot;, yellow(string(Spinners[config.SPINNER][counter])), red(state))
-			time.Sleep(time.Duration(freq) * time.Second)
-			select {
-			case &lt;-done:
-				fmt.Println()
-				break
-			default:
+	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+		<span style="color:#a6e22e">counter</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>
+		<span style="color:#66d9ef">for</span> {
+			<span style="color:#a6e22e">counter</span> = (<span style="color:#a6e22e">counter</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> len(<span style="color:#a6e22e">Spinners</span>[<span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">SPINNER</span>])
+			<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;\r[%s] Waiting for state: %s&#34;</span>, <span style="color:#a6e22e">yellow</span>(string(<span style="color:#a6e22e">Spinners</span>[<span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">SPINNER</span>][<span style="color:#a6e22e">counter</span>])), <span style="color:#a6e22e">red</span>(<span style="color:#a6e22e">state</span>))
+			<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span>(<span style="color:#a6e22e">freq</span>) <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+			<span style="color:#66d9ef">select</span> {
+			<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">done</span>:
+				<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>()
+				<span style="color:#66d9ef">break</span>
+			<span style="color:#66d9ef">default</span>:
 			}
 		}
 	}()
 
-	wg.Wait()
+	<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Wait</span>()
 }
-</code></pre>
-
-<p>And I&rsquo;m calling it with the following method:</p>
-
-<pre><code class="language-go">	utils.WaitForFunctionWithStatusOutput(&quot;DELETE_COMPLETE&quot;, config.WAITFREQUENCY, func() {
-		cfClient.Client.WaitUntilStackDeleteComplete(describeStackInput)
+</code></pre></div><p>And I&rsquo;m calling it with the following method:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#a6e22e">utils</span>.<span style="color:#a6e22e">WaitForFunctionWithStatusOutput</span>(<span style="color:#e6db74">&#34;DELETE_COMPLETE&#34;</span>, <span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">WAITFREQUENCY</span>, <span style="color:#66d9ef">func</span>() {
+		<span style="color:#a6e22e">cfClient</span>.<span style="color:#a6e22e">Client</span>.<span style="color:#a6e22e">WaitUntilStackDeleteComplete</span>(<span style="color:#a6e22e">describeStackInput</span>)
 	})
-</code></pre>
-
-<p>This would output these lines to the console:</p>
-
-<pre><code class="language-bash">[\] Waiting for state: DELETE_COMPLETE
-</code></pre>
-
-<p>The spinner can be configured to be one of the following types:</p>
-
-<pre><code class="language-go">var Spinners = []string{`←↖↑↗→↘↓↙`,
-	`▁▃▄▅▆▇█▇▆▅▄▃`,
-	`┤┘┴└├┌┬┐`,
-	`◰◳◲◱`,
-	`◴◷◶◵`,
-	`◐◓◑◒`,
-	`⣾⣽⣻⢿⡿⣟⣯⣷`,
-	`|/-\`}
-</code></pre>
-
-<p>Handy.</p>
-
+</code></pre></div><p>This would output these lines to the console:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span><span style="color:#ae81ff">\]</span> Waiting <span style="color:#66d9ef">for</span> state: DELETE_COMPLETE
+</code></pre></div><p>The spinner can be configured to be one of the following types:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">Spinners</span> = []<span style="color:#66d9ef">string</span>{<span style="color:#e6db74">`←↖↑↗→↘↓↙`</span>,
+	<span style="color:#e6db74">`▁▃▄▅▆▇█▇▆▅▄▃`</span>,
+	<span style="color:#e6db74">`┤┘┴└├┌┬┐`</span>,
+	<span style="color:#e6db74">`◰◳◲◱`</span>,
+	<span style="color:#e6db74">`◴◷◶◵`</span>,
+	<span style="color:#e6db74">`◐◓◑◒`</span>,
+	<span style="color:#e6db74">`⣾⣽⣻⢿⡿⣟⣯⣷`</span>,
+	<span style="color:#e6db74">`|/-\`</span>}
+</code></pre></div><p>Handy.</p>
 <p>And with that, let&rsquo;s dive into the basics of Furnace.</p>
-
-<h1 id="furnace">Furnace<a href="#furnace" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
-<h2 id="directory-structure-and-packages">Directory Structure and Packages<a href="#directory-structure-and-packages" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
+<h1 id="furnace">Furnace</h1>
+<h2 id="directory-structure-and-packages">Directory Structure and Packages</h2>
 <p>Furnace is divided into three main packages.</p>
-
-<h3 id="commands">commands<a href="#commands" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-
+<h3 id="commands">commands</h3>
 <p>Commands package is where the gist of Furnace lies. These commands represent the commands which are used through the CLI. Each
 file has the implementation for one command. The structure is devised by this library: <a href="https://github.com/Yitsushi/go-commander">Yitsushi&rsquo;s Command Library</a>.
-As of the writing of this post, the following commands are available:
-- create - Creates a stack using the CloudFormation template file under ~/.config/go-furnace
-- delete - Deletes the created Stack. Doesn&rsquo;t do anything if the stack doesn&rsquo;t exist
-- push - Pushes an application to a stack
-- status - Displays information about the stack
-- delete-application - Deletes the CodeDeploy application and deployment group created by <code>push</code></p>
-
+As of the writing of this post, the following commands are available:</p>
+<ul>
+<li>create - Creates a stack using the CloudFormation template file under ~/.config/go-furnace</li>
+<li>delete - Deletes the created Stack. Doesn&rsquo;t do anything if the stack doesn&rsquo;t exist</li>
+<li>push - Pushes an application to a stack</li>
+<li>status - Displays information about the stack</li>
+<li>delete-application - Deletes the CodeDeploy application and deployment group created by <code>push</code></li>
+</ul>
 <p>These commands represent the heart of furnace. I would like to keep these to a minimum, but I do plan on adding more, like
 <code>update</code> and <code>rollout</code>. Further details and help messages on these commands can be obtained by running: <code>./furnace help</code> or
 <code>./furnace help create</code>.</p>
-
-<pre><code class="language-bash">❯ ./furnace help push
-Usage: furnace push appName [-s3]
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">❯ ./furnace help push
+Usage: furnace push appName <span style="color:#f92672">[</span>-s3<span style="color:#f92672">]</span>
 
 Push a version of the application to a stack
 
@@ -270,41 +246,33 @@ Examples:
   furnace push appName
   furnace push appName -s3
   furnace push -s3
-</code></pre>
-
-<h3 id="config">config<a href="#config" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-
-<p>Contains the configuration loader and some project wide defaults which are as follows:
-- Events for the plugin system - <code>pre-create</code>, <code>post-create</code>, <code>pre-delete</code>, <code>post-delete</code>.
-- CodeDeploy role name - <code>CodeDeployServiceRole</code>. This is used if none is provided to locate the CodeDeploy IAM role.
-- Wait frequency - Is the setting which controls how long the waiter should sleep in between status updates. Default is <code>1s</code>.
-- Spinner - Is just the number of the spinner to use.
-- Plugin registry - Is a map of functions to run for the above events.</p>
-
+</code></pre></div><h3 id="config">config</h3>
+<p>Contains the configuration loader and some project wide defaults which are as follows:</p>
+<ul>
+<li>Events for the plugin system - <code>pre-create</code>, <code>post-create</code>, <code>pre-delete</code>, <code>post-delete</code>.</li>
+<li>CodeDeploy role name - <code>CodeDeployServiceRole</code>. This is used if none is provided to locate the CodeDeploy IAM role.</li>
+<li>Wait frequency - Is the setting which controls how long the waiter should sleep in between status updates. Default is <code>1s</code>.</li>
+<li>Spinner - Is just the number of the spinner to use.</li>
+<li>Plugin registry - Is a map of functions to run for the above events.</li>
+</ul>
 <p>Further more, config loads the CloudFormation template and checks if some necessary settings are present in the environment, exp:
 the configuration folder under <code>~/.config/go-furnace</code>.</p>
-
-<h3 id="utils">utils<a href="#utils" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-
-<p>These are some helper functions which are used throughout the project. To list them:
-- error_handler - Is a simple error handler. I&rsquo;m thinking of refactoring this one to some saner version.
-- spinner - Sets up which spinner to use in the waiter function.
-- waiter - Contains the verbose waiter introduced above under <a href="##Waiters">Waiters</a>.</p>
-
-<h2 id="configuration-and-environment-variables">Configuration and Environment variables<a href="#configuration-and-environment-variables" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
+<h3 id="utils">utils</h3>
+<p>These are some helper functions which are used throughout the project. To list them:</p>
+<ul>
+<li>error_handler - Is a simple error handler. I&rsquo;m thinking of refactoring this one to some saner version.</li>
+<li>spinner - Sets up which spinner to use in the waiter function.</li>
+<li>waiter - Contains the verbose waiter introduced above under <a href="##Waiters">Waiters</a>.</li>
+</ul>
+<h2 id="configuration-and-environment-variables">Configuration and Environment variables</h2>
 <p>Furnace is a Go application, thus it doesn&rsquo;t have the luxury of Ruby or Python where the configuration files are usually bundled
 with the app. But, it does have a standard for it. Usually, configurations reside in either of these two locations. Environment
 Properties or|and configuration files under a fixed location ( i.e. HOME/.config/app-name ). Furnace employs both.</p>
-
 <p>Settings like, region, stack name, enable plugin system, are under environment properties ( though this can change ), while the
 CloudFormation template lives under <code>~/.config/go-furnace/</code>. Lastly it assumes some things, like the Deployment IAM role just
 exists under the used AWS account. All these are loaded and handled by the config package described above.</p>
-
-<h2 id="usage">Usage<a href="#usage" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
+<h2 id="usage">Usage</h2>
 <p>A typical scenario for Furnace would be the following:</p>
-
 <ul>
 <li>Setup your CloudFormation template or use the one provided. The one provided sets up a highly available and self healing setting
 using Auto-Scaling and Load-Balancing with a single application instance. Edit this template to your liking than copy it to
@@ -317,69 +285,89 @@ to SSH into the created instance.</li>
 appropriate version of the app from S3 or GitHub and push that version to the instances in the Auto-Scaling group. To all of
 them.</li>
 </ul>
-
-<h2 id="general-practices-applied-to-the-project">General Practices Applied to the Project<a href="#general-practices-applied-to-the-project" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
-<h3 id="commands-1">Commands<a href="#commands-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-
+<h2 id="general-practices-applied-to-the-project">General Practices Applied to the Project</h2>
+<h3 id="commands-1">Commands</h3>
 <p>For each command the main entry point is the <code>execute</code> function. These functions are usually calling out the small chunks of
 distributed methods. Logic was kept to a bare minimum ( probably could be simplified even further ) in the execute functions
 mostly for testability and the likes. We will see that in a followup post.</p>
-
-<h3 id="errors">Errors<a href="#errors" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-
+<h3 id="errors">Errors</h3>
 <p>Errors are handled immediately and usually through a fatal. If any error occurs than the application is halted. In followup
 versions this might become more granular. I.e. don&rsquo;t immediately stop the world, maybe try to recover, or create a Poller or
 Re-Tryer, which tries a call again for a configured amount of times.</p>
-
-<h3 id="output-colors">Output colors<a href="#output-colors" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-
+<h3 id="output-colors">Output colors</h3>
 <p>Not that important, but still&hellip; Aesthetics. Displaying data to the console in a nice way gives it some extra flare.</p>
-
-<h3 id="makefile">Makefile<a href="#makefile" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-
+<h3 id="makefile">Makefile</h3>
 <p>This project works with a Makefile for various reasons. Later on, once the project might become more complex, a Makefile makes it
 really easy to handle different ways of packaging the application. Currently, for example, it provides a <code>linux</code> target which will
 make Go build the project for Linux architecture on any other Architecture i.e. cross-compiling.</p>
-
 <p>It also provides an easy way to run unit tests with <code>make test</code> and installing with <code>make &amp;&amp; make install</code>.</p>
-
-<h1 id="closing-words">Closing Words<a href="#closing-words" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
+<h1 id="closing-words">Closing Words</h1>
 <p>That is all for Part 2. Join me in Part 3 where I will talk about the experimental Plugin system that Furnace employs.</p>
-
 <p>Thank you for reading!
 Gergely.</p>
 
-			</div>
-			<hr class="post-end">
-			<footer class="post-info">
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>1853 Words</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2017-03-19 11:03 &#43;0000</p>
-			</footer>
-		</article>
-		<div class="post-nav thin">
-			<a class="next-post" href="https://skarlso.github.io/2017/03/22/building-furnace-part-3/">
-				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 3</span>
-			</a>
-			<a class="prev-post" href="https://skarlso.github.io/2017/03/17/test-new-hugo/">
-				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>Testing new Hugo if posts are generated properly</span>
-			</a>
-		</div>
-		<div id="comments" class="thin">
-</div>
-	</main>
+            </div>
 
-	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
-		<p>
-			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
-		</p>
-	</footer>
+            
 
 
-	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
+        </article>
 
-</body>
+        
 
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
 </html>

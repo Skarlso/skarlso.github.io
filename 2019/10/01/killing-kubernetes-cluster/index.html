@@ -1,156 +1,277 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="">
+    <head>
+    <meta charset="UTF-8" />
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
 
-<meta itemprop="name" content="How I killed my entire Kubernetes cluster">
-<meta itemprop="description" content="Intro One morning I woke up and tried to access my gitea just to find that it wasn&rsquo;t running.
-I checked my cluster and found that the whole thing was dead as meat. I quickly jumped in and ran k get pods -A to see what&rsquo;s going on. None of my services worked.
-What immediately struck my eye was a 100&#43; pods of my fork_updater cronjob. The fork_updater cronjob which runs once a month, looks like this:">
+    <title>How I killed my entire Kubernetes cluster | Ramblings of a cloud engineer</title>
 
+    <link rel="stylesheet" href="/css/meme.min.css" />
 
-<meta itemprop="datePublished" content="2019-10-01T21:01:00&#43;01:00" />
-<meta itemprop="dateModified" content="2019-10-01T21:01:00&#43;01:00" />
-<meta itemprop="wordCount" content="286">
+    
+    
+        <script src="/js/meme.min.js"></script>
 
+    
 
+    
 
-<meta itemprop="keywords" content="" />
-<meta property="og:title" content="How I killed my entire Kubernetes cluster" />
-<meta property="og:description" content="Intro One morning I woke up and tried to access my gitea just to find that it wasn&rsquo;t running.
-I checked my cluster and found that the whole thing was dead as meat. I quickly jumped in and ran k get pods -A to see what&rsquo;s going on. None of my services worked.
+    <meta name="author" content="hannibal" /><meta name="description" content="Intro One morning I woke up and tried to access my gitea just to find that it wasn’t running.
+I checked my cluster and found that the whole thing was dead as meat. I quickly jumped in and ran k get pods -A to see what’s going on. None of my services worked.
 What immediately struck my eye was a 100&#43; pods of my fork_updater cronjob. The fork_updater cronjob which runs once a month, looks like this:" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2019/10/01/killing-kubernetes-cluster/" />
-<meta property="article:published_time" content="2019-10-01T21:01:00&#43;01:00"/>
-<meta property="article:modified_time" content="2019-10-01T21:01:00&#43;01:00"/>
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="How I killed my entire Kubernetes cluster"/>
-<meta name="twitter:description" content="Intro One morning I woke up and tried to access my gitea just to find that it wasn&rsquo;t running.
-I checked my cluster and found that the whole thing was dead as meat. I quickly jumped in and ran k get pods -A to see what&rsquo;s going on. None of my services worked.
-What immediately struck my eye was a 100&#43; pods of my fork_updater cronjob. The fork_updater cronjob which runs once a month, looks like this:"/>
 
-	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-	<link rel="manifest" href="/site.webmanifest">
-	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
-	<link rel="shortcut icon" href="/favicon.ico">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
 
-	<title>How I killed my entire Kubernetes cluster</title>
-	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
-	
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2019/10/01/killing-kubernetes-cluster/" />
+    
+
+    
+    
+        <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
+
+        
+
+
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-69463020-2"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-69463020-2');
+    </script>
+
+
+
+
+    
+    
+
+    
 </head>
 
-<body id="page">
-	
-	<header id="site-header" class="animated slideInUp faster">
-		<div class="hdr-wrapper section-inner">
-			<div class="hdr-left">
-				<div class="site-branding">
-					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
-				</div>
-				<nav class="site-nav hide-in-mobile">
-					<a href="https://skarlso.github.io/blog/">blog</a>
-				</nav>
-			</div>
-			<div class="hdr-right hdr-icons">
-				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
-			</div>
-		</div>
-	</header>
-	<div id="mobile-menu" class="animated fast">
-		<ul>
-			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
-		</ul>
-	</div>
+    <body>
+        <div class="container">
+            
 
 
-	<main class="site-main section-inner thin animated fadeIn faster">
-		<h1>How I killed my entire Kubernetes cluster</h1>
-		<div class="content">
-			
 
-<h1 id="intro">Intro<a href="#intro" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
 
+        
+
+        <article class="content post h-entry" data-align="default" data-type="post">
+
+            <h1 class="post-title p-name">How I killed my entire Kubernetes cluster</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="intro">Intro</h1>
 <p>One morning I woke up and tried to access my gitea just to find that it wasn&rsquo;t running.</p>
-
-<p><img src="/img/kube_dead.png" alt="dead kube" /></p>
-
+<p><img src="/img/kube_dead.png" alt="dead kube"></p>
 <p>I checked my cluster and found that the whole thing was dead as meat. I quickly jumped in and ran <code>k get pods -A</code> to see what&rsquo;s
 going on. None of my services worked.</p>
-
 <p>What immediately struck my eye was a 100+ pods of my fork_updater cronjob. The fork_updater cronjob which runs once a month, looks
 like this:</p>
-
-<pre><code class="language-yaml">apiVersion: batch/v1beta1
-kind: CronJob
-metadata:
-  name: fork-updater
-  namespace: fork-updater
-spec:
-  schedule: &quot;* * 1 * *&quot;
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          volumes:
-          - name: fork-updater-ssh-key
-            secret:
-              secretName: fork-updater-ssh-key
-              defaultMode: 256 # yaml spec does not support octal mode
-          containers:
-          - name: fork-updater
-            imagePullPolicy: IfNotPresent
-            image: skarlso/repo-updater:1.0.4
-            env:
-              - name:  GIT_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name:  fork-updater-secret
-                    key:  GIT_TOKEN
-            volumeMounts:
-            - name: fork-updater-ssh-key
-              mountPath: &quot;/etc/secret&quot;
-              readOnly: true
-          restartPolicy: OnFailure
-</code></pre>
-
-<p>Inherently there is nothing wrong with this at first glance. But on a second glance, the problem is <code>restartPolicy: Always</code>.
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">batch/v1beta1</span>
+<span style="color:#f92672">kind</span>: <span style="color:#ae81ff">CronJob</span>
+<span style="color:#f92672">metadata</span>:
+  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">fork-updater</span>
+  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">fork-updater</span>
+<span style="color:#f92672">spec</span>:
+  <span style="color:#f92672">schedule</span>: <span style="color:#e6db74">&#34;* * 1 * *&#34;</span>
+  <span style="color:#f92672">jobTemplate</span>:
+    <span style="color:#f92672">spec</span>:
+      <span style="color:#f92672">template</span>:
+        <span style="color:#f92672">spec</span>:
+          <span style="color:#f92672">volumes</span>:
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">fork-updater-ssh-key</span>
+            <span style="color:#f92672">secret</span>:
+              <span style="color:#f92672">secretName</span>: <span style="color:#ae81ff">fork-updater-ssh-key</span>
+              <span style="color:#f92672">defaultMode</span>: <span style="color:#ae81ff">256</span> <span style="color:#75715e"># yaml spec does not support octal mode</span>
+          <span style="color:#f92672">containers</span>:
+          - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">fork-updater</span>
+            <span style="color:#f92672">imagePullPolicy</span>: <span style="color:#ae81ff">IfNotPresent</span>
+            <span style="color:#f92672">image</span>: <span style="color:#ae81ff">skarlso/repo-updater:1.0.4</span>
+            <span style="color:#f92672">env</span>:
+              - <span style="color:#f92672">name</span>:  <span style="color:#ae81ff">GIT_TOKEN</span>
+                <span style="color:#f92672">valueFrom</span>:
+                  <span style="color:#f92672">secretKeyRef</span>:
+                    <span style="color:#f92672">name</span>:  <span style="color:#ae81ff">fork-updater-secret</span>
+                    <span style="color:#f92672">key</span>:  <span style="color:#ae81ff">GIT_TOKEN</span>
+            <span style="color:#f92672">volumeMounts</span>:
+            - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">fork-updater-ssh-key</span>
+              <span style="color:#f92672">mountPath</span>: <span style="color:#e6db74">&#34;/etc/secret&#34;</span>
+              <span style="color:#f92672">readOnly</span>: <span style="color:#66d9ef">true</span>
+          <span style="color:#f92672">restartPolicy</span>: <span style="color:#ae81ff">OnFailure</span>
+</code></pre></div><p>Inherently there is nothing wrong with this at first glance. But on a second glance, the problem is <code>restartPolicy: Always</code>.
 For whatever the reason, the cronjob died when it started up. The restart policy then&hellip; restarted the cronjob, which failed again
 really fast. Then it scheduled a new one and a new one and a new one&hellip; and I had 100+ containers pending and running and
 creating.</p>
-
 <p>At that point the cluster was basically DDOSd into oblivion. Once the other resources started to die ( since this was a private
 cluster and I didn&rsquo;t bother to set up restrictions on resources ) the cronjob hogged even more and it basically blocked everything
 else from being able to run. It overwhelmed the scheduler.</p>
-
 <p>Lovevly that.</p>
-
 <p>This is how you could potentionally kill a cluster which doesn&rsquo;t have any resource limits and restrictions set up.</p>
-
 <p>Gergely.</p>
 
-		</div>
-		<div id="comments" class="thin">
-			
+            </div>
 
-		</div>
-	</main>
-
-	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
-		<p>
-			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
-		</p>
-	</footer>
+            
 
 
-	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
+        </article>
 
-</body>
+        
 
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+    
+
+        
+            <div class="load-comments">
+                <div id="load-comments">Load Comments?</div>
+            </div>
+        
+
+        
+            <div id="disqus_thread"></div>
+        
+
+        
+
+        
+
+        
+    
+
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+    
+
+        
+            <script>
+    function loadComments() {
+        if (typeof DISQUS === 'undefined') {
+            var disqus_config = function() {
+                this.page.url = 'https:\/\/skarlso.github.io\/2019\/10\/01\/killing-kubernetes-cluster\/';
+                this.page.identifier = '\/2019\/10\/01\/killing-kubernetes-cluster\/';
+                this.page.title = 'How I killed my entire Kubernetes cluster';
+            };
+            (function() {
+                var d = document, s = d.createElement('script'); s.async = true;
+                s.src = 'https://hannibalDisqus.disqus.com/embed.js';
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        } else {
+            DISQUS.reset({
+                reload: true,
+                config: function() {
+                    this.page.url = 'https:\/\/skarlso.github.io\/2019\/10\/01\/killing-kubernetes-cluster\/';
+                    this.page.identifier = '\/2019\/10\/01\/killing-kubernetes-cluster\/';
+                    this.page.title = 'How I killed my entire Kubernetes cluster';
+                }
+            });
+        }
+    }
+</script>
+
+        
+
+        
+
+        
+
+        
+
+    
+
+
+
+
+
+
+
+
+
+
+    </body>
 </html>

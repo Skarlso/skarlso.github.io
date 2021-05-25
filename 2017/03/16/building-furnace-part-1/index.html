@@ -1,394 +1,386 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="">
+    <head>
+    <meta charset="UTF-8" />
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="generator" content="Hugo 0.83.1" /><meta name="theme-color" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
 
-<meta itemprop="name" content="Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1">
-<meta itemprop="description" content="Other posts: Part 2, Part 3, Part 4.
-Building Furnace: Part 1 Intro Hi folks.
-This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.
-The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them.">
+    <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1 | Ramblings of a cloud engineer</title>
 
+    <link rel="stylesheet" href="/css/meme.min.css" />
 
-<meta itemprop="datePublished" content="2017-03-16T21:49:00&#43;01:00" />
-<meta itemprop="dateModified" content="2017-03-16T21:49:00&#43;01:00" />
-<meta itemprop="wordCount" content="1419">
+    
+    
+        <script src="/js/meme.min.js"></script>
 
+    
 
+    
 
-<meta itemprop="keywords" content="" />
-<meta property="og:title" content="Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1" />
-<meta property="og:description" content="Other posts: Part 2, Part 3, Part 4.
+    <meta name="author" content="hannibal" /><meta name="description" content="Other posts: Part 2, Part 3, Part 4.
 Building Furnace: Part 1 Intro Hi folks.
 This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.
 The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2017/03/16/building-furnace-part-1/" />
-<meta property="article:published_time" content="2017-03-16T21:49:00&#43;01:00"/>
-<meta property="article:modified_time" content="2017-03-16T21:49:00&#43;01:00"/>
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1"/>
-<meta name="twitter:description" content="Other posts: Part 2, Part 3, Part 4.
-Building Furnace: Part 1 Intro Hi folks.
-This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.
-The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them."/>
 
-	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-	<link rel="manifest" href="/site.webmanifest">
-	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
-	<link rel="shortcut icon" href="/favicon.ico">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ramblings of a cloud engineer" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Ramblings of a cloud engineer" />
+    <meta name="msapplication-starturl" content="../../../../" />
+    <meta name="msapplication-TileColor" content="" />
+    <meta name="msapplication-TileImage" content="../../../../icons/mstile-150x150.png" />
+    <link rel="manifest" href="/manifest.json" />
 
-	<title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1</title>
-	<link rel="stylesheet" href="https://skarlso.github.io/css/style.min.c693329ce3bac2503f88115a4011a284a06d53e30f484562a37664dc4c5f0a74.css" integrity="sha256-xpMynOO6wlA/iBFaQBGihKBtU+MPSEVio3Zk3ExfCnQ=">
-	
+    
+    
+
+    
+    <link rel="canonical" href="https://skarlso.github.io/2017/03/16/building-furnace-part-1/" />
+    
+
+    
+    
+        <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
+
+        
+
+
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-69463020-2"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-69463020-2');
+    </script>
+
+
+
+
+    
+    
+
+    
 </head>
 
-<body id="page">
-	
-	<header id="site-header" class="animated slideInUp faster">
-		<div class="hdr-wrapper section-inner">
-			<div class="hdr-left">
-				<div class="site-branding">
-					<a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a>
-				</div>
-				<nav class="site-nav hide-in-mobile">
-					<a href="https://skarlso.github.io/blog/">blog</a>
-				</nav>
-			</div>
-			<div class="hdr-right hdr-icons">
-				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
-			</div>
-		</div>
-	</header>
-	<div id="mobile-menu" class="animated fast">
-		<ul>
-			<li><a href="https://skarlso.github.io/blog/">blog</a></li>
-		</ul>
-	</div>
+    <body>
+        <div class="container">
+            
 
 
-	<main class="site-main section-inner animated fadeIn faster">
-		<article class="thin">
-			<header class="post-header">
-				<div class="post-meta"><span>Mar 16, 2017</span></div>
-				<h1>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1</h1>
-			</header>
-			<div class="content">
-				
 
-<h1 id="other-posts">Other posts:<a href="#other-posts" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
+            
+                
+                
+                
+            
+            
+    <main class="main single" id="main">
+    <div class="main-inner">
 
+        
+
+        <article class="content post h-entry" data-align="default" data-type="posts" data-layout="post">
+
+            <h1 class="post-title p-name">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1</h1>
+
+            
+
+            
+
+            
+
+            <div class="post-body e-content">
+                <h1 id="other-posts">Other posts:</h1>
 <p><a href="https://skarlso.github.io/2017/03/19/building-furnace-part-2/">Part 2</a>, <a href="https://skarlso.github.io/2017/03/22/building-furnace-part-3/">Part 3</a>, <a href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/">Part 4</a>.</p>
-
-<h1 id="building-furnace-part-1">Building Furnace: Part 1<a href="#building-furnace-part-1" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
-<h1 id="intro">Intro<a href="#intro" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
+<h1 id="building-furnace-part-1">Building Furnace: Part 1</h1>
+<h1 id="intro">Intro</h1>
 <p>Hi folks.</p>
-
 <p>This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go,
 with AWS. Including Unit testing and a experimental plugin feature.</p>
-
 <p>The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar
 with them. The second part will talk about the Go SDK and the project structure itself, how it can be used, improved, and how it can
 help in everyday life. The third part will talk about the experimental plugin system, and finally, we will tackle unit testing AWS
 in Go.</p>
-
 <p>Let&rsquo;s begin, shall we?</p>
-
-<h1 id="aws">AWS<a href="#aws" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
-<h2 id="cloudformation">CloudFormation<a href="#cloudformation" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
-<p>If you haven&rsquo;t yet read about, or know off, AWS&rsquo; CloudFormation service, you can either go ahead and read the <a href="https://aws.amazon.com/cloudformation/">Documentation</a>
+<h1 id="aws">AWS</h1>
+<h2 id="cloudformation">CloudFormation</h2>
+<p>If you haven&rsquo;t yet read about, or know off, AWS' CloudFormation service, you can either go ahead and read the <a href="https://aws.amazon.com/cloudformation/">Documentation</a>
 or read on for a very quick summary. If you are familiar with CF, you should skip ahead to <a href="##CodeDeploy">CodeDeploy</a> section.</p>
-
 <p>CF is a service which bundles together other AWS services (for example: EC2, S3, ELB, ASG, RDS) into one, easily manageable stack.
 After a stack has been created, all the resources can be handled as one, located, tagged and used via CF specific console commands.
 It&rsquo;s also possible to define any number of parameters, so a stack can actually be very versatile. A parameter can be anything, from
 SSH IP restriction to KeyPair names and list of tags to create or in what region the stack will be in.</p>
-
 <p>To describe how these parts fit together, one must use a CloudFormation Template file which is either in JSON or in
 YAML format. A simple example looks like this:</p>
-
-<pre><code class="language-yaml">    Parameters:
-      KeyName:
-        Description: The EC2 Key Pair to allow SSH access to the instance
-        Type: AWS::EC2::KeyPair::KeyName
-    Resources:
-      Ec2Instance:
-        Type: AWS::EC2::Instance
-        Properties:
-          SecurityGroups:
-          - Ref: InstanceSecurityGroup
-          - MyExistingSecurityGroup
-          KeyName:
-            Ref: KeyName
-          ImageId: ami-7a11e213
-      InstanceSecurityGroup:
-        Type: AWS::EC2::SecurityGroup
-        Properties:
-          GroupDescription: Enable SSH access via port 22
-          SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort: '22'
-            ToPort: '22'
-            CidrIp: 0.0.0.0/0
-</code></pre>
-
-<p>There are a myriad of these template samples <a href="https://aws.amazon.com/cloudformation/aws-cloudformation-templates/">here</a>.</p>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">    <span style="color:#f92672">Parameters</span>:
+      <span style="color:#f92672">KeyName</span>:
+        <span style="color:#f92672">Description</span>: <span style="color:#ae81ff">The EC2 Key Pair to allow SSH access to the instance</span>
+        <span style="color:#f92672">Type</span>: <span style="color:#ae81ff">AWS::EC2::KeyPair::KeyName</span>
+    <span style="color:#f92672">Resources</span>:
+      <span style="color:#f92672">Ec2Instance</span>:
+        <span style="color:#f92672">Type</span>: <span style="color:#ae81ff">AWS::EC2::Instance</span>
+        <span style="color:#f92672">Properties</span>:
+          <span style="color:#f92672">SecurityGroups</span>:
+          - <span style="color:#f92672">Ref</span>: <span style="color:#ae81ff">InstanceSecurityGroup</span>
+          - <span style="color:#ae81ff">MyExistingSecurityGroup</span>
+          <span style="color:#f92672">KeyName</span>:
+            <span style="color:#f92672">Ref</span>: <span style="color:#ae81ff">KeyName</span>
+          <span style="color:#f92672">ImageId</span>: <span style="color:#ae81ff">ami-7a11e213</span>
+      <span style="color:#f92672">InstanceSecurityGroup</span>:
+        <span style="color:#f92672">Type</span>: <span style="color:#ae81ff">AWS::EC2::SecurityGroup</span>
+        <span style="color:#f92672">Properties</span>:
+          <span style="color:#f92672">GroupDescription</span>: <span style="color:#ae81ff">Enable SSH access via port 22</span>
+          <span style="color:#f92672">SecurityGroupIngress</span>:
+          - <span style="color:#f92672">IpProtocol</span>: <span style="color:#ae81ff">tcp</span>
+            <span style="color:#f92672">FromPort</span>: <span style="color:#e6db74">&#39;22&#39;</span>
+            <span style="color:#f92672">ToPort</span>: <span style="color:#e6db74">&#39;22&#39;</span>
+            <span style="color:#f92672">CidrIp</span>: <span style="color:#ae81ff">0.0.0.0</span><span style="color:#ae81ff">/0</span>
+</code></pre></div><p>There are a myriad of these template samples <a href="https://aws.amazon.com/cloudformation/aws-cloudformation-templates/">here</a>.</p>
 <p>I&rsquo;m not going to explain this in too much detail. Parameters define the parameters, and resources define all the AWS services which
 we would like to configure. Here we can see, that we are creating an EC2 instance with a custom Security Group plus and already
 existing security group. ImageId is the AMI which will be used for the EC2 instance. The InstanceSecurityGroup is only defining
 some SSH access to the instance.</p>
-
 <p>That is pretty much it. This can become bloated relatively quickly once, VPCs, ELBs, and ASGs come into play. And CloudFormation
 templates can also contain simple logical switches, like, conditions, ref for variables, maps and other shenanigans.</p>
-
 <p>For example consider this part in the above example:</p>
-
-<pre><code class="language-yaml">      KeyName:
-        Ref: KeyName
-</code></pre>
-
-<p>Here, we use the <code>KeyName</code> parameter as a Reference Value which will be interpolated to the real value, or the default one, as the
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">      <span style="color:#f92672">KeyName</span>:
+        <span style="color:#f92672">Ref</span>: <span style="color:#ae81ff">KeyName</span>
+</code></pre></div><p>Here, we use the <code>KeyName</code> parameter as a Reference Value which will be interpolated to the real value, or the default one, as the
 template gets processed.</p>
-
-<h2 id="codedeploy">CodeDeploy<a href="#codedeploy" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
-
+<h2 id="codedeploy">CodeDeploy</h2>
 <p>If you haven&rsquo;t heard about CodeDeploy yet, please browse the relevant <a href="http://docs.aws.amazon.com/codedeploy/latest/userguide/welcome.html">Documentation</a>
 or follow along for a &ldquo;quick&rdquo; description.</p>
-
 <p>CodeDeploy just does what the name says. It deploys code. Any kind of code, as long as the deployment process is described in a
 file called <code>appspec.yml</code>. It can be easy as coping a file to a specific location or incredibly complex with builds of various
 kinds.</p>
-
 <p>For a simple example look at this configuration:</p>
-
-<pre><code class="language-yaml">    version: 0.0
-    os: linux
-    files:
-      - source: /index.html
-        destination: /var/www/html/
-      - source: /healthy.html
-        destination: /var/www/html/
-    hooks:
-      BeforeInstall:
-        - location: scripts/install_dependencies
-          timeout: 300
-          runas: root
-        - location: scripts/clean_up
-          timeout: 300
-          runas: root
-        - location: scripts/start_server
-          timeout: 300
-          runas: root
-      ApplicationStop:
-        - location: scripts/stop_server
-          timeout: 300
-          runas: root
-</code></pre>
-
-<p>CodeDeploy applications have hooks and life-cycle events which can be used to control the deployment process of an like, starting
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">    <span style="color:#f92672">version</span>: <span style="color:#ae81ff">0.0</span>
+    <span style="color:#f92672">os</span>: <span style="color:#ae81ff">linux</span>
+    <span style="color:#f92672">files</span>:
+      - <span style="color:#f92672">source</span>: <span style="color:#ae81ff">/index.html</span>
+        <span style="color:#f92672">destination</span>: <span style="color:#ae81ff">/var/www/html/</span>
+      - <span style="color:#f92672">source</span>: <span style="color:#ae81ff">/healthy.html</span>
+        <span style="color:#f92672">destination</span>: <span style="color:#ae81ff">/var/www/html/</span>
+    <span style="color:#f92672">hooks</span>:
+      <span style="color:#f92672">BeforeInstall</span>:
+        - <span style="color:#f92672">location</span>: <span style="color:#ae81ff">scripts/install_dependencies</span>
+          <span style="color:#f92672">timeout</span>: <span style="color:#ae81ff">300</span>
+          <span style="color:#f92672">runas</span>: <span style="color:#ae81ff">root</span>
+        - <span style="color:#f92672">location</span>: <span style="color:#ae81ff">scripts/clean_up</span>
+          <span style="color:#f92672">timeout</span>: <span style="color:#ae81ff">300</span>
+          <span style="color:#f92672">runas</span>: <span style="color:#ae81ff">root</span>
+        - <span style="color:#f92672">location</span>: <span style="color:#ae81ff">scripts/start_server</span>
+          <span style="color:#f92672">timeout</span>: <span style="color:#ae81ff">300</span>
+          <span style="color:#f92672">runas</span>: <span style="color:#ae81ff">root</span>
+      <span style="color:#f92672">ApplicationStop</span>:
+        - <span style="color:#f92672">location</span>: <span style="color:#ae81ff">scripts/stop_server</span>
+          <span style="color:#f92672">timeout</span>: <span style="color:#ae81ff">300</span>
+          <span style="color:#f92672">runas</span>: <span style="color:#ae81ff">root</span>
+</code></pre></div><p>CodeDeploy applications have hooks and life-cycle events which can be used to control the deployment process of an like, starting
 the WebServer; making sure files are in the right location; copying files, running configuration management software like puppet,
 ansible or chef; etc, etc.</p>
-
 <p>What can be done in an <code>appspec.yml</code> file is described here: <a href="http://docs.aws.amazon.com/codedeploy/latest/userguide/app-spec-ref.html">Appspec Reference Documentation</a>.</p>
-
 <p>Deployment happens in one of two ways:</p>
-
-<h3 id="github">GitHub<a href="#github" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-
+<h3 id="github">GitHub</h3>
 <p>If the preferred way to deploy the application is from GitHub a commit hash must be used to identify which &ldquo;version&rdquo; of the
 application is to be deployed. For example:</p>
-
-<pre><code class="language-go">    rev = &amp;codedeploy.RevisionLocation{
-        GitHubLocation: &amp;codedeploy.GitHubLocation{
-            CommitId:   aws.String(&quot;kajdf94j0f9k309klksjdfkj&quot;),
-            Repository: aws.String(&quot;Skarlso/furnace-codedeploy-app&quot;),
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#a6e22e">rev</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">codedeploy</span>.<span style="color:#a6e22e">RevisionLocation</span>{
+        <span style="color:#a6e22e">GitHubLocation</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">codedeploy</span>.<span style="color:#a6e22e">GitHubLocation</span>{
+            <span style="color:#a6e22e">CommitId</span>:   <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;kajdf94j0f9k309klksjdfkj&#34;</span>),
+            <span style="color:#a6e22e">Repository</span>: <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;Skarlso/furnace-codedeploy-app&#34;</span>),
         },
-        RevisionType: aws.String(&quot;GitHub&quot;),
+        <span style="color:#a6e22e">RevisionType</span>: <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;GitHub&#34;</span>),
     }
-</code></pre>
-
-<p>Commit Id is the hash of the latest release and repository is the full account/repository pointing to the application.</p>
-
-<h3 id="s3">S3<a href="#s3" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-
+</code></pre></div><p>Commit Id is the hash of the latest release and repository is the full account/repository pointing to the application.</p>
+<h3 id="s3">S3</h3>
 <p>The second way is to use an S3 bucket. The bucket will contain an archived version of the application with a given extension. I&rsquo;m
 saying given extension, because it has to be specified like this (and can be either &lsquo;zip&rsquo;, or &lsquo;tar&rsquo; or &lsquo;tgz&rsquo;):</p>
-
-<pre><code class="language-go">    rev = &amp;codedeploy.RevisionLocation{
-        S3Location: &amp;codedeploy.S3Location{
-            Bucket:     aws.String(&quot;my_codedeploy_bucket&quot;),
-            BundleType: aws.String(&quot;zip&quot;),
-            Key:        aws.String(&quot;my_awesome_app&quot;),
-            Version:    aws.String(&quot;VersionId&quot;),
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#a6e22e">rev</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">codedeploy</span>.<span style="color:#a6e22e">RevisionLocation</span>{
+        <span style="color:#a6e22e">S3Location</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">codedeploy</span>.<span style="color:#a6e22e">S3Location</span>{
+            <span style="color:#a6e22e">Bucket</span>:     <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;my_codedeploy_bucket&#34;</span>),
+            <span style="color:#a6e22e">BundleType</span>: <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;zip&#34;</span>),
+            <span style="color:#a6e22e">Key</span>:        <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;my_awesome_app&#34;</span>),
+            <span style="color:#a6e22e">Version</span>:    <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;VersionId&#34;</span>),
         },
-        RevisionType: aws.String(&quot;S3&quot;),
+        <span style="color:#a6e22e">RevisionType</span>: <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;S3&#34;</span>),
     }
-</code></pre>
-
-<p>Here, we specify the bucket name, the extension, the name of the file and an optional version id, which can be ignored.</p>
-
-<h3 id="deploying">Deploying<a href="#deploying" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-
+</code></pre></div><p>Here, we specify the bucket name, the extension, the name of the file and an optional version id, which can be ignored.</p>
+<h3 id="deploying">Deploying</h3>
 <p>So how does code deploy get either of the applications to our EC2 instances? It uses an agent which is running on all of the
 instances that we create. In order to do this, the agent needs to be present on our instance. For linux this can be achieved with
 the following UserData (UserData in CF is the equivalent of a bootsrap script):</p>
-
-<pre><code class="language-bash">    &quot;UserData&quot; : {
-        &quot;Fn::Base64&quot; : { &quot;Fn::Join&quot; : [ &quot;\n&quot;, [
-            &quot;#!/bin/bash -v&quot;,
-            &quot;sudo yum -y update&quot;,
-            &quot;sudo yum -y install ruby wget&quot;,
-            &quot;cd /home/ec2-user/&quot;,
-            &quot;wget https://aws-codedeploy-eu-central-1.s3.amazonaws.com/latest/install&quot;,
-            &quot;chmod +x ./install&quot;,
-            &quot;sudo ./install auto&quot;,
-            &quot;sudo service codedeploy-agent start&quot;,
-        ] ] }
-    }
-</code></pre>
-
-<p>A simple user data configuration in the CloudFormation template will make sure that every instance that we create will have the
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    <span style="color:#e6db74">&#34;UserData&#34;</span> : <span style="color:#f92672">{</span>
+        <span style="color:#e6db74">&#34;Fn::Base64&#34;</span> : <span style="color:#f92672">{</span> <span style="color:#e6db74">&#34;Fn::Join&#34;</span> : <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;\n&#34;</span>, <span style="color:#f92672">[</span>
+            <span style="color:#e6db74">&#34;#!/bin/bash -v&#34;</span>,
+            <span style="color:#e6db74">&#34;sudo yum -y update&#34;</span>,
+            <span style="color:#e6db74">&#34;sudo yum -y install ruby wget&#34;</span>,
+            <span style="color:#e6db74">&#34;cd /home/ec2-user/&#34;</span>,
+            <span style="color:#e6db74">&#34;wget https://aws-codedeploy-eu-central-1.s3.amazonaws.com/latest/install&#34;</span>,
+            <span style="color:#e6db74">&#34;chmod +x ./install&#34;</span>,
+            <span style="color:#e6db74">&#34;sudo ./install auto&#34;</span>,
+            <span style="color:#e6db74">&#34;sudo service codedeploy-agent start&#34;</span>,
+        <span style="color:#f92672">]</span> <span style="color:#f92672">]</span> <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>A simple user data configuration in the CloudFormation template will make sure that every instance that we create will have the
 CodeDeploy agent running and waiting for instructions. This agent is self updating. Which can cause some trouble if AWS releases a
 broken agent. However unlikely, it can happen. Never the less, once installed, it&rsquo;s no longer a concern to be bothered with.</p>
-
 <p>It communications on HTTPS port 443.</p>
-
 <p>CodeDeploy identifies instances which need to be updated according to our preferences, by tagging the EC2 and Auto Scaling groups.
 Tagging happens in the CloudFormation template through the AutoScalingGroup settings like this:</p>
-
-<pre><code class="language-json">    &quot;Tags&quot; : [
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">    <span style="color:#e6db74">&#34;Tags&#34;</span> <span style="color:#960050;background-color:#1e0010">:</span> [
         {
-            &quot;Key&quot; : &quot;fu_stage&quot;,
-            &quot;Value&quot; : { &quot;Ref&quot;: &quot;AWS::StackName&quot; },
-            &quot;PropagateAtLaunch&quot; : true
+            <span style="color:#f92672">&#34;Key&#34;</span> : <span style="color:#e6db74">&#34;fu_stage&#34;</span>,
+            <span style="color:#f92672">&#34;Value&#34;</span> : { <span style="color:#f92672">&#34;Ref&#34;</span>: <span style="color:#e6db74">&#34;AWS::StackName&#34;</span> },
+            <span style="color:#f92672">&#34;PropagateAtLaunch&#34;</span> : <span style="color:#66d9ef">true</span>
         }
     ]
-</code></pre>
-
-<p>This will give the EC2 instance a tag called <code>fu_stage</code> with value equaling to the name of the stack. Once this is done, CodeDeploy
+</code></pre></div><p>This will give the EC2 instance a tag called <code>fu_stage</code> with value equaling to the name of the stack. Once this is done, CodeDeploy
 looks like this:</p>
-
-<pre><code class="language-go">    params := &amp;codedeploy.CreateDeploymentInput{
-        ApplicationName:               aws.String(appName),
-        IgnoreApplicationStopFailures: aws.Bool(true),
-        DeploymentGroupName:           aws.String(appName + &quot;DeploymentGroup&quot;),
-        Revision:                      revisionLocation(),
-        TargetInstances: &amp;codedeploy.TargetInstances{
-            AutoScalingGroups: []*string{
-                aws.String(&quot;AutoScalingGroupPhysicalID&quot;),
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#a6e22e">params</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">codedeploy</span>.<span style="color:#a6e22e">CreateDeploymentInput</span>{
+        <span style="color:#a6e22e">ApplicationName</span>:               <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#a6e22e">appName</span>),
+        <span style="color:#a6e22e">IgnoreApplicationStopFailures</span>: <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">Bool</span>(<span style="color:#66d9ef">true</span>),
+        <span style="color:#a6e22e">DeploymentGroupName</span>:           <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#a6e22e">appName</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;DeploymentGroup&#34;</span>),
+        <span style="color:#a6e22e">Revision</span>:                      <span style="color:#a6e22e">revisionLocation</span>(),
+        <span style="color:#a6e22e">TargetInstances</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">codedeploy</span>.<span style="color:#a6e22e">TargetInstances</span>{
+            <span style="color:#a6e22e">AutoScalingGroups</span>: []<span style="color:#f92672">*</span><span style="color:#66d9ef">string</span>{
+                <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;AutoScalingGroupPhysicalID&#34;</span>),
             },
-            TagFilters: []*codedeploy.EC2TagFilter{
+            <span style="color:#a6e22e">TagFilters</span>: []<span style="color:#f92672">*</span><span style="color:#a6e22e">codedeploy</span>.<span style="color:#a6e22e">EC2TagFilter</span>{
                 {
-                    Key:   aws.String(&quot;fu_stage&quot;),
-                    Type:  aws.String(&quot;KEY_AND_VALUE&quot;),
-                    Value: aws.String(config.STACKNAME),
+                    <span style="color:#a6e22e">Key</span>:   <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;fu_stage&#34;</span>),
+                    <span style="color:#a6e22e">Type</span>:  <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;KEY_AND_VALUE&#34;</span>),
+                    <span style="color:#a6e22e">Value</span>: <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">String</span>(<span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">STACKNAME</span>),
                 },
             },
         },
-        UpdateOutdatedInstancesOnly: aws.Bool(false),
+        <span style="color:#a6e22e">UpdateOutdatedInstancesOnly</span>: <span style="color:#a6e22e">aws</span>.<span style="color:#a6e22e">Bool</span>(<span style="color:#66d9ef">false</span>),
     }
-</code></pre>
-
-<p>CreateDeploymentInput is the entire parameter list that is needed in order to identify instances to deploy code to. We can see
+</code></pre></div><p>CreateDeploymentInput is the entire parameter list that is needed in order to identify instances to deploy code to. We can see
 here that it looks for an AutoScalingGroup by Physical Id and the tag labeled <code>fu_stage</code>. Once found, it will use
 <code>UpdateOutdatedInstancesOnly</code> to determine if an instance needs to be updated or not. Set to false means, it always updates.</p>
-
-<h1 id="furnace">Furnace<a href="#furnace" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
+<h1 id="furnace">Furnace</h1>
 <p>Where does <a href="https://github.com/Skarlso/go-furnace">Furnace</a> fit in, in all of this? Furnace provides a very easy mechanism to create,
 delete and push code to a CloudFormation stack using CodeDeploy, and a couple of environment properties. Furnace <code>create</code> will
 create a CloudFormation stack according to the provided template, all the while asking for the parameters defined in it for
 flexibility. <code>delete</code> will remove the stack and all affiliated resources except for the created CodeDeploy application. For that,
 there is <code>delete-application</code>. <code>status</code> will display information about the stack: Outputs, Parameters, Id, Name, and status.
 Something like this:</p>
-
-<pre><code class="language-bash">    2017/03/16 21:14:37 Stack state is:  {
-      Capabilities: [&quot;CAPABILITY_IAM&quot;],
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    2017/03/16 21:14:37 Stack state is:  <span style="color:#f92672">{</span>
+      Capabilities: <span style="color:#f92672">[</span><span style="color:#e6db74">&#34;CAPABILITY_IAM&#34;</span><span style="color:#f92672">]</span>,
       CreationTime: 2017-03-16 20:09:38.036 +0000 UTC,
       DisableRollback: false,
-      Outputs: [{
-          Description: &quot;URL of the website&quot;,
-          OutputKey: &quot;URL&quot;,
-          OutputValue: &quot;http://FurnaceSt-ElasticL-ID.eu-central-1.elb.amazonaws.com&quot;
-        }],
-      Parameters: [
-        {
-          ParameterKey: &quot;KeyName&quot;,
-          ParameterValue: &quot;UserKeyPair&quot;
-        },
-        {
-          ParameterKey: &quot;SSHLocation&quot;,
-          ParameterValue: &quot;0.0.0.0/0&quot;
-        },
-        {
-          ParameterKey: &quot;CodeDeployBucket&quot;,
-          ParameterValue: &quot;None&quot;
-        },
-        {
-          ParameterKey: &quot;InstanceType&quot;,
-          ParameterValue: &quot;t2.nano&quot;
-        }
-      ],
-      StackId: &quot;arn:aws:cloudformation:eu-central-1:9999999999999:stack/FurnaceStack/asdfadsf-adsfa3-432d-a-fdasdf&quot;,
-      StackName: &quot;FurnaceStack&quot;,
-      StackStatus: &quot;CREATE_COMPLETE&quot;
-    }
-</code></pre>
-
-<p>( This will later be improved to include created resources as well. )</p>
-
+      Outputs: <span style="color:#f92672">[{</span>
+          Description: <span style="color:#e6db74">&#34;URL of the website&#34;</span>,
+          OutputKey: <span style="color:#e6db74">&#34;URL&#34;</span>,
+          OutputValue: <span style="color:#e6db74">&#34;http://FurnaceSt-ElasticL-ID.eu-central-1.elb.amazonaws.com&#34;</span>
+        <span style="color:#f92672">}]</span>,
+      Parameters: <span style="color:#f92672">[</span>
+        <span style="color:#f92672">{</span>
+          ParameterKey: <span style="color:#e6db74">&#34;KeyName&#34;</span>,
+          ParameterValue: <span style="color:#e6db74">&#34;UserKeyPair&#34;</span>
+        <span style="color:#f92672">}</span>,
+        <span style="color:#f92672">{</span>
+          ParameterKey: <span style="color:#e6db74">&#34;SSHLocation&#34;</span>,
+          ParameterValue: <span style="color:#e6db74">&#34;0.0.0.0/0&#34;</span>
+        <span style="color:#f92672">}</span>,
+        <span style="color:#f92672">{</span>
+          ParameterKey: <span style="color:#e6db74">&#34;CodeDeployBucket&#34;</span>,
+          ParameterValue: <span style="color:#e6db74">&#34;None&#34;</span>
+        <span style="color:#f92672">}</span>,
+        <span style="color:#f92672">{</span>
+          ParameterKey: <span style="color:#e6db74">&#34;InstanceType&#34;</span>,
+          ParameterValue: <span style="color:#e6db74">&#34;t2.nano&#34;</span>
+        <span style="color:#f92672">}</span>
+      <span style="color:#f92672">]</span>,
+      StackId: <span style="color:#e6db74">&#34;arn:aws:cloudformation:eu-central-1:9999999999999:stack/FurnaceStack/asdfadsf-adsfa3-432d-a-fdasdf&#34;</span>,
+      StackName: <span style="color:#e6db74">&#34;FurnaceStack&#34;</span>,
+      StackStatus: <span style="color:#e6db74">&#34;CREATE_COMPLETE&#34;</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>( This will later be improved to include created resources as well. )</p>
 <p>Once the stack is <code>CREATE_COMPLETE</code> a simple <code>push</code> will deliver our application on each instance in the stack. We will get into
 more detail about how these commands are working in Part 2 of this series.</p>
-
-<h1 id="final-words">Final Words<a href="#final-words" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
-
+<h1 id="final-words">Final Words</h1>
 <p>This is it for now.</p>
-
 <p>Join me next time when I will talk about the AWS Go SDK and its intricacies and we will start to look at the basics of Furnace.</p>
-
 <p>As always,
 Thanks for reading!
 Gergely.</p>
 
-			</div>
-			<hr class="post-end">
-			<footer class="post-info">
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>1419 Words</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2017-03-16 20:49 &#43;0000</p>
-			</footer>
-		</article>
-		<div class="post-nav thin">
-			<a class="next-post" href="https://skarlso.github.io/2017/03/17/test-new-hugo/">
-				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>Testing new Hugo if posts are generated properly</span>
-			</a>
-			<a class="prev-post" href="https://skarlso.github.io/2017/03/03/images-on-old-posts/">
-				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>Images on older posts</span>
-			</a>
-		</div>
-		<div id="comments" class="thin">
-</div>
-	</main>
+            </div>
 
-	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
-		<p>
-			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
-		</p>
-	</footer>
+            
 
 
-	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
+        </article>
 
-</body>
+        
 
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+        
+
+
+    </div>
+</main>
+
+
+            
+
+            
+
+        </div>
+        
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </body>
 </html>
