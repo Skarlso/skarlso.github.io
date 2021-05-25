@@ -55,7 +55,7 @@ You could opt in using eval with a constructor parameter, but generally, it was 
 				</nav>
 			</div>
 			<div class="hdr-right hdr-icons">
-				<span class="hdr-social hide-in-mobile"><a href="https://twitter.com/skarlso" target="_blank" rel="noopener" title="Twitter"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a><a href="https://github.com/Skarlso" target="_blank" rel="noopener" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
 			</div>
 		</div>
 	</header>
@@ -90,16 +90,22 @@ You could opt in using eval with a constructor parameter, but generally, it was 
 <p>After much digging and understanding the code, I found, all it does is perform the given operations on the current node. And if the operation is true, it will select that node, otherwise, return false, and ignore that node.</p>
 
 <p>For example <code>$..book[?(@['price'] &gt; 20)]</code> could be translated to:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">return</span> <span class="vi">@_current_node</span><span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> <span class="o">&gt;</span> <span class="mi">20</span></code></pre></div>
+
+<pre><code class="language-ruby">return @_current_node['price'] &gt; 20
+</code></pre>
+
 <p>Checking first if <code>'price'</code> is even a key in <code>@_current_node</code>. Once I&rsquo;ve understood this part, I set on trying to fix eval.</p>
 
 <h3 id="safe-4">SAFE = 4<a href="#safe-4" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
 <p>In ruby, you could extract the part where you Eval and put it into its own proc and set <code>SAFE = 4</code> which will disable some things like system calls.</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="nb">proc</span> <span class="k">do</span>
-  <span class="no">SAFE</span> <span class="o">=</span> <span class="mi">4</span>
-  <span class="nb">eval</span><span class="p">(</span><span class="n">some_expression</span><span class="p">)</span>
-<span class="k">end</span><span class="o">.</span><span class="n">call</span></code></pre></div>
+
+<pre><code class="language-ruby">proc do
+  SAFE = 4
+  eval(some_expression)
+end.call
+</code></pre>
+
 <p>SAFE levels:</p>
 
 <p>$SAFE   Description
@@ -122,7 +128,10 @@ You could opt in using eval with a constructor parameter, but generally, it was 
 <p><img src="/img/nobodylikesyou.jpg" alt="nobodylikesyou" /></p>
 
 <p><code>Object.send</code> is the best way to get some flexibility while still being safe. You basically just call methods on objects by describing said method on an object and giving parameters to it, like:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="mi">1</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="ss">:+</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="mi">3</span></code></pre></div>
+
+<pre><code class="language-ruby">1.send(:+, 2) =&gt; 3
+</code></pre>
+
 <p>This is a very powerful tool in our toolbox which we will exploit immensely.</p>
 
 <p>So let&rsquo;s get to it.</p>
@@ -134,9 +143,15 @@ You could opt in using eval with a constructor parameter, but generally, it was 
 <h2 id="the-expression">The expression<a href="#the-expression" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
 
 <p>How do we get from this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">$..book<span class="o">[</span>?<span class="o">(</span>@<span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> &lt; <span class="m">20</span><span class="o">)]</span></code></pre></div>
+
+<pre><code class="language-bash">$..book[?(@['price'] &lt; 20)]
+</code></pre>
+
 <p>To this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="vi">@_current_node</span><span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> <span class="o">&lt;</span> <span class="mi">20</span></code></pre></div>
+
+<pre><code class="language-ruby">@_current_node['price'] &lt; 20
+</code></pre>
+
 <p>Well. By simple elimination. There are a couple of problems along the way of course. Because this wouldn&rsquo;t be a parser if it couldn&rsquo;t handle ALL the other cases&hellip;</p>
 
 <h3 id="removing-clutter">Removing Clutter<a href="#removing-clutter" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
@@ -174,24 +189,33 @@ You could opt in using eval with a constructor parameter, but generally, it was 
 <p>This, basically lets us pass in some parameters into a dig function on a hash or an array with variadic parameters, which will go on and access those elements in order how they were supplied. Until it either returns a <code>nil</code> or an end result.</p>
 
 <p>For example:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="mi">2</span><span class="o">.</span><span class="mi">3</span><span class="o">.</span><span class="mi">1</span> <span class="p">:</span><span class="mo">001</span> <span class="o">&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="p">{</span><span class="ss">a</span><span class="p">:</span> <span class="p">{</span><span class="ss">b</span><span class="p">:</span> <span class="s1">&#39;c&#39;</span><span class="p">}}</span>
- <span class="o">=&gt;</span> <span class="p">{</span><span class="ss">:a</span><span class="o">=&gt;</span><span class="p">{</span><span class="ss">:b</span><span class="o">=&gt;</span><span class="s2">&#34;c&#34;</span><span class="p">}}</span>
-<span class="mi">2</span><span class="o">.</span><span class="mi">3</span><span class="o">.</span><span class="mi">1</span> <span class="p">:</span><span class="mo">002</span> <span class="o">&gt;</span> <span class="n">a</span><span class="o">.</span><span class="n">dig</span><span class="p">(</span><span class="ss">:a</span><span class="p">,</span> <span class="ss">:b</span><span class="p">)</span>
- <span class="o">=&gt;</span> <span class="s2">&#34;c&#34;</span></code></pre></div>
+
+<pre><code class="language-ruby">2.3.1 :001 &gt; a = {a: {b: 'c'}}
+ =&gt; {:a=&gt;{:b=&gt;&quot;c&quot;}}
+2.3.1 :002 &gt; a.dig(:a, :b)
+ =&gt; &quot;c&quot;
+</code></pre>
+
 <p>Easy. However&hellip; Dig was only added after ruby 2.3 thus, I had to write my own dig for now, until I stop supporting anything below 2.3.</p>
 
 <p>At first, I wanted to add it to the hash class, but it proved to be a futile attempt if I wanted to do it nicely, thus the parser got it as a private method.</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby">    <span class="k">def</span> <span class="nf">dig</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="nb">hash</span><span class="p">)</span>
-      <span class="k">return</span> <span class="nb">hash</span> <span class="k">unless</span> <span class="nb">hash</span><span class="o">.</span><span class="n">is_a?</span> <span class="no">Hash</span>
-      <span class="k">return</span> <span class="kp">nil</span> <span class="k">unless</span> <span class="nb">hash</span><span class="o">.</span><span class="n">key?</span><span class="p">(</span><span class="n">keys</span><span class="o">.</span><span class="n">first</span><span class="p">)</span>
-      <span class="k">return</span> <span class="nb">hash</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">keys</span><span class="o">.</span><span class="n">first</span><span class="p">)</span> <span class="k">if</span> <span class="n">keys</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span>
-      <span class="n">prev</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="n">shift</span>
-      <span class="n">dig</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="nb">hash</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">prev</span><span class="p">))</span>
-    <span class="k">end</span></code></pre></div>
+
+<pre><code class="language-ruby">    def dig(keys, hash)
+      return hash unless hash.is_a? Hash
+      return nil unless hash.key?(keys.first)
+      return hash.fetch(keys.first) if keys.size == 1
+      prev = keys.shift
+      dig(keys, hash.fetch(prev))
+    end
+</code></pre>
+
 <p>And the corresponding regex behind getting a multitude of elements is as follows:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="o">...</span>
-<span class="k">if</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\[&#39;\w+&#39;\]+/</span><span class="p">)</span>
-<span class="o">...</span></code></pre></div>
+
+<pre><code class="language-ruby">...
+if t = scanner.scan(/\['\w+'\]+/)
+...
+</code></pre>
+
 <h4 id="operator">Operator<a href="#operator" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
 <p>Selecting the operator is another interesting part as it can be a single one or multiple and all sorts. Until I realized that no&hellip; it can actually be only a couple.</p>
@@ -201,13 +225,16 @@ You could opt in using eval with a constructor parameter, but generally, it was 
 <p><img src="/img/whattwo.jpg" alt="whattwo" /></p>
 
 <p>Also, after a bit of fiddling and doing and doing a silly case statement first:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">case</span> <span class="n">op</span>
-<span class="k">when</span> <span class="s1">&#39;&gt;&#39;</span>
-  <span class="n">dig</span><span class="p">(</span><span class="vi">@_current_node</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">operand</span>
-<span class="k">when</span> <span class="s1">&#39;&lt;&#39;</span>
-  <span class="n">dig</span><span class="p">(</span><span class="vi">@_current_node</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">operand</span>
-<span class="o">...</span>
-<span class="k">end</span></code></pre></div>
+
+<pre><code class="language-ruby">case op
+when '&gt;'
+  dig(@_current_node, *elements) &gt; operand
+when '&lt;'
+  dig(@_current_node, *elements) &gt; operand
+...
+end
+</code></pre>
+
 <p>&hellip;I promptly saw that this is not how it should be done.</p>
 
 <p>And here comes Object.send.</p>
@@ -215,17 +242,26 @@ You could opt in using eval with a constructor parameter, but generally, it was 
 <p><img src="/img/send.jpg" alt="send" /></p>
 
 <p>This gave me the opportunity to write this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">dig</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="vi">@_current_node</span><span class="p">)</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">operator</span><span class="p">,</span> <span class="n">operand</span><span class="p">)</span></code></pre></div>
+
+<pre><code class="language-ruby">dig(elements, @_current_node).send(operator, operand)
+</code></pre>
+
 <p>Much better. Now I could send all the things in the way of a node.</p>
 
 <p><img src="/img/sendtwo.jpg" alt="send" /></p>
 
 <p>Parsing an op be like:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\s+[&lt;&gt;=][&lt;&gt;=]?\s+?/</span><span class="p">)</span></code></pre></div>
+
+<pre><code class="language-ruby">elsif t = scanner.scan(/\s+[&lt;&gt;=][&lt;&gt;=]?\s+?/)
+</code></pre>
+
 <h4 id="operand">Operand<a href="#operand" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 
 <p>Now comes the final piece. The value which we are comparing. This could either be a simple integer, a floating number, or a word. Hah. So coming up with a regex which fits this tightly took a little fiddling, but eventually I ended up with this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?&#39;?(\w+)?[.,]?(\w+)?&#39;?(\s+)?/</span><span class="p">)</span></code></pre></div>
+
+<pre><code class="language-ruby">elsif t = scanner.scan(/(\s+)?'?(\w+)?[.,]?(\w+)?'?(\s+)?/)
+</code></pre>
+
 <p>Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because an this expression <code>$..book[?(@.price)]</code> is valid. Which is basically just asserting if a given node has a price element.</p>
 
 <h4 id="logical-operators">Logical Operators<a href="#logical-operators" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
@@ -233,34 +269,43 @@ You could opt in using eval with a constructor parameter, but generally, it was 
 <p>The last thing that remains is logical operators, which if you are using eval, is pretty straight forward. It takes care of anything that you might add in like <code>&amp;&amp;, ||, |, &amp;, ^</code> etc etc.</p>
 
 <p>Now, that&rsquo;s something I did with a case though. Until I find a nicer solution. Since we can already parse a single expression it&rsquo;s just a question of breaking down a multi structure expression as the following one: <code>$..book[?(@['price'] &gt; 20 &amp;&amp; @.written.year == 1998)]</code>.</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">exps</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sr">/(&amp;&amp;)|(\|\|)/</span><span class="p">)</span></code></pre></div>
+
+<pre><code class="language-ruby">exps = exp.split(/(&amp;&amp;)|(\|\|)/)
+</code></pre>
+
 <p>This splits up the string by either <code>&amp;&amp;</code> or <code>||</code> and the usage of groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like <code>[true, '&amp;&amp;', false]</code>. You know what could immediately resolve this? Yep&hellip;</p>
 
 <p><img src="/img/saynotoeval.jpg" alt="saynotoeval" />.</p>
 
 <p>I&rsquo;d rather just parse it although technically an eval at this stage wouldn&rsquo;t be that big of a problem&hellip;</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
-  <span class="n">exps</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sr">/(&amp;&amp;)|(\|\|)/</span><span class="p">)</span>
-  <span class="n">ret</span> <span class="o">=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">.</span><span class="n">shift</span><span class="p">)</span>
-  <span class="n">exps</span><span class="o">.</span><span class="n">each_with_index</span> <span class="k">do</span> <span class="o">|</span><span class="n">item</span><span class="p">,</span> <span class="n">index</span><span class="o">|</span>
-    <span class="k">case</span> <span class="n">item</span>
-    <span class="k">when</span> <span class="s1">&#39;&amp;&amp;&#39;</span>
-      <span class="n">ret</span> <span class="o">&amp;&amp;=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="o">]</span><span class="p">)</span>
-    <span class="k">when</span> <span class="s1">&#39;||&#39;</span>
-      <span class="n">ret</span> <span class="o">||=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="o">]</span><span class="p">)</span>
-    <span class="k">end</span>
-  <span class="k">end</span>
-  <span class="n">ret</span>
-<span class="k">end</span></code></pre></div>
+
+<pre><code class="language-ruby">def parse(exp)
+  exps = exp.split(/(&amp;&amp;)|(\|\|)/)
+  ret = parse_exp(exps.shift)
+  exps.each_with_index do |item, index|
+    case item
+    when '&amp;&amp;'
+      ret &amp;&amp;= parse_exp(exps[index + 1])
+    when '||'
+      ret ||= parse_exp(exps[index + 1])
+    end
+  end
+  ret
+end
+</code></pre>
+
 <h1 id="closing-words">Closing words<a href="#closing-words" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
 
 <p>That&rsquo;s it folks. The parser is done. And there is no eval being used. There are some more things here that are interesting. Like, array indexing is allowed in jsonpath which is solved by sending <code>.length</code> to a current node. For example:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">if</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\./</span><span class="p">)</span>
-  <span class="n">sym</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\w+/</span><span class="p">)</span>
-  <span class="n">op</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/./</span><span class="p">)</span>
-  <span class="n">num</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\d+/</span><span class="p">)</span>
-  <span class="k">return</span> <span class="vi">@_current_node</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sym</span><span class="o">.</span><span class="n">to_sym</span><span class="p">)</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">to_sym</span><span class="p">,</span> <span class="n">num</span><span class="o">.</span><span class="n">to_i</span><span class="p">)</span>
-<span class="k">end</span></code></pre></div>
+
+<pre><code class="language-ruby">if scanner.scan(/\./)
+  sym = scanner.scan(/\w+/)
+  op = scanner.scan(/./)
+  num = scanner.scan(/\d+/)
+  return @_current_node.send(sym.to_sym).send(op.to_sym, num.to_i)
+end
+</code></pre>
+
 <p>If an expression begins with a <code>.</code>. So you see that using <code>send</code> will help a lot, and understanding what eval is trying to evaluate and rather writing your own parser, isn&rsquo;t that hard at all using ruby.</p>
 
 <p>I hope you enjoyed reading this little tid-bit as much as I enjoyed writing and drawing it. Leave a comment if your liked the drawings or if you did not and I should never do them again (( I don&rsquo;t really care, this is my blog haha. )). Note to self: I shouldn&rsquo;t draw on the other side of the drawing because of bleed-through.</p>
@@ -284,31 +329,11 @@ Gergely.</p>
 			</a>
 		</div>
 		<div id="comments" class="thin">
-<div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
 </div>
 	</main>
 
 	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a> &#183; <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
+		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
 		<p>
 			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
 		</p>
@@ -316,17 +341,6 @@ Gergely.</p>
 
 
 	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-69463020-2', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
-
 
 </body>
 

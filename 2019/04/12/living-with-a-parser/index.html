@@ -52,7 +52,7 @@
 				</nav>
 			</div>
 			<div class="hdr-right hdr-icons">
-				<span class="hdr-social hide-in-mobile"><a href="https://twitter.com/skarlso" target="_blank" rel="noopener" title="Twitter"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a><a href="https://github.com/Skarlso" target="_blank" rel="noopener" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
 			</div>
 		</div>
 	</header>
@@ -97,8 +97,11 @@
 <p><img src="/img/parser/infinity.jpg" alt="infinity" /></p>
 
 <p>What was then the first trouble that arose after I replaced eval? The parser back then was dumbed down a lot. The bug I faced was a simple infinite loop. The parser works like a lexer. It identifies tokens of certain type and tries to parse them into variables. This lexing had an error.</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="o">-</span>        <span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?&#39;?(\w+)?[.,]?(\w+)?&#39;?(\s+)?/</span><span class="p">)</span> <span class="c1"># @TODO: At this point I should trim somewhere...</span>
-<span class="o">+</span>        <span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?&#39;?.*&#39;?(\s+)?/</span><span class="p">)</span></code></pre></div>
+
+<pre><code class="language-ruby">-        elsif t = scanner.scan(/(\s+)?'?(\w+)?[.,]?(\w+)?'?(\s+)?/) # @TODO: At this point I should trim somewhere...
++        elsif t = scanner.scan(/(\s+)?'?.*'?(\s+)?/)
+</code></pre>
+
 <p>It was caught by this Json Path:</p>
 
 <pre><code>$.acceptNewTasks.[?(@.taskEndpoint == &quot;mps/awesome&quot;)].lastTaskPollTime
@@ -113,7 +116,10 @@
 <p><img src="/img/parser/twins1.jpg" alt="twins1" /></p>
 
 <p>The second problem was the fact that the parser is using strings. Who would have thought that the string <code>2.0</code> in fact does not equal to string <code>2</code>? In Ruby the simplest way of making sure a variable is a Number is by casting the variable to Number or Float. In case it’s not a Number we rescue and move on.</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">el</span> <span class="o">=</span> <span class="nb">Float</span><span class="p">(</span><span class="n">el</span><span class="p">)</span> <span class="k">rescue</span> <span class="n">el</span></code></pre></div>
+
+<pre><code class="language-ruby">el = Float(el) rescue el
+</code></pre>
+
 <p>Incidentally this also solved the problem where the json path contained a number but since everything is a string this, also did not equal: <code>'1' == 1</code>.</p>
 
 <p>Since first the string needed to be a Number.</p>
@@ -125,8 +131,11 @@
 <p>Next came supported operators. The parser only supported the basic operators: <code>&lt;&gt;=</code>. It was missing <code>=~</code> from this. Which meant people who would use regexes to filter JSON would no longer be able to do so. This was only a tiny modification actually:</p>
 
 <p>First, the operator filter needed to be aware&hellip;</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="o">-</span> <span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?[&lt;&gt;=][=&lt;&gt;]?(\s+)?/</span><span class="p">)</span>
-<span class="o">+</span> <span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?[&lt;&gt;=][=~]?(\s+)?/</span><span class="p">)</span></code></pre></div>
+
+<pre><code class="language-ruby">- elsif t = scanner.scan(/(\s+)?[&lt;&gt;=][=&lt;&gt;]?(\s+)?/)
++ elsif t = scanner.scan(/(\s+)?[&lt;&gt;=][=~]?(\s+)?/)
+</code></pre>
+
 <p>With that done, we just <code>.to_regexp</code> it with the power of ruby and <code>send</code> would automatically pick it up. And of course test coverage.</p>
 
 <h1 id="regression">Regression<a href="#regression" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
@@ -138,13 +147,16 @@
 <p><img src="/img/parser/twins2.jpg" alt="twins2" /></p>
 
 <p>Aka, the story of <code>true == 'true'</code>&hellip; Inherently working with strings here makes it difficult to detect when the type boolean is meant or a string which happens to say <code>true</code>. This one was easy to solve as well in the end:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">operand</span> <span class="o">=</span> <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="s1">&#39;true&#39;</span>
-            <span class="kp">true</span>
-        <span class="k">elsif</span> <span class="n">t</span> <span class="o">==</span> <span class="s1">&#39;false&#39;</span>
-            <span class="kp">false</span>
-        <span class="k">else</span>
-            <span class="n">operator</span><span class="o">.</span><span class="n">to_s</span><span class="o">.</span><span class="n">strip</span> <span class="o">==</span> <span class="s1">&#39;=~&#39;</span> <span class="p">?</span> <span class="n">t</span><span class="o">.</span><span class="n">to_regexp</span> <span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">gsub</span><span class="p">(</span><span class="sr">%r{^&#39;|&#39;$}</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span> <span class="c1"># We also handle regexp here.</span>
-        <span class="k">end</span></code></pre></div>
+
+<pre><code class="language-ruby">operand = if t == 'true'
+            true
+        elsif t == 'false'
+            false
+        else
+            operator.to_s.strip == '=~' ? t.to_regexp : t.gsub(%r{^'|'$}, '').strip # We also handle regexp here.
+        end
+</code></pre>
+
 <p>Ignoring the regex part, this was all it needed.</p>
 
 <h2 id="syntax">Syntax<a href="#syntax" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
@@ -158,23 +170,29 @@
 <p>Formatting and comparing numbers gave me a lot of headache. I had to detect whether I’m dealing with a number or a string parsed as a number or a number but that was converted into string or a string that happened to be a number. Geez…</p>
 
 <p>I ended up making it simple like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">el</span> <span class="o">=</span> <span class="nb">Float</span><span class="p">(</span><span class="n">el</span><span class="p">)</span> <span class="k">rescue</span> <span class="n">el</span>
-<span class="n">operand</span> <span class="o">=</span> <span class="nb">Float</span><span class="p">(</span><span class="n">operand</span><span class="p">)</span> <span class="k">rescue</span> <span class="n">operand</span></code></pre></div>
-<p>Basically everything is a number. Doesn’t matter where it came from, what it was in the past… It’s a number if it can be converted. This, of course, also means that a test like this one fails:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby">  <span class="k">def</span> <span class="nf">test_number_match</span>
-    <span class="n">json</span> <span class="o">=</span> <span class="p">{</span>
-      <span class="ss">channels</span><span class="p">:</span><span class="o">[</span>
-        <span class="p">{</span>
-          <span class="ss">elem</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-          <span class="ss">elem</span><span class="p">:</span> <span class="s1">&#39;1&#39;</span>
-        <span class="p">}</span>
-      <span class="o">]</span>
-    <span class="p">}</span><span class="o">.</span><span class="n">to_json</span>
 
-    <span class="n">assert_equal</span> <span class="o">[</span><span class="p">{</span> <span class="s1">&#39;elem&#39;</span> <span class="o">=&gt;</span> <span class="mi">1</span> <span class="p">}</span><span class="o">]</span><span class="p">,</span> <span class="no">JsonPath</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="n">json</span><span class="p">,</span> <span class="s2">&#34;$..channels[?(@.elem == 1)]&#34;</span><span class="p">)</span>
-  <span class="k">end</span></code></pre></div>
+<pre><code class="language-ruby">el = Float(el) rescue el
+operand = Float(operand) rescue operand
+</code></pre>
+
+<p>Basically everything is a number. Doesn’t matter where it came from, what it was in the past… It’s a number if it can be converted. This, of course, also means that a test like this one fails:</p>
+
+<pre><code class="language-ruby">  def test_number_match
+    json = {
+      channels:[
+        {
+          elem: 1,
+        },
+        {
+          elem: '1'
+        }
+      ]
+    }.to_json
+
+    assert_equal [{ 'elem' =&gt; 1 }], JsonPath.on(json, &quot;$..channels[?(@.elem == 1)]&quot;)
+  end
+</code></pre>
+
 <p>Both will match… Even though you’d expect it only to match one. Luckily though… this is exactly how <a href="http://jsonpath.com/">http://jsonpath.com/</a> works as well. An AST would detect that it’s a number type… But since I’m parsing strings here, that would be almost impossible a feat to accomplish in a nice manner.</p>
 
 <h2 id="groups">Groups<a href="#groups" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
@@ -191,18 +209,21 @@
 <h3 id="parentheses">Parentheses<a href="#parentheses" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
 <p>As a first step, we make sure that the parentheses match. It’s possible that someone didn’t pay attention and left out a closing parentheses. Now, there are a couple of way of doing that in Ruby, but I went for the most plain blatant one.</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby">    <span class="k">def</span> <span class="nf">check_parenthesis_count</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
-      <span class="k">return</span> <span class="kp">true</span> <span class="k">unless</span> <span class="n">exp</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&#34;(&#34;</span><span class="p">)</span>
-      <span class="n">depth</span> <span class="o">=</span> <span class="mi">0</span>
-      <span class="n">exp</span><span class="o">.</span><span class="n">chars</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">c</span><span class="o">|</span>
-        <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s1">&#39;(&#39;</span>
-          <span class="n">depth</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="k">elsif</span> <span class="n">c</span> <span class="o">==</span> <span class="s1">&#39;)&#39;</span>
-          <span class="n">depth</span> <span class="o">-=</span> <span class="mi">1</span>
-        <span class="k">end</span>
-      <span class="k">end</span>
-      <span class="n">depth</span> <span class="o">==</span> <span class="mi">0</span>
-    <span class="k">end</span></code></pre></div>
+
+<pre><code class="language-ruby">    def check_parenthesis_count(exp)
+      return true unless exp.include?(&quot;(&quot;)
+      depth = 0
+      exp.chars.each do |c|
+        if c == '('
+          depth += 1
+        elsif c == ')'
+          depth -= 1
+        end
+      end
+      depth == 0
+    end
+</code></pre>
+
 <p>A basic depth counter. We do this first, to avoid parsing an invalid query.</p>
 
 <h3 id="breaking-it-down">Breaking it down<a href="#breaking-it-down" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
@@ -240,18 +261,21 @@
 </code></pre>
 
 <p>Which basically boils down to the fact that Jsonpath can’t handle nested lists like these:</p>
-<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
-  <span class="nt">&#34;phoneNumbers&#34;</span><span class="p">:</span> <span class="p">[</span>
-    <span class="p">[{</span>
-      <span class="nt">&#34;type&#34;</span>  <span class="p">:</span> <span class="s2">&#34;iPhone&#34;</span><span class="p">,</span>
-      <span class="nt">&#34;number&#34;</span><span class="p">:</span> <span class="s2">&#34;0123-4567-8888&#34;</span>
-    <span class="p">}],</span>
-    <span class="p">[{</span>
-      <span class="nt">&#34;type&#34;</span>  <span class="p">:</span> <span class="s2">&#34;home&#34;</span><span class="p">,</span>
-      <span class="nt">&#34;number&#34;</span><span class="p">:</span> <span class="s2">&#34;0123-4567-8910&#34;</span>
-    <span class="p">}]</span>
-  <span class="p">]</span>
-<span class="p">}</span></code></pre></div>
+
+<pre><code class="language-json">{
+  &quot;phoneNumbers&quot;: [
+    [{
+      &quot;type&quot;  : &quot;iPhone&quot;,
+      &quot;number&quot;: &quot;0123-4567-8888&quot;
+    }],
+    [{
+      &quot;type&quot;  : &quot;home&quot;,
+      &quot;number&quot;: &quot;0123-4567-8910&quot;
+    }]
+  ]
+}
+</code></pre>
+
 <p>That isn’t actually the problem of the parser, but Jsonpath itself.</p>
 
 <h1 id="conclusion">Conclusion<a href="#conclusion" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h1>
@@ -267,32 +291,12 @@
 		</div>
 		<div id="comments" class="thin">
 			
-<div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
 
 		</div>
 	</main>
 
 	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a> &#183; <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
+		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
 		<p>
 			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
 		</p>
@@ -300,17 +304,6 @@
 
 
 	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-69463020-2', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
-
 
 </body>
 

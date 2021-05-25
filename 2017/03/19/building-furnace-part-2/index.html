@@ -61,7 +61,7 @@ AWS SDK Fortunately, the Go SDK for AWS is quiet verbose and littered with examp
 				</nav>
 			</div>
 			<div class="hdr-right hdr-icons">
-				<span class="hdr-social hide-in-mobile"><a href="https://twitter.com/skarlso" target="_blank" rel="noopener" title="Twitter"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a><a href="https://github.com/Skarlso" target="_blank" rel="noopener" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
 			</div>
 		</div>
 	</header>
@@ -118,36 +118,45 @@ make in-lining possible. We&rsquo;ll see later that they are used to a great ext
 constructing Input structs and make for poor aesthetics.</p>
 
 <p>This is something I&rsquo;m returning in a test for stubbing a client call:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">		<span class="k">return</span> <span class="o">&amp;</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesOutput</span><span class="p">{</span>
-			<span class="nx">StackResourceSummaries</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">StackResourceSummary</span><span class="p">{</span>
-				<span class="p">{</span>
-					<span class="nx">ResourceType</span><span class="p">:</span>       <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;NoASG&#34;</span><span class="p">),</span>
-					<span class="nx">PhysicalResourceId</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;arn::whatever&#34;</span><span class="p">),</span>
-				<span class="p">},</span>
-			<span class="p">},</span>
-		<span class="p">}</span></code></pre></div>
+
+<pre><code class="language-go">		return &amp;cloudformation.ListStackResourcesOutput{
+			StackResourceSummaries: []*cloudformation.StackResourceSummary{
+				{
+					ResourceType:       aws.String(&quot;NoASG&quot;),
+					PhysicalResourceId: aws.String(&quot;arn::whatever&quot;),
+				},
+			},
+		}
+</code></pre>
+
 <p>This doesn&rsquo;t look so appealing, but one gets used to it quickly.</p>
 
 <h2 id="error-handling">Error handling<a href="#error-handling" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
 
 <p>Errors also have their own types. An AWS error looks like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">if</span> <span class="nx">awsErr</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">err</span><span class="p">.(</span><span class="nx">awserr</span><span class="p">.</span><span class="nx">Error</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
-    <span class="p">}</span>
-<span class="p">}</span></code></pre></div>
+
+<pre><code class="language-go">if err != nil {
+    if awsErr, ok := err.(awserr.Error); ok {
+    }
+}
+</code></pre>
+
 <p>First, we check if error is nil, than we type check if the error is an AWS error or something different. In the wild, this will
 look something like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="nx">awsErr</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">err</span><span class="p">.(</span><span class="nx">awserr</span><span class="p">.</span><span class="nx">Error</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
-			<span class="k">if</span> <span class="nx">awsErr</span><span class="p">.</span><span class="nf">Code</span><span class="p">()</span> <span class="o">!=</span> <span class="nx">codedeploy</span><span class="p">.</span><span class="nx">ErrCodeDeploymentGroupAlreadyExistsException</span> <span class="p">{</span>
-				<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">awsErr</span><span class="p">.</span><span class="nf">Code</span><span class="p">())</span>
-				<span class="k">return</span> <span class="nx">err</span>
-			<span class="p">}</span>
-			<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;DeploymentGroup already exists. Nothing to do.&#34;</span><span class="p">)</span>
-			<span class="k">return</span> <span class="kc">nil</span>
-		<span class="p">}</span>
-		<span class="k">return</span> <span class="nx">err</span>
-	<span class="p">}</span></code></pre></div>
+
+<pre><code class="language-go">	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() != codedeploy.ErrCodeDeploymentGroupAlreadyExistsException {
+				log.Println(awsErr.Code())
+				return err
+			}
+			log.Println(&quot;DeploymentGroup already exists. Nothing to do.&quot;)
+			return nil
+		}
+		return err
+	}
+</code></pre>
+
 <p>If it&rsquo;s an AWS error, we can check further for the error code that it returns in order to identify what to handle, or what to throw
 on to the caller to a potential fatal. Here, I&rsquo;m ignoring the AlreadyExistsException because, if it does, we just go on to a next
 action.</p>
@@ -172,48 +181,60 @@ them through playing with the API and focused experimentation.</p>
 situations to take in effect, like a Stage being <code>CREATE_COMPLETE</code>. The Go waiters, however, don&rsquo;t allow for callback to be fired,
 or for running blocks, like the ruby SDK does. For this, I wrote a handy little waiter for myself, which outputs a spinner to see
 that we are currently waiting for something and not frozen in time. This waiter looks like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// WaitForFunctionWithStatusOutput waits for a function to complete its action.
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">WaitForFunctionWithStatusOutput</span><span class="p">(</span><span class="nx">state</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">freq</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">f</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-	<span class="nx">done</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span>
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-		<span class="nf">f</span><span class="p">()</span>
-		<span class="nx">done</span> <span class="o">&lt;-</span> <span class="kc">true</span>
-	<span class="p">}()</span>
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">counter</span> <span class="o">:=</span> <span class="mi">0</span>
-		<span class="k">for</span> <span class="p">{</span>
-			<span class="nx">counter</span> <span class="p">=</span> <span class="p">(</span><span class="nx">counter</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">Spinners</span><span class="p">[</span><span class="nx">config</span><span class="p">.</span><span class="nx">SPINNER</span><span class="p">])</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;\r[%s] Waiting for state: %s&#34;</span><span class="p">,</span> <span class="nf">yellow</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">Spinners</span><span class="p">[</span><span class="nx">config</span><span class="p">.</span><span class="nx">SPINNER</span><span class="p">][</span><span class="nx">counter</span><span class="p">])),</span> <span class="nf">red</span><span class="p">(</span><span class="nx">state</span><span class="p">))</span>
-			<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">freq</span><span class="p">)</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-			<span class="k">select</span> <span class="p">{</span>
-			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">done</span><span class="p">:</span>
-				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">()</span>
-				<span class="k">break</span>
-			<span class="k">default</span><span class="p">:</span>
-			<span class="p">}</span>
-		<span class="p">}</span>
-	<span class="p">}()</span>
 
-	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
-<span class="p">}</span></code></pre></div>
+<pre><code class="language-go">// WaitForFunctionWithStatusOutput waits for a function to complete its action.
+func WaitForFunctionWithStatusOutput(state string, freq int, f func()) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	done := make(chan bool)
+	go func() {
+		defer wg.Done()
+		f()
+		done &lt;- true
+	}()
+	go func() {
+		counter := 0
+		for {
+			counter = (counter + 1) % len(Spinners[config.SPINNER])
+			fmt.Printf(&quot;\r[%s] Waiting for state: %s&quot;, yellow(string(Spinners[config.SPINNER][counter])), red(state))
+			time.Sleep(time.Duration(freq) * time.Second)
+			select {
+			case &lt;-done:
+				fmt.Println()
+				break
+			default:
+			}
+		}
+	}()
+
+	wg.Wait()
+}
+</code></pre>
+
 <p>And I&rsquo;m calling it with the following method:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">utils</span><span class="p">.</span><span class="nf">WaitForFunctionWithStatusOutput</span><span class="p">(</span><span class="s">&#34;DELETE_COMPLETE&#34;</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">WAITFREQUENCY</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">cfClient</span><span class="p">.</span><span class="nx">Client</span><span class="p">.</span><span class="nf">WaitUntilStackDeleteComplete</span><span class="p">(</span><span class="nx">describeStackInput</span><span class="p">)</span>
-	<span class="p">})</span></code></pre></div>
+
+<pre><code class="language-go">	utils.WaitForFunctionWithStatusOutput(&quot;DELETE_COMPLETE&quot;, config.WAITFREQUENCY, func() {
+		cfClient.Client.WaitUntilStackDeleteComplete(describeStackInput)
+	})
+</code></pre>
+
 <p>This would output these lines to the console:</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="o">[</span><span class="se">\]</span> Waiting <span class="k">for</span> state: DELETE_COMPLETE</code></pre></div>
+
+<pre><code class="language-bash">[\] Waiting for state: DELETE_COMPLETE
+</code></pre>
+
 <p>The spinner can be configured to be one of the following types:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="nx">Spinners</span> <span class="p">=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">`←↖↑↗→↘↓↙`</span><span class="p">,</span>
-	<span class="s">`▁▃▄▅▆▇█▇▆▅▄▃`</span><span class="p">,</span>
-	<span class="s">`┤┘┴└├┌┬┐`</span><span class="p">,</span>
-	<span class="s">`◰◳◲◱`</span><span class="p">,</span>
-	<span class="s">`◴◷◶◵`</span><span class="p">,</span>
-	<span class="s">`◐◓◑◒`</span><span class="p">,</span>
-	<span class="s">`⣾⣽⣻⢿⡿⣟⣯⣷`</span><span class="p">,</span>
-	<span class="s">`|/-\`</span><span class="p">}</span></code></pre></div>
+
+<pre><code class="language-go">var Spinners = []string{`←↖↑↗→↘↓↙`,
+	`▁▃▄▅▆▇█▇▆▅▄▃`,
+	`┤┘┴└├┌┬┐`,
+	`◰◳◲◱`,
+	`◴◷◶◵`,
+	`◐◓◑◒`,
+	`⣾⣽⣻⢿⡿⣟⣯⣷`,
+	`|/-\`}
+</code></pre>
+
 <p>Handy.</p>
 
 <p>And with that, let&rsquo;s dive into the basics of Furnace.</p>
@@ -238,8 +259,9 @@ As of the writing of this post, the following commands are available:
 <p>These commands represent the heart of furnace. I would like to keep these to a minimum, but I do plan on adding more, like
 <code>update</code> and <code>rollout</code>. Further details and help messages on these commands can be obtained by running: <code>./furnace help</code> or
 <code>./furnace help create</code>.</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">❯ ./furnace <span class="nb">help</span> push
-Usage: furnace push appName <span class="o">[</span>-s3<span class="o">]</span>
+
+<pre><code class="language-bash">❯ ./furnace help push
+Usage: furnace push appName [-s3]
 
 Push a version of the application to a stack
 
@@ -247,7 +269,9 @@ Examples:
   furnace push
   furnace push appName
   furnace push appName -s3
-  furnace push -s3</code></pre></div>
+  furnace push -s3
+</code></pre>
+
 <h3 id="config">config<a href="#config" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
 <p>Contains the configuration loader and some project wide defaults which are as follows:
@@ -343,31 +367,11 @@ Gergely.</p>
 			</a>
 		</div>
 		<div id="comments" class="thin">
-<div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
 </div>
 	</main>
 
 	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a> &#183; <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
+		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
 		<p>
 			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
 		</p>
@@ -375,17 +379,6 @@ Gergely.</p>
 
 
 	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-69463020-2', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
-
 
 </body>
 

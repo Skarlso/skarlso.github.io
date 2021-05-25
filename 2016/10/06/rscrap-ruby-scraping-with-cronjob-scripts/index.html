@@ -61,7 +61,7 @@ Hence, I&rsquo;ve come up with RScrap. Which is a bunch of Ruby scripts run as c
 				</nav>
 			</div>
 			<div class="hdr-right hdr-icons">
-				<span class="hdr-social hide-in-mobile"><a href="https://twitter.com/skarlso" target="_blank" rel="noopener" title="Twitter"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a><a href="https://github.com/Skarlso" target="_blank" rel="noopener" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+				<button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
 			</div>
 		</div>
 	</header>
@@ -100,27 +100,33 @@ Hence, I&rsquo;ve come up with RScrap. Which is a bunch of Ruby scripts run as c
 <h2 id="the-main-scraper">The main scraper<a href="#the-main-scraper" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
 
 <p>The main scraper, is simply bunch of convenience methods that wrap handling and working with the database and the telegram bot. That&rsquo;s all. It&rsquo;s very simple. Very short. The Telegram part is just this bit:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">send_message</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-  <span class="no">Telegram</span><span class="o">::</span><span class="no">Bot</span><span class="o">::</span><span class="no">Client</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="vi">@token</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">bot</span><span class="o">|</span>
-    <span class="n">bot</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">send_message</span><span class="p">(</span><span class="ss">chat_id</span><span class="p">:</span> <span class="vi">@id</span><span class="p">,</span> <span class="ss">text</span><span class="p">:</span> <span class="n">text</span><span class="p">)</span>
-  <span class="k">end</span>
-<span class="k">end</span></code></pre></div>
+
+<pre><code class="language-ruby">def send_message(text)
+  Telegram::Bot::Client.run(@token) do |bot|
+    bot.api.send_message(chat_id: @id, text: text)
+  end
+end
+</code></pre>
+
 <p>Straightforward. Creating an interactive bot, would look something like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="ch">#!/usr/bin/env ruby</span>
-<span class="nb">require</span> <span class="s1">&#39;telegram/bot&#39;</span>
 
-<span class="n">token</span> <span class="o">=</span> <span class="s1">&#39;YOUR_TELEGRAM_BOT_API_TOKEN&#39;</span>
+<pre><code class="language-ruby">#!/usr/bin/env ruby
+require 'telegram/bot'
 
-<span class="no">Telegram</span><span class="o">::</span><span class="no">Bot</span><span class="o">::</span><span class="no">Client</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">token</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">bot</span><span class="o">|</span>
-  <span class="n">bot</span><span class="o">.</span><span class="n">listen</span> <span class="k">do</span> <span class="o">|</span><span class="n">message</span><span class="o">|</span>
-    <span class="k">case</span> <span class="n">message</span><span class="o">.</span><span class="n">text</span>
-    <span class="k">when</span> <span class="s1">&#39;/start&#39;</span>
-      <span class="n">bot</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">send_message</span><span class="p">(</span><span class="ss">chat_id</span><span class="p">:</span> <span class="n">message</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="ss">text</span><span class="p">:</span> <span class="s2">&#34;Hello, </span><span class="si">#{</span><span class="n">message</span><span class="o">.</span><span class="n">from</span><span class="o">.</span><span class="n">first_name</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
-    <span class="k">when</span> <span class="s1">&#39;/stop&#39;</span>
-      <span class="n">bot</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">send_message</span><span class="p">(</span><span class="ss">chat_id</span><span class="p">:</span> <span class="n">message</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="ss">text</span><span class="p">:</span> <span class="s2">&#34;Bye, </span><span class="si">#{</span><span class="n">message</span><span class="o">.</span><span class="n">from</span><span class="o">.</span><span class="n">first_name</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
-    <span class="k">end</span>
-  <span class="k">end</span>
-<span class="k">end</span></code></pre></div>
+token = 'YOUR_TELEGRAM_BOT_API_TOKEN'
+
+Telegram::Bot::Client.run(token) do |bot|
+  bot.listen do |message|
+    case message.text
+    when '/start'
+      bot.api.send_message(chat_id: message.chat.id, text: &quot;Hello, #{message.from.first_name}&quot;)
+    when '/stop'
+      bot.api.send_message(chat_id: message.chat.id, text: &quot;Bye, #{message.from.first_name}&quot;)
+    end
+  end
+end
+</code></pre>
+
 <p>Basically, it will listen, and than you can send it messages and based on the parsed <code>message.text</code> you can define functions to call. For example, for rscrap I could define something like <code>run_script(script)</code>. And the command would be: <code>/run reddit</code>. Which will execute my reddit script. The possibilities are endless.</p>
 
 <h2 id="the-scripts">The scripts<a href="#the-scripts" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
@@ -128,28 +134,34 @@ Hence, I&rsquo;ve come up with RScrap. Which is a bunch of Ruby scripts run as c
 <p>The scripts use nokogiri to parse a web page, and than return a URL which will be sent by the TelegramBot. They are also saved in the database so that when a new comic strip comes out, I know that it&rsquo;s new. For reddit, I&rsquo;m saving a timestamp as well, and I collect everything after that timestamp through the reddit API as JSON, and send it as a bundled message with shortified links to the posts using bit.ly.</p>
 
 <p>The scraping is most of the times the same for every comic. Thus, there is a helper method for it. The script itself, is very short. For example, lets look at gunnerkrigg court.</p>
-<div class="highlight"><pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">require_relative</span> <span class="s1">&#39;../rscrap&#39;</span>
-<span class="nb">require</span> <span class="s1">&#39;nokogiri&#39;</span>
-<span class="nb">require</span> <span class="s1">&#39;open-uri&#39;</span>
 
-<span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://www.gunnerkrigg.com&#39;</span>
-<span class="n">scrap</span> <span class="o">=</span> <span class="no">Rscrap</span><span class="o">.</span><span class="n">new</span>
-<span class="n">page</span> <span class="o">=</span> <span class="no">Nokogiri</span><span class="o">::</span><span class="no">HTML</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>
-<span class="n">comic_id</span> <span class="o">=</span> <span class="n">page</span><span class="o">.</span><span class="n">css</span><span class="p">(</span><span class="s1">&#39;img.comic_image&#39;</span><span class="p">)</span><span class="o">[</span><span class="mi">0</span><span class="o">].</span><span class="n">select</span> <span class="p">{</span> <span class="o">|</span><span class="n">e</span><span class="o">|</span> <span class="n">e</span> <span class="k">if</span> <span class="n">e</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;src&#39;</span> <span class="p">}</span><span class="o">[</span><span class="mi">0</span><span class="o">][</span><span class="mi">1</span><span class="o">]</span>
-<span class="n">new_comic</span> <span class="o">=</span> <span class="s2">&#34;</span><span class="si">#{</span><span class="n">url</span><span class="si">}#{</span><span class="n">comic_id</span><span class="si">}</span><span class="s2">&#34;</span>
-<span class="n">scrap</span><span class="o">.</span><span class="n">send_new_comic</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">new_comic</span><span class="p">)</span></code></pre></div>
+<pre><code class="language-ruby">require_relative '../rscrap'
+require 'nokogiri'
+require 'open-uri'
+
+url = 'http://www.gunnerkrigg.com'
+scrap = Rscrap.new
+page = Nokogiri::HTML(open(url))
+comic_id = page.css('img.comic_image')[0].select { |e| e if e[0] == 'src' }[0][1]
+new_comic = &quot;#{url}#{comic_id}&quot;
+scrap.send_new_comic(url, new_comic)
+</code></pre>
+
 <p>The interesting part of it is this bit: <code>comic_id = page.css('img.comic_image')[0].select { |e| e if e[0] == 'src' }[0][1]</code>. It extracts the URL for the comic image, and stores it as an &ldquo;id&rdquo; of the comic. This than, is sent as a message which Telegram will embed. There is no need to visit the web page, the image is in your feed and you can view it directly. Just like an RSS ready.</p>
 
 <h2 id="cron">Cron<a href="#cron" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
 
 <p>These scripts are best used in a cron job. The comics are usually running with a daily frequency, where as the reddit gatherer is running with an hour frequency. Basically, I&rsquo;m receiving updates on an hourly basis if there are new posts by then. Running ruby from cron was a bit tricky. I&rsquo;m using bundler for the environment, and came up with this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash"><span class="m">0</span> <span class="m">6</span>-23 * * * /bin/bash -l -c <span class="s1">&#39;cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/reddit.rb&#39;</span>
-<span class="m">0</span> <span class="m">8</span>,22 * * * /bin/bash -l -c <span class="s1">&#39;cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/gunnerkrigg.rb&#39;</span>
-<span class="m">0</span> <span class="m">8</span>,22 * * * /bin/bash -l -c <span class="s1">&#39;cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/aws_blog.rb&#39;</span>
-<span class="m">0</span> <span class="m">5</span>,23 * * * /bin/bash -l -c <span class="s1">&#39;cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/goblinscomic.rb&#39;</span>
-<span class="m">0</span> <span class="m">6</span>,20 * * * /bin/bash -l -c <span class="s1">&#39;cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/xkcd.rb&#39;</span>
-<span class="m">0</span> <span class="m">7</span>,19 * * * /bin/bash -l -c <span class="s1">&#39;cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/commitstrip.rb&#39;</span>
-<span class="m">0</span> <span class="m">8</span> * * * /bin/bash -l -c <span class="s1">&#39;cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/sequiential_art.rb&#39;</span></code></pre></div>
+
+<pre><code class="language-bash">0 6-23 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/reddit.rb'
+0 8,22 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/gunnerkrigg.rb'
+0 8,22 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/aws_blog.rb'
+0 5,23 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/goblinscomic.rb'
+0 6,20 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/xkcd.rb'
+0 7,19 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/commitstrip.rb'
+0 8 * * * /bin/bash -l -c 'cd /home/&lt;youruser&gt;/rubyproj/rscrap &amp;&amp; bundle exec ruby scripts/sequiential_art.rb'
+</code></pre>
+
 <p>And a telegram message for all these things, looks like this:
 Reddit:
 <img src="https://github.com/Skarlso/rscrap/raw/master/shorten.png" alt="TelegramIMReddit" />
@@ -181,31 +193,11 @@ Gergely.</p>
 			</a>
 		</div>
 		<div id="comments" class="thin">
-<div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
 </div>
 	</main>
 
 	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a> &#183; <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
+		<p>&copy; 2021 <a href="https://skarlso.github.io/">Gergely Brautigam</a>[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)</p>
 		<p>
 			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://skarlso.github.io/posts/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
 		</p>
@@ -213,17 +205,6 @@ Gergely.</p>
 
 
 	<script src="https://skarlso.github.io/js/main.min.4acd331997be4b64e30f47c568e49ba9ad887432eb559fcd232d73a3860134c5.js" integrity="sha256-Ss0zGZe+S2TjD0fFaOSbqa2IdDLrVZ/NIy1zo4YBNMU="></script>
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-69463020-2', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
-
 
 </body>
 
