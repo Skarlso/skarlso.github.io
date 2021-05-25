@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>archive on Ramblings of a cloud engineer</title>
@@ -6,17 +6,118 @@
     <description>Recent content in archive on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-GB</language>
-    <lastBuildDate>Tue, 19 Mar 2019 21:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/archive/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 19 Mar 2019 21:01:00 +0100</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/categories/archive/index.xml" rel="self" type="application/rss+xml" />
+    
     <item>
       <title>Cronohub: Archive from anywhere to anywhere</title>
       <link>https://skarlso.github.io/2019/03/19/cronohub/</link>
       <pubDate>Tue, 19 Mar 2019 21:01:00 +0100</pubDate>
-      
       <guid>https://skarlso.github.io/2019/03/19/cronohub/</guid>
-      <description>Intro Good afternoon folks.
-Today, I would like to talk a little bit about Cronohub. It&amp;rsquo;s a Python application which you can use to archive anything from anywhere to anywhere. It uses plugins to archive this versatility.
-Let me show you some of its features.
-Main Usage Cronohub is a python application which uses the power and ease of usage of Python to give the user a framework. This Framework can then be used to implement concrete functionality in the form of plugins.</description>
+      <description>&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
+&lt;p&gt;Good afternoon folks.&lt;/p&gt;
+&lt;p&gt;Today, I would like to talk a little bit about &lt;a href=&#34;https://github.com/cronohub/cronohub&#34;&gt;Cronohub&lt;/a&gt;. It&amp;rsquo;s a Python application
+which you can use to archive anything from anywhere to anywhere. It uses plugins to archive this versatility.&lt;/p&gt;
+&lt;p&gt;Let me show you some of its features.&lt;/p&gt;
+&lt;h1 id=&#34;main-usage&#34;&gt;Main Usage&lt;/h1&gt;
+&lt;p&gt;Cronohub is a python application which uses the power and ease of usage of Python to give the user a
+framework. This Framework can then be used to implement concrete functionality in the form of plugins.&lt;/p&gt;
+&lt;p&gt;The plugins provide the essential working logic for Cronohub. Cronohub itself, is basically a Hub for these
+plugins.&lt;/p&gt;
+&lt;p&gt;What can Cronohub be actually used for? Say, you have a gazillion Github repositories you would like to archive to a
+S3 bucket. Or SCP to another server. Or to ownCloud&amp;hellip; You would use cronohub as such:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;❯ cronohub -s {github,gitlab} -t {s3,owncloud,scp}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;It is this simple. What&amp;rsquo;s going on here then? &lt;code&gt;-s&lt;/code&gt; tells Cronohub to use a source plugin called &lt;code&gt;github&lt;/code&gt; where as
+&lt;code&gt;-t&lt;/code&gt; tells it to use a target plugin called &lt;code&gt;s3&lt;/code&gt; or &lt;code&gt;owncloud&lt;/code&gt; or an &lt;code&gt;scp&lt;/code&gt; operation.&lt;/p&gt;
+&lt;h2 id=&#34;under-the-hood&#34;&gt;Under the hood&lt;/h2&gt;
+&lt;p&gt;What happens then is that the source plugin downloads the repositories for a given user. The plugins themselves can
+require certain configuration options to be provided. Like environment properties. To get the Help of a plugin you
+can simply ask Cronohub like this:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;❯ cronohub help --source-help github
+Help (github source plugin):
+    - Environment Property:
+        CRONO_GITHUB_TOKEN: a token with access to listing repositories for a given user.
+    - File that filters the list of repositories to archive. If not present, all will be archived.
+        ~/.config/cronohub/configurations/github/.repo_list
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;It will display help information for that plugin.&lt;/p&gt;
+&lt;p&gt;Once the source plugin finished downloading the requested repositories to a given location it will pass on a list
+of files to the target plugin for archiving. The target plugin takes this list of files and will add a timestamp
+to the file and upload them with the requested operation.&lt;/p&gt;
+&lt;p&gt;The plugins take care of parallelization or threading if this makes it faster. For example the github plugin downloads
+at most 5 archive files concurrently.&lt;/p&gt;
+&lt;h1 id=&#34;plugins&#34;&gt;Plugins&lt;/h1&gt;
+&lt;p&gt;What are plugins then? The plugins adhere to an ABC. An Abstract Base Class. This class defines the abilities and
+structure of a plugin. It looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; abc &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; ABCMeta, abstractmethod
+
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;CronohubSourcePlugin&lt;/span&gt;(metaclass&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;ABCMeta):
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;    This is the basic definition of a CronoHub plugin.
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;    &amp;#34;&amp;#34;&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;@abstractmethod&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;validate&lt;/span&gt;(self):
+        &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
+
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;@abstractmethod&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;help&lt;/span&gt;(self):
+        &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
+
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;@abstractmethod&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;fetch&lt;/span&gt;(self):
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&amp;#34;
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        Returns a tuple (str, str) where there first parameter is the name of the
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        archive and the second is the location as a full path. Exp:
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        (&amp;#34;my-project-12345&amp;#34;, &amp;#34;/home/user/projects/my-project/my-project.tar.gz&amp;#34;)
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        &amp;#34;&amp;#34;&amp;#34;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Validation will be called before the plugin can be used. This method can be used to validate settings
+for a plugin, for example if a token is provided for the github plugin. Or a bucket name is defined for the
+S3 plugin etc.&lt;/p&gt;
+&lt;p&gt;Help will display information just like we saw above and fetch will actually perform the downloading or
+fetching of files to later archive.&lt;/p&gt;
+&lt;p&gt;Plugins are located in this repository: &lt;a href=&#34;https://github.com/cronohub/plugins&#34;&gt;Cronohub plugins&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Hopefully, at some point I&amp;rsquo;ll finish &lt;a href=&#34;https://cronohub.org&#34;&gt;https://cronohub.org&lt;/a&gt; and then there will be an online repository for these.&lt;/p&gt;
+&lt;p&gt;Plugins are located at &lt;code&gt;~/.config/cronohub/plugins/{target,source}&lt;/code&gt;. Each plugin must take care of its own
+dependencies via a &lt;code&gt;requirements.txt&lt;/code&gt; file.&lt;/p&gt;
+&lt;p&gt;Right now, there are only a few plugins available.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;Source Plugins&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;Target Plugins&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;Github&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;S3&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;Gitlab&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;SCP&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;Local&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ownCloud&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;No-Op&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;More are hopefully on the way. Local is simply gathering a list of files from a folder. And no-op is what it says. It&amp;rsquo;s good for debugging a source plugin as it doesn&amp;rsquo;t do anything else but displays the files it got from the source plugin.&lt;/p&gt;
+&lt;h1 id=&#34;installation&#34;&gt;Installation&lt;/h1&gt;
+&lt;p&gt;Installing is dead trivial. Simply run:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;pip install cronohub
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&amp;hellip; and that&amp;rsquo;s it. It&amp;rsquo;s published on pypi.org.&lt;/p&gt;
+&lt;h1 id=&#34;contribution&#34;&gt;Contribution&lt;/h1&gt;
+&lt;p&gt;Plugin contributions are heartily welcomed!&lt;/p&gt;
+&lt;p&gt;And that&amp;rsquo;s it.&lt;/p&gt;
+&lt;p&gt;Thank you for reading,&lt;/p&gt;
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
     </item>
     
   </channel>

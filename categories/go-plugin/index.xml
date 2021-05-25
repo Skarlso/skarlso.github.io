@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>go-plugin on Ramblings of a cloud engineer</title>
@@ -6,17 +6,359 @@
     <description>Recent content in go-plugin on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-GB</language>
-    <lastBuildDate>Mon, 29 Oct 2018 07:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/go-plugin/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 29 Oct 2018 07:01:00 +0100</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/categories/go-plugin/index.xml" rel="self" type="application/rss+xml" />
+    
     <item>
       <title>Extensive tutorial on go-plugin.</title>
       <link>https://skarlso.github.io/2018/10/29/go-plugin-tutorial/</link>
       <pubDate>Mon, 29 Oct 2018 07:01:00 +0100</pubDate>
-      
       <guid>https://skarlso.github.io/2018/10/29/go-plugin-tutorial/</guid>
-      <description>Intro If you don&amp;rsquo;t know what go-plugin is, don&amp;rsquo;t worry, here is a small introduction on the subject matter:
-Back in the old days when Go didn&amp;rsquo;t have the plugin package, HashiCorp was desperately looking for a way to use plugins.
-In the old days, Lua plus Go wasn&amp;rsquo;t really a thing yet, and to be honest, nobody wants to write Lua ( joking!).
-And thus Mitchell had this brilliant idea of using RPC over the local network to serve a local interface as something that could easily be implemented with any other language that supported RPC.</description>
+      <description>&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
+&lt;p&gt;If you don&amp;rsquo;t know what go-plugin is, don&amp;rsquo;t worry, here is a small introduction on the subject matter:&lt;/p&gt;
+&lt;p&gt;Back in the old days when Go didn&amp;rsquo;t have the &lt;code&gt;plugin&lt;/code&gt; package, HashiCorp was desperately looking for a way to use plugins.&lt;/p&gt;
+&lt;p&gt;In the old days, Lua plus Go wasn&amp;rsquo;t really a thing yet, and to be honest, nobody wants to write Lua ( joking!).&lt;/p&gt;
+&lt;p&gt;And thus Mitchell had this brilliant idea of using RPC over the local network to serve a local interface as something that could easily be implemented with any other language that supported RPC. This sounds convoluted but has many benefits! For example, your code will never crash because of a plugin and the ability to use any language to implement a plugin. Not just Go.&lt;/p&gt;
+&lt;p&gt;It has been a battle-hardened solution for years now and is being actively used by Terraform, Vault, Consule, and especially Packer. All using go-plugin in order to provide a much needed flexibility. Writing a plugin is easy. Or so they say.&lt;/p&gt;
+&lt;p&gt;It can get complicated quickly, for example, if you are trying to use GRPC. You can lose sight of what exactly you&amp;rsquo;ll need to implement, where and why; or utilizing various languages or using go-plugins in your own project and extending your CLI with pluggable components.&lt;/p&gt;
+&lt;p&gt;These are all nothing to sneeze at. Suddenly you&amp;rsquo;ll find yourself with hundreds of lines of code pasted from various examples and yet nothing works. Or worse, it DOES work but you have no idea how. Then you find yourself needing to extend it with a new capability, or you find an elusive bug and can&amp;rsquo;t trace its origins.&lt;/p&gt;
+&lt;p&gt;Fear not. I&amp;rsquo;ll try to demystify things and draw a clear picture about how it works and how the pieces fit together.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s start at the beginning.&lt;/p&gt;
+&lt;h1 id=&#34;basic-plugin&#34;&gt;Basic plugin&lt;/h1&gt;
+&lt;p&gt;Let&amp;rsquo;s start by writing a simple Go GRPC plugin. In fact, we can go through the basic example in the go-plugin’s repository which can be quite confusing when first starting out. We&amp;rsquo;ll go step-by-step, and the switch to GRPC will be much easier!&lt;/p&gt;
+&lt;h2 id=&#34;basic-concepts&#34;&gt;Basic concepts&lt;/h2&gt;
+&lt;h3 id=&#34;server&#34;&gt;Server&lt;/h3&gt;
+&lt;p&gt;In the case of plugins, the Server is the one serving the plugin&amp;rsquo;s implementation. This means the server will have to provide the implementation to an interface.&lt;/p&gt;
+&lt;h3 id=&#34;client&#34;&gt;Client&lt;/h3&gt;
+&lt;p&gt;The Client calls the server in order to execute the desired behaviour. The underlying logic will connect to the server running on localhost on a random higher port, call the wanted function’s implementation and wait for a response. Once the response is received provide that back to the calling Client.&lt;/p&gt;
+&lt;h2 id=&#34;implementation&#34;&gt;Implementation&lt;/h2&gt;
+&lt;h3 id=&#34;the-main-function&#34;&gt;The main function&lt;/h3&gt;
+&lt;h4 id=&#34;logger&#34;&gt;Logger&lt;/h4&gt;
+&lt;p&gt;The plugins defined here use stdout in a special way. If you aren&amp;rsquo;t writing a Go based plugin, you will have to do that yourself by outputting something like this:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;1|1|tcp|127.0.0.1:1234|grpc
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;We&amp;rsquo;ll come back to this later. Suffice to say the framework will pick this up and will connect to the plugin based on the output. In order to get some output back, we must define a special logger:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;	&lt;span style=&#34;color:#75715e&#34;&gt;// Create an hclog.Logger
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;logger&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;hclog&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;New&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;hclog&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;LoggerOptions&lt;/span&gt;{
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;Name&lt;/span&gt;:   &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;plugin&amp;#34;&lt;/span&gt;,
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;Output&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;os&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Stdout&lt;/span&gt;,
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;Level&lt;/span&gt;:  &lt;span style=&#34;color:#a6e22e&#34;&gt;hclog&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Debug&lt;/span&gt;,
+	})
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;newclient&#34;&gt;NewClient&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;	&lt;span style=&#34;color:#75715e&#34;&gt;// We&amp;#39;re a host! Start by launching the plugin process.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;NewClient&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ClientConfig&lt;/span&gt;{
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;HandshakeConfig&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;handshakeConfig&lt;/span&gt;,
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;Plugins&lt;/span&gt;:         &lt;span style=&#34;color:#a6e22e&#34;&gt;pluginMap&lt;/span&gt;,
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;Cmd&lt;/span&gt;:             &lt;span style=&#34;color:#a6e22e&#34;&gt;exec&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Command&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./plugin/greeter&amp;#34;&lt;/span&gt;),
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;Logger&lt;/span&gt;:          &lt;span style=&#34;color:#a6e22e&#34;&gt;logger&lt;/span&gt;,
+	})
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;defer&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Kill&lt;/span&gt;()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;What is happening here? Let&amp;rsquo;s see one by one:&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;HandshakeConfig: handshakeConfig,&lt;/code&gt;: This part is the handshake configuration of the plugin. It has a nice comment as well.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// handshakeConfigs are used to just do a basic handshake between
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// a plugin and host. If the handshake fails, a user friendly error is shown.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// This prevents users from executing bad plugins or executing a plugin
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// directory. It is a UX feature, not a security feature.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;handshakeConfig&lt;/span&gt; = &lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;HandshakeConfig&lt;/span&gt;{
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;ProtocolVersion&lt;/span&gt;:  &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;,
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;MagicCookieKey&lt;/span&gt;:   &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;BASIC_PLUGIN&amp;#34;&lt;/span&gt;,
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;MagicCookieValue&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;hello&amp;#34;&lt;/span&gt;,
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The &lt;code&gt;ProtocolVersion&lt;/code&gt; here is used in order to maintain compatibility with your current plugin versions. It&amp;rsquo;s basically like an API version. If you increase this, you will have two options. Don&amp;rsquo;t accept lower protocol versions nor switch to the version number and use a different client implementation for a lower version than for a higher version. This way you will maintain backwards compatibility.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;MagicCookieKey&lt;/code&gt; and &lt;code&gt;MagicCookieValue&lt;/code&gt; are used for a basic handshake which the comment is talking about. You have to set this &lt;strong&gt;ONCE&lt;/strong&gt; for your application. Never change it again, for if you do, your plugins will no longer work. For uniqueness sake, I suggest using UUID.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Cmd&lt;/code&gt; is one of the most important parts about a plugin. Basically how plugins work is that they boil down to a compiled binary which is executed and starts an RPC server. This is where you will have to define the binary which will be executed and does all this. Since this is all happening locally, (please keep in mind that Go-plugins only support localhost, and for a good reason), these binaries will most likely sit next to your application&amp;rsquo;s binary or in a pre-configured global location. Something like:  &lt;code&gt;~/.config/my-app/plugins&lt;/code&gt;. This is individual for each plugin of course. The plugins can be autoloaded via a discovery function given a path and a glob.&lt;/p&gt;
+&lt;p&gt;And last but not least is the &lt;code&gt;Plugins&lt;/code&gt; map. This map is used in order to identify a plugin called &lt;code&gt;Dispense&lt;/code&gt;. This map is globally available and must stay consistent in order for all the plugins to work:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// pluginMap is the map of plugins we can dispense.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;pluginMap&lt;/span&gt; = &lt;span style=&#34;color:#66d9ef&#34;&gt;map&lt;/span&gt;[&lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;]&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Pluglin&lt;/span&gt;	&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;greeter&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;example&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterPlugin&lt;/span&gt;{},
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You can see that the key is the name of the plugin and the value is the plugin.&lt;/p&gt;
+&lt;p&gt;We then proceed to create an RPC client:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;	&lt;span style=&#34;color:#75715e&#34;&gt;// Connect via RPC
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;rpcClient&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Client&lt;/span&gt;()
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Fatal&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+	}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Nothing fancy about this one&amp;hellip;&lt;/p&gt;
+&lt;p&gt;Now comes the interesting part:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;	&lt;span style=&#34;color:#75715e&#34;&gt;// Request the plugin
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;raw&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;rpcClient&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Dispense&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;greeter&amp;#34;&lt;/span&gt;)
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Fatal&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+	}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;What&amp;rsquo;s happening here? Dispense will look in the above created map and search for the plugin. If it cannot find it, it will throw an error at us. If it does find it, it will cast this plugin to an RPC or a GRPC type plugin. Then proceed to create an RPC or a GRPC client out of it.&lt;/p&gt;
+&lt;p&gt;There is no call yet. This is just creating a client and parsing it to a respective representation.&lt;/p&gt;
+&lt;p&gt;Now comes the magic:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;	&lt;span style=&#34;color:#75715e&#34;&gt;// We should have a Greeter now! This feels like a normal interface
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#75715e&#34;&gt;// implementation but is in fact over an RPC connection.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;greeter&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;raw&lt;/span&gt;.(&lt;span style=&#34;color:#a6e22e&#34;&gt;example&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Greeter&lt;/span&gt;)
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;fmt&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Println&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;greeter&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;())
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Here we are type asserting our raw GRPC client into our own plugin type. This is so we can call the respective function on the plugin! Once that&amp;rsquo;s done we will have a {client,struct,implementation} that can be called like a simple function.&lt;/p&gt;
+&lt;p&gt;The implementation right now comes from greeter_impl.go, but that will change once protoc makes an appearance.&lt;/p&gt;
+&lt;p&gt;Behind the scenes, go-plugin will do a bunch of hat tricks with multiplexing TCP connections as well as a remote procedure call to our plugin. Our plugin then will run the function, generate some kind of output, and will then send that back for the waiting client.&lt;/p&gt;
+&lt;p&gt;The client will then proceed to parse the message into a given response type and will then return it back to the client’s callee.&lt;/p&gt;
+&lt;p&gt;This concludes main.go for now.&lt;/p&gt;
+&lt;h3 id=&#34;the-interface&#34;&gt;The Interface&lt;/h3&gt;
+&lt;p&gt;Now let’s investigate the Interface. The interface is used to provide calling details. This interface will be what defines our plugins’ capabilities. How does our &lt;code&gt;Greeter&lt;/code&gt; look like?&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Greeter is the interface that we&amp;#39;re exposing as a plugin.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Greeter&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;() &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is pretty simple. It defines a function which will return a string typed value.&lt;/p&gt;
+&lt;p&gt;Now, we will need a couple of things for this to work. Firstly we need something which defines the RPC workings. go-plugin is working with &lt;code&gt;net/http&lt;/code&gt; inside. It also uses something called Yamux for connection multiplexing, but we needn’t worry about this detail.&lt;/p&gt;
+&lt;p&gt;Implementing the RPC details looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Here is an implementation that talks over RPC
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterRPC&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;rpc&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Client&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;g&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterRPC&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;() &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; {
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;resp&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;g&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Call&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Plugin.Greet&amp;#34;&lt;/span&gt;, new(&lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt;{}), &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;resp&lt;/span&gt;)
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#75715e&#34;&gt;// You usually want your interfaces to return errors. If they don&amp;#39;t,
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;		&lt;span style=&#34;color:#75715e&#34;&gt;// there isn&amp;#39;t much other choice here.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;		panic(&lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+	}
+
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;resp&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Here the GreeterRPC struct is an RPC specific implementation that will handle communication over RPC. This is Client in this setup.&lt;/p&gt;
+&lt;p&gt;In case of gRPC, this would look something like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// GRPCClient is an implementation of KV that talks over RPC.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterGRPC&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt;{ &lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;proto&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterClient&lt;/span&gt; }
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;m&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterGRPC&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;() (&lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;error&lt;/span&gt;) {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;s&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;m&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;context&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Background&lt;/span&gt;(), &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;proto&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Empty&lt;/span&gt;{})
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;s&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;What is happening here? What&amp;rsquo;s Proto and what is GreeterClient? GRPC uses Google&amp;rsquo;s protoc library to serialize and unserialize data. &lt;code&gt;proto.GreeterClient&lt;/code&gt; is generated Go code by protoc. This code is a skeleton for which implementation detail will be replaced on run time. Well, the actual result will be used and not replaced as such.&lt;/p&gt;
+&lt;p&gt;Back to our previous example. The RPC client calls a specific Plugin function called Greet for which the implementation will be provided by a Server that will be streamed back over the RPC protocol.&lt;/p&gt;
+&lt;p&gt;The server is pretty easy to follow:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Here is the RPC server that GreeterRPC talks to, conforming to
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// the requirements of net/rpc
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterRPCServer&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; {
+	&lt;span style=&#34;color:#75715e&#34;&gt;// This is the real implementation
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Greeter&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Impl is the concrete implementation that will be called in the Server&amp;rsquo;s implementation of the Greet plugin. Now we must define Greet on the RPCServer in order for it to be able to call the remote code. This looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;s&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterRPCServer&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;args&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt;{}, &lt;span style=&#34;color:#a6e22e&#34;&gt;resp&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;error&lt;/span&gt; {
+	&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;resp&lt;/span&gt; = &lt;span style=&#34;color:#a6e22e&#34;&gt;s&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;()
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is all still boilerplate for the RPC works. Now comes plugin. For this, the comment is actually quite good too:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// This is the implementation of plugin.Plugin so we can serve/consume this
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;//
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// This has two methods: Server must return an RPC server for this plugin
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// type. We construct a GreeterRPCServer for this.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;//
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Client must return an implementation of our interface that communicates
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// over an RPC client. We return GreeterRPC for this.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;//
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Ignore MuxBroker. That is used to create more multiplexed streams on our
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// plugin connection and is a more advanced use case.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterPlugin&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; {
+	&lt;span style=&#34;color:#75715e&#34;&gt;// Impl Injection
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Greeter&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;p&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterPlugin&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;Server&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;MuxBroker&lt;/span&gt;) (&lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt;{}, &lt;span style=&#34;color:#66d9ef&#34;&gt;error&lt;/span&gt;) {
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterRPCServer&lt;/span&gt;{&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt;}, &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterPlugin&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;Client&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;b&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;MuxBroker&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;rpc&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Client&lt;/span&gt;) (&lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt;{}, &lt;span style=&#34;color:#66d9ef&#34;&gt;error&lt;/span&gt;) {
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterRPC&lt;/span&gt;{&lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;}, &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;What does this mean? So, remember: &lt;code&gt;GreeterRPCServer&lt;/code&gt; is the one calling the actual implementation while Client is receiving the result of that call. The &lt;code&gt;GreeterPlugin&lt;/code&gt; has the &lt;code&gt;Greeter&lt;/code&gt; interface embedded just like the &lt;code&gt;RPCServer&lt;/code&gt;. We will use the &lt;code&gt;GreeterPlugin&lt;/code&gt; as a struct in the plugin map. This is the plugin that we will actually use.&lt;/p&gt;
+&lt;p&gt;This is all still common stuff. These things will need to be visible for both. The plugin&amp;rsquo;s implementation will use the interface to see what it needs to implement. The Client will use it see what to call and what API is available. Like, &lt;code&gt;Greet&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;How does the implementation look like?&lt;/p&gt;
+&lt;h3 id=&#34;the-implementation&#34;&gt;The Implementation&lt;/h3&gt;
+&lt;p&gt;In a completely separate package, but which still has access to the interface definition, this plugin could be something like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Here is a real implementation of Greeter
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterHello&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;logger&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;hclog&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Logger&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;g&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterHello&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;() &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;g&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;logger&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Debug&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;message from GreeterHello.Greet&amp;#34;&lt;/span&gt;)
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Hello!&amp;#34;&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;We create a struct and then add the function to it which is defined by the plugin&amp;rsquo;s interface. This interface, since it&amp;rsquo;s required by both parties, could well sit in a common package outside of both programs. Something like a SDK. Both code could import it and use it as a common dependency. This way we have separated the interface from the plugin &lt;strong&gt;and&lt;/strong&gt; the calling client.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;main&lt;/code&gt; function could look something like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;logger&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;hclog&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;New&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;hclog&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;LoggerOptions&lt;/span&gt;{
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Level&lt;/span&gt;:      &lt;span style=&#34;color:#a6e22e&#34;&gt;hclog&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Trace&lt;/span&gt;,
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Output&lt;/span&gt;:     &lt;span style=&#34;color:#a6e22e&#34;&gt;os&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Stderr&lt;/span&gt;,
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;JSONFormat&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;,
+})
+
+&lt;span style=&#34;color:#a6e22e&#34;&gt;greeter&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterHello&lt;/span&gt;{
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;logger&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;logger&lt;/span&gt;,
+}
+&lt;span style=&#34;color:#75715e&#34;&gt;// pluginMap is the map of plugins we can dispense.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;pluginMap&lt;/span&gt; = &lt;span style=&#34;color:#66d9ef&#34;&gt;map&lt;/span&gt;[&lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;]&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Plugin&lt;/span&gt;{
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;greeter&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;example&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterPlugin&lt;/span&gt;{&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;greeter&lt;/span&gt;},
+}
+
+&lt;span style=&#34;color:#a6e22e&#34;&gt;logger&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Debug&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;message from plugin&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;foo&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;bar&amp;#34;&lt;/span&gt;)
+
+&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Serve&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ServeConfig&lt;/span&gt;{
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;HandshakeConfig&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;handshakeConfig&lt;/span&gt;,
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Plugins&lt;/span&gt;:         &lt;span style=&#34;color:#a6e22e&#34;&gt;pluginMap&lt;/span&gt;,
+})
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Notice two things that we need. One is the &lt;code&gt;handshakeConfig&lt;/code&gt;. You can either define it here, with the same cookie details as you defined in the client code, or you can extract the handshake information into the SDK. This is up to you.&lt;/p&gt;
+&lt;p&gt;Then the next interesting thing is the &lt;code&gt;plugin.Serve&lt;/code&gt; method. This is where the magic happens. The plugins open up a RPC communication socket and over a hijacked &lt;code&gt;stdout&lt;/code&gt;, broadcasts its availability to the calling Client in this format:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;CORE-PROTOCOL-VERSION | APP-PROTOCOL-VERSION | NETWORK-TYPE | NETWORK-ADDR | PROTOCOL
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;For Go plugins, you don&amp;rsquo;t have to concern yourself with this. &lt;code&gt;go-plugin&lt;/code&gt; takes care of all this for you. For non-Go versions, we must take this into account. And before calling serve, we need to output this information to &lt;code&gt;stdout&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;For example, a Python plugin must deal with this himself. Like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Output information&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;print&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1|1|tcp|127.0.0.1:1234|grpc&amp;#34;&lt;/span&gt;)
+sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;stdout&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;flush()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;For GRPC plugins, it&amp;rsquo;s also mandatory to implement a HealthChecker.&lt;/p&gt;
+&lt;p&gt;How would all this look like with GRPC?&lt;/p&gt;
+&lt;p&gt;It gets slightly more complicated but not too much. We need to use &lt;code&gt;protoc&lt;/code&gt; to create a protocol description for our implementation, and then we will call that. Let&amp;rsquo;s look at this now by converting the basic greeter example into GRPC.&lt;/p&gt;
+&lt;h1 id=&#34;grpc-basic-plugin&#34;&gt;GRPC Basic plugin&lt;/h1&gt;
+&lt;p&gt;The example that&amp;rsquo;s under GRPC is quite elaborate and perhaps you don&amp;rsquo;t need the Python part. I will focus on the basic RPC example into a GRPC example. That should not be a problem.&lt;/p&gt;
+&lt;h2 id=&#34;the-api&#34;&gt;The API&lt;/h2&gt;
+&lt;p&gt;First and foremost, you will need to define an API to implement with &lt;code&gt;protoc&lt;/code&gt;. For our basic example, the protoc file could look like this:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-proto3&#34; data-lang=&#34;proto3&#34;&gt;syntax = &amp;quot;proto3&amp;quot;;
+package proto;
+
+message GreetResponse {
+    string message = 1;
+}
+
+message Empty {}
+
+service GreeterService {
+    rpc Greet(Empty) returns (GreetResponse);
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The syntax is quite simple and readable. What this defines is a message, which is a response, that will contain a &lt;code&gt;message&lt;/code&gt; with the type &lt;code&gt;string&lt;/code&gt;. The &lt;code&gt;service&lt;/code&gt; defines a service which has a method called &lt;code&gt;Greet&lt;/code&gt;. The service definition is basically an interface for which we will be providing the concrete implementation through the plugin.&lt;/p&gt;
+&lt;p&gt;To read more about protoc, visit this page: &lt;a href=&#34;https://developers.google.com/protocol-buffers/&#34;&gt;Google Protocol Buffer&lt;/a&gt;.&lt;/p&gt;
+&lt;h2 id=&#34;generate-the-code&#34;&gt;Generate the code&lt;/h2&gt;
+&lt;p&gt;Now, with the protoc definition in hand, we need to generate the stubs that the local client implementation can call. That client call will then, through the remote procedure call, call the right function on the server which will have the concrete implementation at the ready. Run it and return the result in the specified format. Because the stub needs to be available by both parties, (the client AND the server), this needs to live in a shared location.&lt;/p&gt;
+&lt;p&gt;Why? Because the client is calling the stub and the server is implementing the stub. Both need it in order to know what to call/implement.&lt;/p&gt;
+&lt;p&gt;To generate the code, run this command:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;protoc -I proto/ proto/greeter.proto --go_out&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;plugins&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;grpc:proto
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;I encourage you to read the generated code. Much will make little sense at first. It will have a bunch of structs and defined things that the GRPC package will use in order to server the function. The interesting bits and pieces are:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;m&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreetResponse&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;GetMessage&lt;/span&gt;() &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; {
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;m&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;m&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Message&lt;/span&gt;
+	}
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Which will get use the message inside the response.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterServiceClient&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;ctx&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;context&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Context&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Empty&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;opts&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;grpc&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;CallOption&lt;/span&gt;) (&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreetResponse&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;error&lt;/span&gt;)
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is our ServiceClient interface which defines the Greet function’s topology.&lt;/p&gt;
+&lt;p&gt;And lastly, this guy:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;RegisterGreeterServiceServer&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;s&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;grpc&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Server&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;srv&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterServiceServer&lt;/span&gt;) {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;s&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;RegisterService&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;_GreeterService_serviceDesc&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;srv&lt;/span&gt;)
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Which we will need in order to register our implementation for the server. We can ignore the rest.&lt;/p&gt;
+&lt;h2 id=&#34;the-interface-1&#34;&gt;The interface&lt;/h2&gt;
+&lt;p&gt;Much like the RPC, we need to define an interface for the client and server to use. This must be in a shared place as both the server and the client need to know about it. You could put this into an SDK and your peers could just get the SDK and implement some function for define and done. The interface definition in the GRPC land could look something like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Greeter is the interface that we&amp;#39;re exposing as a plugin.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Greeter&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;() &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#75715e&#34;&gt;// This is the implementation of plugin.GRPCPlugin so we can serve/consume this.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterGRPCPlugin&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; {
+	&lt;span style=&#34;color:#75715e&#34;&gt;// GRPCPlugin must still implement the Plugin interface
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Plugin&lt;/span&gt;
+	&lt;span style=&#34;color:#75715e&#34;&gt;// Concrete implementation, written in Go. This is only used for plugins
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#75715e&#34;&gt;// that are written in Go.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Greeter&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;p&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterGRPCPlugin&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCServer&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;broker&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCBroker&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;s&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;grpc&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Server&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;error&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;proto&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;RegisterGreeterServer&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;s&lt;/span&gt;, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCServer&lt;/span&gt;{&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt;})
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;p&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterGRPCPlugin&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCClient&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;ctx&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;context&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Context&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;broker&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCBroker&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;grpc&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ClientConn&lt;/span&gt;) (&lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt;{}, &lt;span style=&#34;color:#66d9ef&#34;&gt;error&lt;/span&gt;) {
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCClient&lt;/span&gt;{&lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;proto&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;NewGreeterClient&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;)}, &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;With this we have the Plugin&amp;rsquo;s implementation for hashicorp what needed to be done. The plugin will call the underlying implementation and serve/consume the plugin. We can now write the GRPC part of it.&lt;/p&gt;
+&lt;p&gt;Please note that &lt;code&gt;proto&lt;/code&gt; is a shared library too where the protocol stubs reside. That needs to be somewhere on the path or in a separate SDK of some sort, but it must be visible.&lt;/p&gt;
+&lt;h2 id=&#34;writing-the-grpc-client&#34;&gt;Writing the GRPC Client&lt;/h2&gt;
+&lt;p&gt;Firstly we define the grpc client struct:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// GRPCClient is an implementation of Greeter that talks over RPC.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCClient&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt;{ &lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;proto&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterClient&lt;/span&gt; }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Then we define how the client will call the remote function:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;m&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCClient&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;() &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;ret&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;_&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;m&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;context&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Background&lt;/span&gt;(), &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;proto&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Empty&lt;/span&gt;{})
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ret&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Message&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This will take the &lt;code&gt;client&lt;/code&gt; in the &lt;code&gt;GRPCClient&lt;/code&gt; and will call the method on it. Once that&amp;rsquo;s done we will return to the result &lt;code&gt;Message&lt;/code&gt; property which will be &lt;code&gt;Hello!&lt;/code&gt;. &lt;code&gt;proto.Empty&lt;/code&gt; is an empty struct; we use this if there is no parameter for a defined method or no return value. We can&amp;rsquo;t just leave it blank. &lt;code&gt;protoc&lt;/code&gt; needs to be told explicitly that there is no parameter or return value.&lt;/p&gt;
+&lt;h2 id=&#34;writing-the-grpc-server&#34;&gt;Writing the GRPC Server&lt;/h2&gt;
+&lt;p&gt;The server implementation will also be similar. We call &lt;code&gt;Impl&lt;/code&gt; here which will have our concrete plugin implementation.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Here is the gRPC server that GRPCClient talks to.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCServer&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; {
+	&lt;span style=&#34;color:#75715e&#34;&gt;// This is the real implementation
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Greeter&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;m&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCServer&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;(
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;ctx&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;context&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Context&lt;/span&gt;,
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;req&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;proto&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Empty&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;proto&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterResponse&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;v&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;m&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;()
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;proto&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterResponse&lt;/span&gt;{&lt;span style=&#34;color:#a6e22e&#34;&gt;Message&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;v&lt;/span&gt;}
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And we will use the &lt;code&gt;protoc&lt;/code&gt; defined message response. &lt;code&gt;v&lt;/code&gt; will have the response from &lt;code&gt;Greet&lt;/code&gt; which will be &lt;code&gt;Hello!&lt;/code&gt; provided by the concrete plugin&amp;rsquo;s implementation. We then transform that into a protoc type by setting the &lt;code&gt;Message&lt;/code&gt; property on the &lt;code&gt;GreeterResponse&lt;/code&gt; struct provided by the automatically generated protoc stub code.&lt;/p&gt;
+&lt;p&gt;Easy, right?&lt;/p&gt;
+&lt;h2 id=&#34;writing-the-plugin-itself&#34;&gt;Writing the plugin itself&lt;/h2&gt;
+&lt;p&gt;The whole thing looks much like the RPC implementation with just a few small modifications and changes. This can sit completely outside of everything, or can even be provided by a third party implementor.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Here is a real implementation of KV that writes to a local file with
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// the key name and the contents are the value of the key.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Greeter&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt;{}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;Greeter&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;Greet&lt;/span&gt;() &lt;span style=&#34;color:#66d9ef&#34;&gt;error&lt;/span&gt; {
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Hello!&amp;#34;&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;() {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Serve&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ServeConfig&lt;/span&gt;{
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;HandshakeConfig&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;shared&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Handshake&lt;/span&gt;,
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;Plugins&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;map&lt;/span&gt;[&lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;]&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Plugin&lt;/span&gt;{
+			&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;greeter&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;shared&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GreeterGRPCPlugin&lt;/span&gt;{&lt;span style=&#34;color:#a6e22e&#34;&gt;Impl&lt;/span&gt;: &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Greeter&lt;/span&gt;{}},
+		},
+
+		&lt;span style=&#34;color:#75715e&#34;&gt;// A non-nil value here enables gRPC serving for this plugin...
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;		&lt;span style=&#34;color:#a6e22e&#34;&gt;GRPCServer&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;DefaultGRPCServer&lt;/span&gt;,
+	})
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;calling-it-all-in-the-main&#34;&gt;Calling it all in the main&lt;/h2&gt;
+&lt;p&gt;Once all that is done, the &lt;code&gt;main&lt;/code&gt; function looks the same as RPC&amp;rsquo;s main but with some small modifications.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;	&lt;span style=&#34;color:#75715e&#34;&gt;// We&amp;#39;re a host. Start by launching the plugin process.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;NewClient&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ClientConfig&lt;/span&gt;{
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;HandshakeConfig&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;shared&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Handshake&lt;/span&gt;,
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;Plugins&lt;/span&gt;:         &lt;span style=&#34;color:#a6e22e&#34;&gt;shared&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;PluginMap&lt;/span&gt;,
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;Cmd&lt;/span&gt;:             &lt;span style=&#34;color:#a6e22e&#34;&gt;exec&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Command&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./plugin/greeter&amp;#34;&lt;/span&gt;),
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;AllowedProtocols&lt;/span&gt;: []&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Protocol&lt;/span&gt;{&lt;span style=&#34;color:#a6e22e&#34;&gt;plugin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ProtocolGRPC&lt;/span&gt;},
+	})
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The &lt;code&gt;NewClient&lt;/code&gt; now defines &lt;code&gt;AllowedProtocols&lt;/code&gt; to be &lt;code&gt;ProtocolGRPC&lt;/code&gt;. The rest is the same as before calling &lt;code&gt;Dispense&lt;/code&gt; and value hinting the plugin to the correct type then calling &lt;code&gt;Greet()&lt;/code&gt;.&lt;/p&gt;
+&lt;h1 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;This is it. We made it! Now our plugin works over GRPC with a defined API by protoc. The plugin&amp;rsquo;s implementation can live where ever we want it to, but it needs some shared data. These are:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The generated code by &lt;code&gt;protoc&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;The defined plugin interface&lt;/li&gt;
+&lt;li&gt;The GRPC Server and Client&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;These need to be visible by both the Client and the Server. The Server here is the plugin. If you are planning on making people be able to extend your application with go-plugin, you should make these available as a separate SDK. So people won&amp;rsquo;t have to include your whole project just to implement an interface and use protoc. In fact, you could also extract the &lt;code&gt;protoc&lt;/code&gt; definition into a separate repository so that your SDK can also pull it in.&lt;/p&gt;
+&lt;p&gt;You will have three repositories:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Your application;&lt;/li&gt;
+&lt;li&gt;The SDK providing the interface and the GRPC Server and Client implementation;&lt;/li&gt;
+&lt;li&gt;The protoc definition file and generated skeleton ( for Go based plugins).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Other languages will have to generate their own protoc code, and includ it into the plugin; like the Python implementation example located here: &lt;a href=&#34;https://github.com/hashicorp/go-plugin/tree/master/examples/grpc/plugin-python&#34;&gt;Go-plugin Python Example&lt;/a&gt;. Also, read this documentation carefully: &lt;a href=&#34;https://github.com/hashicorp/go-plugin/blob/master/docs/guide-plugin-write-non-go.md&#34;&gt;non-go go-plugin&lt;/a&gt;. This document will also clarify what &lt;code&gt;1|1|tcp|127.0.0.1:1234|grpc&lt;/code&gt; means and will dissipate the confusion around how plugins work.&lt;/p&gt;
+&lt;p&gt;Lastly, if you would like to have an in-depth explanation about how go-plugin came to be, watch this video by Mitchell:&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.youtube.com/watch?v=SRvm3zQQc1Q&#34;&gt;go-plugin explanation video&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I must warn you though- it&amp;rsquo;s an hour long. But worth the watch!&lt;/p&gt;
+&lt;p&gt;That&amp;rsquo;s it. I hope this has helped to clear the confusion around how to use go-plugin.&lt;/p&gt;
+&lt;p&gt;Happy plugging!&lt;/p&gt;
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
     </item>
     
   </channel>

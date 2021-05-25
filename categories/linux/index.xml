@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Linux on Ramblings of a cloud engineer</title>
@@ -6,27 +6,238 @@
     <description>Recent content in Linux on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-GB</language>
-    <lastBuildDate>Sat, 06 Jun 2015 00:00:00 +0000</lastBuildDate><atom:link href="https://skarlso.github.io/categories/linux/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 06 Jun 2015 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/categories/linux/index.xml" rel="self" type="application/rss+xml" />
+    
     <item>
       <title>Docker &#43; Java &#43; Vagrant&#43; GO.CD</title>
       <link>https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/</link>
       <pubDate>Sat, 06 Jun 2015 00:00:00 +0000</pubDate>
-      
       <guid>https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/</guid>
       <description>&lt;p&gt;Hello folks.&lt;/p&gt;
-&lt;p&gt;Today, I would like to write about something interesting and close to me at the moment. I’m going to setup Go.cd with Docker, and I’m going to get a Ruby Lotus app running. Let’s get started.&lt;/p&gt;</description>
+&lt;p&gt;Today, I would like to write about something interesting and close to me at the moment. I’m going to setup Go.cd with Docker, and I’m going to get a Ruby Lotus app running. Let’s get started.&lt;/p&gt;
+&lt;h1 id=&#34;fluff&#34;&gt;Fluff&lt;/h1&gt;
+&lt;p&gt;Now, obviously, you don’t really need Go.Cd or Docker to setup a Java Gradle application, since it’s dead easy. But I’m going to do it just for the heck of it.&lt;/p&gt;
+&lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
+&lt;p&gt;Okay, lets start with Vagrant. Docker’s strength is coming from Linux’s process isolation capabilities it’s not yet properly working on OSX or Windows. You have a couple of options if you’d like to try never the less, like boot2docker, or a Tiny Linux kernel, but at that point, I think it’s easier to use a VM.&lt;/p&gt;
+&lt;h4 id=&#34;vagrant&#34;&gt;Vagrant&lt;/h4&gt;
+&lt;p&gt;So, let’s start with my small Vagrantfile.&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;Very simple. I’m setting up a trusty64(because docker requires 3.10 &amp;lt;= x) box and then doing a simple shell provision. Also, I gave it a bit juice, since go-server requires a raw power. Here is the shell script:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;The debconf at the end accepts java8’s terms and conditions. And the last line installs docker in my box. This runs for a little while…&lt;/p&gt;
+&lt;p&gt;The routing on the end routes every traffic from 172.17.*.* to my vagrant box, which in turn I’ll be able to use from my mac local, like 127.0.0.1:8153/go/home.&lt;/p&gt;
+&lt;p&gt;After a vagrant up, my box is ready to be used.&lt;/p&gt;
+&lt;h4 id=&#34;docker&#34;&gt;Docker&lt;/h4&gt;
+&lt;p&gt;When that’s finished, we can move on to the next part, which is writing a little Dockerfile for our image. Go.cd will require java and a couple of other things, so let’s automate the installation of that so we don’t have to do it by hand.&lt;/p&gt;
+&lt;p&gt;Here is a Dockerfile I came up with:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;So, our docker images have to be setup with Java as well for go.cd which I’m taking care of here, and a little bit extra, to add vim, and unzip, which is required for dpkg later.&lt;/p&gt;
+&lt;p&gt;At this point run: &lt;strong&gt;docker build -t ubuntu:go .&lt;/strong&gt; -&amp;gt; This will use the dockerfile and create the ubuntu:go image. Note the **. **at the end.&lt;/p&gt;
+&lt;h4 id=&#34;gocd&#34;&gt;Go.cd&lt;/h4&gt;
+&lt;p&gt;Now, I’m creating two containers. One, go-server, will be the go server, and the other, go-agent, will be the go agent.&lt;/p&gt;
+&lt;p&gt;First, go-server:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;Pretty straight forward, no? We forward 8153 to vagrant (which forwards it to my mac), so after we start go-server service we should be able to visit: http://127.0.0.1:8153/go/home.&lt;/p&gt;
+&lt;p&gt;Lo’, and behold, go server. Let’s add an agent too.&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;No need to forward anything here. And as you can see, my agent was added successfully.&lt;/p&gt;
+&lt;p&gt;All nice, and dandy. The agent is there, and I enabled it, so it’s ready to work. Let’s give it something to do, shall we?&lt;/p&gt;
+&lt;h1 id=&#34;the-app&#34;&gt;The App&lt;/h1&gt;
+&lt;p&gt;I’m going to use my gradle project which is on github. This one =&amp;gt; https://github.com/Skarlso/DataMung.git.&lt;/p&gt;
+&lt;p&gt;Very basic setup. Just check it out and then build &amp;amp; run tests. Easy, right?&lt;/p&gt;
+&lt;p&gt;First step in this process, define the pipeline. I’m going to keep it simple. Name the pipeline DataMunger. Group is Linux. Now, in go.cd you have to define something called, an &lt;strong&gt;environment&lt;/strong&gt;. Environment can be anything you want, I’m going to go with Linux. You have to assign &lt;strong&gt;agents&lt;/strong&gt; to this environment who fulfil it and the pipeline which will use that environment. More on that you can read in the go.cd documentation. This is how you would handle a pipeline which uses linux, and a windows environment at the same time.&lt;/p&gt;
+&lt;p&gt;In step one you have to define something called the &lt;strong&gt;Material&lt;/strong&gt;. That will be the source on which the agent will work. This can be multiple, in different folders within the confines of the pipeline, or singular.&lt;/p&gt;
+&lt;p&gt;I defined my git project and tested the connection OK. Next up is the first **Stage **and the initial **Job **to perform. This, for me, will be a compile or an assemble, and later on a test run.&lt;/p&gt;
+&lt;p&gt;Now, Go is awesome in parallelising jobs. If my project would be large enough, I could have multiple jobs here. But for now, I’ll use stages because they run subsequently. So, first stage, compile. Next stage, testing and archiving the results.&lt;/p&gt;
+&lt;p&gt;I added the next stage and defined the artefact. Go supports test-reports. If you define the path to a test artefact than go will parse it and create a nice report out of it.&lt;/p&gt;
+&lt;p&gt;Now, let’s run it. It will probably fail on something. 😉&lt;/p&gt;
+&lt;p&gt;Well, I’ll be… It worked on the first run.&lt;/p&gt;
+&lt;p&gt;And here are the test results.&lt;/p&gt;
+&lt;h1 id=&#34;wrap-up&#34;&gt;Wrap-up&lt;/h1&gt;
+&lt;p&gt;Well, that’s it folks. Gradle project, with vagrant, docker, and go.cd. I hope you all enjoyed reading about it as much as I did doing it.&lt;/p&gt;
+&lt;p&gt;Any questions, please feel free to ask it in the comment section below.&lt;/p&gt;
+&lt;p&gt;Cheers,
+Have a nice weekend,
+Gergely.&lt;/p&gt;</description>
     </item>
     
     <item>
       <title>Getting Dual Card to work on Ubuntu 12.04.</title>
       <link>https://skarlso.github.io/2012/04/11/getting-dual-card-to-work-on-ubuntu-12-04/</link>
       <pubDate>Wed, 11 Apr 2012 00:00:00 +0000</pubDate>
-      
       <guid>https://skarlso.github.io/2012/04/11/getting-dual-card-to-work-on-ubuntu-12-04/</guid>
-      <description>Hi guys.
-Today I want to talk about a little adventure I had yesterday night. It was quite the fun and frustration too. But neither comes without the other when it’s about linux.
-So let us see what the problem is at hand. The problem machine is a Dell Inspiron N5110 with Nvidia card number one: GeForce GT 525M. And number two: Integrated. Optimus for the win.
-So how windows is handling this is actually with a software called Optimus.</description>
+      <description>&lt;p&gt;Hi guys.&lt;/p&gt;
+&lt;p&gt;Today I want to talk about a little adventure I had yesterday night. It was quite the fun and frustration too. But neither comes without the other when it’s about linux.&lt;/p&gt;
+&lt;p&gt;So let us see what the problem is at hand. The problem machine is a Dell Inspiron N5110 with Nvidia card number one: GeForce GT 525M. And number two: Integrated. Optimus for the win.&lt;/p&gt;
+&lt;p&gt;So how windows is handling this is actually with a software called Optimus. Now linux wasn’t design to handle this properly but there are solutions. But I’m getting ahead of myself. Let’s start with the install.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Ubuntu Install&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;So first of all I installed &lt;!-- raw HTML omitted --&gt;Ubuntu 32 bit&lt;!-- raw HTML omitted --&gt; because I experienced more problems with 64 bit. To be honest the ubuntu page also recommends 32 bit. You don’t get to much from the 64 any ways.&lt;/p&gt;
+&lt;p&gt;After I downloaded and burned my disc and installed ubuntu next to my windows 7, I went for the updates. Now HERE is the first key point in my struggle. After the install I went for the additional drivers listed. There were actually additional drivers listed at that point!! Which is interesting because AFTER I installed the updates they disappeared and never appeared again. I’m guessing that one of the packages overrode my drivers. I would go back and reinstall the thing and experiment with it, but I don’t care any more.&lt;/p&gt;
+&lt;p&gt;So let’s move on…&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;After updating…&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;So update went on and my Ubuntu was not using the proper resolution for my screen. It was stuck on 1024×768. Now at this point I would say I could have played around with xrandr and cvt but more about that later…&lt;/p&gt;
+&lt;p&gt;I was immediately searching for additional drivers only to find that my list was empty…&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;http://ielmira.com/uploads/gallery/album_114/gallery_635_114_12692.png&#34; alt=&#34;Empty Additional Drivers&#34;&gt;&lt;/p&gt;
+&lt;p&gt;Like this. Now this isn’t something new actually. I had this one before and I could not for the life of me solve it. Let’s see what I did.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Common in Every solution&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;First let’s go over some repository updates I did before starting to get some solutions.&lt;/p&gt;
+&lt;p&gt;I added the x-swat repository to apt-get because that has the most recent packages that will be released.&lt;/p&gt;
+&lt;p&gt;Add it with these commands:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;pre&gt;&lt;code&gt;  &amp;lt;td class=&amp;quot;code&amp;quot;&amp;gt;
+    &amp;lt;pre class=&amp;quot;bash&amp;quot; style=&amp;quot;font-family:monospace;&amp;quot;&amp;gt;    &amp;lt;span style=&amp;quot;color: #666666; font-style: italic;&amp;quot;&amp;gt;#Add swat repository&amp;lt;/span&amp;gt;
+&amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; add-apt-repository ppa:ubuntu-x-swat&amp;lt;span style=&amp;quot;color: #000000; font-weight: bold;&amp;quot;&amp;gt;/&amp;lt;/span&amp;gt;x-updates
+&amp;lt;span style=&amp;quot;color: #666666; font-style: italic;&amp;quot;&amp;gt;#Update and upgrade&amp;lt;/span&amp;gt;
+&amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;apt-get update&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #000000; font-weight: bold;&amp;quot;&amp;gt;&amp;amp;&amp;amp;&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;apt-get upgrade&amp;lt;/span&amp;gt;&amp;lt;/pre&amp;gt;
+  &amp;lt;/td&amp;gt;
+&amp;lt;/tr&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;Now you’re ready to move on…&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Solution Fail Number One&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;My first guess was to reinstall nvidia driver because of the updates the new driver has to be built with the new version of kernel.&lt;/p&gt;
+&lt;p&gt;So what I did was:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;pre&gt;&lt;code&gt;  &amp;lt;td class=&amp;quot;code&amp;quot;&amp;gt;
+    &amp;lt;pre class=&amp;quot;bash&amp;quot; style=&amp;quot;font-family:monospace;&amp;quot;&amp;gt;    &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;apt-get remove&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #660033;&amp;quot;&amp;gt;--purge&amp;lt;/span&amp;gt; nvidia-current&amp;lt;/pre&amp;gt;
+  &amp;lt;/td&amp;gt;
+&amp;lt;/tr&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;After that finished I reinstalled everything:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;pre&gt;&lt;code&gt;  &amp;lt;td class=&amp;quot;code&amp;quot;&amp;gt;
+    &amp;lt;pre class=&amp;quot;bash&amp;quot; style=&amp;quot;font-family:monospace;&amp;quot;&amp;gt;    &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;apt-get update&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #000000; font-weight: bold;&amp;quot;&amp;gt;&amp;amp;&amp;amp;&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;apt-get install&amp;lt;/span&amp;gt; nvidia-current nvidia-settings&amp;lt;/pre&amp;gt;
+  &amp;lt;/td&amp;gt;
+&amp;lt;/tr&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;Additional drivers sometimes needs update to get new drivers. After that I rebooted. At this point I didn’t have an xorg.conf files yet.&lt;/p&gt;
+&lt;p&gt;After the reboot everything was the same. Nothing changed. nvidia-settings still said I don’t appear to be using nvidia x. All right I thought let’s do that.&lt;/p&gt;
+&lt;p&gt;So I run:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;pre&gt;&lt;code&gt;  &amp;lt;td class=&amp;quot;code&amp;quot;&amp;gt;
+    &amp;lt;pre class=&amp;quot;bash&amp;quot; style=&amp;quot;font-family:monospace;&amp;quot;&amp;gt;    &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; nvidia-xconfig&amp;lt;/pre&amp;gt;
+  &amp;lt;/td&amp;gt;
+&amp;lt;/tr&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;And reboot..&lt;/p&gt;
+&lt;p&gt;Now THIS messed up my resolution pretty badly. All I was able to get my desktop to was 640×480. At this point I begun to play with xrandr.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Xrandr&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;So in order to get my resolution back I started to play around with xrandr at the first place. I wasn’t trying to add anything to xorg.conf yet because I needed to find out if it would even work!&lt;/p&gt;
+&lt;p&gt;Now xrandr adds unsupported resolutions to video cards. If you have a resolution which us unknown you can set it using cvt.&lt;/p&gt;
+&lt;p&gt;Here is an article how to do so: &lt;!-- raw HTML omitted --&gt;Xrandr&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
+&lt;p&gt;Alas this didn’t work… LVDS1 which was the display for my laptop didn’t wanted to allow the new resolution I added for 1366×768. The error was:&lt;/p&gt;
+&lt;p&gt;X Error of failed request: BadMatch (invalid parameter attributes)&lt;/p&gt;
+&lt;p&gt;Major opcode of failed request: 150 (RANDR)&lt;/p&gt;
+&lt;p&gt;Minor opcode of failed request: 18 (RRAddOutputMode)&lt;/p&gt;
+&lt;p&gt;Serial number of failed request: 25&lt;/p&gt;
+&lt;p&gt;Current serial number in output stream: 26&lt;/p&gt;
+&lt;p&gt;I couldn’t make much of this rather then that my card was still not properly configured and additional drivers was still empty.&lt;/p&gt;
+&lt;p&gt;As back to square one. I deleted xorg.conf and begun another solution.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Solution Fail Number Two&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;As I was going through problems I found one interesting one. It was a guide on how to install downloaded nvidia driver from scratch.&lt;/p&gt;
+&lt;p&gt;So again I went and uninstalled nvidia and started this solution. The steps are these:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Start ubuntu with recovery mode. Login in root shell (with networking)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Remove your nvidia driver(what you did install) maybe this can be help: sudo apt-get purge nvidia-current sudo rm -rf /etc/X11/xorg.conf&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;restart your computer: sudo reboot&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;start ubuntu normally (not recovery)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;open /etc/default/grub : sudo gedit /etc/default/grub&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;replace the line GRUB_CMDLINE_LINUX=”” to GRUB_CMDLINE_LINUX=”nomodeset” (save and exit)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;update grub: sudo update-grub&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Download appropriate driver from nvidia&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;10.Give executable permission to the downloaded file : chmod a+x nvidia_driver.run&lt;/p&gt;
+&lt;ol start=&#34;11&#34;&gt;
+&lt;li&gt;
+&lt;p&gt;Press CLT+ALT+F1 [command line shell will appear] and login&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;stop lightdm (display manager) service : sudo service lightdm stop&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;start nvidia installation: sudo ./nvidia_driver.run&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;reboot your system: sudo reboot&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Now this brought up a couple of new problems. First that although I downloaded the proper driver from Nvidia it failed to detect my GPU for whatever reasons. And second it could not build because it couldn’t find nvidia.ko. I couldn’t resolve these issues although I guess there are some for it. But in the end it didn’t matter.&lt;/p&gt;
+&lt;p&gt;I reverted back to my original state… which was removing all of the drivers and resetting grub to its original state and went on to solution number three…&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Working Solution Number Three&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;At this point I just wanted SOMETHING to work. I didn’t even care about my nvidia card any more. And that was when I came across a post about dual cards. Something I didn’t care about because IT WAS WORKING before the UPDATE! But I want on any ways and that was the right solution in the end.&lt;/p&gt;
+&lt;p&gt;You can find this solution &lt;!-- raw HTML omitted --&gt;here&lt;!-- raw HTML omitted --&gt;. The first answer.&lt;/p&gt;
+&lt;p&gt;For my sanities sake I will write it down here too.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;First&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Remove nvidia drivers… Again.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Second&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Reinstall Mesa package for GL:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;pre&gt;&lt;code&gt;  &amp;lt;td class=&amp;quot;code&amp;quot;&amp;gt;
+    &amp;lt;pre class=&amp;quot;bash&amp;quot; style=&amp;quot;font-family:monospace;&amp;quot;&amp;gt;    &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;apt-get&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #660033;&amp;quot;&amp;gt;--reinstall&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;install&amp;lt;/span&amp;gt; libgl1-mesa-glx&amp;lt;/pre&amp;gt;
+  &amp;lt;/td&amp;gt;
+&amp;lt;/tr&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;This will get your first card to work with ubuntu.&lt;/p&gt;
+&lt;p&gt;At this point I reinstalled my nvidia drivers too… Something the other guy didn’t mention.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Third&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Reboot&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Fourth&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Install a program called bumblebee. Yes, &lt;!-- raw HTML omitted --&gt;Bumblebee&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
+&lt;p&gt;This is equal to Windows optimus. It will handle your dual video cards. You’ll see in a moment how.&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;pre&gt;&lt;code&gt;  &amp;lt;td class=&amp;quot;code&amp;quot;&amp;gt;
+    &amp;lt;pre class=&amp;quot;bash&amp;quot; style=&amp;quot;font-family:monospace;&amp;quot;&amp;gt;    &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; add-apt-repository ppa:bumblebee&amp;lt;span style=&amp;quot;color: #000000; font-weight: bold;&amp;quot;&amp;gt;/&amp;lt;/span&amp;gt;stable
+&amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;apt-get update&amp;lt;/span&amp;gt;
+&amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;apt-get install&amp;lt;/span&amp;gt; bumblebee bumblebee-nvidia&amp;lt;/pre&amp;gt;
+  &amp;lt;/td&amp;gt;
+&amp;lt;/tr&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;&lt;strong&gt;Fifth&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Add yourself to use Bumblebee:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;pre&gt;&lt;code&gt;  &amp;lt;td class=&amp;quot;code&amp;quot;&amp;gt;
+    &amp;lt;pre class=&amp;quot;bash&amp;quot; style=&amp;quot;font-family:monospace;&amp;quot;&amp;gt;    &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; usermod &amp;lt;span style=&amp;quot;color: #660033;&amp;quot;&amp;gt;-a&amp;lt;/span&amp;gt; &amp;lt;span style=&amp;quot;color: #660033;&amp;quot;&amp;gt;-G&amp;lt;/span&amp;gt; bumblebee &amp;lt;span style=&amp;quot;color: #007800;&amp;quot;&amp;gt;$USER&amp;lt;/span&amp;gt;&amp;lt;/pre&amp;gt;
+  &amp;lt;/td&amp;gt;
+&amp;lt;/tr&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;And then comes the magic. So in order for you to be able to use your second card with bumblebee you have to execute the program with optirun. This is much like windows optimus, just optimus works in the background.&lt;/p&gt;
+&lt;p&gt;After this I could finally see my cards settings for example by typing in:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;pre&gt;&lt;code&gt;  &amp;lt;td class=&amp;quot;code&amp;quot;&amp;gt;
+    &amp;lt;pre class=&amp;quot;bash&amp;quot; style=&amp;quot;font-family:monospace;&amp;quot;&amp;gt;    &amp;lt;span style=&amp;quot;color: #c20cb9; font-weight: bold;&amp;quot;&amp;gt;sudo&amp;lt;/span&amp;gt; optirun nvidia-settings &amp;lt;span style=&amp;quot;color: #660033;&amp;quot;&amp;gt;-c&amp;lt;/span&amp;gt; :&amp;lt;span style=&amp;quot;color: #000000;&amp;quot;&amp;gt;8&amp;lt;/span&amp;gt;&amp;lt;/pre&amp;gt;
+  &amp;lt;/td&amp;gt;
+&amp;lt;/tr&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;This executed the settings app and I was able to edit some settings I required while ubuntu was running fine with my other video card as primary card.&lt;/p&gt;
+&lt;p&gt;Now that was quite the fun, like I said, not?&lt;/p&gt;
+&lt;p&gt;I hope this guide showed you my errors and problems and maybe it could help you get along with yours.&lt;/p&gt;
+&lt;p&gt;If you have any questions, please feel free to write.&lt;/p&gt;
+&lt;p&gt;Thanks for reading!&lt;/p&gt;
+</description>
     </item>
     
   </channel>

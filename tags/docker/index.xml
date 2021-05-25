@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>docker on Ramblings of a cloud engineer</title>
@@ -6,15 +6,60 @@
     <description>Recent content in docker on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-GB</language>
-    <lastBuildDate>Sat, 06 Jun 2015 00:00:00 +0000</lastBuildDate><atom:link href="https://skarlso.github.io/tags/docker/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 06 Jun 2015 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/tags/docker/index.xml" rel="self" type="application/rss+xml" />
+    
     <item>
       <title>Docker &#43; Java &#43; Vagrant&#43; GO.CD</title>
       <link>https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/</link>
       <pubDate>Sat, 06 Jun 2015 00:00:00 +0000</pubDate>
-      
       <guid>https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/</guid>
       <description>&lt;p&gt;Hello folks.&lt;/p&gt;
-&lt;p&gt;Today, I would like to write about something interesting and close to me at the moment. I’m going to setup Go.cd with Docker, and I’m going to get a Ruby Lotus app running. Let’s get started.&lt;/p&gt;</description>
+&lt;p&gt;Today, I would like to write about something interesting and close to me at the moment. I’m going to setup Go.cd with Docker, and I’m going to get a Ruby Lotus app running. Let’s get started.&lt;/p&gt;
+&lt;h1 id=&#34;fluff&#34;&gt;Fluff&lt;/h1&gt;
+&lt;p&gt;Now, obviously, you don’t really need Go.Cd or Docker to setup a Java Gradle application, since it’s dead easy. But I’m going to do it just for the heck of it.&lt;/p&gt;
+&lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
+&lt;p&gt;Okay, lets start with Vagrant. Docker’s strength is coming from Linux’s process isolation capabilities it’s not yet properly working on OSX or Windows. You have a couple of options if you’d like to try never the less, like boot2docker, or a Tiny Linux kernel, but at that point, I think it’s easier to use a VM.&lt;/p&gt;
+&lt;h4 id=&#34;vagrant&#34;&gt;Vagrant&lt;/h4&gt;
+&lt;p&gt;So, let’s start with my small Vagrantfile.&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;Very simple. I’m setting up a trusty64(because docker requires 3.10 &amp;lt;= x) box and then doing a simple shell provision. Also, I gave it a bit juice, since go-server requires a raw power. Here is the shell script:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;The debconf at the end accepts java8’s terms and conditions. And the last line installs docker in my box. This runs for a little while…&lt;/p&gt;
+&lt;p&gt;The routing on the end routes every traffic from 172.17.*.* to my vagrant box, which in turn I’ll be able to use from my mac local, like 127.0.0.1:8153/go/home.&lt;/p&gt;
+&lt;p&gt;After a vagrant up, my box is ready to be used.&lt;/p&gt;
+&lt;h4 id=&#34;docker&#34;&gt;Docker&lt;/h4&gt;
+&lt;p&gt;When that’s finished, we can move on to the next part, which is writing a little Dockerfile for our image. Go.cd will require java and a couple of other things, so let’s automate the installation of that so we don’t have to do it by hand.&lt;/p&gt;
+&lt;p&gt;Here is a Dockerfile I came up with:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;So, our docker images have to be setup with Java as well for go.cd which I’m taking care of here, and a little bit extra, to add vim, and unzip, which is required for dpkg later.&lt;/p&gt;
+&lt;p&gt;At this point run: &lt;strong&gt;docker build -t ubuntu:go .&lt;/strong&gt; -&amp;gt; This will use the dockerfile and create the ubuntu:go image. Note the **. **at the end.&lt;/p&gt;
+&lt;h4 id=&#34;gocd&#34;&gt;Go.cd&lt;/h4&gt;
+&lt;p&gt;Now, I’m creating two containers. One, go-server, will be the go server, and the other, go-agent, will be the go agent.&lt;/p&gt;
+&lt;p&gt;First, go-server:&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;Pretty straight forward, no? We forward 8153 to vagrant (which forwards it to my mac), so after we start go-server service we should be able to visit: http://127.0.0.1:8153/go/home.&lt;/p&gt;
+&lt;p&gt;Lo’, and behold, go server. Let’s add an agent too.&lt;/p&gt;
+&lt;!-- raw HTML omitted --&gt;
+&lt;p&gt;No need to forward anything here. And as you can see, my agent was added successfully.&lt;/p&gt;
+&lt;p&gt;All nice, and dandy. The agent is there, and I enabled it, so it’s ready to work. Let’s give it something to do, shall we?&lt;/p&gt;
+&lt;h1 id=&#34;the-app&#34;&gt;The App&lt;/h1&gt;
+&lt;p&gt;I’m going to use my gradle project which is on github. This one =&amp;gt; https://github.com/Skarlso/DataMung.git.&lt;/p&gt;
+&lt;p&gt;Very basic setup. Just check it out and then build &amp;amp; run tests. Easy, right?&lt;/p&gt;
+&lt;p&gt;First step in this process, define the pipeline. I’m going to keep it simple. Name the pipeline DataMunger. Group is Linux. Now, in go.cd you have to define something called, an &lt;strong&gt;environment&lt;/strong&gt;. Environment can be anything you want, I’m going to go with Linux. You have to assign &lt;strong&gt;agents&lt;/strong&gt; to this environment who fulfil it and the pipeline which will use that environment. More on that you can read in the go.cd documentation. This is how you would handle a pipeline which uses linux, and a windows environment at the same time.&lt;/p&gt;
+&lt;p&gt;In step one you have to define something called the &lt;strong&gt;Material&lt;/strong&gt;. That will be the source on which the agent will work. This can be multiple, in different folders within the confines of the pipeline, or singular.&lt;/p&gt;
+&lt;p&gt;I defined my git project and tested the connection OK. Next up is the first **Stage **and the initial **Job **to perform. This, for me, will be a compile or an assemble, and later on a test run.&lt;/p&gt;
+&lt;p&gt;Now, Go is awesome in parallelising jobs. If my project would be large enough, I could have multiple jobs here. But for now, I’ll use stages because they run subsequently. So, first stage, compile. Next stage, testing and archiving the results.&lt;/p&gt;
+&lt;p&gt;I added the next stage and defined the artefact. Go supports test-reports. If you define the path to a test artefact than go will parse it and create a nice report out of it.&lt;/p&gt;
+&lt;p&gt;Now, let’s run it. It will probably fail on something. 😉&lt;/p&gt;
+&lt;p&gt;Well, I’ll be… It worked on the first run.&lt;/p&gt;
+&lt;p&gt;And here are the test results.&lt;/p&gt;
+&lt;h1 id=&#34;wrap-up&#34;&gt;Wrap-up&lt;/h1&gt;
+&lt;p&gt;Well, that’s it folks. Gradle project, with vagrant, docker, and go.cd. I hope you all enjoyed reading about it as much as I did doing it.&lt;/p&gt;
+&lt;p&gt;Any questions, please feel free to ask it in the comment section below.&lt;/p&gt;
+&lt;p&gt;Cheers,
+Have a nice weekend,
+Gergely.&lt;/p&gt;</description>
     </item>
     
   </channel>

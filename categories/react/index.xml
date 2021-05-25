@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>react on Ramblings of a cloud engineer</title>
@@ -6,14 +6,596 @@
     <description>Recent content in react on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-GB</language>
-    <lastBuildDate>Thu, 23 Jul 2020 21:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/react/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 23 Jul 2020 21:01:00 +0100</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/categories/react/index.xml" rel="self" type="application/rss+xml" />
+    
     <item>
       <title>How to deploy a Go (Golang) backend with a React frontend separately on Kubernetes - Part One</title>
       <link>https://skarlso.github.io/2020/07/23/kubernetes-deploy-golang-react-apps-separately-part1/</link>
       <pubDate>Thu, 23 Jul 2020 21:01:00 +0100</pubDate>
-      
       <guid>https://skarlso.github.io/2020/07/23/kubernetes-deploy-golang-react-apps-separately-part1/</guid>
-      <description>Intro Welcome. This is a longer post about how to deploy a Go backend with a React frontend on Kubernetes as separate entities. Instead of the usual compiled together single binary Go application, we are going to separate the two. Why? Because usually a React frontend is just a &amp;ldquo;static&amp;rdquo; SPA app with very little requirements in terms of resources, while the Go backend does most of the leg work, requiring a lot more resources.</description>
+      <description>&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
+&lt;p&gt;Welcome. This is a longer post about how to deploy a Go backend with a React frontend
+on Kubernetes as separate entities. Instead of the usual compiled together single binary Go
+application, we are going to separate the two. Why? Because usually a React frontend is just a &amp;ldquo;static&amp;rdquo;
+SPA app with very little requirements in terms of resources, while the Go backend does most of the
+leg work, requiring a lot more resources.&lt;/p&gt;
+&lt;p&gt;Part two of this will contain scaling, utilization configuration, health probes, readiness probes,
+and how to make sure our application can run multiple instances without stepping on each other&amp;rsquo;s toes.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Note&lt;/em&gt;: This isn&amp;rsquo;t going to be a Kubernetes guide. Some knowledge is assumed.&lt;/p&gt;
+&lt;h2 id=&#34;summary&#34;&gt;Summary&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/kube/short-version.png&#34; alt=&#34;Give me the short version&#34;&gt;&lt;/p&gt;
+&lt;p&gt;This post details a complex setup of an infrastructure with a second part coming on scaling and how to make
+your application scalable in the first place by doing idempotent transactions or dealing with locking and
+several instances of the same application not stepping on each other&amp;rsquo;s foot.&lt;/p&gt;
+&lt;p&gt;This, part one, details how to deploy traditional REST + Frontend based application in Go + React, but not bundled
+together as a single binary, instead having the backend separate from the frontend. They key in doing so is explained
+at the &lt;a href=&#34;#ingress&#34;&gt;Ingress&lt;/a&gt; section when talking about routing specific URIs to the backend and frontend services.&lt;/p&gt;
+&lt;p&gt;If you are familiar with Kubernetes and infrastructure setup, feel free to skip ahead to that section. Otherwise, enjoy
+the drawings or the writing or both.&lt;/p&gt;
+&lt;h2 id=&#34;technology&#34;&gt;Technology&lt;/h2&gt;
+&lt;p&gt;The SPA app will be handled by &lt;a href=&#34;https://www.npmjs.com/package/serve&#34;&gt;Serve&lt;/a&gt; while the Go backend
+will use &lt;a href=&#34;https://echo.labstack.com/&#34;&gt;Echo&lt;/a&gt;. The database will be Postgres.&lt;/p&gt;
+&lt;p&gt;We are going to apply some best practices using Network Policies to cordon off traffic that we don&amp;rsquo;t
+want to go outside.&lt;/p&gt;
+&lt;p&gt;We will set up HTTPS using cert-manager and let&amp;rsquo;s encrypt. We&amp;rsquo;ll be using nginx as ingress
+provider.&lt;/p&gt;
+&lt;h2 id=&#34;code&#34;&gt;Code&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/kube/architect.png&#34; alt=&#34;Let me show you the code&#34;&gt;&lt;/p&gt;
+&lt;p&gt;All, or most of the code, including the application can be found here:&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/staple-org&#34;&gt;Staple&lt;/a&gt;. The application is a simple reading list manager with
+user handling, email sending and lots of database access.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s get to it then!&lt;/p&gt;
+&lt;h2 id=&#34;kubernetes-provider&#34;&gt;Kubernetes Provider&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/kube/audition.png&#34; alt=&#34;Difficult Choice&#34;&gt;&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s start with the obvious one. Where do you would like to create your Kubernetes cluster?&lt;/p&gt;
+&lt;p&gt;There are four major providers now-a-days. AWS &lt;a href=&#34;https://aws.amazon.com/eks/&#34;&gt;EKS&lt;/a&gt;, GCP &lt;a href=&#34;https://cloud.google.com/kubernetes-engine&#34;&gt;GKE&lt;/a&gt;,
+Azure &lt;a href=&#34;https://azure.microsoft.com/en-us/services/kubernetes-service/&#34;&gt;AKS&lt;/a&gt; and DigitalOcean &lt;a href=&#34;https://www.digitalocean.com/products/kubernetes/&#34;&gt;DKE&lt;/a&gt;.
+Personally, I prefer DO because, it&amp;rsquo;s a lot cheaper than the others. The downside is that DO only
+provides ReadWriteOnce persistent volumes. This gets to be a problem when we are trying to update
+and the new Pod can&amp;rsquo;t mount the volume because it&amp;rsquo;s already taken by the existing one. This can be
+solved by a good ol NFS instance. But that&amp;rsquo;s another story.&lt;/p&gt;
+&lt;p&gt;AWS&#39; was late to the party and their solution is quite fragile and the API is terrible. GCP is best in terms
+of technicalities, api, handling, and updates. Azure is surprisingly good, however, the documentation is
+most of the times out of date or even plain incorrect at some places.&lt;/p&gt;
+&lt;h2 id=&#34;setup-basics&#34;&gt;Setup Basics&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/kube/owl.jpg&#34; alt=&#34;Owl&#34;&gt;&lt;/p&gt;
+&lt;p&gt;To setup your Kubernetes instance, follow DigitalOcean&amp;rsquo;s Kubernetes Getting Started guide. It&amp;rsquo;s really simple.
+When you have access to the cluster via kubectl I highly recommend using this tool: &lt;a href=&#34;https://github.com/derailed/k9s&#34;&gt;k9s&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;It&amp;rsquo;s a flexible and quite handy tool for quick observations, logs, shells to pods, edits and generally following what&amp;rsquo;s
+happening to your cluster.&lt;/p&gt;
+&lt;p&gt;Now that we are all set with our own little cluster, it&amp;rsquo;s time to have some people move in. First, we are going to
+install cert-manager.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Note&lt;/em&gt;: I&amp;rsquo;m not going to use Helm because I think it&amp;rsquo;s unnecessary in this setting. We aren&amp;rsquo;t going to install
+these things in a highly configurable way and updating with helm is a pain in the butt. For example, for cert-manager
+the update with helm takes several steps, whilst updating with a plain yaml file is just applying the next version
+of the yaml file.&lt;/p&gt;
+&lt;p&gt;I&amp;rsquo;m not going to explain how to install cert-manager or nginx. I&amp;rsquo;ll link to their respective guides because frankly, they
+are simple to follow and work out of the box.&lt;/p&gt;
+&lt;p&gt;To install nginx, simply apply the yaml file located here: &lt;a href=&#34;https://kubernetes.github.io/ingress-nginx/deploy/#digital-ocean&#34;&gt;DigitalOcean Nginx&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;To install cert-manager follow this guide: &lt;a href=&#34;https://cert-manager.io/docs/installation/kubernetes/&#34;&gt;https://cert-manager.io/docs/installation/kubernetes/&lt;/a&gt;.
+Follow the regular manifest install part, then ignore the Helm part and proceed with verification and then install
+your issuer. I used a simple ACME/http01 issuer from here: &lt;a href=&#34;https://cert-manager.io/docs/configuration/acme/http01/&#34;&gt;https://cert-manager.io/docs/configuration/acme/http01/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Note&lt;/em&gt;: That acme configuration contains the &lt;strong&gt;staging&lt;/strong&gt; url. This is to test that things are working. Once you are
+sure that everything is wired up correctly, switch that url to this one:
+&lt;code&gt;https://acme-v02.api.letsencrypt.org/directory&lt;/code&gt; -&amp;gt; prod url. For example:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;cert-manager.io/v1alpha2&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;ClusterIssuer&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;letsencrypt-prod&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;acme&lt;/span&gt;:
+    &lt;span style=&#34;color:#75715e&#34;&gt;# The ACME server URL&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;server&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;https://acme-v02.api.letsencrypt.org/directory&lt;/span&gt;
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Email address used for ACME registration&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;email&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;your@email.com&lt;/span&gt;
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Name of a secret used to store the ACME account private key&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;privateKeySecretRef&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;letsencrypt-prod&lt;/span&gt;
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Enable the HTTP-01 challenge provider&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;solvers&lt;/span&gt;:
+      - &lt;span style=&#34;color:#f92672&#34;&gt;http01&lt;/span&gt;:
+          &lt;span style=&#34;color:#f92672&#34;&gt;ingress&lt;/span&gt;:
+            &lt;span style=&#34;color:#f92672&#34;&gt;class&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;nginx&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;em&gt;Note&lt;/em&gt;: I&amp;rsquo;m using a ClusterIssuer because I have multiple domains and multiple namespaces.&lt;/p&gt;
+&lt;p&gt;That&amp;rsquo;s it. Cert-manager and nginx should be up and running. Later on, we will create our own
+ingress rules.&lt;/p&gt;
+&lt;h2 id=&#34;domain&#34;&gt;Domain&lt;/h2&gt;
+&lt;p&gt;Next, you&amp;rsquo;ll need a domain to bind too. There are a gazillion domain providers out there like
+no-ip, GoDaddy, HostGator, Shopify and so on. Choose one which is available to you or has the best
+prices.&lt;/p&gt;
+&lt;p&gt;There are some good guides on how to choose a domain and where to create it.
+For example: &lt;a href=&#34;https://domains.google/learning-center/5-things-to-watch-out-for-when-buying-a-domain/&#34;&gt;5 things to watch out for when buying a domain&lt;/a&gt;.&lt;/p&gt;
+&lt;h1 id=&#34;the-application&#34;&gt;The application&lt;/h1&gt;
+&lt;p&gt;Alright, let&amp;rsquo;s put together the application.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/kube/assemble.png&#34; alt=&#34;Assemble&#34;&gt;&lt;/p&gt;
+&lt;h2 id=&#34;structure&#34;&gt;Structure&lt;/h2&gt;
+&lt;p&gt;Every piece of our infrastructure will be laid out in yaml files. I believe in infrastructure as code.
+If you run a command you will most likely forget about it, unless it&amp;rsquo;s logged and / or is replayable.&lt;/p&gt;
+&lt;p&gt;This is the structure I&amp;rsquo;m using:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.
+├── LICENSE
+├── README.md
+├── certificate_request
+│   └── certificate_request.yml
+├── configmaps
+│   └── staple_initdb_script.yaml
+├── database
+│   ├── staple_db_deployment.yaml
+│   ├── staple_db_network_policy.yaml
+│   ├── staple_db_pvc.yaml
+│   └── staple_db_service.yaml
+├── namespace
+│   └── staple_namespace.yaml
+├── primer.sql
+├── rbac
+├── secrets
+│   ├── staple_db_password.yaml
+│   └── staple_mg_creds.yaml
+├── staple-backend
+│   ├── staple_deployment.yaml
+│   └── staple_service.yaml
+└── staple-frontend
+    ├── staple_deployment.yaml
+    └── staple_service.yaml
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;One other possible combination is, if you have multiple applications:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.
+├── README.md
+├── applications
+│   ├── confluence
+│   │   ├── db
+│   │   │   ├── db_deployment.yaml
+│   │   │   └── db_service.yaml
+│   │   ├── deployment
+│   │   │   └── deployment.yaml
+│   │   ├── pvc
+│   │   │   └── confluence_app_pvc.yaml
+│   │   └── service
+│   │       └── service.yaml
+│   ├── gitea
+│   │   ├── config
+│   │   │   ├── app.ini
+│   │   │   └── gitea_config_map.yaml
+│   │   ├── db
+│   │   │   ├── gitea_db_deployment.yaml
+│   │   │   ├── gitea_db_network_policy.yaml
+│   │   │   ├── gitea_db_pvc.yaml
+│   │   │   └── gitea_db_service.yaml
+│   │   ├── deployment
+│   │   │   └── gitea_deployment.yaml
+│   │   ├── pvc
+│   │   │   └── gitea_app_pvc.yaml
+│   │   └── service
+│   │       └── gitea_service.yaml
+├── cronjobs
+│   ├── cronjob1
+│   │   ├── Dockerfile
+│   │   ├── README.md
+│   │   ├── go.mod
+│   │   ├── go.sum
+│   │   ├── cron.yaml
+│   │   └── main.go
+├── ingress
+│   ├── example1
+│   │   ├── example1_ingress_resource.yaml
+│   │   └── gitea_ssh_configmap.yaml
+│   ├── example2
+│   │   └── example2_ingress_resource.yaml
+│   ├── lets-encrypt-issuer.yaml
+│   └── nginx
+│       ├── nginx-ingress-controller-deployment.yaml
+│       └── nginx-ingress-controller-service.yaml
+└── namespaces
+    ├── example1_namespace.yaml
+    ├── example2_namespace.yaml
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;namespace&#34;&gt;Namespace&lt;/h2&gt;
+&lt;p&gt;Before we begin, we&amp;rsquo;ll create a namespace for our application to properly partition all our entities.&lt;/p&gt;
+&lt;p&gt;To create a namespace we&amp;rsquo;ll use this yaml &lt;code&gt;example_namespace.yaml&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;Namespace&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;example&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Apply this with &lt;code&gt;kubectl -f apply example_namespace.yaml&lt;/code&gt;.&lt;/p&gt;
+&lt;h2 id=&#34;the-database&#34;&gt;The Database&lt;/h2&gt;
+&lt;p&gt;Deploying a Postgres database on Kubernetes is actually really easy. You need five things to have a basic, but
+relatively secure installation.&lt;/p&gt;
+&lt;h3 id=&#34;secret&#34;&gt;Secret&lt;/h3&gt;
+&lt;p&gt;The secret contains our password and our database user. In postgres, if you define a user using &lt;code&gt;POSTGRES_USER&lt;/code&gt;
+postgres will create the user and a database with the user&amp;rsquo;s name. This could come from Vault too, but
+the Kubernetes secret is usually enough since it should be a closed environment anyways. But for important information
+I would definitely use an admission policy and some vault secret goodness. (Maybe another post?)&lt;/p&gt;
+&lt;p&gt;Our secret looks like this:
+database_secret.yaml&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;Secret&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-password&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;data&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;POSTGRES_PASSWORD&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;cGFzc3dvcmQxMjM=&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;# This creates a user and a db with the same name.&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;POSTGRES_USER&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;c3RhcGxl&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To generate the base64 code for a password and a user, use:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;echo -n &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;password123&amp;#34;&lt;/span&gt; | base64
+echo -n &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;username&amp;#34;&lt;/span&gt; | base64
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&amp;hellip;and paste the result in the respective fields. Once done, apply with &lt;code&gt;kubectl -f apply database_secret.yaml&lt;/code&gt;.&lt;/p&gt;
+&lt;h3 id=&#34;deployment&#34;&gt;Deployment&lt;/h3&gt;
+&lt;p&gt;The deployment which configures our database. Looks something like this (database_deployment.yaml):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;apps/v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;Deployment&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;replicas&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;selector&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;matchLabels&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;template&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;labels&lt;/span&gt;:
+        &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;containers&lt;/span&gt;:
+      - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;postgres&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;image&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;postgres:11&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;env&lt;/span&gt;:
+          - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;POSTGRES_USER&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;value&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+          - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;POSTGRES_PASSWORD&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;valueFrom&lt;/span&gt;:
+              &lt;span style=&#34;color:#f92672&#34;&gt;secretKeyRef&lt;/span&gt;:
+                &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-password&lt;/span&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;key&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;POSTGRES_PASSWORD&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;volumeMounts&lt;/span&gt;:
+        - &lt;span style=&#34;color:#f92672&#34;&gt;mountPath&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;/var/lib/postgresql/data&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;subPath&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;data&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;# important so it gets mounted correctly&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-data&lt;/span&gt;
+        - &lt;span style=&#34;color:#f92672&#34;&gt;mountPath&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;/docker-entrypoint-initdb.d/staple_initdb.sql&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;subPath&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple_initdb.sql&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;bootstrap-script&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;volumes&lt;/span&gt;:
+        - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-data&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;persistentVolumeClaim&lt;/span&gt;:
+            &lt;span style=&#34;color:#f92672&#34;&gt;claimName&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;do-storage-staple-db&lt;/span&gt;
+        - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;bootstrap-script&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;configMap&lt;/span&gt;:
+            &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-initdb-script&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Note the two volume mounts.&lt;/p&gt;
+&lt;p&gt;The first one makes sure that our data isn&amp;rsquo;t lost when the database pod itself restarts. It creates a mount
+to a persistent volume which is defined a few lines below by &lt;code&gt;persistentVolumeClaim&lt;/code&gt;. &lt;code&gt;subPath&lt;/code&gt; is important
+in this case otherwise you&amp;rsquo;ll end up with a lost&amp;amp;found folder.&lt;/p&gt;
+&lt;p&gt;The second mount is a postgres specific initialization file. Postgres will run that sql file when it
+starts up. I&amp;rsquo;m using it to create my application&amp;rsquo;s schema.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;create&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;database&lt;/span&gt; staples;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;create&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;table&lt;/span&gt; users (email varchar(&lt;span style=&#34;color:#ae81ff&#34;&gt;255&lt;/span&gt;), password text, confirm_code text, max_staples int);
+&lt;span style=&#34;color:#66d9ef&#34;&gt;create&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;table&lt;/span&gt; staples (name varchar(&lt;span style=&#34;color:#ae81ff&#34;&gt;255&lt;/span&gt;), id serial, content text, created_at &lt;span style=&#34;color:#66d9ef&#34;&gt;timestamp&lt;/span&gt;, archived bool, user_email varchar(&lt;span style=&#34;color:#ae81ff&#34;&gt;255&lt;/span&gt;));
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And it comes from a configmap which looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;ConfigMap&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-initdb-script&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;labels&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;data&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;staple_initdb.sql&lt;/span&gt;:
+    &lt;span style=&#34;color:#ae81ff&#34;&gt;create table users (email varchar(255), password text, confirm_code text, max_staples int);&lt;/span&gt;
+    &lt;span style=&#34;color:#ae81ff&#34;&gt;create table staples (name varchar(255), id serial, content text, created_at timestamp, archived bool, user_email varchar(255));&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;network-policy&#34;&gt;Network Policy&lt;/h3&gt;
+&lt;p&gt;Network policies are important if you value your privacy. They restrict a PODs communication to a certain namespace
+OR even to between applications only. By default I like to deny all traffic and then slowly open the valve until everything works.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/kube/szaffi.png&#34; alt=&#34;Szaffi&#34;&gt;
+Kudos if you know who this is. (mind my terrible drawing capabilities)&lt;/p&gt;
+&lt;p&gt;We&amp;rsquo;ll use a basic network policy which will restrict the DB to talk to anything BUT the backend. Nothing else
+will be able to talk to this Pod.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;networking.k8s.io/v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;NetworkPolicy&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-network-policy&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;podSelector&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;matchLabels&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;policyTypes&lt;/span&gt;:
+  - &lt;span style=&#34;color:#ae81ff&#34;&gt;Ingress&lt;/span&gt;
+  - &lt;span style=&#34;color:#ae81ff&#34;&gt;Egress&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;ingress&lt;/span&gt;:
+  - &lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt;:
+    - &lt;span style=&#34;color:#f92672&#34;&gt;podSelector&lt;/span&gt;:
+        &lt;span style=&#34;color:#f92672&#34;&gt;matchLabels&lt;/span&gt;:
+          &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;ports&lt;/span&gt;:
+    - &lt;span style=&#34;color:#f92672&#34;&gt;protocol&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;TCP&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;port&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;5432&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;egress&lt;/span&gt;:
+  - &lt;span style=&#34;color:#f92672&#34;&gt;to&lt;/span&gt;:
+    - &lt;span style=&#34;color:#f92672&#34;&gt;podSelector&lt;/span&gt;:
+        &lt;span style=&#34;color:#f92672&#34;&gt;matchLabels&lt;/span&gt;:
+          &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;ports&lt;/span&gt;:
+    - &lt;span style=&#34;color:#f92672&#34;&gt;protocol&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;TCP&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;port&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;5432&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The important bit here is the &lt;code&gt;podSelector&lt;/code&gt; part. The label will be the label used by the application deployment.
+This will restrict the Pod&amp;rsquo;s incoming and outgoing traffic to that of the application Pod including denying internet
+traffic.&lt;/p&gt;
+&lt;h3 id=&#34;pvc&#34;&gt;PVC&lt;/h3&gt;
+&lt;p&gt;The persistent volume claim definition is straight forward:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;PersistentVolumeClaim&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;do-storage-staple-db&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;accessModes&lt;/span&gt;:
+  - &lt;span style=&#34;color:#ae81ff&#34;&gt;ReadWriteOnce&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;resources&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;requests&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;storage&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;10Gi&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;storageClassName&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;do-block-storage&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;10 gigs should be enough anything.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/kube/gates.png&#34; alt=&#34;Gates&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;service&#34;&gt;Service&lt;/h3&gt;
+&lt;p&gt;The service will expose the database deployment to our cluster.&lt;/p&gt;
+&lt;p&gt;Our service is fairly basic:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;Service&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-service&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;ports&lt;/span&gt;:
+  - &lt;span style=&#34;color:#f92672&#34;&gt;port&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;5432&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;selector&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;clusterIP&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;None&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;That&amp;rsquo;s done with the database. Next up is the backend.&lt;/p&gt;
+&lt;h2 id=&#34;the-backend&#34;&gt;The backend&lt;/h2&gt;
+&lt;p&gt;The backend itself is written in a way that it doesn&amp;rsquo;t require a persistent storage so
+we can skip that part. It only needs three pieces. A secret, a deployment definition and the
+service exposing the deployment.&lt;/p&gt;
+&lt;h3 id=&#34;secret-1&#34;&gt;Secret&lt;/h3&gt;
+&lt;p&gt;First, we create a secret which contains Mailgun credentials.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;Secret&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-mg-creds&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;data&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;MG_DOMAIN&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;cGFzc3dvcmQxMjM=&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;MG_API_KEY&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;cGFzc3dvcmQxMjM=&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;database-connection&#34;&gt;Database connection&lt;/h3&gt;
+&lt;p&gt;The connection settings are handled through the same secret which is used to spin up the DB itself.
+We have to only mount that here too and we are good.&lt;/p&gt;
+&lt;h3 id=&#34;deployment-1&#34;&gt;Deployment&lt;/h3&gt;
+&lt;p&gt;Which brings us to the deployment. This is a bit more involved.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;apps/v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;Deployment&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-app&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;labels&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;replicas&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;selector&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;matchLabels&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;template&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;labels&lt;/span&gt;:
+        &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/instance&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;containers&lt;/span&gt;:
+      - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;image&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;skarlso/staple:v0.1.0&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;imagePullPolicy&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;IfNotPresent&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;resources&lt;/span&gt;:
+          &lt;span style=&#34;color:#f92672&#34;&gt;requests&lt;/span&gt;:
+            &lt;span style=&#34;color:#f92672&#34;&gt;memory&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;500Mi&amp;#34;&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;cpu&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;250m&amp;#34;&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;limits&lt;/span&gt;:
+            &lt;span style=&#34;color:#f92672&#34;&gt;memory&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1000Mi&amp;#34;&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;cpu&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;500m&amp;#34;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;env&lt;/span&gt;:
+          - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;POD_NAMESPACE&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;valueFrom&lt;/span&gt;:
+              &lt;span style=&#34;color:#f92672&#34;&gt;fieldRef&lt;/span&gt;:
+                &lt;span style=&#34;color:#f92672&#34;&gt;fieldPath&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;metadata.namespace&lt;/span&gt;
+          - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;DB_PASSWORD&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;valueFrom&lt;/span&gt;:
+              &lt;span style=&#34;color:#f92672&#34;&gt;secretKeyRef&lt;/span&gt;:
+                &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-password&lt;/span&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;key&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;POSTGRES_PASSWORD&lt;/span&gt;
+          - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;MG_DOMAIN&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;valueFrom&lt;/span&gt;:
+              &lt;span style=&#34;color:#f92672&#34;&gt;secretKeyRef&lt;/span&gt;:
+                &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-mg-creds&lt;/span&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;key&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;MG_DOMAIN&lt;/span&gt;
+          - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;MG_API_KEY&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;valueFrom&lt;/span&gt;:
+              &lt;span style=&#34;color:#f92672&#34;&gt;secretKeyRef&lt;/span&gt;:
+                &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-mg-creds&lt;/span&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;key&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;MG_API_KEY&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;args&lt;/span&gt;:
+          - --&lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-hostname=staple-db-service.cronohub.svc.cluster.local:5432&lt;/span&gt;
+          - --&lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-username=staple&lt;/span&gt;
+          - --&lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-database=staple&lt;/span&gt;
+          - --&lt;span style=&#34;color:#ae81ff&#34;&gt;staple-db-password=$(DB_PASSWORD)&lt;/span&gt;
+          - --&lt;span style=&#34;color:#ae81ff&#34;&gt;mg-domain=$(MG_DOMAIN)&lt;/span&gt;
+          - --&lt;span style=&#34;color:#ae81ff&#34;&gt;mg-api-key=$(MG_API_KEY)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;ports&lt;/span&gt;:
+        - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-port&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;containerPort&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;9998&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;There are a few important points here and I won&amp;rsquo;t explain them all, like the resource restrictions,
+which you should be familiar with by now. I&amp;rsquo;m using a mix of 12factor app&amp;rsquo;s environment configuration
+and command line arguments for the application configuration. The app itself is not using os.Environ
+but the args.&lt;/p&gt;
+&lt;p&gt;The args point to the cluster local dns of the database, some db settings, and the mailgun credentials.&lt;/p&gt;
+&lt;p&gt;It also exposes the container port 9998 which is Echo&amp;rsquo;s default port.&lt;/p&gt;
+&lt;p&gt;Now all we need is the service.&lt;/p&gt;
+&lt;h3 id=&#34;service-1&#34;&gt;Service&lt;/h3&gt;
+&lt;p&gt;Without much fanfare:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;Service&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-service&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;labels&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/instance&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;selector&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/instance&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;ports&lt;/span&gt;:
+  - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;service-port&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;port&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;9998&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;targetPort&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-port&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And with this, the backend is done.&lt;/p&gt;
+&lt;h2 id=&#34;the-frontend&#34;&gt;The frontend&lt;/h2&gt;
+&lt;p&gt;The frontend, similarly to the backend, does not require a persistent volume. We can skip that one too.&lt;/p&gt;
+&lt;p&gt;In fact it only needs two things, a deployment and a service, and that&amp;rsquo;s all. It uses serve to host the
+static files. Honestly, that could also be a Go application serving the static content or anything
+that can serve static files.&lt;/p&gt;
+&lt;h3 id=&#34;deployment-2&#34;&gt;Deployment&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;apps/v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;Deployment&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;labels&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;replicas&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;selector&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;matchLabels&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;template&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;labels&lt;/span&gt;:
+        &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/instance&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;containers&lt;/span&gt;:
+      - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;image&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;skarlso/staple-frontend:v0.0.9&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;imagePullPolicy&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;IfNotPresent&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;resources&lt;/span&gt;:
+          &lt;span style=&#34;color:#f92672&#34;&gt;requests&lt;/span&gt;:
+            &lt;span style=&#34;color:#f92672&#34;&gt;memory&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;500Mi&amp;#34;&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;cpu&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;250m&amp;#34;&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;limits&lt;/span&gt;:
+            &lt;span style=&#34;color:#f92672&#34;&gt;memory&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1000Mi&amp;#34;&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;cpu&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;500m&amp;#34;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;env&lt;/span&gt;:
+          - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;POD_NAMESPACE&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;valueFrom&lt;/span&gt;:
+              &lt;span style=&#34;color:#f92672&#34;&gt;fieldRef&lt;/span&gt;:
+                &lt;span style=&#34;color:#f92672&#34;&gt;fieldPath&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;metadata.namespace&lt;/span&gt;
+          - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;REACT_APP_STAPLE_DEV_HOST&lt;/span&gt;
+            &lt;span style=&#34;color:#f92672&#34;&gt;value&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;ports&lt;/span&gt;:
+        - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-front&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;containerPort&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;5000&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;service-2&#34;&gt;Service&lt;/h3&gt;
+&lt;p&gt;And the service:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;Service&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;v1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-front-service&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;labels&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/instance&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;selector&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;app&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;app.kubernetes.io/instance&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-frontend&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;ports&lt;/span&gt;:
+  - &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-front&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;port&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;5000&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;targetPort&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-front&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And with that the backend and frontend are wired together and ready to receive traffic.&lt;/p&gt;
+&lt;p&gt;All pods should be up and running without problems at this point. If you have any trouble deploying
+things, please don&amp;rsquo;t hesitate to leave a question in the comments.&lt;/p&gt;
+&lt;h2 id=&#34;ingress&#34;&gt;Ingress&lt;/h2&gt;
+&lt;p&gt;Fantastic. Now, our application is running. We just need to expose it and route traffic to it.
+The backend has the api route &lt;code&gt;/rest/api/v1/&lt;/code&gt;. The frontend has the route syntax &lt;code&gt;/login&lt;/code&gt;, &lt;code&gt;/register&lt;/code&gt;
+and a bunch of others. The key here is that all of them are under the same domain name but based on the URI
+we need to direct one request to the backend the other to the frontend.&lt;/p&gt;
+&lt;p&gt;This is done via nginx&amp;rsquo;s routing logic using regex. In an nginx config this would be the &lt;code&gt;location&lt;/code&gt; part.
+It&amp;rsquo;s imperative that the order of the routing is from more specific towards more general Because we need to catch
+the specific URIs first.&lt;/p&gt;
+&lt;h3 id=&#34;ingress-resource&#34;&gt;Ingress Resource&lt;/h3&gt;
+&lt;p&gt;To do this, we will create something called an &lt;a href=&#34;https://docs.nginx.com/nginx-ingress-controller/configuration/ingress-resources/&#34;&gt;Ingress Resource&lt;/a&gt;.
+Note that this is Nginx&amp;rsquo;s ingress resource and not Kubernetes&#39;. There is a difference.&lt;/p&gt;
+&lt;p&gt;I suggest reading up on that link about the ingress resource because it reads quite well and will explain how it
+works and fits into the Kubernetes environment.&lt;/p&gt;
+&lt;p&gt;Got it? Good. We&amp;rsquo;ll create one for &lt;code&gt;staple.app&lt;/code&gt; domain:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;apiVersion&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;extensions/v1beta1&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;kind&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;Ingress&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;namespace&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;name&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-app-ingress&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;annotations&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;kubernetes.io/ingress.class&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;nginx&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;cert-manager.io/cluster-issuer&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;letsencrypt-prod&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;cert-manager.io/acme-challenge-type&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;http01&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;nginx.ingress.kubernetes.io/rewrite-target&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;/$1&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;# this is important&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;spec&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;tls&lt;/span&gt;:
+  - &lt;span style=&#34;color:#f92672&#34;&gt;hosts&lt;/span&gt;:
+    - &lt;span style=&#34;color:#ae81ff&#34;&gt;staple.app&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;secretName&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-app-tls&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;rules&lt;/span&gt;:
+  - &lt;span style=&#34;color:#f92672&#34;&gt;host&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple.app&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;http&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;paths&lt;/span&gt;:
+      - &lt;span style=&#34;color:#f92672&#34;&gt;backend&lt;/span&gt;:
+          &lt;span style=&#34;color:#f92672&#34;&gt;serviceName&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-service&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;servicePort&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;ss-port&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;# 9998&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;path&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;/(rest/api/1.*)&lt;/span&gt;
+  - &lt;span style=&#34;color:#f92672&#34;&gt;host&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple.app&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;http&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;paths&lt;/span&gt;:
+      - &lt;span style=&#34;color:#f92672&#34;&gt;backend&lt;/span&gt;:
+          &lt;span style=&#34;color:#f92672&#34;&gt;serviceName&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;staple-front-service&lt;/span&gt;
+          &lt;span style=&#34;color:#f92672&#34;&gt;servicePort&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;sfs-port&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;# 5000&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;path&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;/(.*)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Let&amp;rsquo;s take a look at what&amp;rsquo;s going on here. The first thing to catch the eye are the annotations.
+These are configuration settings for nginx, cert-manager and Kubernetes.
+We have the cluster issuer&amp;rsquo;s name. The challenge type, which we decided should be http01,
+and the most important part, the rewrite-target setting. This will use the first capture group
+as a base after the host.&lt;/p&gt;
+&lt;p&gt;With this rewrite rule in place, the &lt;code&gt;paths&lt;/code&gt; values need to provide a capture group. The first in line will see
+everything that goes to the urls like: &lt;code&gt;staple.app/rest/api/1/token&lt;/code&gt;, &lt;code&gt;staple.app/rest/api/1/staples&lt;/code&gt;,
+&lt;code&gt;staple.app/rest/api/1/user&lt;/code&gt;, etc. The first part of the url is the host &lt;code&gt;staple.app&lt;/code&gt;, second part is &lt;code&gt;/(rest/api/1/.*)&lt;/code&gt;
+for which the result is that group number one ($1) will be &lt;code&gt;rest/api/1/token&lt;/code&gt;. Nginx now sees that we
+have a backend route for that and will send this URI along to the service. Our service picks it up
+and will match that URI to the router configuration.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/kube/regex.png&#34; alt=&#34;Regex&#34;&gt;&lt;/p&gt;
+&lt;p&gt;If there is a request like, &lt;code&gt;staple.app/login&lt;/code&gt;, which is our frontend&amp;rsquo;s job to pick up, the first rule
+will not catch it because the regex isn&amp;rsquo;t matching, so it falls through to the second one, which
+is the frontend service that is using a &amp;ldquo;catch all&amp;rdquo; regex. Like ip tables, we go from
+specific to more general.&lt;/p&gt;
+&lt;h1 id=&#34;ending-words&#34;&gt;Ending words&lt;/h1&gt;
+&lt;p&gt;And that&amp;rsquo;s it. If everything works correctly, then the certificate service wired up the https certs and
+we should be able ping the rest endpoint under &lt;code&gt;https://staple.app/rest/api/1/token&lt;/code&gt; and log in to the app
+in the browser using &lt;code&gt;https://staple.app&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Stay tuned for the second part where we&amp;rsquo;ll scale the thing up!&lt;/p&gt;
+&lt;p&gt;Thanks for reading!
+Gergely.&lt;/p&gt;
+</description>
     </item>
     
   </channel>

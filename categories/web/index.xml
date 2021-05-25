@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Web on Ramblings of a cloud engineer</title>
@@ -6,27 +6,391 @@
     <description>Recent content in Web on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-GB</language>
-    <lastBuildDate>Wed, 02 Nov 2016 00:00:00 +0000</lastBuildDate><atom:link href="https://skarlso.github.io/categories/web/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 02 Nov 2016 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/categories/web/index.xml" rel="self" type="application/rss+xml" />
+    
     <item>
       <title>How to do Google Sign-In with Go - Part 2</title>
       <link>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2/</link>
       <pubDate>Wed, 02 Nov 2016 00:00:00 +0000</pubDate>
-      
       <guid>https://skarlso.github.io/2016/11/02/google-signin-with-go-part2/</guid>
-      <description>Intro Hi Folks.
-This is a follow up on my previous post about Google Sign-In. In this post we will discover what to do with the information retrieved in the first encounter, which you can find here: Google Sign-In Part 1.
-Forewords The Project Everything I did in the first post, and that I&amp;rsquo;m going to do in this example, can be found in this project: Google-OAuth-Go-Sample.
-Just to recap, we left off previously on the point where we successfully obtained information about the user, with a secure token and a session initiated with them.</description>
+      <description>&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
+&lt;p&gt;Hi Folks.&lt;/p&gt;
+&lt;p&gt;This is a follow up on my previous post about Google Sign-In. In this post we will discover what to do with the information retrieved in the first encounter, which you can find here: &lt;a href=&#34;http://skarlso.github.io/2016/06/12/google-signin-with-go/&#34;&gt;Google Sign-In Part 1&lt;/a&gt;.&lt;/p&gt;
+&lt;h1 id=&#34;forewords&#34;&gt;Forewords&lt;/h1&gt;
+&lt;h2 id=&#34;the-project&#34;&gt;The Project&lt;/h2&gt;
+&lt;p&gt;Everything I did in the first post, and that I&amp;rsquo;m going to do in this example, can be found in this project: &lt;a href=&#34;https://github.com/Skarlso/google-oauth-go-sample&#34;&gt;Google-OAuth-Go-Sample&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Just to recap, we left off previously on the point where we successfully obtained information about the user, with a secure token and a session initiated with them. Google nicely enough provided us with some details which we can use. This information was in JSON format and looked something like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;{
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;sub&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1111111111111111111111&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Your Name&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;given_name&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Your&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;family_name&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Name&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;profile&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;https://plus.google.com/1111111111111111111111&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;picture&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;email&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;your@gmail.com&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;email_verified&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;gender&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;male&amp;#34;&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;In my example, to keep things simple, I will use the email address since that has to be unique in the land of Google. You could assign an ID to the user, and you could complicate things even further, but my goal is not to write an academic paper about cryptography here.&lt;/p&gt;
+&lt;h1 id=&#34;implementation&#34;&gt;Implementation&lt;/h1&gt;
+&lt;h2 id=&#34;making-something-useful-out-of-the-data&#34;&gt;Making something useful out of the data&lt;/h2&gt;
+&lt;p&gt;In order for the app to recognise a user it must save some data about the user. I&amp;rsquo;m doing that in MongoDB right now, but that could be any form of persistence layer, like, SQLite3, BoltDB, PostgresDB, etc.&lt;/p&gt;
+&lt;h3 id=&#34;after-successful-user-authorization&#34;&gt;After successful user authorization&lt;/h3&gt;
+&lt;p&gt;Once the user used google to provide us with sufficient information about him/herself, we can retrieve data about that user from our records. The data could be anything that is linked to our unique identifier like: Character Profile, Player Information, Status, Last Logged-In, etcetc. For this, there are two things that need to happen after authorization: Save/Load user information and initiate a session.&lt;/p&gt;
+&lt;p&gt;The session can be in the form of a cookie, or a Redis storage, or URL re-writing. I&amp;rsquo;m choosing a cookie here.&lt;/p&gt;
+&lt;h3 id=&#34;save--load-user-information&#34;&gt;Save / Load user information&lt;/h3&gt;
+&lt;p&gt;All I&amp;rsquo;m doing is a simple, &lt;em&gt;returning / new&lt;/em&gt; user handling. The concept is simple. If the email isn&amp;rsquo;t saved, we save it. If it&amp;rsquo;s saved, we set a logic to our page render to greet the returning user.&lt;/p&gt;
+&lt;p&gt;In the &lt;code&gt;AuthHandler&lt;/code&gt; I&amp;rsquo;m doing the following:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;seen&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;db&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;database&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;MongoDBConnection&lt;/span&gt;{}
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;_&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;mongoErr&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;db&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;LoadUser&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;u&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Email&lt;/span&gt;); &lt;span style=&#34;color:#a6e22e&#34;&gt;mongoErr&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;seen&lt;/span&gt; = &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt; {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; = &lt;span style=&#34;color:#a6e22e&#34;&gt;db&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;SaveUser&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;u&lt;/span&gt;)
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Println&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;HTML&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusBadRequest&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;error.tmpl&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;H&lt;/span&gt;{&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;message&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Error while saving user. Please try again.&amp;#34;&lt;/span&gt;})
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt;
+    }
+}
+&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;HTML&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusOK&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;battle.tmpl&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;H&lt;/span&gt;{&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;email&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;u&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Email&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;seen&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;seen&lt;/span&gt;})
+&lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Let&amp;rsquo;s break this down a bit. There is a db connection here, which calls a function that either returns an error, or it doesn&amp;rsquo;t. If it doesn&amp;rsquo;t, that means we have our user. If it does, it means we have to save the user. This is a very simple case (disregard for now, that the error could be something else as well (If you can&amp;rsquo;t get passed that, you could type check the error or check if the returned record contains the requested user information instead of checking for an error.)).&lt;/p&gt;
+&lt;p&gt;The template is than rendered depending on the &lt;code&gt;seen&lt;/code&gt; boolean like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-html&#34; data-lang=&#34;html&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;!DOCTYPE html&amp;gt;&lt;/span&gt;
+&amp;lt;&lt;span style=&#34;color:#f92672&#34;&gt;link&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;rel&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;icon&amp;#34;&lt;/span&gt;
+      &lt;span style=&#34;color:#a6e22e&#34;&gt;type&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;image/png&amp;#34;&lt;/span&gt;
+      &lt;span style=&#34;color:#a6e22e&#34;&gt;href&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/img/favicon.ico&amp;#34;&lt;/span&gt; /&amp;gt;
+&amp;lt;&lt;span style=&#34;color:#f92672&#34;&gt;html&lt;/span&gt;&amp;gt;
+  &amp;lt;&lt;span style=&#34;color:#f92672&#34;&gt;head&lt;/span&gt;&amp;gt;
+    &amp;lt;&lt;span style=&#34;color:#f92672&#34;&gt;link&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;rel&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;stylesheet&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;href&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/css/main.css&amp;#34;&lt;/span&gt;&amp;gt;
+  &amp;lt;/&lt;span style=&#34;color:#f92672&#34;&gt;head&lt;/span&gt;&amp;gt;
+  &amp;lt;&lt;span style=&#34;color:#f92672&#34;&gt;body&lt;/span&gt;&amp;gt;
+    {{if .seen}}
+        &amp;lt;&lt;span style=&#34;color:#f92672&#34;&gt;h1&lt;/span&gt;&amp;gt;Welcome back to the battlefield &amp;#39;{{ .email }}&amp;#39;.&amp;lt;/&lt;span style=&#34;color:#f92672&#34;&gt;h1&lt;/span&gt;&amp;gt;
+    {{else}}
+        &amp;lt;&lt;span style=&#34;color:#f92672&#34;&gt;h1&lt;/span&gt;&amp;gt;Welcome to the battlefield &amp;#39;{{ .email }}&amp;#39;.&amp;lt;/&lt;span style=&#34;color:#f92672&#34;&gt;h1&lt;/span&gt;&amp;gt;
+    {{end}}
+  &amp;lt;/&lt;span style=&#34;color:#f92672&#34;&gt;body&lt;/span&gt;&amp;gt;
+&amp;lt;/&lt;span style=&#34;color:#f92672&#34;&gt;html&lt;/span&gt;&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You can see here, that if &lt;code&gt;seen&lt;/code&gt; is &lt;em&gt;true&lt;/em&gt; the header message will say: &amp;ldquo;Welcome &lt;em&gt;back&lt;/em&gt;&amp;hellip;&amp;rdquo;.&lt;/p&gt;
+&lt;h3 id=&#34;initiating-a-session&#34;&gt;Initiating a session&lt;/h3&gt;
+&lt;p&gt;When the user is successfully authenticated, we activate a session so that the user can access pages that require authorization. Here, I have to mention that I&amp;rsquo;m using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt;, so restricted end-points are made with groups which require a middleware.&lt;/p&gt;
+&lt;p&gt;As I mentioned earlier, I&amp;rsquo;m using cookies as session handlers. For this, a new session store has to be created with some secure token. This is achieved with the following code fragments ( note that I&amp;rsquo;m using a Gin session middleware which uses gorilla&amp;rsquo;s session handler located here: &lt;a href=&#34;https://github.com/gin-gonic/contrib&#34;&gt;Gin-Gonic(Sessions)&lt;/a&gt;):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// RandToken in handlers.go:
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// RandToken generates a random @l length token.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;RandToken&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;l&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;b&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; make([]&lt;span style=&#34;color:#66d9ef&#34;&gt;byte&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;l&lt;/span&gt;)
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;rand&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Read&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;b&lt;/span&gt;)
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;base64&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StdEncoding&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;EncodeToString&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;b&lt;/span&gt;)
+}
+
+&lt;span style=&#34;color:#75715e&#34;&gt;// quest.go:
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Create the cookie store in main.go.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;store&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sessions&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;NewCookieStore&lt;/span&gt;([]byte(&lt;span style=&#34;color:#a6e22e&#34;&gt;handlers&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;RandToken&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;64&lt;/span&gt;)))
+&lt;span style=&#34;color:#a6e22e&#34;&gt;store&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Options&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;sessions&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Options&lt;/span&gt;{
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Path&lt;/span&gt;:   &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/&amp;#34;&lt;/span&gt;,
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;MaxAge&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;86400&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;7&lt;/span&gt;,
+})
+
+&lt;span style=&#34;color:#75715e&#34;&gt;// using the cookie store:
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Use&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;sessions&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Sessions&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;goquestsession&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;store&lt;/span&gt;))
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;After this &lt;code&gt;gin.Context&lt;/code&gt; lets us access this session store by doing &lt;code&gt;session := sessions.Default(c)&lt;/code&gt;. Now, create a session variable called &lt;code&gt;user-id&lt;/code&gt; like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Set&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;user-id&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;u&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Email&lt;/span&gt;)
+&lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; = &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Save&lt;/span&gt;()
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Println&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;HTML&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusBadRequest&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;error.tmpl&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;H&lt;/span&gt;{&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;message&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Error while saving session. Please try again.&amp;#34;&lt;/span&gt;})
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Don&amp;rsquo;t forget to &lt;code&gt;save&lt;/code&gt; the session. ;) That is it. If I restart the server, the cookie won&amp;rsquo;t be usable any longer, since it will generate a new token for the cookie store. The user will have to log in again. &lt;strong&gt;Note&lt;/strong&gt;: It might be that you&amp;rsquo;ll see something like this, from &lt;code&gt;session&lt;/code&gt;: &lt;code&gt;[sessions] ERROR! securecookie: the value is not valid&lt;/code&gt;. You can ignore this error.&lt;/p&gt;
+&lt;h2 id=&#34;restricting-access-to-certain-end-points-with-the-auth-middleware&#34;&gt;Restricting access to certain end-points with the auth Middleware™&lt;/h2&gt;
+&lt;p&gt;Now, that our session is alive, we can use it to restrict access to some part of the application. With Gin, it looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;authorized&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Group&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/battle&amp;#34;&lt;/span&gt;)
+&lt;span style=&#34;color:#a6e22e&#34;&gt;authorized&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Use&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;middleware&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;AuthorizeRequest&lt;/span&gt;())
+{
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;authorized&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GET&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/field&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;handlers&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;FieldHandler&lt;/span&gt;)
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This creates a grouping of end-points under &lt;code&gt;/battle&lt;/code&gt;. Which means, everything under &lt;code&gt;/battle&lt;/code&gt; will only be accessible if the middleware passed to the &lt;code&gt;Use&lt;/code&gt; function calls the next handler in the chain. If it aborts the call chain, the end-point will not be accessible. My middleware is pretty simple, but it gets the job done:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// AuthorizeRequest is used to authorize a request for a certain end-point group.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;AuthorizeRequest&lt;/span&gt;() &lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;HandlerFunc&lt;/span&gt; {
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Context&lt;/span&gt;) {
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sessions&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Default&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;)
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;v&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Get&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;user-id&amp;#34;&lt;/span&gt;)
+		&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;v&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+			&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;HTML&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusUnauthorized&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;error.tmpl&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;H&lt;/span&gt;{&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;message&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Please log in.&amp;#34;&lt;/span&gt;})
+			&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Abort&lt;/span&gt;()
+		}
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Next&lt;/span&gt;()
+	}
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Note, that this only check if &lt;code&gt;user-id&lt;/code&gt; is set or not. That&amp;rsquo;s certainly not enough for a secure application. Its only supposed to be a simple example of the mechanics of the auth middleware. Also, the session usually contains more than one parameter. It&amp;rsquo;s more likely that it contains several variables, which describe the user including a state for CORS protection. For CORS I&amp;rsquo;d recommend using &lt;a href=&#34;https://github.com/rs/cors&#34;&gt;rs/cors&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;If you would try to access http://127.0.0.1:9090/battle/field without logging in, you&amp;rsquo;d be redirected to an &lt;code&gt;error.tmpl&lt;/code&gt; with the message: &lt;strong&gt;Please log in.&lt;/strong&gt;.&lt;/p&gt;
+&lt;h1 id=&#34;final-words&#34;&gt;Final Words&lt;/h1&gt;
+&lt;p&gt;That&amp;rsquo;s pretty much it. Important parts are:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Saving the right information&lt;/li&gt;
+&lt;li&gt;Secure cookie store&lt;/li&gt;
+&lt;li&gt;CORS for sessions&lt;/li&gt;
+&lt;li&gt;Checks of the users details in the cookie&lt;/li&gt;
+&lt;li&gt;Authorised end-points&lt;/li&gt;
+&lt;li&gt;Session handling&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Any questions, remarks, ideas, are very welcomed in the comment section. There are plenty of very nice Go frameworks which do Google OAuth2 out of the box. I recommend using them, as they save you a lot of legwork.&lt;/p&gt;
+&lt;p&gt;Thank you for reading!
+Gergely.&lt;/p&gt;
+</description>
     </item>
     
     <item>
       <title>How to do Google sign-in with Go</title>
       <link>https://skarlso.github.io/2016/06/12/google-signin-with-go/</link>
       <pubDate>Sun, 12 Jun 2016 00:00:00 +0000</pubDate>
-      
       <guid>https://skarlso.github.io/2016/06/12/google-signin-with-go/</guid>
       <description>&lt;p&gt;Hi folks.&lt;/p&gt;
-&lt;p&gt;Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.&lt;/p&gt;</description>
+&lt;p&gt;Today, I would like to write up a step - by - step guide with a sample web app on how to do Google Sign-In and authorization.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s get started.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;EDIT&lt;/strong&gt;: A sample project of this, and &lt;a href=&#34;http://skarlso.github.io/2016/11/02/google-signin-with-go-part2/&#34;&gt;Part 2&lt;/a&gt;, can be found
+&lt;a href=&#34;https://github.com/Skarlso/goquestwebapp&#34;&gt;here&lt;/a&gt; or &lt;a href=&#34;https://github.com/Skarlso/google-oauth-go-sample&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
+&lt;h2 id=&#34;google-oauth-token&#34;&gt;Google OAuth token&lt;/h2&gt;
+&lt;p&gt;First what you need is, to register your application with Google, so you&amp;rsquo;ll get a Token that you can use to authorize later calls to Google services.&lt;/p&gt;
+&lt;p&gt;You can do that here: &lt;a href=&#34;https://console.developers.google.com/iam-admin/projects&#34;&gt;Google Developer Console&lt;/a&gt;. You&amp;rsquo;ll have to create a new project. Once it&amp;rsquo;s done, click on &lt;code&gt;Credentials&lt;/code&gt; and create an OAuth token. You should see something like this: &amp;ldquo;To create an OAuth client ID, you must first set a product name on the consent screen.&amp;rdquo;. Go through the questions, like, what type your application is, and once you arrive at stage where it&amp;rsquo;s asking for your application&amp;rsquo;s name &amp;ndash; there is a section asking for redirect URLs; there, write the url you wish to use when authorising your user. If you don&amp;rsquo;t know this yet, don&amp;rsquo;t fret, you can come back and change it later. Do NOT use &lt;code&gt;localhost&lt;/code&gt;. If you are running on your own, use http://127.0.0.1:port/whatever.&lt;/p&gt;
+&lt;p&gt;This will get you a &lt;code&gt;client ID&lt;/code&gt; and a &lt;code&gt;client secret&lt;/code&gt;. I&amp;rsquo;m going to save these into a file which will sit next to my web app. It could be stored more securely, for example, in a database or a mounted secure, encrypted drive, and so and so forth.&lt;/p&gt;
+&lt;p&gt;Your application can now be identified through Google services.&lt;/p&gt;
+&lt;h1 id=&#34;the-application&#34;&gt;The Application&lt;/h1&gt;
+&lt;h2 id=&#34;libraries&#34;&gt;Libraries&lt;/h2&gt;
+&lt;p&gt;Google has a nice library to use with OAuth 2.0. The library is available here: &lt;a href=&#34;https://github.com/golang/oauth2&#34;&gt;Google OAth 2.0&lt;/a&gt;. It&amp;rsquo;s a bit cryptic at first, but not to worry. After a bit of fiddling you&amp;rsquo;ll understand fast what it does. I&amp;rsquo;m also using &lt;a href=&#34;https://github.com/gin-gonic/gin&#34;&gt;Gin&lt;/a&gt;, and Gin&amp;rsquo;s session handling middleware &lt;a href=&#34;https://github.com/gin-gonic/contrib/tree/master/sessions&#34;&gt;Gin-Session&lt;/a&gt;.&lt;/p&gt;
+&lt;h2 id=&#34;setup---credentials&#34;&gt;Setup - Credentials&lt;/h2&gt;
+&lt;p&gt;Let&amp;rsquo;s create a setup which configures your credentials from the file you saved earlier. This is pretty straightforward.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;// Credentials which stores google ids.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Credentials&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Cid&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;cid&amp;#34;`&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Csecret&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;csecret&amp;#34;`&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;init&lt;/span&gt;() {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Credentials&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;file&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ioutil&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ReadFile&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./creds.json&amp;#34;&lt;/span&gt;)
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;fmt&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Printf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;File error: %v\n&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;os&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Exit&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
+    }
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;json&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Unmarshal&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;file&lt;/span&gt;, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;)
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Once you have the creds loaded, you can now go on to construct the OAuth client.&lt;/p&gt;
+&lt;h2 id=&#34;setup---oauth-client&#34;&gt;Setup - OAuth client&lt;/h2&gt;
+&lt;p&gt;Construct the OAuth config like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;conf&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;oauth2&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Config&lt;/span&gt;{
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;ClientID&lt;/span&gt;:     &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Cid&lt;/span&gt;,
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;ClientSecret&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Csecret&lt;/span&gt;,
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;RedirectURL&lt;/span&gt;:  &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://localhost:9090/auth&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;Scopes&lt;/span&gt;: []&lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;{
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;https://www.googleapis.com/auth/userinfo.email&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// You have to select your own scope from here -&amp;gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;  },
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;Endpoint&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;google&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Endpoint&lt;/span&gt;,
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;It will give you a struct which you can then use to Authorize the user in the google domain. Next, all you need to do is call &lt;code&gt;AuthCodeURL&lt;/code&gt; on this config. It will give you a URL which redirects to a Google Sign-In form. Once the user fills that out and clicks &amp;lsquo;Allow&amp;rsquo;, you&amp;rsquo;ll get back a TOKEN in the &lt;code&gt;code&lt;/code&gt; query parameter and a &lt;code&gt;state&lt;/code&gt; which helps protect against CSRF attacks. Always check if the provided state is the same which you provided with AuthCodeURL. This will look something like this &lt;code&gt;http://127.0.0.1:9090/auth?code=4FLKFskdjflf3343d4f&amp;amp;state=lhfu3f983j;asdf&lt;/code&gt;. Small function for this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;getLoginURL&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;state&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; {
+    &lt;span style=&#34;color:#75715e&#34;&gt;// State can be some kind of random generated hash string.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#75715e&#34;&gt;// See relevant RFC: http://tools.ietf.org/html/rfc6749#section-10.12
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;conf&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;AuthCodeURL&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;state&lt;/span&gt;)
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Construct a button which the user can click and be redirected to the Google Sign-In form. When constructing the url, we must do one more thing. Create a secure state token and save it in the form of a cookie for the current user.&lt;/p&gt;
+&lt;h2 id=&#34;random-state-and-button-construction&#34;&gt;Random State and Button construction&lt;/h2&gt;
+&lt;p&gt;Small piece of code random token:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;randToken&lt;/span&gt;() &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;b&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; make([]&lt;span style=&#34;color:#66d9ef&#34;&gt;byte&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;32&lt;/span&gt;)
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;rand&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Read&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;b&lt;/span&gt;)
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;base64&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StdEncoding&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;EncodeToString&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;b&lt;/span&gt;)
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Storing it in a session and constructing the button:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;loginHandler&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Context&lt;/span&gt;) {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;state&lt;/span&gt; = &lt;span style=&#34;color:#a6e22e&#34;&gt;randToken&lt;/span&gt;()
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sessions&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Default&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Set&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;state&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;state&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Save&lt;/span&gt;()
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Writer&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Write&lt;/span&gt;([]byte(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;lt;html&amp;gt;&amp;lt;title&amp;gt;Golang Google&amp;lt;/title&amp;gt; &amp;lt;body&amp;gt; &amp;lt;a href=&amp;#39;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;getLoginURL&lt;/span&gt;() &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#39;&amp;gt;&amp;lt;button&amp;gt;Login with Google!&amp;lt;/button&amp;gt; &amp;lt;/a&amp;gt; &amp;lt;/body&amp;gt;&amp;lt;/html&amp;gt;&amp;#34;&lt;/span&gt;))
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;It&amp;rsquo;s not the nicest button I ever come up with, but it will have to do.&lt;/p&gt;
+&lt;h1 id=&#34;user-information&#34;&gt;User Information&lt;/h1&gt;
+&lt;p&gt;After you got the token, you can construct an authorised Google HTTP Client, which let&amp;rsquo;s you call Google related services and retrieve information about the user.&lt;/p&gt;
+&lt;h2 id=&#34;getting-the-client&#34;&gt;Getting the Client&lt;/h2&gt;
+&lt;p&gt;Before we construct a client, we must check if the retrieved state is still the same compared to the one we provided. I&amp;rsquo;m doing this before constructing the client. Together this looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;authHandler&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Context&lt;/span&gt;) {
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Check state validity.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sessions&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Default&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;retrievedState&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Get&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;state&amp;#34;&lt;/span&gt;)
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;retrievedState&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Query&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;state&amp;#34;&lt;/span&gt;) {
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;AbortWithError&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusUnauthorized&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;fmt&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Errorf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Invalid session state: %s&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;retrievedState&lt;/span&gt;))
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt;
+    }
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Handle the exchange code to initiate a transport.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;  	&lt;span style=&#34;color:#a6e22e&#34;&gt;tok&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;conf&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Exchange&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;oauth2&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;NoContext&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Query&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;code&amp;#34;&lt;/span&gt;))
+  	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+  		&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;AbortWithError&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusBadRequest&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+          &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt;
+  	}
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Construct the client.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;conf&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Client&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;oauth2&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;NoContext&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;tok&lt;/span&gt;)
+    &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;obtaining-information&#34;&gt;Obtaining information&lt;/h2&gt;
+&lt;p&gt;Our next step is to retrieve information about the user. To achieve this, call Google&amp;rsquo;s API with the authorised client. The code for that is:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;resp&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Get&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;https://www.googleapis.com/oauth2/v3/userinfo&amp;#34;&lt;/span&gt;)
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;AbortWithError&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusBadRequest&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt;
+}
+&lt;span style=&#34;color:#66d9ef&#34;&gt;defer&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;resp&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Body&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Close&lt;/span&gt;()
+&lt;span style=&#34;color:#a6e22e&#34;&gt;data&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;_&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ioutil&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ReadAll&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;resp&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Body&lt;/span&gt;)
+&lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Println&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Resp body: &amp;#34;&lt;/span&gt;, string(&lt;span style=&#34;color:#a6e22e&#34;&gt;data&lt;/span&gt;))
+&lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And this will yield a body like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;{
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;sub&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1111111111111111111111&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Your Name&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;given_name&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Your&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;family_name&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Name&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;profile&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;https://plus.google.com/1111111111111111111111&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;picture&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;https://lh3.googleusercontent.com/asdfadsf/AAAAAAAAAAI/Aasdfads/Xasdfasdfs/photo.jpg&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;email&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;your@gmail.com&amp;#34;&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;email_verified&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;,
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;gender&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;male&amp;#34;&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Parse it, and you&amp;rsquo;ve got an email which you can store somewhere for registration purposes. At this point, your user is not yet Authenticated. For that, I&amp;rsquo;m going to post a second post, which describes how to go on. Retrieving the stored email address, and user session handling with Gin and MongoDB.&lt;/p&gt;
+&lt;h1 id=&#34;putting-it-all-together&#34;&gt;Putting it all together&lt;/h1&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;
+
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; (
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;crypto/rand&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;encoding/base64&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;encoding/json&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;io/ioutil&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;fmt&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;log&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;os&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;net/http&amp;#34;&lt;/span&gt;
+
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;github.com/gin-gonic/contrib/sessions&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;github.com/gin-gonic/gin&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;golang.org/x/oauth2&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;golang.org/x/oauth2/google&amp;#34;&lt;/span&gt;
+)
+
+&lt;span style=&#34;color:#75715e&#34;&gt;// Credentials which stores google ids.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Credentials&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Cid&lt;/span&gt;     &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;cid&amp;#34;`&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Csecret&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;csecret&amp;#34;`&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#75715e&#34;&gt;// User is a retrieved and authentiacted user.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;User&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Sub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;sub&amp;#34;`&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Name&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;name&amp;#34;`&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;GivenName&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;given_name&amp;#34;`&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;FamilyName&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;family_name&amp;#34;`&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Profile&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;profile&amp;#34;`&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Picture&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;picture&amp;#34;`&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Email&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;email&amp;#34;`&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;EmailVerified&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;email_verified&amp;#34;`&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;Gender&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;`json:&amp;#34;gender&amp;#34;`&lt;/span&gt;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;cred&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Credentials&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;conf&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;oauth2&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Config&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;state&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;store&lt;/span&gt; = &lt;span style=&#34;color:#a6e22e&#34;&gt;sessions&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;NewCookieStore&lt;/span&gt;([]byte(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;secret&amp;#34;&lt;/span&gt;))
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;randToken&lt;/span&gt;() &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;b&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; make([]&lt;span style=&#34;color:#66d9ef&#34;&gt;byte&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;32&lt;/span&gt;)
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;rand&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Read&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;b&lt;/span&gt;)
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;base64&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StdEncoding&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;EncodeToString&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;b&lt;/span&gt;)
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;init&lt;/span&gt;() {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;file&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ioutil&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ReadFile&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./creds.json&amp;#34;&lt;/span&gt;)
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Printf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;File error: %v\n&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;os&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Exit&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
+    }
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;json&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Unmarshal&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;file&lt;/span&gt;, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;cred&lt;/span&gt;)
+
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;conf&lt;/span&gt; = &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;oauth2&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Config&lt;/span&gt;{
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;ClientID&lt;/span&gt;:     &lt;span style=&#34;color:#a6e22e&#34;&gt;cred&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Cid&lt;/span&gt;,
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;ClientSecret&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;cred&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Csecret&lt;/span&gt;,
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;RedirectURL&lt;/span&gt;:  &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://127.0.0.1:9090/auth&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;Scopes&lt;/span&gt;: []&lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;{
+            &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;https://www.googleapis.com/auth/userinfo.email&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// You have to select your own scope from here -&amp;gt; https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;        },
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;Endpoint&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;google&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Endpoint&lt;/span&gt;,
+    }
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;indexHandler&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Context&lt;/span&gt;) {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;HTML&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusOK&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;index.tmpl&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;H&lt;/span&gt;{})
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;getLoginURL&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;state&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt; {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;conf&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;AuthCodeURL&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;state&lt;/span&gt;)
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;authHandler&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Context&lt;/span&gt;) {
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Handle the exchange code to initiate a transport.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sessions&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Default&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;retrievedState&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Get&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;state&amp;#34;&lt;/span&gt;)
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;retrievedState&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Query&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;state&amp;#34;&lt;/span&gt;) {
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;AbortWithError&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusUnauthorized&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;fmt&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Errorf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Invalid session state: %s&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;retrievedState&lt;/span&gt;))
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt;
+    }
+
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;tok&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;conf&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Exchange&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;oauth2&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;NoContext&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Query&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;code&amp;#34;&lt;/span&gt;))
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;AbortWithError&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusBadRequest&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt;
+	}
+
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;conf&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Client&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;oauth2&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;NoContext&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;tok&lt;/span&gt;)
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;email&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Get&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;https://www.googleapis.com/oauth2/v3/userinfo&amp;#34;&lt;/span&gt;)
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;AbortWithError&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusBadRequest&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt;
+	}
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;defer&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;email&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Body&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Close&lt;/span&gt;()
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;data&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;_&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ioutil&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ReadAll&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;email&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Body&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Println&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Email body: &amp;#34;&lt;/span&gt;, string(&lt;span style=&#34;color:#a6e22e&#34;&gt;data&lt;/span&gt;))
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Status&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;http&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;StatusOK&lt;/span&gt;)
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;loginHandler&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Context&lt;/span&gt;) {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;state&lt;/span&gt; = &lt;span style=&#34;color:#a6e22e&#34;&gt;randToken&lt;/span&gt;()
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sessions&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Default&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Set&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;state&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;state&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;session&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Save&lt;/span&gt;()
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Writer&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Write&lt;/span&gt;([]byte(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;lt;html&amp;gt;&amp;lt;title&amp;gt;Golang Google&amp;lt;/title&amp;gt; &amp;lt;body&amp;gt; &amp;lt;a href=&amp;#39;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;getLoginURL&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;state&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#39;&amp;gt;&amp;lt;button&amp;gt;Login with Google!&amp;lt;/button&amp;gt; &amp;lt;/a&amp;gt; &amp;lt;/body&amp;gt;&amp;lt;/html&amp;gt;&amp;#34;&lt;/span&gt;))
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;gin&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Default&lt;/span&gt;()
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Use&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;sessions&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Sessions&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;goquestsession&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;store&lt;/span&gt;))
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Static&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/css&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./static/css&amp;#34;&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Static&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/img&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./static/img&amp;#34;&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;LoadHTMLGlob&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;templates/*&amp;#34;&lt;/span&gt;)
+
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GET&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;indexHandler&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GET&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/login&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;loginHandler&lt;/span&gt;)
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;GET&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/auth&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;authHandler&lt;/span&gt;)
+
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;router&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Run&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;127.0.0.1:9090&amp;#34;&lt;/span&gt;)
+}
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is it folks. I hope this helped. Any comments or advices are welcomed.&lt;/p&gt;
+&lt;h1 id=&#34;google-api-documentation&#34;&gt;Google API Documentation&lt;/h1&gt;
+&lt;p&gt;The documentation to this whole process, and MUCH more information can be found here: &lt;a href=&#34;https://developers.google.com/identity/protocols/OAuth2&#34;&gt;Google API Docs&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Thanks for reading,
+Gergely.&lt;/p&gt;</description>
     </item>
     
   </channel>

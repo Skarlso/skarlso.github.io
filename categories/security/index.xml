@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>security on Ramblings of a cloud engineer</title>
@@ -6,16 +6,90 @@
     <description>Recent content in security on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-GB</language>
-    <lastBuildDate>Sun, 17 Feb 2019 21:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/security/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 17 Feb 2019 21:01:00 +0100</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/categories/security/index.xml" rel="self" type="application/rss+xml" />
+    
     <item>
       <title>Go SSH with Host Key Verification</title>
       <link>https://skarlso.github.io/2019/02/17/go-ssh-with-host-key-verification/</link>
       <pubDate>Sun, 17 Feb 2019 21:01:00 +0100</pubDate>
-      
       <guid>https://skarlso.github.io/2019/02/17/go-ssh-with-host-key-verification/</guid>
-      <description>Hi folks.
-Following a long search and reading lots of debates and possibilities of doing SSH within Go, I was shocked to see that not a great many tools and people use SSH with host key verification. What I usually see is this:
-HostKeyCallback: ssh.InsecureIgnoreHostKey() This is terrible. Now, I realise that doing HostKeyVerification can be tedious, but don&amp;rsquo;t fear. It&amp;rsquo;s actually easy now that the Go team provided the knownhosts subpackage in their crypto SSH package located here: KnownHosts.</description>
+      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
+&lt;p&gt;Following a long search and reading lots of debates and possibilities of doing SSH within Go, I was shocked to see that not a great many tools and people use SSH with host key verification. What I usually see is this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;HostKeyCallback&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;ssh&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;InsecureIgnoreHostKey&lt;/span&gt;()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is terrible. Now, I realise that doing HostKeyVerification can be tedious, but don&amp;rsquo;t fear. It&amp;rsquo;s actually easy
+now that the Go team provided the knownhosts subpackage in their crypto SSH package located here:
+&lt;a href=&#34;https://godoc.org/golang.org/x/crypto/ssh/knownhosts&#34;&gt;KnownHosts&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;This part in particular is interesting: &lt;a href=&#34;https://godoc.org/golang.org/x/crypto/ssh/knownhosts#New&#34;&gt;New&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Using new with a known_hosts file a code can be written like this one to verify host keys:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;
+
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; (
+	&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;bytes&amp;#34;&lt;/span&gt;
+	&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;fmt&amp;#34;&lt;/span&gt;
+	&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;io/ioutil&amp;#34;&lt;/span&gt;
+	&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;log&amp;#34;&lt;/span&gt;
+
+	&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;golang.org/x/crypto/ssh&amp;#34;&lt;/span&gt;
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;kh&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;golang.org/x/crypto/ssh/knownhosts&amp;#34;&lt;/span&gt;
+)
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;() {
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;user&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;user&amp;#34;&lt;/span&gt;
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;address&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;192.168.0.17&amp;#34;&lt;/span&gt;
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;command&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;uptime&amp;#34;&lt;/span&gt;
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;port&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;9999&amp;#34;&lt;/span&gt;
+
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;key&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ioutil&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ReadFile&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/Users/user/.ssh/id_rsa&amp;#34;&lt;/span&gt;)
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Fatalf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;unable to read private key: %v&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+	}
+
+	&lt;span style=&#34;color:#75715e&#34;&gt;// Create the Signer for this private key.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;signer&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ssh&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ParsePrivateKey&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;key&lt;/span&gt;)
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Fatalf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;unable to parse private key: %v&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+	}
+
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;hostKeyCallback&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;kh&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;New&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/Users/user/.ssh/known_hosts&amp;#34;&lt;/span&gt;)
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Fatal&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;could not create hostkeycallback function: &amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+	}
+
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;config&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;ssh&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;ClientConfig&lt;/span&gt;{
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;User&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;user&lt;/span&gt;,
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;Auth&lt;/span&gt;: []&lt;span style=&#34;color:#a6e22e&#34;&gt;ssh&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;AuthMethod&lt;/span&gt;{
+			&lt;span style=&#34;color:#75715e&#34;&gt;// Add in password check here for moar security.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;			&lt;span style=&#34;color:#a6e22e&#34;&gt;ssh&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;PublicKeys&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;signer&lt;/span&gt;),
+		},
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;HostKeyCallback&lt;/span&gt;: &lt;span style=&#34;color:#a6e22e&#34;&gt;hostKeyCallback&lt;/span&gt;,
+	}
+	&lt;span style=&#34;color:#75715e&#34;&gt;// Connect to the remote server and perform the SSH handshake.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ssh&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Dial&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;tcp&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;address&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;:&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;port&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;config&lt;/span&gt;)
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Fatalf&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;unable to connect: %v&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+	}
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;defer&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Close&lt;/span&gt;()
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;ss&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;NewSession&lt;/span&gt;()
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; {
+		&lt;span style=&#34;color:#a6e22e&#34;&gt;log&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Fatal&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;unable to create SSH session: &amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;err&lt;/span&gt;)
+	}
+	&lt;span style=&#34;color:#66d9ef&#34;&gt;defer&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ss&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Close&lt;/span&gt;()
+	&lt;span style=&#34;color:#75715e&#34;&gt;// Creating the buffer which will hold the remotly executed command&amp;#39;s output.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;stdoutBuf&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;bytes&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Buffer&lt;/span&gt;
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;ss&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Stdout&lt;/span&gt; = &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;stdoutBuf&lt;/span&gt;
+	&lt;span style=&#34;color:#a6e22e&#34;&gt;ss&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Run&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;command&lt;/span&gt;)
+	&lt;span style=&#34;color:#75715e&#34;&gt;// Let&amp;#39;s print out the result of command.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;	&lt;span style=&#34;color:#a6e22e&#34;&gt;fmt&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Println&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;stdoutBuf&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;String&lt;/span&gt;())
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Here is the whole thing as a &lt;a href=&#34;https://gist.github.com/Skarlso/34321a230cf0245018288686c9e70b2d&#34;&gt;Gist&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Please try and avoid using Insecure host keys. It is easier, but can harm so much. Software like these:
+&lt;a href=&#34;https://mitmproxy.org/&#34;&gt;Man in The Middle Proxy&lt;/a&gt; thrive in an environment that doesn&amp;rsquo;t do it, or doesn&amp;rsquo;t in other ways
+mitigate this problem.&lt;/p&gt;
+&lt;p&gt;Be wise and be safe.
+Thanks for reading,
+Gergely.&lt;/p&gt;
+</description>
     </item>
     
   </channel>

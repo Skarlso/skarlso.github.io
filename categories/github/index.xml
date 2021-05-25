@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>github on Ramblings of a cloud engineer</title>
@@ -6,18 +6,197 @@
     <description>Recent content in github on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-GB</language>
-    <lastBuildDate>Tue, 19 Mar 2019 22:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/github/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 19 Mar 2019 22:01:00 +0100</lastBuildDate>
+    <atom:link href="https://skarlso.github.io/categories/github/index.xml" rel="self" type="application/rss+xml" />
+    
     <item>
       <title>Deploy a Hugo Blog Github Actions</title>
       <link>https://skarlso.github.io/2019/03/19/deploy-hugo-blog-github-actions/</link>
       <pubDate>Tue, 19 Mar 2019 22:01:00 +0100</pubDate>
-      
       <guid>https://skarlso.github.io/2019/03/19/deploy-hugo-blog-github-actions/</guid>
-      <description>Intro Hi folks.
-Today I thought I show you how you can use Github Actions to deploy a hugo based blog like this one.
-Let&amp;rsquo;s dive in.
-Actions What are actions? If you read the above linked document they are basically steps performed in containers based on some events that happened with your repository. Events can be such as pushing, creating a PR or creating/closing an issue etc.
-We need an even on a push.</description>
+      <description>&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
+&lt;p&gt;Hi folks.&lt;/p&gt;
+&lt;p&gt;Today I thought I show you how you can use &lt;a href=&#34;https://github.com/features/actions&#34;&gt;Github Actions&lt;/a&gt; to deploy a hugo based blog like this one.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s dive in.&lt;/p&gt;
+&lt;h1 id=&#34;actions&#34;&gt;Actions&lt;/h1&gt;
+&lt;p&gt;What are actions? If you read the above linked document they are basically steps performed in containers based on some events that happened with your repository. Events can be such as pushing, creating a PR or creating/closing an issue etc.&lt;/p&gt;
+&lt;p&gt;We need an even on a push.&lt;/p&gt;
+&lt;p&gt;Actions is in beta right now so much of the documentation has some gaps but they are fairly okay. I recommend reading through this one carefully: &lt;a href=&#34;https://developer.github.com/actions/&#34;&gt;Developer Guide&lt;/a&gt;. This describes for example accessing the environment. That is important because we will need to access the generated content from one action in the next action.&lt;/p&gt;
+&lt;h1 id=&#34;dockerfile&#34;&gt;Dockerfile&lt;/h1&gt;
+&lt;p&gt;Each action requires a Dockerfile which will be used to create a container to run this particular action in. The Dockerfile uses LABELS to mark a container. It is recommended to create an ENTRYPOINT in the Dockerfile that can work with CMDs passed in from the action.&lt;/p&gt;
+&lt;p&gt;For example my pusher container has the ability to push into any repository thanks to using arguments for the entrypoint.sh script.&lt;/p&gt;
+&lt;p&gt;We&amp;rsquo;ll see that later on.&lt;/p&gt;
+&lt;h1 id=&#34;blog-actions&#34;&gt;Blog actions&lt;/h1&gt;
+&lt;p&gt;Let&amp;rsquo;s look at the two actions in detail which we&amp;rsquo;ll be using.&lt;/p&gt;
+&lt;h2 id=&#34;builder&#34;&gt;Builder&lt;/h2&gt;
+&lt;p&gt;First, we need to build the blog. This is accomplished pretty much the same as I wrote earlier in the travis blog part but with a little extra information.&lt;/p&gt;
+&lt;p&gt;This is the Dockerfile:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-Dockerfile&#34; data-lang=&#34;Dockerfile&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;FROM&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; golang:latest&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Hugo Builder&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;maintainer&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Gergely Brautigam &amp;lt;gergely@gergelybrautigam.com&amp;gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;version&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0.1.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;com.github.actions.name&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Go Builder&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;com.github.actions.description&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Build a hugo blog&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;com.github.actions.icon&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;package&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;com.github.actions.color&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;#E0EBF5&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;  apt-get update &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;  apt-get install -y ca-certificates openssl git &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;  update-ca-certificates &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;  rm -rf /var/lib/apt&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; go get github.com/gohugoio/hugo&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;COPY&lt;/span&gt; entrypoint.sh /entrypoint.sh&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;ENTRYPOINT&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/entrypoint.sh&amp;#34;&lt;/span&gt;]&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Pretty simple. The entrypoint script looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#!/bin/bash
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
+set -e
+set -x
+set -o pipefail
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[[&lt;/span&gt; -z &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$GITHUB_WORKSPACE&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;]]&lt;/span&gt;; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+  echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Set the GITHUB_WORKSPACE env variable.&amp;#34;&lt;/span&gt;
+  exit &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[[&lt;/span&gt; -z &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$GITHUB_REPOSITORY&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;]]&lt;/span&gt;; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+  echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Set the GITHUB_REPOSITORY env variable.&amp;#34;&lt;/span&gt;
+  exit &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+
+root_path&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$GITHUB_WORKSPACE&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Root path is: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;root_path&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+blog_path&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$GITHUB_WORKSPACE&lt;span style=&#34;color:#e6db74&#34;&gt;/.blog&amp;#34;&lt;/span&gt;
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Blog path is: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;blog_path&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+mkdir -p &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$blog_path&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+mkdir -p &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$root_path&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+cd &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$root_path&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Preparing to build blog&amp;#34;&lt;/span&gt;
+hugo --theme hermit
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Building is done. Copying over generated files&amp;#34;&lt;/span&gt;
+cp -R public/* &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$blog_path&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;/
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Copy is done.&amp;#34;&lt;/span&gt;
+
+exit &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The interesting parts here are &lt;code&gt;GITHUB_WORKSPACE&lt;/code&gt; and &lt;code&gt;GITHUB_REPOSITORY&lt;/code&gt;. The workspace is where the repository is located at.&lt;/p&gt;
+&lt;p&gt;This is the place where we will copy our built blog files. Since this is a mount basically on the local build machine the next action which comes along will see the folder &lt;code&gt;.blog&lt;/code&gt;. This is how we pass artifacts between actions.&lt;/p&gt;
+&lt;p&gt;This action can be found here: &lt;a href=&#34;https://github.com/Skarlso/blog-builder&#34;&gt;Hugo Blog Builder Action&lt;/a&gt;.&lt;/p&gt;
+&lt;h2 id=&#34;publisher&#34;&gt;Publisher&lt;/h2&gt;
+&lt;p&gt;Once the building finishes successfully we can push it to the new location.&lt;/p&gt;
+&lt;p&gt;Dockerfile is similar to the one above in every regard. Except for the name and that it doesn&amp;rsquo;t need Hugo and the command&amp;hellip;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-Dockerfile&#34; data-lang=&#34;Dockerfile&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;FROM&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; golang:latest&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Hugo Pusher&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;maintainer&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Gergely Brautigam &amp;lt;gergely@gergelybrautigam.com&amp;gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;version&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0.1.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;com.github.actions.name&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Go Pusher&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;com.github.actions.description&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Push a hugo blog&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;com.github.actions.icon&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;package&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;LABEL&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;com.github.actions.color&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;#E0EBF5&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;  apt-get update &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;  apt-get install -y ca-certificates openssl git &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;  update-ca-certificates &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;  rm -rf /var/lib/apt&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;COPY&lt;/span&gt; entrypoint.sh /entrypoint.sh&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;ENTRYPOINT&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/entrypoint.sh&amp;#34;&lt;/span&gt;]&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;CMD&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Skarlso/skarlso.github.io.git&amp;#34;&lt;/span&gt;]&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Why do we require the CMD? Let&amp;rsquo;s take a look at the script.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#!/bin/bash
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
+set -e
+set -x
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[[&lt;/span&gt; -z &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$GITHUB_WORKSPACE&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;]]&lt;/span&gt;; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+  echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Set the GITHUB_WORKSPACE env variable.&amp;#34;&lt;/span&gt;
+  exit &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[[&lt;/span&gt; -z &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$GITHUB_REPOSITORY&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;]]&lt;/span&gt;; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+  echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Set the GITHUB_REPOSITORY env variable.&amp;#34;&lt;/span&gt;
+  exit &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+
+setup_git&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  repo&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;$1
+  git config --global user.email &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;bot@github.com&amp;#34;&lt;/span&gt;
+  git config --global user.name &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Github Actions&amp;#34;&lt;/span&gt;
+  git init
+  echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Starting to clone blog repository&amp;#34;&lt;/span&gt;
+  git remote add origin https://&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;PUSH_TOKEN&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;@github.com/&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;repo&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &amp;gt; /dev/null 2&amp;gt;&amp;amp;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+  git pull origin master
+  echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Cloning is done&amp;#34;&lt;/span&gt;
+  ls -l
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+commit_website_files&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  git add .
+  git commit -am &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Github Action Build &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;GITHUB_SHA&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+upload_files&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  git push --quiet --set-upstream origin master
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Beginning publishing workflow&amp;#34;&lt;/span&gt;
+repo&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;$1
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt; -z &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;repo&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+    echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Repo must be defined.&amp;#34;&lt;/span&gt;
+    exit &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Using repository &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;repo&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; to push to&amp;#34;&lt;/span&gt;
+mkdir /opt/publish &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; cd /opt/publish
+blog_path&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$GITHUB_WORKSPACE&lt;span style=&#34;color:#e6db74&#34;&gt;/.blog&amp;#34;&lt;/span&gt;
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Blog is located at: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;blog_path&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+ls -l &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;blog_path&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Setting up git&amp;#34;&lt;/span&gt;
+setup_git &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;repo&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+cp -R &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;blog_path&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;/* .
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Copied over generated content from blog path. Committing.&amp;#34;&lt;/span&gt;
+commit_website_files
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Committed. Pushing.&amp;#34;&lt;/span&gt;
+upload_files
+echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;All done.&amp;#34;&lt;/span&gt;
+exit &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now this is a lot more involved. I&amp;rsquo;m leaving as many echos in here as possible for esae of debugging.&lt;/p&gt;
+&lt;p&gt;The interesting part in here is the &lt;code&gt;repo=$1&lt;/code&gt;. This is why we need CMD specified. But this is what makes this Action a bit more flexible too. It can push anywhere it has access to.&lt;/p&gt;
+&lt;p&gt;This action can be found here: &lt;a href=&#34;https://github.com/Skarlso/blog-publisher&#34;&gt;Hugo Blog Publisher Action&lt;/a&gt;.&lt;/p&gt;
+&lt;h2 id=&#34;the-workflow-file&#34;&gt;The Workflow file&lt;/h2&gt;
+&lt;p&gt;How does this all fit together? You have to create a workflow file which looks something like this:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;workflow &amp;quot;Publish Blog&amp;quot; {
+  on = &amp;quot;push&amp;quot;
+  resolves = [&amp;quot;blog-publisher&amp;quot;]
+}
+
+action &amp;quot;blog-builder&amp;quot; {
+  uses = &amp;quot;skarlso/blog-builder@master&amp;quot;
+  secrets = [&amp;quot;GITHUB_TOKEN&amp;quot;]
+}
+
+action &amp;quot;blog-publisher&amp;quot; {
+  uses = &amp;quot;skarlso/blog-publisher@master&amp;quot;
+  needs = [&amp;quot;blog-builder&amp;quot;]
+  secrets = [&amp;quot;GITHUB_TOKEN&amp;quot;, &amp;quot;PUSH_TOKEN&amp;quot;]
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This is located in your repositroy under &lt;code&gt;.github/main.workdflow&lt;/code&gt;. Notice the secrets. GITHUB_TOKEN is created for you by Github. This is a basic token which lets you access the github API. But it can&amp;rsquo;t be used for pushing code. Thus, we need another token. This can be defined under your repository / settings / secrets. Once you have a token, add a new secret called PUSH_TOKEN and&amp;hellip; done.&lt;/p&gt;
+&lt;p&gt;Everything should be ready to go.&lt;/p&gt;
+&lt;h2 id=&#34;location-of-the-actions&#34;&gt;Location of the actions&lt;/h2&gt;
+&lt;p&gt;Now, I read the doc and should have been possible to have these actions in the repositroy itself. However, I faced some problems with that setup so I ended up having actions in their respectice repository. That&amp;rsquo;s why &lt;code&gt;uses&lt;/code&gt; is set up to be &lt;code&gt;skarlso/&amp;lt;action-name&amp;gt;@branch&lt;/code&gt;.&lt;/p&gt;
+&lt;h1 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;On a push now the blog is built and published. If a step fails it won&amp;rsquo;t be published. It&amp;rsquo;s actually a lot faster than my travis build was.&lt;/p&gt;
+&lt;p&gt;Thank you for reading,&lt;/p&gt;
+&lt;p&gt;Gergely.&lt;/p&gt;
+</description>
     </item>
     
   </channel>
