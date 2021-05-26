@@ -1,101 +1,23 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>review on Ramblings of a cloud engineer</title>
     <link>https://skarlso.github.io/categories/review/</link>
     <description>Recent content in review on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-GB</language>
-    <lastBuildDate>Mon, 11 May 2020 21:01:00 +0100</lastBuildDate>
-    <atom:link href="https://skarlso.github.io/categories/review/index.xml" rel="self" type="application/rss+xml" />
-    
+    <language>en</language>
+    <lastBuildDate>Mon, 11 May 2020 21:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/review/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>How to do a good code review</title>
       <link>https://skarlso.github.io/2020/05/11/good-code-reviews/</link>
       <pubDate>Mon, 11 May 2020 21:01:00 +0100</pubDate>
+      
       <guid>https://skarlso.github.io/2020/05/11/good-code-reviews/</guid>
-      <description>&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-&lt;p&gt;Hi folks.&lt;/p&gt;
-&lt;p&gt;This time, I would like to talk a little bit about code reviews.&lt;/p&gt;
-&lt;p&gt;How do you do code reviews? Don&amp;rsquo;t hesitate to share it in the comments.&lt;/p&gt;
-&lt;p&gt;How do I do code reviews? Well read on if you would like to know.&lt;/p&gt;
-&lt;h1 id=&#34;the-top-down-approach&#34;&gt;The Top Down approach&lt;/h1&gt;
-&lt;p&gt;If I&amp;rsquo;m dealing with a small code change, a couple of lines here and there in the odd file
-first, I&amp;rsquo;ll try to understand why the review is there? What was it trying to achieve? What&amp;rsquo;s
-the goal of the change? Is there a ticket/issue I can read for background info? Or an RFC?&lt;/p&gt;
-&lt;p&gt;Understanding the goal of the change will let you know how to read the change. I usually also
-scribble down some notes and my expectations to see if the change meets them or does something
-completely different. And if it&amp;rsquo;s different, maybe my expectations were wrong.&lt;/p&gt;
-&lt;p&gt;In any case, I will have a framework to start with. It&amp;rsquo;s important to understand why the change
-is there in the first place. I cannot stress this enough.&lt;/p&gt;
-&lt;h1 id=&#34;logical-follow&#34;&gt;Logical follow&lt;/h1&gt;
-&lt;p&gt;If the change is large, the top down approach will simply not work. You will loose track of
-why the change is and your logical big picture image will fade into nothingness after a hundred lines.&lt;/p&gt;
-&lt;p&gt;In Github at least, what I would do to approach this, is close all views and just have a general sense first
-how big the change is, and what files changed (after I understand why the change is there and what is it trying
-to change and / or solve). Once I have a feel for the structure I would look for changes which are trivial.
-For example parameter changes of a function. I would expect that in that case there will be a lot of changes at places
-where that function was called. I would review those and then go on.&lt;/p&gt;
-&lt;p&gt;If there is any, I would look for an entry point into the change. Is there a new handler? A new API?
-A new method? Did an API change? If so, did that change propagate all the way through the API&amp;rsquo;s implementation?&lt;/p&gt;
-&lt;p&gt;If it&amp;rsquo;s a huge number of deletes, I would look for the deleted code in the whole codebase. Did they miss something?
-Was that code referenced in another section of the code or possibly in another service? In that case, do a search
-on the whole organization on all repositories if you believe that that makes sense.&lt;/p&gt;
-&lt;p&gt;If it&amp;rsquo;s concurrent code&amp;hellip; are they syncing it up at some point? Are they releasing the lock? Is the lock happening
-at the right place? In Go for example, you can get a lock and then &lt;code&gt;defer w.Lock.Unlock()&lt;/code&gt; it. This makes
-for a convenient way of &amp;ldquo;forgetting&amp;rdquo; about the lock acquire. But this is counterproductive in some cases.&lt;/p&gt;
-&lt;p&gt;Imagine you have a function which acquires the lock in the begin. Then does a for loop which takes a couple of seconds
-but doesn&amp;rsquo;t actually use the map or the value you were trying to protect. In that case you are taking the
-lock but aren&amp;rsquo;t actually using it. There was no point in acquiring it at the beginning of the function.&lt;/p&gt;
-&lt;h1 id=&#34;general-order&#34;&gt;General order&lt;/h1&gt;
-&lt;p&gt;There are a LOT of things one can review in a PR. Minute things and a myriad if small to big logical
-problems and ramifications. It&amp;rsquo;s not possible to list them all. So here are some general rules I would
-follow:&lt;/p&gt;
-&lt;h2 id=&#34;syntax&#34;&gt;Syntax&lt;/h2&gt;
-&lt;p&gt;The first thing I would do is look through the syntax and follow this mnemonic: BUD.
-B(ottleneck), U(nnecessary code), D(uplicate work). Spotting these is usually easy but it can happen
-that the change is subtle. Bottlenecks are often embedded loops in loops or a very sneaky recursion.
-Unnecessary code is sometimes harder to spot. This is duplicate code which could be extracted. It can be subtle
-because it&amp;rsquo;s likely that only a small thing changes and at first glance it&amp;rsquo;s not trivial how to extract
-the rest of the code around that small thing. Maybe it can be a function (if your language supports functions
-as first class citizens) which could close over a value and change it multiple times.&lt;/p&gt;
-&lt;p&gt;Duplicate work is when a loop is calculating something over and over but it&amp;rsquo;s actually the same thing or
-we already have that information and it&amp;rsquo;s not likely that it would change so it can be reused. These kind of
-problems are solved through caching or simply just do it once, store the result, then pass it around. Candidates
-for this could be multiple calls to the same api for the same information which didn&amp;rsquo;t change in between.&lt;/p&gt;
-&lt;h2 id=&#34;general-language-guidelines&#34;&gt;General language guidelines&lt;/h2&gt;
-&lt;p&gt;General language syntax and guidelines adherence comes next. In Go this is trivial, since we have a plethora
-of tools available to us, devs, in the form of static analyzers like, fmt, golint, goimport etc. But in the
-absence there is usually a good guide at hand how a language is supposed to look like.&lt;/p&gt;
-&lt;h2 id=&#34;workplace--project-guideline-adherence&#34;&gt;Workplace / Project guideline adherence&lt;/h2&gt;
-&lt;p&gt;This could arguably come before the general adherence. Whichever suits you better. Or maybe your workplace / environment
-the code is in (this could also be an open source project) is different from the general guidelines. That is okay, as
-long as it&amp;rsquo;s sensible. You could try changing it if you think it&amp;rsquo;s too far from how a language is supposed to look like
-but that usually doesn&amp;rsquo;t work. Especially if the in-place guidelines are already there for years.&lt;/p&gt;
-&lt;p&gt;Generally though, it&amp;rsquo;s better to follow whatever style/code/whim the current environment is doing. If changing something
-always look around how that looks like in the code you are working in and then follow that style. These could be things like,
-variable naming, comment semantics, logical flow of the code, structuring (like where the code should go and how it should look
-like (yes, look like(sometime aesthetics matter))).&lt;/p&gt;
-&lt;h2 id=&#34;could-it-be-done-concurrently&#34;&gt;Could it be done concurrently&lt;/h2&gt;
-&lt;p&gt;As a cherry on top, I would try to determine if the work that is being done, could be done in a thread / go routine. In Go, go routines
-are cheap and very easy to make. It&amp;rsquo;s also easy to abuse them of course, but it doesn&amp;rsquo;t hurt to think asynchronously. Especially in
-a distributed environment. Which brings me to the next point.&lt;/p&gt;
-&lt;h2 id=&#34;in-a-distributed-environment-timing-is-key&#34;&gt;In a distributed environment timing is key&lt;/h2&gt;
-&lt;p&gt;If this change is in an environment which has many services and is generally distributed your first though should immediately
-be, how those this affect the rest of the services and what timing issues could arise. If there is a delete operation, what about
-another service calling a create or a get on the same resource at the same time? What if it&amp;rsquo;s a create but another service also calls
-create with the same values? Is the data eventually consistent or strongly consistent? How does that affect the runtime? Is the change
-in a frequently called code segment which is usually under heavy load? Did the change change the way that is handled? Did it slow it down
-or speed it up? Did it trade the slowdown for strong consistency? Is strong consistency really needed in that service which would
-justify the slowdown?&lt;/p&gt;
-&lt;p&gt;Like I said&amp;hellip; a myriad of things&amp;hellip;&lt;/p&gt;
-&lt;p&gt;I&amp;rsquo;ll stop here for now.&lt;/p&gt;
-&lt;h1 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h1&gt;
-&lt;p&gt;I hope this made sense. If you disagree with this approach or have a different guideline of reviewing, please don&amp;rsquo;t hesitate it to share it!&lt;/p&gt;
-&lt;p&gt;As always,
-Thanks for reading!
-Gergely.&lt;/p&gt;
-</description>
+      <description>Intro Hi folks.
+This time, I would like to talk a little bit about code reviews.
+How do you do code reviews? Don&amp;rsquo;t hesitate to share it in the comments.
+How do I do code reviews? Well read on if you would like to know.
+The Top Down approach If I&amp;rsquo;m dealing with a small code change, a couple of lines here and there in the odd file first, I&amp;rsquo;ll try to understand why the review is there?</description>
     </item>
     
   </channel>

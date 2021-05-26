@@ -1,145 +1,22 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>parser on Ramblings of a cloud engineer</title>
     <link>https://skarlso.github.io/categories/parser/</link>
     <description>Recent content in parser on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-GB</language>
-    <lastBuildDate>Fri, 12 Apr 2019 08:01:00 +0100</lastBuildDate>
-    <atom:link href="https://skarlso.github.io/categories/parser/index.xml" rel="self" type="application/rss+xml" />
-    
+    <language>en</language>
+    <lastBuildDate>Fri, 12 Apr 2019 08:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/parser/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Living with a new Parser for a year</title>
       <link>https://skarlso.github.io/2019/04/12/living-with-a-parser/</link>
       <pubDate>Fri, 12 Apr 2019 08:01:00 +0100</pubDate>
+      
       <guid>https://skarlso.github.io/2019/04/12/living-with-a-parser/</guid>
-      <description>&lt;p&gt;Hi folks!&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/hi.jpg&#34; alt=&#34;hi&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Today’s post is a retrospective. I would like to gather some thoughts about living with the new parser that I wrote for &lt;a href=&#34;https://github.com/joshbuddy/jsonpath/&#34;&gt;JsonPath&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;After a little over a year, some interesting problems surfaced that I thought I’d share for people who also would like to endeavor on this path. Let’s begin.&lt;/p&gt;
-&lt;h1 id=&#34;previously&#34;&gt;Previously&lt;/h1&gt;
-&lt;p&gt;About, two years ago, I took over managing / fixing / improving this ruby gem: &lt;a href=&#34;https://github.com/joshbuddy/jsonpath&#34;&gt;Json Parser&lt;/a&gt;. It&amp;rsquo;s a json parser in ruby. Amongst other problems, it used &lt;code&gt;eval&lt;/code&gt; in the background to evaluate expressions. It was a security risk to use this gem to its full extent. Something had to be done about that.&lt;/p&gt;
-&lt;p&gt;I proceeded to write a semi-language parser which replaced eval that can be found here: &lt;a href=&#34;https://github.com/joshbuddy/jsonpath/blob/master/lib/jsonpath/parser.rb&#34;&gt;Parser&lt;/a&gt;. The basic intention was to replace the bare minimum of the eval behavior, and so, it was lacking some serious logic. That got improved as time went by.&lt;/p&gt;
-&lt;p&gt;This is a one year retrospective on living with a self-written parser. Enjoy some of the quirks I faced so you don&amp;rsquo;t have to.&lt;/p&gt;
-&lt;h1 id=&#34;ast&#34;&gt;AST&lt;/h1&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/ast.jpg&#34; alt=&#34;ast&#34;&gt;&lt;/p&gt;
-&lt;p&gt;AST is short for &lt;a href=&#34;https://en.wikipedia.org/wiki/Abstract_syntax_tree&#34;&gt;Abstract Syntax Tree&lt;/a&gt;. It’s a data structure that is ideal for representing and parsing language syntax. All major lexers use some kind of AST in the background like this old Ruby language parser gem: &lt;a href=&#34;https://github.com/whitequark/parser&#34;&gt;Whitequark Parser&lt;/a&gt;. This parser is used by projects like Rubocop and line coverage reports. It&amp;rsquo;s usage is not trivial right out of the box. But as you move along you get a firm grasp of true potential.&lt;/p&gt;
-&lt;p&gt;I decided to not use that parser a year ago mainly because I thought it’s too much for what I’m trying to accomplish. Maybe I was right, maybe not. I tried to play with Parser recently but it’s none trivial nature and lack of documentation makes it cumbersome to use.&lt;/p&gt;
-&lt;h1 id=&#34;the-first-problems&#34;&gt;The first problems&lt;/h1&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/infinity.jpg&#34; alt=&#34;infinity&#34;&gt;&lt;/p&gt;
-&lt;p&gt;What was then the first trouble that arose after I replaced eval? The parser back then was dumbed down a lot. The bug I faced was a simple infinite loop. The parser works like a lexer. It identifies tokens of certain type and tries to parse them into variables. This lexing had an error.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/(\s+)?&amp;#39;?(\w+)?[.,]?(\w+)?&amp;#39;?(\s+)?/&lt;/span&gt;) &lt;span style=&#34;color:#75715e&#34;&gt;# @TODO: At this point I should trim somewhere...&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/(\s+)?&amp;#39;?.*&amp;#39;?(\s+)?/&lt;/span&gt;)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;It was caught by this Json Path:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$.acceptNewTasks.[?(@.taskEndpoint == &amp;quot;mps/awesome&amp;quot;)].lastTaskPollTime
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The culprit was the &lt;code&gt;/&lt;/code&gt; character. The tokenizer wasn’t prepared…&lt;/p&gt;
-&lt;p&gt;Eval would have no problem but the parser is using strict regex-s. This is where an AST would have had more luck.&lt;/p&gt;
-&lt;h1 id=&#34;numbers&#34;&gt;Numbers&lt;/h1&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/twins1.jpg&#34; alt=&#34;twins1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;The second problem was the fact that the parser is using strings. Who would have thought that the string &lt;code&gt;2.0&lt;/code&gt; in fact does not equal to string &lt;code&gt;2&lt;/code&gt;? In Ruby the simplest way of making sure a variable is a Number is by casting the variable to Number or Float. In case it’s not a Number we rescue and move on.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;el &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Float(el) &lt;span style=&#34;color:#66d9ef&#34;&gt;rescue&lt;/span&gt; el
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Incidentally this also solved the problem where the json path contained a number but since everything is a string this, also did not equal: &lt;code&gt;&#39;1&#39; == 1&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;Since first the string needed to be a Number.&lt;/p&gt;
-&lt;h1 id=&#34;supporting-regexes&#34;&gt;Supporting regexes&lt;/h1&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/bouncer1.jpg&#34; alt=&#34;bouncer1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Next came supported operators. The parser only supported the basic operators: &lt;code&gt;&amp;lt;&amp;gt;=&lt;/code&gt;. It was missing &lt;code&gt;=~&lt;/code&gt; from this. Which meant people who would use regexes to filter JSON would no longer be able to do so. This was only a tiny modification actually:&lt;/p&gt;
-&lt;p&gt;First, the operator filter needed to be aware&amp;hellip;&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/(\s+)?[&amp;lt;&amp;gt;=][=&amp;lt;&amp;gt;]?(\s+)?/&lt;/span&gt;)
-&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/(\s+)?[&amp;lt;&amp;gt;=][=~]?(\s+)?/&lt;/span&gt;)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;With that done, we just &lt;code&gt;.to_regexp&lt;/code&gt; it with the power of ruby and &lt;code&gt;send&lt;/code&gt; would automatically pick it up. And of course test coverage.&lt;/p&gt;
-&lt;h1 id=&#34;regression&#34;&gt;Regression&lt;/h1&gt;
-&lt;p&gt;Once the parser was introduced I knew that it would create problems, since eval did many things that the parser could not handle. And they started to arrive slowly. One-by-one.&lt;/p&gt;
-&lt;h2 id=&#34;booleans&#34;&gt;Booleans&lt;/h2&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/twins2.jpg&#34; alt=&#34;twins2&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Aka, the story of &lt;code&gt;true == &#39;true&#39;&lt;/code&gt;&amp;hellip; Inherently working with strings here makes it difficult to detect when the type boolean is meant or a string which happens to say &lt;code&gt;true&lt;/code&gt;. This one was easy to solve as well in the end:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;operand &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;true&amp;#39;&lt;/span&gt;
-            &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;false&amp;#39;&lt;/span&gt;
-            &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;
-            operator&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;to_s&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;strip &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;=~&amp;#39;&lt;/span&gt; ? t&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;to_regexp : t&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;gsub(&lt;span style=&#34;color:#e6db74&#34;&gt;%r{^&amp;#39;|&amp;#39;$}&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;strip &lt;span style=&#34;color:#75715e&#34;&gt;# We also handle regexp here.&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Ignoring the regex part, this was all it needed.&lt;/p&gt;
-&lt;h2 id=&#34;syntax&#34;&gt;Syntax&lt;/h2&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/bouncer3.jpg&#34; alt=&#34;bouncer3&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Some smaller tid-bits here and there also started to crop up. Things that eval did not mind at all, but my poor Parser couldn&amp;rsquo;t handle. The regex started out tightly tied. This meant that certain characters weren&amp;rsquo;t properly detected. Characters like the underscore, or &lt;code&gt;@&lt;/code&gt; or &lt;code&gt;/&lt;/code&gt;&amp;hellip; All these weren&amp;rsquo;t picked up by my tight regexp. I had to widen it a bit using .* at certain places.&lt;/p&gt;
-&lt;h2 id=&#34;number-formatting&#34;&gt;Number formatting&lt;/h2&gt;
-&lt;p&gt;Formatting and comparing numbers gave me a lot of headache. I had to detect whether I’m dealing with a number or a string parsed as a number or a number but that was converted into string or a string that happened to be a number. Geez…&lt;/p&gt;
-&lt;p&gt;I ended up making it simple like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;el &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Float(el) &lt;span style=&#34;color:#66d9ef&#34;&gt;rescue&lt;/span&gt; el
-operand &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Float(operand) &lt;span style=&#34;color:#66d9ef&#34;&gt;rescue&lt;/span&gt; operand
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Basically everything is a number. Doesn’t matter where it came from, what it was in the past… It’s a number if it can be converted. This, of course, also means that a test like this one fails:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;test_number_match&lt;/span&gt;
-    json &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; {
-      &lt;span style=&#34;color:#e6db74&#34;&gt;channels&lt;/span&gt;:&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;
-        {
-          &lt;span style=&#34;color:#e6db74&#34;&gt;elem&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;,
-        },
-        {
-          &lt;span style=&#34;color:#e6db74&#34;&gt;elem&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;1&amp;#39;&lt;/span&gt;
-        }
-      &lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;
-    }&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;to_json
-
-    assert_equal &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;{ &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;elem&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt; }&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;JsonPath&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;on(json, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$..channels[?(@.elem == 1)]&amp;#34;&lt;/span&gt;)
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Both will match… Even though you’d expect it only to match one. Luckily though… this is exactly how &lt;a href=&#34;http://jsonpath.com/&#34;&gt;http://jsonpath.com/&lt;/a&gt; works as well. An AST would detect that it’s a number type… But since I’m parsing strings here, that would be almost impossible a feat to accomplish in a nice manner.&lt;/p&gt;
-&lt;h2 id=&#34;groups&#34;&gt;Groups&lt;/h2&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/bouncer2.jpg&#34; alt=&#34;bouncer2&#34;&gt;&lt;/p&gt;
-&lt;p&gt;And finally, the biggest one… Groups in conditions. A query like this one for example:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$..book[?((@[&#39;author&#39;] == &#39;Evelyn Waugh&#39; || @[&#39;author&#39;] == &#39;Herman Melville&#39; &amp;amp;&amp;amp; (@[&#39;price&#39;] == 33 || @[&#39;price&#39;] == 9))]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Something like this was never parsed correctly. Since the parser didn’t understand grouping and order of evaluation. Let’s break it down. How do we get from a monstrous like that one above to something that can be handled? We take it one group at a time.&lt;/p&gt;
-&lt;h3 id=&#34;parentheses&#34;&gt;Parentheses&lt;/h3&gt;
-&lt;p&gt;As a first step, we make sure that the parentheses match. It’s possible that someone didn’t pay attention and left out a closing parentheses. Now, there are a couple of way of doing that in Ruby, but I went for the most plain blatant one.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;check_parenthesis_count&lt;/span&gt;(exp)
-      &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;unless&lt;/span&gt; exp&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;include?(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;(&amp;#34;&lt;/span&gt;)
-      depth &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;
-      exp&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;chars&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;each &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;c&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; c &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;(&amp;#39;&lt;/span&gt;
-          depth &lt;span style=&#34;color:#f92672&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; c &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;)&amp;#39;&lt;/span&gt;
-          depth &lt;span style=&#34;color:#f92672&#34;&gt;-=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-      &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-      depth &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;A basic depth counter. We do this first, to avoid parsing an invalid query.&lt;/p&gt;
-&lt;h3 id=&#34;breaking-it-down&#34;&gt;Breaking it down&lt;/h3&gt;
-&lt;p&gt;Next we break down this complex thing into a query that makes more sense to the parser. To do that, we take each group and extract the operation in them and replace it with the value they provide. Meaning a query like the one above essentially should look like this:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;((false || false) &amp;amp;&amp;amp; (false || true))
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Neat. This is handled by this code segment: &lt;a href=&#34;https://github.com/joshbuddy/jsonpath/blob/b2525b8e8c596ddf1c8b40982529300b5a98132b/lib/jsonpath/parser.rb#L112&#34;&gt;Parser&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;The parsing function is called over and over again until there are no parentheses left in the expression. Aka, a single true or false or number remains.&lt;/p&gt;
-&lt;p&gt;Now, who can spot an issue with that? The function &lt;code&gt;bool_or_exp&lt;/code&gt; is there to return a float or a boolean value. If it returns a float, we still &amp;amp;&amp;amp;= -it together with the result&amp;hellip; Thus, if there is a query like this one for example:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$..book[?(@.length-5 &amp;amp;&amp;amp; @.type == &#39;asdf&#39;)]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This would fail horribly. Which means, asking for a specific index in a json in a grouped expression is not supported at the moment.&lt;/p&gt;
-&lt;h3 id=&#34;return-value&#34;&gt;Return Value&lt;/h3&gt;
-&lt;p&gt;The parser doesn’t just return a bool value and call it a day. It also returns indexes like you read above. Indexes in cases when there is a query that returns the location of an item in the node and not if the node contains something or matches some data. For example:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$..book[(@.length-5)]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Returns the length-5-th book.&lt;/p&gt;
-&lt;h1 id=&#34;outstanding-issues&#34;&gt;Outstanding issues&lt;/h1&gt;
-&lt;p&gt;Right now there are two outstanding issues. The one mentioned above, where you can’t nest indexes and true/false notations. And the other is a submitted issue in which it’s described that it’s not possible to use something like this:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$.phoneNumbers[?(@[0].type == &#39;home&#39;)]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Which basically boils down to the fact that Jsonpath can’t handle nested lists like these:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;{
-  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;phoneNumbers&amp;#34;&lt;/span&gt;: [
-    [{
-      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;  : &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;iPhone&amp;#34;&lt;/span&gt;,
-      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;number&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0123-4567-8888&amp;#34;&lt;/span&gt;
-    }],
-    [{
-      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;  : &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;home&amp;#34;&lt;/span&gt;,
-      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;number&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0123-4567-8910&amp;#34;&lt;/span&gt;
-    }]
-  ]
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;That isn’t actually the problem of the parser, but Jsonpath itself.&lt;/p&gt;
-&lt;h1 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h1&gt;
-&lt;p&gt;Like a good marriage, living with a Parser is a lot of compromise and ironing out edges and working on making it better for both parties involved. I have no doubt that there are more bugs in this code, but I&amp;rsquo;m trying to keep it concise and clear to read as much as possible.&lt;/p&gt;
-&lt;p&gt;I hope this was as fun to read as it was to write.&lt;/p&gt;
-&lt;p&gt;Thank you for reading,&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <description>Hi folks!
+Today’s post is a retrospective. I would like to gather some thoughts about living with the new parser that I wrote for JsonPath.
+After a little over a year, some interesting problems surfaced that I thought I’d share for people who also would like to endeavor on this path. Let’s begin.
+Previously About, two years ago, I took over managing / fixing / improving this ruby gem: Json Parser.</description>
     </item>
     
   </channel>

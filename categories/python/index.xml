@@ -1,975 +1,124 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Python on Ramblings of a cloud engineer</title>
     <link>https://skarlso.github.io/categories/python/</link>
     <description>Recent content in Python on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-GB</language>
-    <lastBuildDate>Tue, 19 Mar 2019 21:01:00 +0100</lastBuildDate>
-    <atom:link href="https://skarlso.github.io/categories/python/index.xml" rel="self" type="application/rss+xml" />
-    
+    <language>en</language>
+    <lastBuildDate>Tue, 19 Mar 2019 21:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/python/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Cronohub: Archive from anywhere to anywhere</title>
       <link>https://skarlso.github.io/2019/03/19/cronohub/</link>
       <pubDate>Tue, 19 Mar 2019 21:01:00 +0100</pubDate>
+      
       <guid>https://skarlso.github.io/2019/03/19/cronohub/</guid>
-      <description>&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-&lt;p&gt;Good afternoon folks.&lt;/p&gt;
-&lt;p&gt;Today, I would like to talk a little bit about &lt;a href=&#34;https://github.com/cronohub/cronohub&#34;&gt;Cronohub&lt;/a&gt;. It&amp;rsquo;s a Python application
-which you can use to archive anything from anywhere to anywhere. It uses plugins to archive this versatility.&lt;/p&gt;
-&lt;p&gt;Let me show you some of its features.&lt;/p&gt;
-&lt;h1 id=&#34;main-usage&#34;&gt;Main Usage&lt;/h1&gt;
-&lt;p&gt;Cronohub is a python application which uses the power and ease of usage of Python to give the user a
-framework. This Framework can then be used to implement concrete functionality in the form of plugins.&lt;/p&gt;
-&lt;p&gt;The plugins provide the essential working logic for Cronohub. Cronohub itself, is basically a Hub for these
-plugins.&lt;/p&gt;
-&lt;p&gt;What can Cronohub be actually used for? Say, you have a gazillion Github repositories you would like to archive to a
-S3 bucket. Or SCP to another server. Or to ownCloud&amp;hellip; You would use cronohub as such:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;❯ cronohub -s {github,gitlab} -t {s3,owncloud,scp}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;It is this simple. What&amp;rsquo;s going on here then? &lt;code&gt;-s&lt;/code&gt; tells Cronohub to use a source plugin called &lt;code&gt;github&lt;/code&gt; where as
-&lt;code&gt;-t&lt;/code&gt; tells it to use a target plugin called &lt;code&gt;s3&lt;/code&gt; or &lt;code&gt;owncloud&lt;/code&gt; or an &lt;code&gt;scp&lt;/code&gt; operation.&lt;/p&gt;
-&lt;h2 id=&#34;under-the-hood&#34;&gt;Under the hood&lt;/h2&gt;
-&lt;p&gt;What happens then is that the source plugin downloads the repositories for a given user. The plugins themselves can
-require certain configuration options to be provided. Like environment properties. To get the Help of a plugin you
-can simply ask Cronohub like this:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;❯ cronohub help --source-help github
-Help (github source plugin):
-    - Environment Property:
-        CRONO_GITHUB_TOKEN: a token with access to listing repositories for a given user.
-    - File that filters the list of repositories to archive. If not present, all will be archived.
-        ~/.config/cronohub/configurations/github/.repo_list
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;It will display help information for that plugin.&lt;/p&gt;
-&lt;p&gt;Once the source plugin finished downloading the requested repositories to a given location it will pass on a list
-of files to the target plugin for archiving. The target plugin takes this list of files and will add a timestamp
-to the file and upload them with the requested operation.&lt;/p&gt;
-&lt;p&gt;The plugins take care of parallelization or threading if this makes it faster. For example the github plugin downloads
-at most 5 archive files concurrently.&lt;/p&gt;
-&lt;h1 id=&#34;plugins&#34;&gt;Plugins&lt;/h1&gt;
-&lt;p&gt;What are plugins then? The plugins adhere to an ABC. An Abstract Base Class. This class defines the abilities and
-structure of a plugin. It looks like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; abc &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; ABCMeta, abstractmethod
-
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;CronohubSourcePlugin&lt;/span&gt;(metaclass&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;ABCMeta):
-    &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&amp;#34;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;    This is the basic definition of a CronoHub plugin.
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;    &amp;#34;&amp;#34;&amp;#34;&lt;/span&gt;
-    &lt;span style=&#34;color:#a6e22e&#34;&gt;@abstractmethod&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;validate&lt;/span&gt;(self):
-        &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
-
-    &lt;span style=&#34;color:#a6e22e&#34;&gt;@abstractmethod&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;help&lt;/span&gt;(self):
-        &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
-
-    &lt;span style=&#34;color:#a6e22e&#34;&gt;@abstractmethod&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;fetch&lt;/span&gt;(self):
-        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&amp;#34;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        Returns a tuple (str, str) where there first parameter is the name of the
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        archive and the second is the location as a full path. Exp:
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        (&amp;#34;my-project-12345&amp;#34;, &amp;#34;/home/user/projects/my-project/my-project.tar.gz&amp;#34;)
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        &amp;#34;&amp;#34;&amp;#34;&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Validation will be called before the plugin can be used. This method can be used to validate settings
-for a plugin, for example if a token is provided for the github plugin. Or a bucket name is defined for the
-S3 plugin etc.&lt;/p&gt;
-&lt;p&gt;Help will display information just like we saw above and fetch will actually perform the downloading or
-fetching of files to later archive.&lt;/p&gt;
-&lt;p&gt;Plugins are located in this repository: &lt;a href=&#34;https://github.com/cronohub/plugins&#34;&gt;Cronohub plugins&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;Hopefully, at some point I&amp;rsquo;ll finish &lt;a href=&#34;https://cronohub.org&#34;&gt;https://cronohub.org&lt;/a&gt; and then there will be an online repository for these.&lt;/p&gt;
-&lt;p&gt;Plugins are located at &lt;code&gt;~/.config/cronohub/plugins/{target,source}&lt;/code&gt;. Each plugin must take care of its own
-dependencies via a &lt;code&gt;requirements.txt&lt;/code&gt; file.&lt;/p&gt;
-&lt;p&gt;Right now, there are only a few plugins available.&lt;/p&gt;
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th style=&#34;text-align:center&#34;&gt;Source Plugins&lt;/th&gt;
-&lt;th style=&#34;text-align:center&#34;&gt;Target Plugins&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;Github&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;S3&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;Gitlab&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;SCP&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;Local&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;ownCloud&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;No-Op&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;p&gt;More are hopefully on the way. Local is simply gathering a list of files from a folder. And no-op is what it says. It&amp;rsquo;s good for debugging a source plugin as it doesn&amp;rsquo;t do anything else but displays the files it got from the source plugin.&lt;/p&gt;
-&lt;h1 id=&#34;installation&#34;&gt;Installation&lt;/h1&gt;
-&lt;p&gt;Installing is dead trivial. Simply run:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;pip install cronohub
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&amp;hellip; and that&amp;rsquo;s it. It&amp;rsquo;s published on pypi.org.&lt;/p&gt;
-&lt;h1 id=&#34;contribution&#34;&gt;Contribution&lt;/h1&gt;
-&lt;p&gt;Plugin contributions are heartily welcomed!&lt;/p&gt;
-&lt;p&gt;And that&amp;rsquo;s it.&lt;/p&gt;
-&lt;p&gt;Thank you for reading,&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <description>Intro Good afternoon folks.
+Today, I would like to talk a little bit about Cronohub. It&amp;rsquo;s a Python application which you can use to archive anything from anywhere to anywhere. It uses plugins to archive this versatility.
+Let me show you some of its features.
+Main Usage Cronohub is a python application which uses the power and ease of usage of Python to give the user a framework. This Framework can then be used to implement concrete functionality in the form of plugins.</description>
     </item>
     
     <item>
       <title>Django – RPG – Part 3</title>
       <link>https://skarlso.github.io/2015/04/21/django-rpg-part-3/</link>
       <pubDate>Tue, 21 Apr 2015 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2015/04/21/django-rpg-part-3/</guid>
-      <description>&lt;p&gt;Hello folks.&lt;/p&gt;
-&lt;p&gt;A small update to this. I created the model now, which is the database design for this app. It&amp;rsquo;s very simple, nothing fancy. Also, I&amp;rsquo;m writing the app with Python 3 from now on.&lt;/p&gt;
-&lt;p&gt;Here is the model now:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.db &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; models
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.contrib.auth.models &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; User
-
-&lt;span style=&#34;color:#75715e&#34;&gt;# Create your models here.&lt;/span&gt;
-
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Item&lt;/span&gt;(models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Model):
-    name &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;CharField(max_length&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;100&lt;/span&gt;, default&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Item&amp;#34;&lt;/span&gt;)
-    damage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;IntegerField(default&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;)
-    defense &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;IntegerField(default&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;)
-    consumable &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;BooleanField(default&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;False)
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; __str__(self):
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;name
-
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Inventory&lt;/span&gt;(models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Model):
-    items &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;ManyToManyField(Item)
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; __str__(self):
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;items
-
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Character&lt;/span&gt;(models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Model):
-    &lt;span style=&#34;color:#75715e&#34;&gt;# By default Django uses the primery key of the related object.&lt;/span&gt;
-    &lt;span style=&#34;color:#75715e&#34;&gt;# Hence, no need to specify User.id.&lt;/span&gt;
-    user &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;OneToOneField(User, null&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;True)
-    name &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;CharField(max_length&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;100&lt;/span&gt;)
-    inventory &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; models&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;ForeignKey(Inventory)
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; __str__(self):
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;name
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Worth noting a few things here. The __str__ is only with Python 3. In Python 2 it would be unicode. And the OneToOne and the foreign key are automatically using Primary keys defined in the references model. The __str__ is there to return some view when you are debugging in the console instead of [&amp;lt;Item: Item object&amp;gt;].&lt;/p&gt;
-&lt;p&gt;In order to apply this change you just have to run this commend (given you set up your app in the settings.py as an INSTALLED_APP):&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;
-python manage.py makemigrations polls
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This creates the migration script. And this applies it:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;
-python manage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;py migrate
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;I love the fact that django creates incremental migration scripts out of the box. So if there was any problem at all, you can always roll back. Which comes very handy in certain situations.&lt;/p&gt;
-&lt;p&gt;That&amp;rsquo;s it.&lt;/p&gt;
-&lt;p&gt;Thanks for reading!&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <description>Hello folks.
+A small update to this. I created the model now, which is the database design for this app. It&amp;rsquo;s very simple, nothing fancy. Also, I&amp;rsquo;m writing the app with Python 3 from now on.
+Here is the model now:
+1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33  from django.</description>
     </item>
     
     <item>
       <title>Django – RPG – Part 2</title>
       <link>https://skarlso.github.io/2015/04/12/django-rpg-part-2/</link>
       <pubDate>Sun, 12 Apr 2015 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2015/04/12/django-rpg-part-2/</guid>
       <description>&lt;p&gt;Hello.&lt;/p&gt;
-&lt;p&gt;Continuing where we left off with the Django RPG project. Next up is implementing a rudimentary registration and adding the ability to create a character. Maybe even, design the database through django&amp;rsquo;s modelling.&lt;/p&gt;
-&lt;p&gt;Since we are using Django&amp;rsquo;s very own authentication model, I think we are covered in terms of users. Let&amp;rsquo;s add two things for now. An Index page, where there is a link to login and a link to registration.&lt;/p&gt;
-&lt;p&gt;Adding the index first. Later I would like to switch to a base template model, but for now, I created a simple index.html page. That only contains the two links to the two views. The views are a simple function call in the views.py too which the URLConfig will later point to.&lt;/p&gt;
-&lt;p&gt;For now, the index function looks like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;index&lt;/span&gt;(request):
-  &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&amp;#39;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;  myrpg/rpg/views.py
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;  &amp;#39;&amp;#39;&amp;#39;&lt;/span&gt;
-	title &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;My RPG&amp;#34;&lt;/span&gt;
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; render_to_response(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;index.html&amp;#39;&lt;/span&gt;, {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt;:title})
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Note, that the title here is utterly unimportant but because I want to switch to a base.html template I&amp;rsquo;ll leave it here for later usage.&lt;/p&gt;
-&lt;p&gt;That concludes the index. Now, let&amp;rsquo;s create the registration. That is a little more complex, but still rather easy. We are just checking of the user already exists or not, if so, display and error, if not, create the user.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# myrpg/rpg/views.py&lt;/span&gt;
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;registration&lt;/span&gt;(request):
-	state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Please register.&amp;#34;&lt;/span&gt;
-	username &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; password &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; email &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; request&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;POST:
-		username &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; request&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;POST&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;username&amp;#39;&lt;/span&gt;)
-		email &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; request&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;POST&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;email&amp;#39;&lt;/span&gt;)
-		password &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; request&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;POST&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;password&amp;#39;&lt;/span&gt;)
-		&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; User&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;objects&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;filter(username &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; username)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;exists():
-			&lt;span style=&#34;color:#75715e&#34;&gt;# raise forms.ValidationError(&amp;#34;Username %s is already in use.&amp;#34; % username)&lt;/span&gt;
-			state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Username &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; is already in use. Please try another.&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; username
-		&lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;:
-			&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt;:
-				user &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; User&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;objects&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;create_user(username &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; username, email &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; email, password &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; password)
-				state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Thank you for registering with us &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;!&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; user&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;username
-			&lt;span style=&#34;color:#66d9ef&#34;&gt;except&lt;/span&gt;:
-				state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Unexpected error occured: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;exc_info()[]
-
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; render_to_response(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;registration.html&amp;#39;&lt;/span&gt;, {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;state&amp;#39;&lt;/span&gt;: state}, context_instance &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; RequestContext(request))
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Here, I&amp;rsquo;m checking to see of the username already exists with the filter. This is by using Django&amp;rsquo;s model which models the database like hibernate. It&amp;rsquo;s a simple query. And I&amp;rsquo;m doing this, because this is faster than raising an exception. Later on, I&amp;rsquo;ll be switching to a validation framework and django&amp;rsquo;s own auth view. Because, why not.&lt;/p&gt;
-&lt;p&gt;The URL conf looks like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#myrpg/rpg/urls.py&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.conf.urls &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; url
-
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; . &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; views
-
-urlpatterns &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [
-    url(&lt;span style=&#34;color:#e6db74&#34;&gt;r&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;^$&amp;#39;&lt;/span&gt;, views&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;index, name&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;index&amp;#39;&lt;/span&gt;),
-    url(&lt;span style=&#34;color:#e6db74&#34;&gt;r&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;^login/$&amp;#39;&lt;/span&gt;, views&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;login_user, name&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;login&amp;#39;&lt;/span&gt;),
-    url(&lt;span style=&#34;color:#e6db74&#34;&gt;r&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;^registration/$&amp;#39;&lt;/span&gt;, views&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;registration, name&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;registration&amp;#39;&lt;/span&gt;),
-]
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And this now, resides in a file under the RPG app and not the main one. The main one includes this one, like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#myrpg/urls.py&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.conf.urls &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; include, url
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.contrib &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; admin
-
-urlpatterns &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [
-    &lt;span style=&#34;color:#75715e&#34;&gt;# Examples:&lt;/span&gt;
-    &lt;span style=&#34;color:#75715e&#34;&gt;# url(r&amp;#39;^$&amp;#39;, &amp;#39;myrpg.views.home&amp;#39;, name=&amp;#39;home&amp;#39;),&lt;/span&gt;
-    &lt;span style=&#34;color:#75715e&#34;&gt;# url(r&amp;#39;^blog/&amp;#39;, include(&amp;#39;blog.urls&amp;#39;)),&lt;/span&gt;
-
-    url(&lt;span style=&#34;color:#e6db74&#34;&gt;r&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;^admin/&amp;#39;&lt;/span&gt;, include(admin&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;site&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;urls)),
-    url(&lt;span style=&#34;color:#e6db74&#34;&gt;r&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;^rpg/&amp;#39;&lt;/span&gt;, include(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;rpg.urls&amp;#39;&lt;/span&gt;)),
-]
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;That&amp;rsquo;s it for now. As always, you can check out the code under github.&lt;/p&gt;
-&lt;p&gt;Tune in next time, when I&amp;rsquo;ll attempt to create a view to create a Character for a logged in user and link it to the user. I&amp;rsquo;ll do this with django&amp;rsquo;s model framework.&lt;/p&gt;
-&lt;p&gt;Thanks for reading,&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;</description>
+&lt;p&gt;Continuing where we left off with the Django RPG project. Next up is implementing a rudimentary registration and adding the ability to create a character. Maybe even, design the database through django&amp;rsquo;s modelling.&lt;/p&gt;</description>
     </item>
     
     <item>
       <title>Django – RPG – Part 1</title>
       <link>https://skarlso.github.io/2015/04/10/django-rpg-2/</link>
       <pubDate>Fri, 10 Apr 2015 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2015/04/10/django-rpg-2/</guid>
       <description>&lt;p&gt;Hi folks.&lt;/p&gt;
-&lt;p&gt;So last time, we tried to implement a little RPG of mine using Meteor, which failed miserably. This time we are going to try and use Django. Let&amp;rsquo;s have at it, shall we?&lt;/p&gt;
-&lt;p&gt;If you don&amp;rsquo;t know what django is (than you are probably not reading this blog entry anyways. ), have a look =&amp;gt; &lt;!-- raw HTML omitted --&gt;Link&lt;!-- raw HTML omitted --&gt;. It&amp;rsquo;s a Python Web Framework.&lt;/p&gt;
-&lt;h1 id=&#34;in-the-beginning&#34;&gt;In the beginning&lt;/h1&gt;
-&lt;p&gt;So here we are again. I&amp;rsquo;m starting off by creating the skeleton for my RPG. First, the welcome page with a tiny login capability. Which means session tracking. For now, on the same page.&lt;/p&gt;
-&lt;p&gt;To create the skeleton I just run this little command:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;django&lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;admin&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;py startproject myrpg
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Easy enough, right? Basic directory structure is created. You can read that in django&amp;rsquo;s own documentation: &lt;!-- raw HTML omitted --&gt;&lt;a href=&#34;https://docs.djangoproject.com/en/1.8/intro/tutorial01/&#34;&gt;https://docs.djangoproject.com/en/1.8/intro/tutorial01/&lt;/a&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;I&amp;rsquo;m using Sublime Text 3 to build this app. I was thinking of pycharm, but that would take away too much fun.&lt;/p&gt;
-&lt;p&gt;By default Django uses SQLlite and I&amp;rsquo;m okay with that.&lt;/p&gt;
-&lt;p&gt;The basics are there. Let&amp;rsquo;s move to higher ground. The next step can be to design the login page. I&amp;rsquo;m not much of a designer so I&amp;rsquo;ll leave that part to people who care more / understand it better. I&amp;rsquo;m only looking for a simple Login with a username and a password. Nothing fancy. And I&amp;rsquo;m going to use Django&amp;rsquo;s auth system for users: &lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;django.contrib.auth&lt;!-- raw HTML omitted --&gt;.&lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;It&amp;rsquo;s pretty good, has lots of features and can auth a user pretty quickly given a username and password, which is all I want for now.&lt;/p&gt;
-&lt;p&gt;I running a migrate command to create all the necessary tables and data:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;
-python manage.py migrate
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;A quick check with sqlite3 and running **.schema **showed me that the tables are indeed created and filled with default data for all the **INSTALLED_APPS **django has at the moment.&lt;/p&gt;
-&lt;p&gt;I did a quick check with &lt;em&gt;python manage.py runserver&lt;/em&gt; and everything seems to work fine.&lt;/p&gt;
-&lt;h1 id=&#34;the-rpg-app&#34;&gt;The RPG App&lt;/h1&gt;
-&lt;h1 id=&#34;heading&#34;&gt;&lt;/h1&gt;
-&lt;p&gt;So, that concludes the setup. Following the tutorial, django has this notion of apps and projects. In short, a project is a set of configurations and applications which forms a website. Hence, I&amp;rsquo;m going to create an RPG APP for now. The tutorial continues with a Poll type of App, but I&amp;rsquo;m sure I can apply the same things to a login page.&lt;/p&gt;
-&lt;p&gt;First, let&amp;rsquo;s create the App using the command:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;
-python manage.py startapp rpg
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;That creates the skeleton for the app. The tutorial then suggests to define the database first. Which I think is a bad idea; usually when doing design, you don&amp;rsquo;t want to start with the database model. But for now, I shall comply. We want a login page and we are using the auth module, which means, for now, I don&amp;rsquo;t care about the database. Skip.&lt;/p&gt;
-&lt;p&gt;I&amp;rsquo;m going to go off corse for now, since I only want to create a basic login. For that, I have to read up on views and models a little bit in order to create a simple login page. Be right back.&lt;/p&gt;
-&lt;p&gt;I&amp;rsquo;m fighting the basic auth system at the moment. Everything seems to be working fine. In the Admin screen I was able to add a basic user to do some debugging, but for now, the login seems to not work with this error:&lt;/p&gt;
-&lt;p&gt;&lt;em&gt;CSRF verification failed. Request aborted&lt;/em&gt;&lt;/p&gt;
-&lt;p&gt;This is the CSRF protection which came out with Django. I did a bit of more document reading and setup the CSRF as was described here:&lt;/p&gt;
-&lt;p&gt;&lt;!-- raw HTML omitted --&gt;&lt;a href=&#34;https://docs.djangoproject.com/en/1.8/ref/csrf/&#34;&gt;https://docs.djangoproject.com/en/1.8/ref/csrf/&lt;/a&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;However, I&amp;rsquo;m still facing the same problem. Let&amp;rsquo;s research further. Ahh yes. I wasn&amp;rsquo;t returning the request context I&amp;rsquo;ve set up. Before:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.shortcuts &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; render_to_response
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.contrib.auth &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; authenticate, login
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.template.context_processors &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; csrf
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;login_user&lt;/span&gt;(request):
-    c &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; {}
-    c&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;update(csrf(request))
-    state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Please log in below...&amp;#34;&lt;/span&gt;
-    username &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; password &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; request&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;POST:
-        username &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; request&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;POST&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;username&amp;#39;&lt;/span&gt;)
-        password &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; request&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;POST&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;password&amp;#39;&lt;/span&gt;)
-
-        user &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; authenticate(username&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;username, password&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;password)
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; user &lt;span style=&#34;color:#f92672&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;not&lt;/span&gt; None:
-            &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; user&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;is_active:
-                login(request, user)
-                state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;You&amp;#39;re successfully logged in!&amp;#34;&lt;/span&gt;
-            &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;:
-                state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Your account is not active, please contact the site admin.&amp;#34;&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;:
-            state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Your username and/or password were incorrect.&amp;#34;&lt;/span&gt;
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; render_to_response(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;auth.html&amp;#39;&lt;/span&gt;,{&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;state&amp;#39;&lt;/span&gt;:state, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;username&amp;#39;&lt;/span&gt;: username})
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;After:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.shortcuts &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; render_to_response
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.contrib.auth &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; authenticate, login
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.template.context_processors &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; csrf
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; django.template &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; RequestContext
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;login_user&lt;/span&gt;(request):
-    state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Please log in below...&amp;#34;&lt;/span&gt;
-    username &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; password &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; request&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;POST:
-        username &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; request&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;POST&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;username&amp;#39;&lt;/span&gt;)
-        password &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; request&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;POST&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;password&amp;#39;&lt;/span&gt;)
-
-        user &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; authenticate(username&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;username, password&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;password)
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; user &lt;span style=&#34;color:#f92672&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;not&lt;/span&gt; None:
-            &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; user&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;is_active:
-                login(request, user)
-                state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;You&amp;#39;re successfully logged in!&amp;#34;&lt;/span&gt;
-            &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;:
-                state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Your account is not active, please contact the site admin.&amp;#34;&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;:
-            state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Your username and/or password were incorrect.&amp;#34;&lt;/span&gt;
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; render_to_response(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;auth.html&amp;#39;&lt;/span&gt;,{&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;state&amp;#39;&lt;/span&gt;:state, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;username&amp;#39;&lt;/span&gt;: username}, context_instance&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;RequestContext(request))
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Notice that now I&amp;rsquo;m returning the request context at the end when I&amp;rsquo;m rendering the response. And lo&#39; and behold, my login is now working.&lt;/p&gt;
-&lt;h1 id=&#34;progress-so-far&#34;&gt;Progress so far&lt;/h1&gt;
-&lt;p&gt; &lt;/p&gt;
-&lt;p&gt;So, I&amp;rsquo;ve set up a user using the Admin portal accessible from the app / admin. Created my default rpg app, and added my default auth view into a template folder. Configured the URL setting in &lt;strong&gt;urls.py&lt;/strong&gt; to look like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;url(&lt;span style=&#34;color:#e6db74&#34;&gt;r&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;^login/$&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;rpg.views.login_user&amp;#39;&lt;/span&gt;),
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Very basic for now, but when I return to it, we are going to clean it up and then continue with implementing the main screen which will greet the user and display some stats about his/her character.&lt;/p&gt;
-&lt;p&gt;The whole code is under github here =&amp;gt; &lt;!-- raw HTML omitted --&gt;&lt;a href=&#34;https://github.com/Skarlso/myrpg&#34;&gt;https://github.com/Skarlso/myrpg&lt;/a&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;Bye for now,&lt;/p&gt;
-&lt;p&gt;And thanks for reading.&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;</description>
+&lt;p&gt;So last time, we tried to implement a little RPG of mine using Meteor, which failed miserably. This time we are going to try and use Django. Let&amp;rsquo;s have at it, shall we?&lt;/p&gt;</description>
     </item>
     
     <item>
       <title>Small Python GUI to Calculate Lever Distance</title>
       <link>https://skarlso.github.io/2015/04/10/small-python-gui-to-calculate-lever-distance/</link>
       <pubDate>Fri, 10 Apr 2015 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2015/04/10/small-python-gui-to-calculate-lever-distance/</guid>
-      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
-&lt;p&gt;Just a small script which calculates your distance from a lever focal point if you know your weight, the object&amp;rsquo;s weight and the object&amp;rsquo;s and the distance the object has from the focal point of the lever.&lt;/p&gt;
-&lt;p&gt;Like this:&lt;/p&gt;
-&lt;p&gt;This script will give you D1. And this is how it will look like in doing so:&lt;/p&gt;
-&lt;p&gt;So, in order for me (77kg) to lift an object of 80kg which is on a, by default, 1 meter long lever, I have to stand back ~1.03meters. Which is totally cool, right?&lt;/p&gt;
-&lt;p&gt;Here is the code:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; Tkinter &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; ttk
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;calculate&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;args):
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt;:
-        your_weight_value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; float(your_weight&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get())
-        object_weight_value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; float(object_weight&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get())
-        object_distance_value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; float(object_distance&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get())
-        your_distance&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;set((object_weight_value &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; object_distance_value) &lt;span style=&#34;color:#f92672&#34;&gt;/&lt;/span&gt; your_weight_value)
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;except&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ValueError&lt;/span&gt;:
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;pass&lt;/span&gt;
-
-root &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Tk()
-root&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;title(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Lever distance counter&amp;#34;&lt;/span&gt;)
-
-mainframe &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Frame(root, padding&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;4 4 12 12&amp;#34;&lt;/span&gt;)
-mainframe&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(N, W, E, S))
-mainframe&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;columnconfigure(, weight&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
-mainframe&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;rowconfigure(, weight&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
-
-your_weight &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; StringVar()
-object_weight &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; StringVar()
-object_distance &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; StringVar()
-your_distance &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; StringVar()
-
-object_distance&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;set(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1&amp;#34;&lt;/span&gt;)
-
-your_weight_entry &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Entry(mainframe, width&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;7&lt;/span&gt;, textvariable&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;your_weight)
-your_weight_entry&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(W, E))
-object_weight_entry &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Entry(mainframe, width&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;7&lt;/span&gt;, textvariable&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;object_weight)
-object_weight_entry&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(W, E))
-object_distance_entry &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Entry(mainframe, width&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;7&lt;/span&gt;, textvariable&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;object_distance)
-object_distance_entry&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(W, E))
-
-
-ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Label(mainframe, textvariable&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;your_distance)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(W, E))
-ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Label(mainframe, text&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Your weight&amp;#34;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;W)
-ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Label(mainframe, text&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Object weight&amp;#34;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;W)
-ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Label(mainframe, text&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Object Distance&amp;#34;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;W)
-ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Label(mainframe, text&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Your Distance&amp;#34;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;W)
-
-ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Label(mainframe, text&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;kg&amp;#34;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;W)
-ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Label(mainframe, text&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;kg&amp;#34;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;W)
-ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Label(mainframe, text&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;m&amp;#34;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;W)
-ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Label(mainframe, text&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;m&amp;#34;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;W)
-
-ttk&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Button(mainframe, text&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Calculate&amp;#34;&lt;/span&gt;, command&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;calculate)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid(column&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, row&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;, sticky&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;W)
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; child &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; mainframe&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;winfo_children(): child&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid_configure(padx&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;, pady&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;)
-
-your_weight_entry&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;focus()
-root&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;bind(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;, calculate)
-
-root&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;mainloop()
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Please enjoy, and feel free to alter in any way. I&amp;rsquo;m using Tkinter and a grid layout which I find very easy to work with.&lt;/p&gt;
-&lt;p&gt;Thanks for reading,
-Gergely.&lt;/p&gt;
-</description>
+      <description>Hi folks.
+Just a small script which calculates your distance from a lever focal point if you know your weight, the object&amp;rsquo;s weight and the object&amp;rsquo;s and the distance the object has from the focal point of the lever.
+Like this:
+This script will give you D1. And this is how it will look like in doing so:
+So, in order for me (77kg) to lift an object of 80kg which is on a, by default, 1 meter long lever, I have to stand back ~1.</description>
     </item>
     
     <item>
       <title>Python and my Math commitment</title>
       <link>https://skarlso.github.io/2015/03/15/python-and-my-math-commitment/</link>
       <pubDate>Sun, 15 Mar 2015 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2015/03/15/python-and-my-math-commitment/</guid>
-      <description>&lt;p&gt;Let&amp;rsquo;s talk about plans. It&amp;rsquo;s good to have one. For example, I have a plan for this year.&lt;/p&gt;
-&lt;p&gt;I kind of like math. So, I have this book:&lt;/p&gt;
-&lt;p&gt;It&amp;rsquo;s 1400 pages long and basically, has everything in it. It&amp;rsquo;s a rather exhaustive book. Hence, my plan is to finish the book by the end of 2015 and write a couple of python scripts that calculate something interesting.&lt;/p&gt;
-&lt;p&gt;(2021 Hindsight): Yeah, I didn&amp;rsquo;t manage this&amp;hellip; But it&amp;rsquo;s a cool idea, let&amp;rsquo;s see if I can get around coming further. I managed to get until 500 pages or so, before life stepped in.&lt;/p&gt;
-&lt;p&gt;For example, Newton&amp;rsquo;s law of cooling how I learned it is:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;k*log(2.5)*((t(0)-k)/(t-k))
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Where k =&amp;gt; a material&amp;rsquo;s surface based constant. T(0) =&amp;gt; initial temperature. T =&amp;gt; target temperature. K =&amp;gt; Environment&amp;rsquo;s temperature.&lt;/p&gt;
-&lt;p&gt;A simple python script for this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;
-&lt;span style=&#34;color:#75715e&#34;&gt;# Calculating Newton&amp;#39;s law of Cooling&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; __future__ &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; division
-&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; sys
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; math &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; log
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;calculation&lt;/span&gt;(k, Tz, T, K):
-	res &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; (Tz &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt; K)&lt;span style=&#34;color:#f92672&#34;&gt;/&lt;/span&gt;(T &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt; K)
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; k &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; (log(res, &lt;span style=&#34;color:#ae81ff&#34;&gt;2.5&lt;/span&gt;))
-
-k &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;argv[&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;]
-Tz &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;argv[&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;]
-T &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;argv[&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;]
-K &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;argv[&lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;]
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;print&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Calculating aproximate temperature for given parameters: k=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;, Tz=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;C, T=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;C, K=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;C&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; (k, Tz, T, K))
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;print&lt;/span&gt;(calculation(float(k), float(Tz), float(T), float(K)))
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Enjoy.&lt;/p&gt;
-&lt;p&gt;And as always,
-Thanks for reading!&lt;/p&gt;
-</description>
+      <description>Let&amp;rsquo;s talk about plans. It&amp;rsquo;s good to have one. For example, I have a plan for this year.
+I kind of like math. So, I have this book:
+It&amp;rsquo;s 1400 pages long and basically, has everything in it. It&amp;rsquo;s a rather exhaustive book. Hence, my plan is to finish the book by the end of 2015 and write a couple of python scripts that calculate something interesting.
+(2021 Hindsight): Yeah, I didn&amp;rsquo;t manage this&amp;hellip; But it&amp;rsquo;s a cool idea, let&amp;rsquo;s see if I can get around coming further.</description>
     </item>
     
     <item>
       <title>Sphere Judge Online – Python Kivy Android app – Part 2</title>
       <link>https://skarlso.github.io/2015/03/02/sphere-judge-online-python-kivy-android-app-part-2/</link>
       <pubDate>Mon, 02 Mar 2015 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2015/03/02/sphere-judge-online-python-kivy-android-app-part-2/</guid>
-      <description>&lt;p&gt;Here we are again. I will attempt to further this little journey of mine into the land of Android and Python.&lt;/p&gt;
-&lt;p&gt;This is the second part of the advanture you can read the first one a little bit back.&lt;/p&gt;
-&lt;h1 id=&#34;the-script&#34;&gt;The Script&lt;/h1&gt;
-&lt;p&gt;We left off at a point where I successfully configured my environment and compiled my first hello world APK. At that point it took a little bit fiddling to get it to work on my phone.&lt;/p&gt;
-&lt;p&gt;Now, I have progressed a little bit into spoj&amp;rsquo;s page parsing. The code so far is as follows:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;
-__author__ &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;hannibal&amp;#39;&lt;/span&gt;
-
-&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; requests
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; random &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; randint
-&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; lxml.html &lt;span style=&#34;color:#f92672&#34;&gt;as&lt;/span&gt; lh
-
-random_page_number &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; randint(, &lt;span style=&#34;color:#ae81ff&#34;&gt;63&lt;/span&gt;) &lt;span style=&#34;color:#75715e&#34;&gt;# 63 being the maximum page number at spoj&lt;/span&gt;
-r &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; requests&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://www.spoj.com/problems/classical/sort=0,start=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%d&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; (random_page_number &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;50&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;50&lt;/span&gt;))
-&lt;span style=&#34;color:#75715e&#34;&gt;# Problem Div XPath =&amp;gt; //[@class=&amp;#34;problems&amp;#34;]&lt;/span&gt;
-
-spoj_page &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; lh&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;document_fromstring(r&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;text)
-links_to_problems &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; spoj_page[]&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;xpath(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;//tr[@class=&amp;#39;problemrow&amp;#39;]/td[2]/a&amp;#34;&lt;/span&gt;)
-
-current_link &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; links_to_problems[randint(, len(links_to_problems))]
-&lt;span style=&#34;color:#66d9ef&#34;&gt;print&lt;/span&gt;(current_link&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;attrib[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;href&amp;#39;&lt;/span&gt;])
-r &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; requests&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://www.spoj.com/&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; current_link&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;attrib[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;href&amp;#39;&lt;/span&gt;])
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;print&lt;/span&gt;(r&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;text&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;encode(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;utf-8&amp;#34;&lt;/span&gt;))
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is pretty straight forward so far. It gets the problems page, loads in all of the links and prints it out.&lt;/p&gt;
-&lt;p&gt;My goal is an application which looks something like this:&lt;/p&gt;
-&lt;p&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;___&lt;/p&gt;
-&lt;p&gt;|   _&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;  |&lt;/p&gt;
-&lt;p&gt;|  |                                                                           | |&lt;/p&gt;
-&lt;p&gt;|  |                                                                           | |&lt;/p&gt;
-&lt;p&gt;|  |                    Display Problem Description               | |&lt;/p&gt;
-&lt;p&gt;|  |                                                                           | |&lt;/p&gt;
-&lt;p&gt;|  |                                                                           | |&lt;/p&gt;
-&lt;p&gt;|  |                                                                           | |&lt;/p&gt;
-&lt;p&gt;|  |_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_____ | |&lt;/p&gt;
-&lt;p&gt;|                                                                                 |&lt;/p&gt;
-&lt;p&gt;|                                                                                 |&lt;/p&gt;
-&lt;p&gt;|                         Button:Finish Problem                        |&lt;/p&gt;
-&lt;p&gt;|                                                                                 |&lt;/p&gt;
-&lt;p&gt;|                         Button:Next Problem                          |&lt;/p&gt;
-&lt;p&gt;|_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;_&lt;strong&gt;_&lt;/strong&gt;________ |&lt;/p&gt;
-&lt;p&gt;It&amp;rsquo;s very basic. When it loads up, it will gather and display a new problem. You have two options, either get a new one, or save / finish this item, saying you never want to see it again.&lt;/p&gt;
-&lt;p&gt;Let&amp;rsquo;s put the first part into an android app. Just gather data, and get it disaplyed.&lt;/p&gt;
-&lt;p&gt;*Queue a days worth of hacking and frustrated cussing.*&lt;/p&gt;
-&lt;p&gt;So, turns out it&amp;rsquo;s not as easy as I would have liked it to be. I ran into some pretty nasty problems. Some of them I&amp;rsquo;ll write down below for the record, and an attempted solution as well.&lt;/p&gt;
-&lt;h1 id=&#34;problems&#34;&gt;Problems&lt;/h1&gt;
-&lt;p&gt;&lt;strong&gt;#1:&lt;/strong&gt; &lt;strong&gt;Problem:&lt;/strong&gt; Libraries. I&amp;rsquo;m using lxml and requests. Requests is a pure python library, but lxml is partially C. Which apparently is not very well supported yet.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Solution (Partial):&lt;/strong&gt; I could optain request by two ways, but the most simple one, was basically just building my distribution with the optional requests module like this:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;
-./distribute.sh -m &amp;quot;openssl pil requests kivy&amp;quot;
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Attempting to do the same with LXML resulted in a compile issue which I tracked down to something like: &amp;ldquo;sorry, but we don&amp;rsquo;t support OSX&amp;rdquo;. But it&amp;rsquo;s okay. There are other ways to parse an html page, I just really like the xpath filter. So I soldiered on with trying to get something to work at least.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;#3: Problem:&lt;/strong&gt; &lt;em&gt;Bogus compile time exception.&lt;/em&gt; There were some exceptions on the way when I was trying to compile with buildozer. &lt;strong&gt;Solution:&lt;/strong&gt; It&amp;rsquo;s interesting because previously my solution to another compile time issue was to use a specific version of Cython. But this time the solution was to actually remove that version and install the latest one. Which is 0.22 as of the time of this writing. So:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;
-sudo pip update cython
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;strong&gt;#2: Problem:&lt;/strong&gt; Connection. So now, I&amp;rsquo;m down to the bare bone. At this point, I just want to see a page source in a label. My code looks like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; kivy
-kivy&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;require(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;1.8.0&amp;#39;&lt;/span&gt;)
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; kivy.lang &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; Builder
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; kivy.uix.gridlayout &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; GridLayout
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; kivy.properties &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; NumericProperty
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; kivy.app &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; App
-
-&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; requests
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; random &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; randint
-&lt;span style=&#34;color:#75715e&#34;&gt;# import lxml.html as lh&lt;/span&gt;
-
-&lt;span style=&#34;color:#75715e&#34;&gt;# import sys&lt;/span&gt;
-&lt;span style=&#34;color:#75715e&#34;&gt;# sys.path.append(&amp;#39;/sdcard/com.googlecode.pythonforandroid/extras/python/site-packages&amp;#39;)&lt;/span&gt;
-
-
-Builder&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;load_string(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&amp;#39;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;:
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;    cols: 1
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;    Label:
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        text: root.get_problem()
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;    Button:
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        text: &amp;#39;Click me! &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%d&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39; &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;% r&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;oot.counter
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        on_release: root.my_callback()
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&amp;#39;&lt;/span&gt;)
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;SpojAppScreen&lt;/span&gt;(GridLayout):
-    counter &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; NumericProperty()
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;my_callback&lt;/span&gt;(self):
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;print&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;The button has been pushed&amp;#39;&lt;/span&gt;
-        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;counter &lt;span style=&#34;color:#f92672&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;get_problem&lt;/span&gt;(self):
-        random_page_number &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; randint(, &lt;span style=&#34;color:#ae81ff&#34;&gt;63&lt;/span&gt;) &lt;span style=&#34;color:#75715e&#34;&gt;# 63 being the maximum page number at spoj&lt;/span&gt;
-        r &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; requests&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://www.spoj.com/problems/classical/sort=0,start=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%d&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; (random_page_number &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;50&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;50&lt;/span&gt;))
-
-        &lt;span style=&#34;color:#75715e&#34;&gt;# Problem Div XPath =&amp;gt; //[@class=&amp;#34;problems&amp;#34;]&lt;/span&gt;
-
-        &lt;span style=&#34;color:#75715e&#34;&gt;# spoj_page = lh.document_fromstring(r.text)&lt;/span&gt;
-        &lt;span style=&#34;color:#75715e&#34;&gt;# links_to_problems = spoj_page[0].xpath(&amp;#34;//tr[@class=&amp;#39;problemrow&amp;#39;]/td[2]/a&amp;#34;)&lt;/span&gt;
-
-        &lt;span style=&#34;color:#75715e&#34;&gt;# current_link = links_to_problems[randint(0, len(links_to_problems))]&lt;/span&gt;
-        &lt;span style=&#34;color:#75715e&#34;&gt;# print(current_link.attrib[&amp;#39;href&amp;#39;])&lt;/span&gt;
-        &lt;span style=&#34;color:#75715e&#34;&gt;# r = requests.get(&amp;#34;http://www.spoj.com/%s&amp;#34; % current_link.attrib[&amp;#39;href&amp;#39;])&lt;/span&gt;
-        &lt;span style=&#34;color:#75715e&#34;&gt;# print(r.text.encode(&amp;#34;utf-8&amp;#34;))&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; r&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;text&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;encode(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;utf-8&amp;#34;&lt;/span&gt;)
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;SpojApp&lt;/span&gt;(App):
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;build&lt;/span&gt;(self):
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; SpojAppScreen()
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; __name__ &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;__main__&amp;#39;&lt;/span&gt;:
-    SpojApp()&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;run()
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;However, running this results in a connection error in adb logcat:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;
-I/python  (27610):  kivy.lang.BuilderException: Parser: File &amp;quot;&amp;quot;, line 5:
-I/python  (27610):  ...
-I/python  (27610):        3:    cols: 1
-I/python  (27610):        4:    Label:
-I/python  (27610):  &amp;amp;gt;&amp;amp;gt;    5:        text: root.get_problem()
-I/python  (27610):        6:    Button:
-I/python  (27610):        7:        text: &#39;Click me! %d&#39; % root.counter
-I/python  (27610):  ...
-I/python  (27610):  BuilderException: Parser: File &amp;quot;&amp;quot;, line 5:
-I/python  (27610):  ...
-I/python  (27610):        3:    cols: 1
-I/python  (27610):        4:    Label:
-I/python  (27610):  &amp;amp;gt;&amp;amp;gt;    5:        text: root.get_problem()
-I/python  (27610):        6:    Button:
-I/python  (27610):        7:        text: &#39;Click me! %d&#39; % root.counter
-I/python  (27610):  ...
-I/python  (27610):  ConnectionError: (&#39;Connection aborted.&#39;, gaierror(4, &#39;non-recoverable failure in name resolution.&#39;))
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;strong&gt;Solution:&lt;/strong&gt; I tried simply putting out a random number at some point, which actullay worked, so I know it&amp;rsquo;s the connection. I&amp;rsquo;m guessing I need permission to access the network. Which would be this:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;
-uses-permission android:name=&amp;quot;android.permission.INTERNET&amp;quot;
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;And yes! Building and installing it with this additional permission got me so far as I can display the web page&amp;rsquo;s content in a label.&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;
-./build.py --package org.spoj --permission INTERNET --name &amp;quot;Spoj&amp;quot; --version 1.0 --dir /Users/hannibal/PythonProjects/spoj/ debug
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;There is a saying that you should end on a high note, so that is what I&amp;rsquo;m going to do here right now. Join me next time, when I&amp;rsquo;ll try to replace lxml with something else.&lt;/p&gt;
-&lt;p&gt;Thanks for reading!&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <description>Here we are again. I will attempt to further this little journey of mine into the land of Android and Python.
+This is the second part of the advanture you can read the first one a little bit back.
+The Script We left off at a point where I successfully configured my environment and compiled my first hello world APK. At that point it took a little bit fiddling to get it to work on my phone.</description>
     </item>
     
     <item>
       <title>Sphere Judge Online – Python Kivy Android app</title>
       <link>https://skarlso.github.io/2015/02/26/sphere-judge-online-python-kivy-android-app/</link>
       <pubDate>Thu, 26 Feb 2015 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2015/02/26/sphere-judge-online-python-kivy-android-app/</guid>
-      <description>&lt;p&gt;Hello folks.&lt;/p&gt;
-&lt;p&gt;Today I would like to take you on a journey I fought myself through in order to write a python android app, which gets you a random problem from &lt;!-- raw HTML omitted --&gt;Sphere Judge Online&lt;!-- raw HTML omitted --&gt;. Then you can mark it as solved and it will be stored as such, and you can move on to the next problem. With the words of Neil deGrasse Tyson, Come with Me!&lt;/p&gt;
-&lt;h1 id=&#34;beginnings&#34;&gt;Beginnings&lt;/h1&gt;
-&lt;p&gt;When I first embarked on this endeavour I ran into numerous errors, many amongst them being compilation issues when I was trying to install libraries.&lt;/p&gt;
-&lt;p&gt;I started to write down all of these, and then started fresh on a new machine. I realised that ALL of my problems where only because of **ONE **thing. One thing, which I wanted to do, but it ended up being the death of me. And that is.. *Drummrolls* **Python 3. **I tried doing all the things that I started to do, with Python 3. Turns out, that neither libraries are supporting it very well yet. And that&amp;rsquo;s including Cython as well, which I thought would be up to speed by now. But sadly, it&amp;rsquo;s not.&lt;/p&gt;
-&lt;h1 id=&#34;prerequisite&#34;&gt;Prerequisite&lt;/h1&gt;
-&lt;p&gt;In order to go any further we need a few things first. For this to work, you&amp;rsquo;ll have to perform these things in order as I found out later. And certain versions of certain libraries are required instead of the latest ones.&lt;/p&gt;
-&lt;p&gt;Depending on the environment you are using, you need to install python-dev and some other graphic libraries. I followed this and that was fine. Latest packages are working alright.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;sudo apt-get install build-essential patch git-core ccache ant python-pip python-dev
-sudo apt-get install ia32-libs  libc6-dev-i386
-sudo apt-get install lib32stdc++6 lib32z1
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Only install these if you are absolutely certain you need them.&lt;/p&gt;
-&lt;p&gt;Clone python-android from git into a nice and cosy directory.&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;git clone https://github.com/kivy/python-for-android.git
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;While this is underway, for python-android you also need &lt;!-- raw HTML omitted --&gt;android-sdk&lt;!-- raw HTML omitted --&gt; and &lt;!-- raw HTML omitted --&gt;android-ndk&lt;!-- raw HTML omitted --&gt;. Select the ones which are for your environment. The NDK is needed in order to build the APK out of our python code later on.&lt;/p&gt;
-&lt;p&gt;After you are done, run ./android and install tools, APIs and other things you want. Make sure you have these set up:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;export ANDROIDSDK=/path/to/android-sdk
-export ANDROIDNDK=/path/to/android-ndk
-export ANDROIDNDKVER=rX
-export ANDROIDAPI=X
-export PATH=$ANDROIDNDK:$ANDROIDSDK/platform-tools:$ANDROIDSDK/tools:$PATH
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The API version needs to be the one which you installed on your machine.&lt;/p&gt;
-&lt;p&gt;Now, we have to get a specific version of Cython. In order to do that, execute the following command:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;sudo pip install -I https://pypi.python.org/packages/source/C/Cython/Cython-0.20.1.tar.gz
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Source your new .bash_profile file if you haven&amp;rsquo;t done so already.&lt;/p&gt;
-&lt;p&gt;At this point we are ready to install Kivy. Please follow the instructions for your environment on the respective page from Kivy&amp;rsquo;s documentation:&lt;/p&gt;
-&lt;p&gt;&lt;!-- raw HTML omitted --&gt;&lt;a href=&#34;http://kivy.org/docs/installation/installation.html&#34;&gt;http://kivy.org/docs/installation/installation.html&lt;/a&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: For Mac users. In addition, before doing the kivy stuff, and if you would like to execute kivy applications on your mac, you need to install pygame.&lt;/p&gt;
-&lt;p&gt;It&amp;rsquo;s a bit of a hassle but you only need to perform these commands:&lt;/p&gt;
-&lt;p&gt;Install Quartz =&amp;gt; &lt;!-- raw HTML omitted --&gt;&lt;a href=&#34;http://xquartz.macosforge.org/landing/&#34;&gt;http://xquartz.macosforge.org/landing/&lt;/a&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;Install Homebrew =&amp;gt; &lt;!-- raw HTML omitted --&gt;ruby -e &amp;ldquo;$(curl -fsSL &lt;a href=&#34;https://raw.github.com/Homebrew/homebrew/go/install)%22&#34;&gt;https://raw.github.com/Homebrew/homebrew/go/install)&amp;quot;&lt;/a&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;Install some other packages =&amp;gt; &lt;!-- raw HTML omitted --&gt;brew install hg sdl sdl_image sdl_mixer sdl_ttf portmidi&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;Install pygame =&amp;gt; &lt;!-- raw HTML omitted --&gt;pip install hg+http://bitbucket.org/pygame/pygame&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;Once this finishes, you should be good to go for the final command in the prerequisites. Go to your cloned python-android folder and run this (make sure you have ANT installed):&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;./distribute.sh -m &amp;quot;openssl pil kivy&amp;quot;
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Now we are ready for some coding.&lt;/p&gt;
-&lt;h1 id=&#34;implementation&#34;&gt;Implementation&lt;/h1&gt;
-&lt;p&gt;So, finally after our environment is all setup, we can move on to write some python code. Let&amp;rsquo;s start with a simple hello world application:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; kivy
-kivy&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;require(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;1.8.0&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color:#75715e&#34;&gt;# 1.8.0 is the latest kivy version&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; kivy.lang &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; Builder
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; kivy.uix.gridlayout &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; GridLayout
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; kivy.properties &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; NumericProperty
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; kivy.app &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; App
-
-Builder&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;load_string(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&amp;#39;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;:
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;    cols: 1
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;    Label:
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        text: &amp;#39;Welcome to the Hello world&amp;#39;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;    Button:
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        text: &amp;#39;Click me! &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%d&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39; &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;% r&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;oot.counter
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;        on_release: root.my_callback()
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&amp;#39;&lt;/span&gt;)
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;HelloWorldScreen&lt;/span&gt;(GridLayout):
-    counter &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; NumericProperty()
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;my_callback&lt;/span&gt;(self):
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;print&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;The button has been pushed&amp;#39;&lt;/span&gt;
-        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;counter &lt;span style=&#34;color:#f92672&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;HelloWorldApp&lt;/span&gt;(App):
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;build&lt;/span&gt;(self):
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; HelloWorldScreen()
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; __name__ &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;__main__&amp;#39;&lt;/span&gt;:
-    HelloWorldApp()&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;run()
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is a simple Hello World python-android app. Save this into a file called &lt;!-- raw HTML omitted --&gt;main.py&lt;!-- raw HTML omitted --&gt;. Main.py is used to execute the app on your phone. It&amp;rsquo;s your entry point. Whatever app you are writing, this has to be where it will begin.&lt;/p&gt;
-&lt;p&gt;In order to get this installed on our device, we will use python-android&amp;rsquo;s distribution.sh. The command to run after you changed directory into python-android is this (make sure that you have a compatible android device plugged in and in developer mode):&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;
-./build.py --package org.hello.world --name &amp;quot;Hello world&amp;quot; --version 1.0 --dir /PATH/TO/helloworld debug installd
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Upon success, you should see it on your device. This is how the hello world app looks like:&lt;/p&gt;
-&lt;h1 id=&#34;finishing-up&#34;&gt;Finishing up&lt;/h1&gt;
-&lt;p&gt;This has been quite the ride so far. We will continue our journey when I&amp;rsquo;ll start writing my own app for SPOJ.&lt;/p&gt;
-&lt;p&gt;Thanks for reading!
-Gergely.&lt;/p&gt;
-</description>
+      <description>Hello folks.
+Today I would like to take you on a journey I fought myself through in order to write a python android app, which gets you a random problem from Sphere Judge Online. Then you can mark it as solved and it will be stored as such, and you can move on to the next problem. With the words of Neil deGrasse Tyson, Come with Me!
+Beginnings When I first embarked on this endeavour I ran into numerous errors, many amongst them being compilation issues when I was trying to install libraries.</description>
     </item>
     
     <item>
       <title>Updating All Jenkins Jobs Via Jenkins API – Python</title>
       <link>https://skarlso.github.io/2014/11/07/updating-all-jenkins-jobs-via-jenkins-api-python/</link>
       <pubDate>Fri, 07 Nov 2014 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2014/11/07/updating-all-jenkins-jobs-via-jenkins-api-python/</guid>
-      <description>&lt;p&gt;Hello everybody.&lt;/p&gt;
-&lt;p&gt;I would like to share with you a small script I wrote to update all, or a single, Jenkins job from a Python script remotely.&lt;/p&gt;
-&lt;p&gt;This will enable you to update a Jenkins job from anywhere using an admin credential based on a config.xml template that you have. With this, if you want to apply a config change to all or just a single job in Jenkins, you don&amp;rsquo;t have to go and do it for all the rest. You just call this script and it will cycle through all the jobs you have and update them if the begin with &amp;ldquo;yourpipelinedelimiter&amp;rdquo; or if they aren&amp;rsquo;t in a restricted list of jobs. The delimiter helps to identify pipelines which are dev pipelines. If you have multiple pipelines which are helpers or builders and you don&amp;rsquo;t usually apply the same config to them, than the delimiter can help identify the dev pipelines you actually want to update.&lt;/p&gt;
-&lt;p&gt;Enjoy, hope it helps someone.&lt;/p&gt;
-&lt;p&gt;And now, without any further ado:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&amp;#39;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	Created to update multiple pipelines in jenkins with a given configuration and job list.
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	Usage:
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	Example 1:
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	Updating a single pipeline&amp;#39;s job with a given config.xml.
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	python update-jenkins-jobs.py job-name config.xml pipeline-name
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	Example 2:
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	Updating every pipeline in jenkins dynamically. !!!WARNING!!! This updates every job EXCEPT of the ones specified in restricted_jobs.
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	python update-jenkins-jobs.py job-name config.xml
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&amp;#39;&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; xml.dom &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; minidom
-&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; requests
-&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; sys
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;update_pipeline&lt;/span&gt;(pipeline):
-	&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&amp;#39;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	Takes in a list of pipelines to update.
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	&amp;#39;&amp;#39;&amp;#39;&lt;/span&gt;
-	config_file &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; open(config_to_use, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;rb&amp;#39;&lt;/span&gt;)
-	headers &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;content-type&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;application/xml&amp;#39;&lt;/span&gt;}
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;print&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Updating pipelines: &amp;#34;&lt;/span&gt;, pipeline)
-
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; dev_job &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; pipeline:
-		url &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://jenkins:9999/job/&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;/job/&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;/config.xml&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; (dev_job, job_to_update)
-		r &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; requests&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;post(url, data&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;config_file, headers&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;headers, auth&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;user&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;password&amp;#39;&lt;/span&gt;))
-		&lt;span style=&#34;color:#66d9ef&#34;&gt;print&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Updating pipeline: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;; Response Code: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; (dev_job, r))
-
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;get_dev_pipelines&lt;/span&gt;():
-	&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&amp;#39;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	Gets a list of pipelines which can be used by update_pipeline.
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;	&amp;#39;&amp;#39;&amp;#39;&lt;/span&gt;
-	r &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; requests&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;get(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;http://jenkins:9999/api/xml&amp;#39;&lt;/span&gt;, auth&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;user&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;password&amp;#39;&lt;/span&gt;), stream&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;True)
-	job_list_xml &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; r&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;text
-
-	xmldoc &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; minidom&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;parseString(job_list_xml)
-	itemlist &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; xmldoc&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;getElementsByTagName(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt;)
-
-	dev_job_list &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; []
-
-	restricted_jobs &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;yourpipelinedelimiter-dev-pipeline1&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;yourpipelinedelimiter-dev-pipeline2&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;yourpipelinedelimiter-dev-pipeline3&amp;#34;&lt;/span&gt;]
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; s &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; itemlist:
-	    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;yourpipelinedelimiter-dev&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; s&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;firstChild&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;nodeValue) :
-	    	value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; s&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;firstChild&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;nodeValue
-	    	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (value &lt;span style=&#34;color:#f92672&#34;&gt;not&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; restricted_jobs):
-	    		dev_job_list&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;append(value)
-
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; dev_job_list
-
-
-job_to_update &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;argv[&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;]
-config_to_use &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;argv[&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;]
-dev_pipeline &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; []
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; len(sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;argv) &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;:
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;print&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Args length:&amp;#34;&lt;/span&gt;, len(sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;argv))
-	dev_pipeline&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;append(sys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;argv[&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;])
-
-update_pipeline(get_dev_pipelines() &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;not&lt;/span&gt; dev_pipeline &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt; dev_pipeline)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Thanks for reading.&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <description>Hello everybody.
+I would like to share with you a small script I wrote to update all, or a single, Jenkins job from a Python script remotely.
+This will enable you to update a Jenkins job from anywhere using an admin credential based on a config.xml template that you have. With this, if you want to apply a config change to all or just a single job in Jenkins, you don&amp;rsquo;t have to go and do it for all the rest.</description>
     </item>
     
     <item>
       <title>Python Course Review</title>
       <link>https://skarlso.github.io/2014/08/25/python-course-review/</link>
       <pubDate>Mon, 25 Aug 2014 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2014/08/25/python-course-review/</guid>
       <description>&lt;p&gt;Hello Everybody.&lt;/p&gt;
 &lt;p&gt;Today I&amp;rsquo;d like to write a little bit about a python course I did.&lt;/p&gt;
 &lt;p&gt;It&amp;rsquo;s an 8 week course on algorithmic programming with fun little projects. I&amp;rsquo;d like to write down some of my solutions with pseudo code for my own better understanding and for the sake of sharing knowledge. I won&amp;rsquo;t, however, share full projects since that would be against the honour code.&lt;/p&gt;
-&lt;p&gt;Let&amp;rsquo;s begin.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Week Zero&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;This week was all about getting the hang out of reading the posts and the documentation and the questions and getting used to the wordings. The tutors really out did themselves. They tried to make a course that can be both funny and teach something at the same time which is anything but easy.&lt;/p&gt;
-&lt;p&gt;Even though the tasks that were given were interesting al-bight at times a little bit far stretched and could have been easier done if used something else to complete them. But if we would have done that, what&amp;rsquo;s the point of it all then?&lt;/p&gt;
-&lt;p&gt;So I&amp;rsquo;ll try to recall everything solely based on my notes taken in those 8 weeks. Let&amp;rsquo;s see how much I truly learned.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Assignment of week one&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;We were to build the game 2048 which if you played you know what it is all about.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://ironyca.files.wordpress.com/2014/03/2048-game.jpg&#34; alt=&#34;2048&#34;&gt;&lt;/p&gt;
-&lt;p&gt;The goal is to add up numbers so that higher and higher numbers are created. There is no real &amp;ldquo;end&amp;rdquo; of the game. You can continue as long as you have space left although the intended goal is to create 2048. There are a couple of clones of this game and we were supposed to write one this time of our own.&lt;/p&gt;
-&lt;p&gt;We approached this game with the intention of refreshing our memory about Python. Handling matrices python syntax, counting indices and a bit of assessment about the general understanding of Mathematics and programming from the populace.&lt;/p&gt;
-&lt;p&gt;I must say it was hard. It was hard to get back into the habit of properly thinking about something at first. It was hard to get used to Math again which I missed for a very long time. I forgot many things and as English is not my first language many things written about Math in English were extremely hard to understand in the beginning.&lt;/p&gt;
-&lt;p&gt;But thankfully for my trusty mathematics Bible in Hungarian I was saved.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://s02.static.libri.hu/cover/9f/3/818403_5.jpg&#34; alt=&#34;math book&#34;&gt;&lt;/p&gt;
-&lt;p&gt;This book is 1448 pages long but contained all the information necessary to get my mind back into the game. And oh boy was it worth the initial trouble. I had to first realize that I forgot so much it was very painful and immensely disappointing, frustrating and shameful. But you should never give up and so I fought my way through it.&lt;/p&gt;
-&lt;p&gt;And it was extremely helpful to do Tests First. As the grading was based on how many of a given set of Unit Tests were passing it was very helpful to start tests first which were leading the design of the program. Also it was crucial to work in as little chunks as possible since one could easily lost himself trying to grasp a problem proving to be too large to look at from afar.&lt;/p&gt;
-&lt;p&gt;The hard part about this project was the Merging of the numbers and creating the proper grid which results from the Merge. Here are some examples:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;[2, 0, 2, 4]&lt;/code&gt; should return &lt;code&gt;[4, 4, 0, 0]&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;[0, 0, 2, 2]&lt;/code&gt; should return &lt;code&gt;[4, 0, 0, 0]&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;[2, 2, 0, 0]&lt;/code&gt; should return &lt;code&gt;[4, 0, 0, 0]&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;[2, 2, 2, 2]&lt;/code&gt; should return &lt;code&gt;[4, 4, 0, 0]&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;[8, 16, 16, 8]&lt;/code&gt; should return &lt;code&gt;[8, 32, 8, 0]&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;In order to achieve this you must trim the zeros like this &lt;code&gt;[2,2,4]&lt;/code&gt; and than produce the result which is &lt;code&gt;[4,4]&lt;/code&gt; and put a couple of zeros at the end &lt;code&gt;[4,4,0,0]&lt;/code&gt;. My first though was to use the Deque class in Python in order to achieve this but that was an outside module which was not allowed.&lt;/p&gt;
-&lt;p&gt;It was an interesting way to begin the course. Many people left at this point and were leaving afterwards too. Most of them in frustration that they were missing the python knowledge the rest out of frustration of not knowing the necessary math. At the end though it was getting easier to follow the problems after we got used to the conventions and sentence structures. The professors were also helpful and sometimes re-worded some of the descriptions to better describe what they wanted.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Week One&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;So after a hard start we moved on to a very interesting week one. This one got me into a certain game I don&amp;rsquo;t want to see ever again. It&amp;rsquo;s name: &lt;strong&gt;&lt;!-- raw HTML omitted --&gt;Cookie Clicker&lt;!-- raw HTML omitted --&gt;.&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://img2.wikia.nocookie.net/__cb20130827014912/cookieclicker/images/5/5a/PerfectCookie.png&#34; alt=&#34;cookie&#34;&gt;&lt;/p&gt;
-&lt;p&gt;We sort of had to re-create the cookie clicker but without the clicking. We only were supposed to re-create the buying of upgrades and simulate a sequence of clicks via the means of a cycle.&lt;/p&gt;
-&lt;p&gt;In this week the description of the tasks was, at the least, confusing. They started to use the term _time _which lead many to believe that we were somehow supposed to use python&amp;rsquo;s date / time methods and libraries. But after a couple of re-reads it was apparent that by _time _they actually were referring to &lt;em&gt;&lt;strong&gt;cycle count.&lt;/strong&gt;&lt;/em&gt;** **&lt;/p&gt;
-&lt;p&gt;Knowing this made the task at hand a lot easier. This time around our main focus were the following:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Mathematical Sums&lt;/li&gt;
-&lt;li&gt;Finding the Max&lt;/li&gt;
-&lt;li&gt;Higher - Order functions&lt;/li&gt;
-&lt;li&gt;Plotting with Python&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The course just went into overdrive. We were looking lot at things like these:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;∑n i=0 α^i = α^0 + α^1 + α^2 + ... + α^n = α^(n+1) − 1 / α − 1
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;(2021 Hindsight): It&amp;rsquo;s funny how I&amp;rsquo;m looking at this now, and it immeditely makes perfect sense. I love how evolved in that regard over the time.&lt;/p&gt;
-&lt;p&gt;It was rather awesome though frustrating at first like I wrote earlier. These were the easier one.&lt;/p&gt;
-&lt;p&gt;Finding the maximum is trivial. Especially if you are using a built in **max **provided by Python. But if you mix it with Higher-Order functions it gets interesting. If you want to do anything else as well and not just a max, for example getting the index of the maximum item as well, you usually end up writing a custom Max any ways.&lt;/p&gt;
-&lt;p&gt;Plotting in Python was exquisite interesting. The garphs which were produced showed as an insight into how powerful a solution really is or how effective. Here came in the Big-O notations almost. To see if a function was exponential, logarithmic or plain polynomial. O(n), O(n^2), O(logn) etc, etc.&lt;/p&gt;
-&lt;p&gt;This resulted in very interesting graphs like this:&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Week Two&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;So last week we had plotting and counting this week was even more interesting. Week Two&amp;rsquo;s main focus was &lt;strong&gt;Probability&lt;/strong&gt;. Specifically the &lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;Monte Carlo&lt;!-- raw HTML omitted --&gt; &lt;!-- raw HTML omitted --&gt;methods&lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;. Tl;dr; it describes that if you try something enough times you can derive a result that will be, with very high probability, the one you are looking for (expected value).&lt;/p&gt;
-&lt;p&gt;We tried out this algorithm by playing a nice game of tic-tac-toe.&lt;/p&gt;
-&lt;p&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;The point of this exercise was to create a machine player which, after running a 1000 or so random scenarios, was choosing the best option given a certain game state. It was difficult to get the results to always return a correct answer. At this point last weeks plotting became important since if your Monet Carlo algorithm was not fast enough the program was running increasingly slower and slower.&lt;/p&gt;
-&lt;p&gt;I was not very satisfied with my solution. It worked, but it was very slow and it wasn&amp;rsquo;t always returning the best option.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Week Three&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;So what comes after probability? Correct. **Combinatorics. **&lt;/p&gt;
-&lt;p&gt;The next hill to climb was combinatorics. Fortunately for me I love probability and combinatorics so this was a little bit easier for me. I was getting the hang out of function calculation as well so I wrote better homework and better projects at this point. Which is the aim of the course, right?&lt;/p&gt;
-&lt;p&gt;The game we used for this approach was &lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;Yahtzee&lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;Now let me say this without too much remorse. I truly, fully and with all my heart, hate Yahtzee. I think it&amp;rsquo;s stupid. I&amp;rsquo;m sorry. I truly do. The only thing I can think of when I hear yahtzee is the South Park version of it.&lt;/p&gt;
-&lt;p&gt;South Park Version of Yahtzee + Tron:&lt;/p&gt;
-&lt;p&gt;I share the enthusiastic look of Stan here.&lt;/p&gt;
-&lt;p&gt;Anyhow, moving on. Thank to the coursera Gods we weren&amp;rsquo;t suppose to write a whole game of Yathzee just a very simplified version of it. We were supposed to count the upper combinations on the second throw. So you already have one throw and you must choose how many die you want to hold on to to maximise the possibility of the best outcome possible. Huh. come again?&lt;/p&gt;
-&lt;p&gt;So you already had a hand. And now the program was to determine which die you were supposed to hold on too in order to maximise the score you can achieve with the remaining two throws.&lt;/p&gt;
-&lt;p&gt;There were a few interesting things that came in with this task. For example this was the first time I could use a Dict init from a list with a zip.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;hand_dict &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; dict(zip(list(hand), []&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;len(hand)))
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And this was the point in course were I found perhaps the most interesting thing. I found an actual use for reduce which was working. I was beginning to get into the habit of using map, filter, reduce.&lt;/p&gt;
-&lt;p&gt;This was the beauty:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;my_list &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; reduce(&lt;span style=&#34;color:#66d9ef&#34;&gt;lambda&lt;/span&gt; z, x: z &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; [y &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; [x] &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; y &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; z], hand, [[]])
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This piece of code produced all the combinations of a given hand which was a list of Tuples. It merged them into a list of lists which I created a list of Tuples out from. After this my life was never ever the same again.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Week Four&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;For me this was the most interesting part of the course. I LOVED this task. Focus was:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Python Generators&lt;/li&gt;
-&lt;li&gt;Stacks / Queues&lt;/li&gt;
-&lt;li&gt;Inheritance in Python&lt;/li&gt;
-&lt;li&gt;Girds&lt;/li&gt;
-&lt;li&gt;Grid Search / &lt;!-- raw HTML omitted --&gt;Breadth First Search&lt;!-- raw HTML omitted --&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;And the task with which we were supposed to achieve this was..&lt;/p&gt;
-&lt;p&gt;Zombie Apocalypse. It was sort of like &lt;strong&gt;Conway&amp;rsquo;s Game of Life&lt;/strong&gt;. Given a grid in which there were Zombies, Humans and Obstacles.&lt;/p&gt;
-&lt;p&gt;The Zombies could only move up, down, left, right. The humans could flee diagonally and none of them could penetrate an obstacle. It was very much fun to write this. The most challenge was to learn the proper implementation of the breadth first search algorithm as the Zombies had to detect the nearest Humans to move towards to and the Humans needed to see the nearest Zombies to flee from.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Week Five&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Halfway through it was become difficult to maintain the time needed for this course. I was finding myself applying a few late days here and there. This was a two months course after all. I did not have all the time in the world at my disposal. But I managed to submit everything without penalties.&lt;/p&gt;
-&lt;p&gt;So this weeks task was rather mundane. It was a &lt;strong&gt;world wrangler&lt;/strong&gt;. Which means given a word generate valid words from the letters in the provided word.&lt;/p&gt;
-&lt;p&gt;The algorithm we were supposed to use though was for me a bit of a challenge. I&amp;rsquo;ll be honest with you, for me, it was a little bit hard to wrap my head around this one. But eventually I succeeded.&lt;/p&gt;
-&lt;p&gt;It was Merge-Sort and Recursion. Let me tell you this now, I hate merge-sort. Recursion I do love though. What I never learned though and was very interesting for me to learn now was recurrences in mathematics. Well never learned is a bit harsh since I knew Fibonacci already and Pascal&amp;rsquo;s Triangle but the mathematical definition was a refreshing new view. I&amp;rsquo;m talking about &lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;Recurrence Relations&lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;.&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;F(n) = F(n-1) + F(n-2)
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This is the Recurrence relation of the famous Fibonacci. Easy, right? Well the hard part is when you are trying to get the &lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;closed-form-expression&lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt; of a Recurrence.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Week Six&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Finally it was coming to an end. The last week was easy so this week had to have a punch. And oh boy it did. This weeks focus:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Trees&lt;/li&gt;
-&lt;li&gt;Lambdas&lt;/li&gt;
-&lt;li&gt;Illustration of Trees&lt;/li&gt;
-&lt;li&gt;&lt;!-- raw HTML omitted --&gt;Minimax&lt;!-- raw HTML omitted --&gt;&lt;/li&gt;
-&lt;li&gt;&lt;!-- raw HTML omitted --&gt;Depth First Search&lt;!-- raw HTML omitted --&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;If I hated merge-sort I hated minimax more. I don&amp;rsquo;t know why but it was again very hard for me to properly grasp this concept. I mean I understood what needed to be done of course but writing it done with code proved to be more difficult then I thought it would be.&lt;/p&gt;
-&lt;p&gt;After hours of research and reading finally I could come up with a solution which was working. I wouldn&amp;rsquo;t say it was good. But it was working.&lt;/p&gt;
-&lt;p&gt;The game with which we were supposed to demonstrate this algorithm was. Tic-Tac-Toe. Turns out that it&amp;rsquo;s rather common place to show off minimax with tic-tac-toe as it was fewer possibilities. The point of the exercise was the following.:&lt;/p&gt;
-&lt;p&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt; &lt;/p&gt;
-&lt;p&gt;To create trees out of the possible moves given a certain game state. This time we wanted to make absolutely sure that if we can&amp;rsquo;t win the game at least we won&amp;rsquo;t loose it. And that&amp;rsquo;s the point of minimax. It will minimize your losses.&lt;/p&gt;
-&lt;p&gt;Now there are several things about this algorithm that are hard.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Performance of Minimax&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;It has and always will be a very interesting task for programmers to try to achieve a better performance for these calculations. Since it&amp;rsquo;s trying to build up a tree with all the possible combinations a game can have it will end up with a huge tree which will take ages to traverse.&lt;/p&gt;
-&lt;p&gt;A few of the solutions could be to exit the search once you have a definitive answer. If you find a winning move there is no point of looking any further. You just stop.&lt;/p&gt;
-&lt;p&gt;You can create the tree dynamically. You can make it somehow intelligent enough to predict a possible best first move and then use minimax on the rest. Or use &lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;Alpha-beta pruning&lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Week Seven&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;And so we are coming to an end. Last weeks assignment was basically to put all the previous weeks knowledge together to create the application called 15 puzzle.&lt;/p&gt;
-&lt;p&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;Now, there was however a little addition to the previous knowledge. It was &lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;invariants&lt;!-- raw HTML omitted --&gt;&lt;!-- raw HTML omitted --&gt;. Now, I love Logic. And I&amp;rsquo;ve been actually using invariants in computer science programming and testing for a long time so this part was not really a problem.&lt;/p&gt;
-&lt;p&gt;An example of an invariant in python would be something like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;while&lt;/span&gt; x &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;:
-  x &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is a loop invariant example. In you find a very useful invariant in your program you can write an assert for it which will help you debug your code and work in small chunks. Invariants will make refactoring your code a hell of a lot easier. As if your invariant is suddenly false you need to check what went wrong.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;while&lt;/span&gt; x &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;:
-  x &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;assert&lt;/span&gt; x &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;6&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This assert will make sure that if your invariant for whatever reason isn&amp;rsquo;t true your code fails immediately.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;End Credits&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;So this was the end of the course. I learned a a lot from this course and I&amp;rsquo;m very proud of myself for completing it. I took away a lot from this course. I took away confidence and logical thinking. I took away greater trust in my Python knowledge and that it&amp;rsquo;s very important to keep my skills from deteriorating.&lt;/p&gt;
-&lt;p&gt;And I think math is important for proper, deep understanding of programming as a science. I think refreshing my math skills gave me at least a deeper trust in my ability to write a piece of code however complicated it might appear. After writing a minimax algorithm I think some Hibernate with DIP and SRP will prove to be less of a problem. Or at least a different category of a problem.. Hehe.&lt;/p&gt;
-&lt;p&gt;Thanks for reading!
-Gergely.&lt;/p&gt;</description>
-    </item>
-    
-    <item>
-      <title>How to check content header on unknown number of items – Python</title>
-      <link>https://skarlso.github.io/2014/02/11/how-to-check-content-header-on-unknown-number-of-items-python/</link>
-      <pubDate>Tue, 11 Feb 2014 00:00:00 +0000</pubDate>
-      <guid>https://skarlso.github.io/2014/02/11/how-to-check-content-header-on-unknown-number-of-items-python/</guid>
-      <description>&lt;p&gt;Hello guys.&lt;/p&gt;
-&lt;p&gt;I&amp;rsquo;d like to share a little something with you. It&amp;rsquo;s what I cooked up in Python to check an unknown number of content items in a web application.&lt;/p&gt;
-&lt;p&gt;Basically the script runs from a script folder under Grails. It goes through all the configured folders where there is static content like images, javascript, css and so on and so forth.&lt;/p&gt;
-&lt;p&gt;And then with curl it calls these items up in using their respective paths&#39;. This works best on localhost if you have your local environment configured to access these elements because in some places direct access is restricted.&lt;/p&gt;
-&lt;p&gt;This script only check static content. Dynamically generated content would have to be hard coded to check.&lt;/p&gt;
-&lt;p&gt;It only generated a file currently with ERROR on a not match an success on match and not found if it encounters an item which it doesn&amp;rsquo;t know about.&lt;/p&gt;
-&lt;p&gt;So without further ado. The Script:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#!/usr/bin/python&lt;/span&gt;
-
-&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; pycurl&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sys&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; os&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; urllib
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Storage&lt;/span&gt;:
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; __init__(self):
-        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;contents &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;store&lt;/span&gt;(self, buf):
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; buf:
-            self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;contents &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; buf
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; __str__(self):
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;contents
-
-&lt;span style=&#34;color:#75715e&#34;&gt;#print retrieved_headers&lt;/span&gt;
-
-filesInDir &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; []
-headers &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; []
-headerRestrictions &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.css&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type: text/css&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.jpg&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type: image/jpeg&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.ico&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;image/vnd.microsoft.icon&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.html&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type: text/html&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.js&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type: application/javascript&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.gif&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type: image/gif&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.png&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type: image/png&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.swf&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type: application/x-shockwave-flash&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.json&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type: application/json&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.htc&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type: text/x-component&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.xml&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Content-Type: application/xml&amp;#39;&lt;/span&gt;}
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; dirname, dirnames, filenames &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; os&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;walk(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;../web-app&amp;#39;&lt;/span&gt;):
-    &lt;span style=&#34;color:#75715e&#34;&gt;# editing the &amp;#39;dirnames&amp;#39; list will stop os.walk() from recursing into there.&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.git&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; dirnames:
-        &lt;span style=&#34;color:#75715e&#34;&gt;# don&amp;#39;t go into any .git directories.&lt;/span&gt;
-        dirnames&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;remove(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.git&amp;#39;&lt;/span&gt;)
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;WEB-INF&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; dirnames:
-        &lt;span style=&#34;color:#75715e&#34;&gt;# don&amp;#39;t go into any WEB-INF directories.&lt;/span&gt;
-        dirnames&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;remove(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;WEB-INF&amp;#39;&lt;/span&gt;)
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;test&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; dirnames:
-        &lt;span style=&#34;color:#75715e&#34;&gt;# don&amp;#39;t go into any test directories.&lt;/span&gt;
-        dirnames&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;remove(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;test&amp;#39;&lt;/span&gt;)
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;META-INF&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; dirnames:
-        &lt;span style=&#34;color:#75715e&#34;&gt;# don&amp;#39;t go into any META-INF directories.&lt;/span&gt;
-        dirnames&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;remove(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;META-INF&amp;#39;&lt;/span&gt;)
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; filename &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; filenames:
-	trimmedDir &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; dirname&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;replace(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;web-app/&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;)
-	trimmedDir &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; trimmedDir&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;replace(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;../&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;)
-	filesInDir&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;append(os&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;path&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;join(trimmedDir, filename))
-    &lt;span style=&#34;color:#75715e&#34;&gt;#    print os.path.join(dirname, filename)&lt;/span&gt;
-
-f &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; open(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;headersandfiles.txt&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;w&amp;#34;&lt;/span&gt;)
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; fileName &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; filesInDir:
-    retrieved_body &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Storage()
-    retrieved_headers &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Storage()
-    c &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; pycurl&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;Curl()
-    fileName &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; fileName&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;replace(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34; &amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;%20&amp;#34;&lt;/span&gt;)
-    url &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;http://localhost:8080/&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; fileName
-    c&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;setopt(c&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;URL, url)
-    c&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;setopt(c&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;WRITEFUNCTION, retrieved_body&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;store)
-    c&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;setopt(c&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;HEADERFUNCTION, retrieved_headers&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;store)
-    c&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;perform()
-    c&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;close()
-    fileLine &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;
-    fileNameBase, fileExtension &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; os&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;path&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;splitext(fileName)
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; headerRestrictions&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;has_key(fileExtension):
-&lt;span style=&#34;color:#75715e&#34;&gt;#	print &amp;#34;Header:%s, Content:%s&amp;#34; % (headerRestrictions[fileExtension], retrieved_headers.__str__())&lt;/span&gt;
-        fileLine &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;CORRECT: Content: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;; Header: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; (fileName, retrieved_headers) &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; headerRestrictions[fileExtension] &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; retrieved_headers&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;__str__()&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;strip() &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;ERROR: Content: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;; Header: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;; URL: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; (fileName, retrieved_headers, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://localhost:8080/&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\n&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; fileName)
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;:
-	fileLine &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;NOT FOUND: Content: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;; Header: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;%s&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;%&lt;/span&gt; (fileName, retrieved_headers)
-
-    f&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;write(fileLine)
-    headers&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;append(retrieved_headers&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;__str__())
-
-f&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;close()
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Hope you like it. Feel free to improve however you want.&lt;/p&gt;
-&lt;p&gt;Thanks for reading,&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+&lt;p&gt;Let&amp;rsquo;s begin.&lt;/p&gt;</description>
     </item>
     
   </channel>

@@ -1,137 +1,23 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>service on Ramblings of a cloud engineer</title>
     <link>https://skarlso.github.io/tags/service/</link>
     <description>Recent content in service on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-GB</language>
-    <lastBuildDate>Sun, 04 Mar 2012 00:00:00 +0000</lastBuildDate>
-    <atom:link href="https://skarlso.github.io/tags/service/index.xml" rel="self" type="application/rss+xml" />
-    
+    <language>en</language>
+    <lastBuildDate>Sun, 04 Mar 2012 00:00:00 +0000</lastBuildDate><atom:link href="https://skarlso.github.io/tags/service/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>JMS Connection setup and Framework</title>
       <link>https://skarlso.github.io/2012/03/04/jms-connection-setup-and-framework/</link>
       <pubDate>Sun, 04 Mar 2012 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2012/03/04/jms-connection-setup-and-framework/</guid>
-      <description>&lt;p&gt;Hello chumps.&lt;/p&gt;
-&lt;p&gt;Today I want to write about jms connection testing with a small framework. I wrote a small thing using a factory object model. It&amp;rsquo;s a lead, a proof of concept. You can use this to go onward.&lt;/p&gt;
-&lt;p&gt;First, let&amp;rsquo;s begin with the JMS connection it self.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;JMS Connection&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;First rule of thumb is: &amp;ldquo;Don&amp;rsquo;t wait for a response when dealing with JMS queues.&amp;rdquo; How so? Because, a JMS queue is asynchronous so you wont get back anything. There are however two ways of checking if it was a success or not.&lt;/p&gt;
-&lt;p&gt;1: Check your database. The service you are trying out probably records something in the database, right? Check it. You can use a simple JDBC connection, or a Postgres connection or whatever your choice of database is.&lt;/p&gt;
-&lt;p&gt;2: You can monitor use the log of your choice of service provider. If there is an exception the moment you send something, you can be sure it is received. Just the format is not correct. This is of course based on how your service handles exceptions.&lt;/p&gt;
-&lt;p&gt;So let&amp;rsquo;s get down to business.&lt;/p&gt;
-&lt;p&gt;First, there is a really good article on how to create a JMS connection.&lt;/p&gt;
-&lt;p&gt;This is the link for it: &lt;a href=&#34;http://www.javablogging.com/simple-guide-to-java-message-service-jms-using-activemq&#34; title=&#34;Simple JMS How To&#34;&gt;Simple Guide to Java message service JMS using ActiveMQ&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;Itt will tell you everything you need to know about creating a connection and waiting for a response.&lt;/p&gt;
-&lt;p&gt;I will tell you now how to use this information in a real live environment.&lt;/p&gt;
-&lt;p&gt;In a real environment you will be using a queue which has certain settings that will not allow you to &amp;ldquo;join&amp;rdquo; it, or creating it. And you need to get the name of the queue and certain settings, like the destination URL.&lt;/p&gt;
-&lt;p&gt;First, the tool you are going to use is called JConsole. JConsole is a tool to monitor applications. It&amp;rsquo;s tool to monitor the JVM. I wont go into details about it since there are numerous descriptions about it. It is part of the java installation.&lt;/p&gt;
-&lt;p&gt;So after firing it up and giving it a connection url which would look like this: &amp;lsquo;service:jmx:rmi:///jndi/rmi://hostName:portNum/jmxrmi&amp;rsquo;, you would go ahead and search on the TAB:&lt;strong&gt;Threads&lt;/strong&gt;.&lt;/p&gt;
-&lt;p&gt;Look for a Thread that is labelled like this: &lt;!-- raw HTML omitted --&gt; Transport Server: tcp://0.0.0.0: &lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
-&lt;p&gt;This will be your destination url.&lt;/p&gt;
-&lt;p&gt;In the blog the guy is using ActiveMQ. It&amp;rsquo;s your best guess. It&amp;rsquo;s lightweight, it&amp;rsquo;s fast it&amp;rsquo;s easy. Go for it.&lt;/p&gt;
-&lt;p&gt;So your Destination would look like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;    ConnectionFactory connectionFactory &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;
-            &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; ActiveMQConnectionFactory&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;lt;yourserviceparameter&amp;gt;://tcp://0.0.0.0:&amp;lt;port&amp;gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
-    Connection connection &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; connectionFactory&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;createConnection&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-    connection&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;start&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;After that you will need the queue name which you can get as easy as this. Go to the TAB &lt;strong&gt;MBeans&lt;/strong&gt;. There you can see, if you are using ActiveMQ, you will see something like this : org.active.activemq. Open this up and you will see under localhost a number of queues that your server has configured. Open up one of them and copy the queue name in the createQueue.&lt;/p&gt;
-&lt;p&gt;Use it like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;    Destination destination &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; session&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;createQueue&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;lt;queue name&amp;gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Of course if your service is configured properly you wont have any access to it. Use the connection like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;    connection &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; connectionFactory&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;createConnection&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;username&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;password&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You will have now logged in with the proper user.&lt;/p&gt;
-&lt;p&gt;Now you can send the message. You have everything configured.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Framework&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Let&amp;rsquo;s speak about the framework you will need to properly use this technology.&lt;/p&gt;
-&lt;p&gt;One of the paradigms for programming is design to interfaces. If you need a proper working framework, your ave to design with the mind set to changing pieces of code. Thinking about what would change the most. Your connection settings. You want a framework which can use any kind of connection. Not just JMS but whatever connection you would like. It could be a synchronous one. Or a database one. Or a JMS. Doesn&amp;rsquo;t matter. You are only interested in a message sent or a connection, or whatever you want.&lt;/p&gt;
-&lt;p&gt;So let&amp;rsquo;s get to it.&lt;/p&gt;
-&lt;p&gt;Interface:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;interface&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;IConnection&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sendMessage&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is sample connection interface. You could have numerous templates here.&lt;/p&gt;
-&lt;p&gt;You will be using an object factory pattern here. Your implementer will be taken for a Java Property file. But it can be taken from whatever configuration you like. XML maybe, or a database even.&lt;/p&gt;
-&lt;p&gt;Let&amp;rsquo;s see you connection factory:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ConnFactory&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; Logger logger &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; Logger&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; IConnection &lt;span style=&#34;color:#a6e22e&#34;&gt;getImplementer&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-	&lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-		Properties prop &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; Properties&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-
-		&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-			prop&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;load&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; FileInputStream&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;conf/implementer.property&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;));&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-		&lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;IOException io&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-			logger&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Log&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Could not find property file: &amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; io&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getMessage&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;());&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-		String implementerClass &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; prop&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getProperty&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;implementer&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
-
-		Class&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;?&amp;gt;&lt;/span&gt; iConnect &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;null&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
-
-		&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-			iConnect &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Class&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;forName&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;implementerClass&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-		&lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;ClassNotFoundException ce&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-			logger&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Log&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Class could not be found: &amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; ce&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getMessage&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;());&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-		IConnection connection &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;null&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
-
-		&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-			connection &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;IConnection&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; iConnect&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;newInstance&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-		&lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;IllegalAccessException ie&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-			logger&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Log&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Illegal access excpetion: &amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; ie&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getMessage&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;());&lt;/span&gt;
-
-		&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;InstantiationException e&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-
-			logger&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Log&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Instatiation exception occured. &amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; e&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getMessage&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;());&lt;/span&gt;
-		&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-		&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; connection&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
-	&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Easy enough, right? Class.forname will instantiate the class name you have in the property file. This could be something like this: com.packagename.ClassName. Doesn&amp;rsquo;t matter to you. You can add some typeof checks, or instanceof checks, whatever you like. Or you can use &lt;!-- raw HTML omitted --&gt; generics.&lt;/p&gt;
-&lt;p&gt;Let&amp;rsquo;s get to the concrete implementation:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;JMSConnectionImpl&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;implements&lt;/span&gt; IConnection &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-    Logger logger &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; Logger&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sendMessage&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-
-   	Connection connection &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;null&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;finally&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-            connection&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;close&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Simple enough. Here you have a concrete implementation of your collection and your sender class.&lt;/p&gt;
-&lt;p&gt;And the simple usage facility of this is. simple too:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;    IConnection iConnection &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ConnFactory&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getImplementer&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-
-    iConnection&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;sendMessage&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Simple enough too, right? So what happens here? You have a factory that will give you back any kind of implementation you are writing in you property file. You don&amp;rsquo;t care what the implementation is in your test. You don&amp;rsquo;t care what it&amp;rsquo;s name is. You don&amp;rsquo;t care what it&amp;rsquo;s result is. Okay, you care about the result, but that&amp;rsquo;s another history since you will check that elsewhere.&lt;/p&gt;
-&lt;p&gt;There you go. If any question occurs, please don&amp;rsquo;t hesitate to ask.&lt;/p&gt;
-&lt;p&gt;Thanks for reading!&lt;/p&gt;
-</description>
+      <description>Hello chumps.
+Today I want to write about jms connection testing with a small framework. I wrote a small thing using a factory object model. It&amp;rsquo;s a lead, a proof of concept. You can use this to go onward.
+First, let&amp;rsquo;s begin with the JMS connection it self.
+JMS Connection
+First rule of thumb is: &amp;ldquo;Don&amp;rsquo;t wait for a response when dealing with JMS queues.&amp;rdquo; How so? Because, a JMS queue is asynchronous so you wont get back anything.</description>
     </item>
     
   </channel>

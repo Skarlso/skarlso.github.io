@@ -1,340 +1,45 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>groovy on Ramblings of a cloud engineer</title>
     <link>https://skarlso.github.io/categories/groovy/</link>
     <description>Recent content in groovy on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-GB</language>
-    <lastBuildDate>Thu, 15 Oct 2015 00:00:00 +0000</lastBuildDate>
-    <atom:link href="https://skarlso.github.io/categories/groovy/index.xml" rel="self" type="application/rss+xml" />
-    
+    <language>en</language>
+    <lastBuildDate>Thu, 15 Oct 2015 00:00:00 +0000</lastBuildDate><atom:link href="https://skarlso.github.io/categories/groovy/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Jenkins Job DSL and Groovy goodness</title>
       <link>https://skarlso.github.io/2015/10/15/jenkins-job-dsl-and-groovy-goodness/</link>
       <pubDate>Thu, 15 Oct 2015 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2015/10/15/jenkins-job-dsl-and-groovy-goodness/</guid>
-      <description>&lt;p&gt;Hi Folks.&lt;/p&gt;
-&lt;p&gt;Ever used &lt;!-- raw HTML omitted --&gt;Job DSL plugin&lt;!-- raw HTML omitted --&gt; for Jenkins? What is that you say? Well, it&amp;rsquo;s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.&lt;/p&gt;
-&lt;p&gt;Today, however, I&amp;rsquo;m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.&lt;/p&gt;
-&lt;p&gt;Today, I would like to write about a part of it which is even more interesting. And that is, extracting re-occurring parts in your job configurations.&lt;/p&gt;
-&lt;p&gt;If you have jobs, which have a common part that is repeated everywhere, you usually have an urge to extracted that into one place, lest it changes and you have to go an apply the change everywhere. That&amp;rsquo;s not very efficient. But how do you do that in something which looks like a JSON descriptor?&lt;/p&gt;
-&lt;p&gt;Fret not, it is just Groovy. And being just groovy, you can use Groovy to implement parts of the job description and then apply that implementation to the job in the DSL.&lt;/p&gt;
-&lt;p&gt;Suppose you have an email which you send after every job for which the DSL looks like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;
-job&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;MyTestJob&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-    description &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;lt;strong&amp;gt;GENERATED - do not modify&amp;lt;/strong&amp;gt;&amp;#39;&lt;/span&gt;
-    label&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;machine_label&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-    logRotator&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;30&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-    parameters &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        stringParam&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;somestringparam&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;default_valye&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Description&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    wrappers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        timeout &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-            noActivity&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;600&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-            abortBuild&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            failBuild&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            writeDescription&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Build failed due to timeout after {0} minutes&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    deliveryPipelineConfiguration&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Main&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;MyTestJob&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-    wrappers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        preBuildCleanup &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-            deleteDirectories&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-        timestamps&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    triggers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        cron&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;H 12 * * 1,2&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    steps &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        batchFile&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;readFileFromWorkspace&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;relative/path/to/file&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;))&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-            publishers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-                wsCleanup&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-                extendedEmail&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;email@address.com&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_SUBJECT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_CONTENT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-                    configure &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; node &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;gt;&lt;/span&gt;
-                        node &lt;span style=&#34;color:#e6db74&#34;&gt;/ presendScript &amp;lt;&amp;lt; readFileFromWorkspace(&amp;#39;email_templates/&lt;/span&gt;emailtemplate&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;groovy&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;)
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                        node / replyTo &amp;lt;&amp;lt; &amp;#39;&lt;/span&gt;$DEFAULT_REPLYTO&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                        node / contentType &amp;lt;&amp;lt; &amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;default&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                    }
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                    trigger(triggerName: &amp;#39;&lt;/span&gt;StillUnstable&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, subject: &amp;#39;&lt;/span&gt;$DEFAULT_SUBJECT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, body: &amp;#39;&lt;/span&gt;$DEFAULT_CONTENT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, replyTo: &amp;#39;&lt;/span&gt;$DEFAULT_REPLYTO&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, sendToDevelopers: true, sendToRecipientList: true)
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                    trigger(triggerName: &amp;#39;&lt;/span&gt;Fixed&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, subject: &amp;#39;&lt;/span&gt;$DEFAULT_SUBJECT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, body: &amp;#39;&lt;/span&gt;$DEFAULT_CONTENT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, replyTo: &amp;#39;&lt;/span&gt;$DEFAULT_REPLYTO&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, sendToDevelopers: true, sendToRecipientList: true)
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                    trigger(triggerName: &amp;#39;&lt;/span&gt;Failure&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, subject: &amp;#39;&lt;/span&gt;$DEFAULT_SUBJECT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, body: &amp;#39;&lt;/span&gt;$DEFAULT_CONTENT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, replyTo: &amp;#39;&lt;/span&gt;$DEFAULT_REPLYTO&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToDevelopers: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToRecipientList: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-                &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-            &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now, that big chunk of email setting is copied into a bunch of files, which is pretty ugly. And once you try to change it, you&amp;rsquo;ll have to change it everywhere. Also, the interesting bits here are those readFileFromWorkspace parts. Those allow us to export even larger chunks of the script into external files. Now, because the slave might be located somewhere else, you should not use new File(&amp;lsquo;file&amp;rsquo;).text in your job DSL. readFileFromWorkspace in the background does that, but applies correct way to the PATH it looks on for the file specified.&lt;/p&gt;
-&lt;p&gt;Let&amp;rsquo;s put this into a groovy script, shall we? Create a utilities folder where the DSL is and create a groovy file in it like this one:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;package&lt;/span&gt; utilities
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;JobCommonTemplate&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;addEmailTemplate&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; job&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; dslFactory&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        String emailScript &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; dslFactory&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;readFileFromWorkspace&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;email_template/EmailTemplate.groovy&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-        job&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;with&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-            publishers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-                wsCleanup&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-                extendedEmail&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;email@address.com&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_SUBJECT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_CONTENT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-                    configure &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; node &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;gt;&lt;/span&gt;
-                        node &lt;span style=&#34;color:#e6db74&#34;&gt;/ presendScript &amp;lt;&amp;lt; emailScript
-&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                        node /&lt;/span&gt; replyTo &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_REPLYTO&amp;#39;&lt;/span&gt;
-                        node &lt;span style=&#34;color:#f92672&#34;&gt;/&lt;/span&gt; contentType &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;default&amp;#39;&lt;/span&gt;
-                    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-                    trigger&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;triggerName: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;StillUnstable&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; subject: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_SUBJECT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; body: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_CONTENT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; replyTo: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_REPLYTO&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToDevelopers: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToRecipientList: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-                    trigger&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;triggerName: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Fixed&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; subject: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_SUBJECT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; body: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_CONTENT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; replyTo: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_REPLYTO&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToDevelopers: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToRecipientList: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-                    trigger&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;triggerName: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Failure&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; subject: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_SUBJECT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; body: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_CONTENT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; replyTo: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_REPLYTO&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToDevelopers: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToRecipientList: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-                &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-            &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The function addEmailTemplate gets two parameters. A job, which is an implementation of a Job, and a dslFactory which is a DslFactory. That factory is an interface which defines our readFileFromWorkspace. Where do we get the implementation from then? That will be from the Job. Let&amp;rsquo;s alter our job to apply this Groovy script.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; utilities.JobCommonTemplate
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; myJob &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; job&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;MyTestJob&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-    description &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;lt;strong&amp;gt;GENERATED - do not modify&amp;lt;/strong&amp;gt;&amp;#39;&lt;/span&gt;
-    label&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;machine_label&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-    logRotator&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;30&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-    parameters &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        stringParam&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;somestringparam&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;default_valye&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Description&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    wrappers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        timeout &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-            noActivity&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;600&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-            abortBuild&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            failBuild&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            writeDescription&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Build failed due to timeout after {0} minutes&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    deliveryPipelineConfiguration&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Main&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;MyTestJob&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-    wrappers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        preBuildCleanup &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-            deleteDirectories&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-        timestamps&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    triggers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        cron&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;H 12 * * 1,2&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    steps &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        batchFile&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;readFileFromWorkspace&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;relative/path/to/file&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;))&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-JobCommonTemplate&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addEmailTemplate&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;myJob&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;this&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Notice three things here.&lt;/p&gt;
-&lt;p&gt;#1 =&amp;gt; &lt;strong&gt;import&lt;/strong&gt;. We import the script from utilities folder which we created and placed the script into it.&lt;/p&gt;
-&lt;p&gt;#2 =&amp;gt; &lt;strong&gt;def myJob&lt;/strong&gt;. We create a variable which will contain our job&amp;rsquo;s description.&lt;/p&gt;
-&lt;p&gt;#3 =&amp;gt; &lt;strong&gt;this&lt;/strong&gt;. &amp;lsquo;this&amp;rsquo; will be the DslFactory. That&amp;rsquo;s where we get our readFileFromWorkspace implementation.&lt;/p&gt;
-&lt;p&gt;And that&amp;rsquo;s it. We have extracted a part of our job which is re-occurring and we found our implementation for our readFileFromWorkspace. DslFactory has most of the things which you need in a job description, would you want to expand on this and extract other bits and pieces.&lt;/p&gt;
-&lt;p&gt;Have fun, and happy coding!&lt;/p&gt;
-&lt;p&gt;As always,&lt;/p&gt;
-&lt;p&gt;Thanks for reading!&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <description>Hi Folks.
+Ever used Job DSL plugin for Jenkins? What is that you say? Well, it&amp;rsquo;s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.
+Today, however, I&amp;rsquo;m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.
+Today, I would like to write about a part of it which is even more interesting.</description>
     </item>
     
     <item>
       <title>Why the expressiveness of your Tests is important – Part One</title>
       <link>https://skarlso.github.io/2014/11/15/why-the-expressiveness-of-your-tests-is-important-part-one/</link>
       <pubDate>Sat, 15 Nov 2014 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2014/11/15/why-the-expressiveness-of-your-tests-is-important-part-one/</guid>
       <description>&lt;p&gt;Hello Everybody.&lt;/p&gt;
-&lt;p&gt;This time I&amp;rsquo;d like to write about the expressiveness of a Test. I think that it&amp;rsquo;s very important to write understandable and expressive tests. In older times I was studying novel writing. There is a rule which a novel needs to follow. It goes something like this: &amp;ldquo;A novel needs to lead its reader and make him understand in the simplest way what&amp;rsquo;s going on, with whom and why?&amp;rdquo;. In other words, it&amp;rsquo;s not a puzzle. It should be obvious what the test is trying to do and it should not require the reader to try and solve it in order to understand it.&lt;/p&gt;
-&lt;p&gt;I&amp;rsquo;m planning this as a series since there are multiple problems with a test I can talk about here.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Geb Tests&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Example:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;login to the home page&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        given: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I am at homepages&amp;#34;&lt;/span&gt;
-            go &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://localhost:8080/home&amp;#34;&lt;/span&gt;
-            at HomePage
-
-        when: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I entir my credential&amp;#34;&lt;/span&gt;
-            filloutLoginForm&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;username&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;password&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-            at MyAccountPage
-
-        then: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I can accass my wallet&amp;#34;&lt;/span&gt;
-            openWallet&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            waitFor &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; contains&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Balance&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now, read this test. It doesn&amp;rsquo;t really make any sense at the first read, right? You need to actually think what is going on there. Of course if you read it slow enough you&amp;rsquo;ll get what it&amp;rsquo;s trying to do. But you don&amp;rsquo;t know what fillform does. Apparently it also submits the form because after fillform you are suddenly at MyAccountPage.&lt;/p&gt;
-&lt;p&gt;There are several things wrong with this one, let&amp;rsquo;s start with the pageobject.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;PageObjects&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;At and toAt return page objects. We can use that to actually make the calling explicit and make it more readable and identify where a function comes from.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;login to the home page&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        given: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I am at homepages&amp;#34;&lt;/span&gt;
-            go &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://localhost:8080/home&amp;#34;&lt;/span&gt;
-            HomePage homePage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; at HomePage
-
-        when: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I entir my credential&amp;#34;&lt;/span&gt;
-            homePage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;filloutLoginForm&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;username&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;password&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-            MyAccountPage myAccountPage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; at MyAccountPage
-
-        then: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I can accass my wallet&amp;#34;&lt;/span&gt;
-            myAccountPage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;openWallet&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            waitFor &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; contains&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Balance&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This reads much better now. You know where the function is coming from and your IDE will not go nuts from things it can&amp;rsquo;t find. And you have autocompletion so there is no fear that you simply mistype something.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Side effects&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Next step, let&amp;rsquo;s remove some of the side effects.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;login to the home page&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        given: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I am at homepages&amp;#34;&lt;/span&gt;
-            go &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://localhost:8080/home&amp;#34;&lt;/span&gt;
-            HomePage homePage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; at HomePage
-
-        when: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I entir my credential&amp;#34;&lt;/span&gt;
-            homePage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;filloutLoginForm&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;username&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;password&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-            homePage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;submitLoginForm&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            MyAccountPage myAccountPage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; at MyAccountPage
-
-        then: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I can accass my wallet&amp;#34;&lt;/span&gt;
-            myAccountPage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;openWallet&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            waitFor &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; myAccountPage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;accountIsDisplayed&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now this is again much better. There are no steps left out. And you can test now the FillForm and the submit independently. Like, submitting the form without filling it out! Or filling it out and not submiting it. Reads better, is explicit, more easy to understand.&lt;/p&gt;
-&lt;p&gt;And the last one for today:&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Grammar&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;I wonder if you noticed it. The grammar is a little bit off in the tests. A small mistake here and there. You might think that, who cares? That&amp;rsquo;s a very bad thought. I think the correct grammar reflects caring. It reflects that we thought about this test and that we thought about the quality of it. Because it means that after you wrote it, you actually re-read the test to make sure it&amp;rsquo;s understandable and readable.&lt;/p&gt;
-&lt;p&gt;So let us correct that:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;login to the home page&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        given: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I am at homepages&amp;#34;&lt;/span&gt;
-            go &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://localhost:8080/home&amp;#34;&lt;/span&gt;
-            HomePage homePage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; at HomePage
-
-        when: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I entir my credential&amp;#34;&lt;/span&gt;
-            homePage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;filloutLoginForm&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;username&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;password&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-            homePage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;submitLoginForm&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            MyAccountPage myAccountPage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; at MyAccountPage
-
-        then: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I can accass my wallet&amp;#34;&lt;/span&gt;
-            myAccountPage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;openWallet&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            waitFor &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; myAccountPage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;accountIsDisplayed&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;As a player I can log in to check my account.&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        given: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I am at the homepage&amp;#34;&lt;/span&gt;
-            go &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://localhost:8080/home&amp;#34;&lt;/span&gt;
-            HomePage homePage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; at HomePage
-
-        when: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I enter my log in credentials.&amp;#34;&lt;/span&gt;
-            homePage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;filloutLoginForm&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;username&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;password&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-            homePage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;submitLoginForm&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            MyAccountPage myAccountPage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; at MyAccountPage
-
-        then: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;I&amp;#39;m directed to my account page.&amp;#34;&lt;/span&gt;
-            myAccountPage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;openWallet&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
-            waitFor &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; myAccountPage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;accountIsDisplayed&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;I also took the liberty of re-phrasing some of the text so that it shows what the test is about and what the user really would like to achieve here. Now try reading that last one. Does it make more sense? Did you understand it at first go? Did it read like a good story?&lt;/p&gt;
-&lt;p&gt;There is a coding practice which goes something like this: &amp;ldquo;Good code is code which doesn&amp;rsquo;t surprise you as you read it.&amp;rdquo; Which means the exact thing happens which you thought of would happen. I think that applies to tests as well. The steps of the test shouldn&amp;rsquo;t come to you as a surprise. Especially if you know what the application is supposed to do.&lt;/p&gt;
-&lt;p&gt;So that&amp;rsquo;s all for today folks. Thank you for reading! If you have a nasty test which you would like me to dissect and make it better and human readable, please share it in the comment section and I will do my best to come up with a good solution for it.&lt;/p&gt;
-&lt;p&gt;And as always,&lt;/p&gt;
-&lt;p&gt;Have a nice day!&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;</description>
+&lt;p&gt;This time I&amp;rsquo;d like to write about the expressiveness of a Test. I think that it&amp;rsquo;s very important to write understandable and expressive tests. In older times I was studying novel writing. There is a rule which a novel needs to follow. It goes something like this: &amp;ldquo;A novel needs to lead its reader and make him understand in the simplest way what&amp;rsquo;s going on, with whom and why?&amp;rdquo;. In other words, it&amp;rsquo;s not a puzzle. It should be obvious what the test is trying to do and it should not require the reader to try and solve it in order to understand it.&lt;/p&gt;</description>
     </item>
     
     <item>
       <title>Groovy and Grails course summary</title>
       <link>https://skarlso.github.io/2013/04/11/groovy-and-grails-course-summary/</link>
       <pubDate>Thu, 11 Apr 2013 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2013/04/11/groovy-and-grails-course-summary/</guid>
-      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
-&lt;p&gt;I attended a 4 day course of Groovy and Grails and this is my attempt at writing up a summary to see how much I retained. I&amp;rsquo;ll try to do this from the top of my head without peaking at my notes.&lt;/p&gt;
-&lt;p&gt;So let&amp;rsquo;s begin.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Introductions&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;First of all, introductions. The course was held by Peter Ledbrook. He is the guy who wrote &lt;a href=&#34;http://www.amazon.co.uk/Grails-Action-Peter-Ledbrook/dp/1617290963/ref=sr_1_2?ie=UTF8&amp;amp;qid=1365713080&amp;amp;sr=8-2&amp;amp;keywords=peter+ledbrook&#34; title=&#34;Grails in Action&#34;&gt;Grails in Action&lt;/a&gt;. He is awesome, go check him out. :: &lt;a href=&#34;https://twitter.com/pledbrook&#34; title=&#34;Twitter for Peter&#34;&gt;Twitter&lt;/a&gt; ::&lt;/p&gt;
-&lt;p&gt;The place where it was held is &lt;a href=&#34;http://skillsmatter.com/&#34; title=&#34;Skills Matter&#34;&gt;Skillsmatter&lt;/a&gt;. Which of course is known to all, if not, go check them out as well!&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Day One&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Day one and two were about Groovy. We were faced with the quirks and hinges of the language. First tasks were Closures and Currying both of which were really interesting. A bit of functional thinking mixed into the soup.&lt;/p&gt;
-&lt;p&gt;The course was divided into Peter telling us about stuff for 1:30 hours and then 1:00 hour lab work which really made the whole thing interactive. We could ask questions while he was talking which I&amp;rsquo;m sure was very distracting but I hope he is used to it by now. 😉&lt;/p&gt;
-&lt;p&gt;The tasks which we faced I&amp;rsquo;m sure were no real challenge for somebody who was used to thinking with closures and functions. But for us they were very intriguing.&lt;/p&gt;
-&lt;p&gt;For example:&lt;/p&gt;
-&lt;p&gt;Convert this class to it&amp;rsquo;s groovy eq.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;NumberHelper&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;findPositives&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; numbers&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-        List positivesList &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; ArrayList&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; i &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt; i &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;lt&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt; numbers&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;length&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt; i&lt;span style=&#34;color:#f92672&#34;&gt;++)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-            &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;numbers&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;i&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;gt&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-                positivesList&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;add&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; Integer&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;numbers&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;i&lt;span style=&#34;color:#f92672&#34;&gt;]));&lt;/span&gt;
-            &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; positivesArray &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;positivesList&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;size&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()];&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; i &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt; i &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;lt&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt; positivesArray&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;length&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt; i&lt;span style=&#34;color:#f92672&#34;&gt;++)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-            positivesArray&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;i&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;((&lt;/span&gt;Integer&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; positivesList&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;i&lt;span style=&#34;color:#f92672&#34;&gt;)).&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;intValue&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
-        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; positivesArray&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
-    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Which basically became:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;findPositive&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; numbers&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-    numbers&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;findAll&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; it &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;lt&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;That&amp;rsquo;s pretty damn awesome.&lt;/p&gt;
-&lt;p&gt;For quite some time now functional languages are re-living their golden age. There are various reasons for that which I won&amp;rsquo;t list here. But it has mainly to do with scalability, concurrency and threaded programming. Also the need to eliminate boilerplate code is bigger then ever. I guess people got fed up with Java being so talkative.&lt;/p&gt;
-&lt;p&gt;So we moved on learning a lot about groovy and its power. We also learned some good practices from Peter what to do and what not to do. For example a line he always repeated is that he hates how a function cannot exist without a class wrapped around it. Another important thing is, which we never ever should forget, that closures are Closures. Which means they aren&amp;rsquo;t functions. They are of the type Closure.&lt;/p&gt;
-&lt;p&gt;And that we shouldn&amp;rsquo;t use Closures just because we can. Be sensible. If a method can achieve your task, use a method.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Day Two&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;On day 2 we got into meta-programming. That&amp;rsquo;s when the real fun started. Groovy is not only powerful and lightweight it also gives the ability to change its behaviour. Meta programming is sort of a bit new to me. So this was my first definitive intro to it. But I must say that it blew me away. The capabilities are limitless.&lt;/p&gt;
-&lt;p&gt;There is a class called Expando in groovy which can be used to create virtually anything on the fly what you want.&lt;/p&gt;
-&lt;p&gt;For example look at this code ::&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; p &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; Expando&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;name: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Jake&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; age: &lt;span style=&#34;color:#ae81ff&#34;&gt;24&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-println p
-
-&lt;span style=&#34;color:#75715e&#34;&gt;//Add properties
-&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;p&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;gender&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Male&amp;#34;&lt;/span&gt;
-println p&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;name&lt;/span&gt;
-
-&lt;span style=&#34;color:#75715e&#34;&gt;//Add metods
-&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;//Override the default toString at runtime.
-&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;p&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;toString&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;amp;&lt;/span&gt;gt&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;${name} (${age})&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-println p
-
-&lt;span style=&#34;color:#75715e&#34;&gt;//Learn how groovy resolves names - &amp;gt; How does it find age.
-&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;p&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addYears&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; years &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;amp;&lt;/span&gt;gt&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt; age &lt;span style=&#34;color:#f92672&#34;&gt;+=&lt;/span&gt; years &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-p&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addYears&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;25&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
-println p
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Neat hmm? Just create expando and build up the class as you go however you want to use it.&lt;/p&gt;
-&lt;p&gt;And you can do this jazz to other, normal classes as well. You can add properties and methods at runtime by implementing the propertyMissing and methodMissing methods. In them afterwards you can specify some custom behaviour you would like to see. By implementing these guys you can directly control what&amp;rsquo;s happening to your class. Who is calling it how and where and why.&lt;/p&gt;
-&lt;p&gt;To grasp the power of metacoding and the abilities with which closures provided us with took a day to properly go over. So we moved on.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Day Three&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;So groovy was over. The time has come to move on and venture into the foggy land of Grails. Turned out it wasn&amp;rsquo;t so foggy after all.&lt;/p&gt;
-&lt;p&gt;Grails is a rapid prototyping kind of a framework. It allows you to set up an application with a blink of an eye. And provides conventions over configuration which is a really good thing to have. But as the day was going by we realised that we would find ourself not once but many times in the bubbling boils of the underbelly of /conf.&lt;/p&gt;
-&lt;p&gt;Again, fortunately, it wasn&amp;rsquo;t really hard. The config was groovy and it was pretty straight forward too.&lt;/p&gt;
-&lt;p&gt;Our third day mostly took as off to explore scaffolding, dynamic &amp;amp; static as well, and the interesting land of GORM Peter showed us the power of grails to create a CRUD application with in a matter of seconds / minutes ( depending on how fast your machine is ) with a fairly nice view. These types of application are usually not accepted of course as an end product. For that you need to thinker a bit here and there.&lt;/p&gt;
-&lt;p&gt;But things like admin portal are easily put together. So use it often and use it will and get it to know how it works.&lt;/p&gt;
-&lt;p&gt;In the land of GORM we explored the 4 different possibilities of data retriaval and generally how everything maps together and how GORM work with ORM.&lt;/p&gt;
-&lt;p&gt;The four different retrieval capabilities are:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Where clauses&lt;/li&gt;
-&lt;li&gt;HQL (Hybernate Query Language)&lt;/li&gt;
-&lt;li&gt;Criteria searches&lt;/li&gt;
-&lt;li&gt;Dynamic finder methods&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Each of which we found very interesting in there own respective ways.&lt;/p&gt;
-&lt;p&gt;Example of a dynamic finder::&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;assert&lt;/span&gt; Account&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;findAllBy&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;PropertyName&lt;span style=&#34;color:#f92672&#34;&gt;**&lt;/span&gt;Modifier&lt;span style=&#34;color:#f92672&#34;&gt;*(&lt;/span&gt;Parameters&lt;span style=&#34;color:#f92672&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;size&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Where propertyName is the name of the property to find by, modifier can be a sql&amp;rsquo;s Like for example.&lt;/p&gt;
-&lt;p&gt;So this could become something like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;assert&lt;/span&gt; Hitman&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;findAllByNameLike&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Agent %&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;15&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;That day was really knowledge packed. I don&amp;rsquo;t say I remember everything but luckily I wrote up some notes and I know what and where to look for if I would be in need of something.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Day Four&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;On the last day everybody was pretty much exhausted. It takes a lot to learn all that from 9 to 5 for 4 days. And Peter gave his best to staff that stuff into our heads and as much as possible of it. I think he did a pretty good job.&lt;/p&gt;
-&lt;p&gt;Last day was all about Controllers, Commands, Models, Views and GSPs and BootStrap config, Environment changes durring start up, the configurability of the whole framework, messages, templates, internationalisation and many thing more which can be easily put together.&lt;/p&gt;
-&lt;p&gt;It was pretty interesting. GSPs have similarities to JSPs but retained only the good parts. And although you can do JSP stuff in GSPs as well with nice embedded tags you have the ability to actually create a nice page which won&amp;rsquo;t be that big a maintenance nightmare.&lt;/p&gt;
-&lt;p&gt;Peter very much pressed the fact that the Controllers should be your only entry point from HTML requests and the views should be the only output of it. The controllers shouldn&amp;rsquo;t be throwing around business logic they should only act as proxies between the outer shell and the inner layering.&lt;/p&gt;
-&lt;p&gt;I think I understood most of the stuff which we were going through. Again, it was pretty straight forward. The application of it is what need practice.&lt;/p&gt;
-&lt;p&gt;Durring the course we created several applications. With dynamic scaffolding as well as static. We created and edited our own views and gsps. Created our own Controllers and what nots. One thing is clear. Grails let&amp;rsquo;s you progress a hell of a lot in a matter of minutes.&lt;/p&gt;
-&lt;p&gt;And we were also talking about testing of course. Using Geb, Spock and the unit testing capabilities of Grails. All very powerful stuff. Spock has some impressive Mocking powers in junction with the good ol&#39; Given When Then structure. If done correctly the test can be very fast and robust.&lt;/p&gt;
-&lt;p&gt;As final words we talked about plugins and the testing of Views and a bit more configuration.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Closing words&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;So all in all the course was excellent. Peter did a very good job of introducing use to Grails and Groovy. It&amp;rsquo;s a very good framework to build upon with a powerful language at our disposal. I&amp;rsquo;m pretty certain that Grails will evolve even more and be a great asset to people who choose to develop with it. Handle with Care though. Because no matter how awesome a tool is, it can always be used for bad purposes. 😉&lt;/p&gt;
-&lt;p&gt;As always,&lt;/p&gt;
-&lt;p&gt;Thanks for reading and have a nice day / evening.&lt;/p&gt;
-</description>
+      <description>Hi folks.
+I attended a 4 day course of Groovy and Grails and this is my attempt at writing up a summary to see how much I retained. I&amp;rsquo;ll try to do this from the top of my head without peaking at my notes.
+So let&amp;rsquo;s begin.
+Introductions
+First of all, introductions. The course was held by Peter Ledbrook. He is the guy who wrote Grails in Action. He is awesome, go check him out.</description>
     </item>
     
   </channel>

@@ -1,113 +1,190 @@
 <!DOCTYPE html>
-<html class="nojs" lang="en-GB" dir="ltr">
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-<title>Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios – Ramblings of a cloud engineer</title>
-<meta name="description" content="Intro Hi folks. Today, I would like demonstrate how to use Ansible in order to construct a server hosting multiple HTTPS domains with Nginx and LetsEncrypt. Are you …">
-<meta name="created" content="2018-01-23T22:34:00+0100">
-<meta name="modified" content="2018-01-23T22:34:00+0100">
-<meta name="author" content="hannibal">
-<meta name="contact" content="skarslo777@gmail.com">
-<meta property="og:site_name" content="Ramblings of a cloud engineer">
-<meta property="og:title" content="Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios">
-<meta property="og:url" content="https://skarlso.github.io/2018/01/23/nginx-certbot-ansible/">
-<meta property="og:type" content="article">
-<meta property="og:image" content="https://skarlso.github.io/apple-touch-icon.png">
-<meta name="generator" content="Hugo 0.83.1" />
-<meta name="msapplication-TileColor" content="#ffffff">
-<meta name="theme-color" content="#ffffff">
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios - Ramblings of a cloud engineer</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
 
 
-<link rel="canonical" href="https://skarlso.github.io/2018/01/23/nginx-certbot-ansible/">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="author" content="hannibal" /><meta name="description" content="Intro Hi folks.
+Today, I would like demonstrate how to use Ansible in order to construct a server hosting multiple HTTPS domains with Nginx and LetsEncrypt. Are you ready? Let&amp;rsquo;s dive in.
+TL;DR What you will need There is really only one thing you need in order for this to work and that is Ansible. If you would like to run local tests without a remote server, than you will need Vagrant and VirtualBox." />
 
-<link rel="stylesheet" href="/css/mobile.2ab74aa64785dcab8114959e76ca140cf76207cd85989bc6d4fc3b12f734a09e.css" media="screen">
-<link rel="stylesheet" href="/css/styles.934ca64e1cd8b39bd18393dc4fa4788aab68ce041fa7830964c671eed3da2b40.css">
-<link rel="stylesheet" href="/css/print.27fc184f8670f41a2690985390779e7b20335a8fadff8fa015cf9417ffe50c36.css" media="print">
 
-<script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    "headline": "Ansible + Nginx + LetsEncrypt + Wiki + Nagios",
-    "datePublished": "2018-01-23T22:34:00+01:00",
-    "dateModified": "2018-01-23T22:34:00+01:00",
-    "url" : "https://skarlso.github.io/2018/01/23/nginx-certbot-ansible/",
-    "description": "Intro Hi folks. Today, I would like demonstrate how to use Ansible in order to construct a server hosting multiple HTTPS domains with Nginx and LetsEncrypt. Are you …",
-    "image" : "https://skarlso.github.io/apple-touch-icon.png",
-    "author": {
-      "@type": "Person",
-      "name": "hannibal"
-    },
-    "mainEntityOfPage": {
-      "@type": "WebPage",
-      "@id": "https://skarlso.github.io"
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "Ramblings of a cloud engineer",
-      "logo" : {
-        "@type": "ImageObject",
-        "url": "https://skarlso.github.io/apple-touch-icon.png"
-      },
-      "url": "https://skarlso.github.io"
-    }
-  }
-</script>
 
-<script src="/js/script-early.min.3b0e641814c87f6a1d6ffa5e7d597f29faa8ce11482541e8801dc34013817c91.js"></script>
-<script defer src="/js/lib/umbrella.min.6e17830ccdded0a13b96d6993865b58202bc2ee750e5892a51858ab048b2bebb.js"></script>
-<script defer src="/js/mobile.min.abb9438113cb72181ecda30b9375cc0771c7ce2e7354414a7c1296b45cf47135.js"></script>
-<script defer src="/js/script.min.a71d161caff0970fa29a345da3bd9b444f629eccf1e4922585879b44f8f30160.js"></script>
 
-<script src="/js/tracking.min.cab571d19167308ad205e765770573e4bae7f3dab20f07533ba563eea84c8202.js"></script>
 
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-	ga('create', 'UA-69463020-2', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
+
+<meta name="generator" content="Hugo 0.83.1 with theme even" />
+
+
+<link rel="canonical" href="https://skarlso.github.io/2018/01/23/nginx-certbot-ansible/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
+
+
+
+<meta property="og:title" content="Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios" />
+<meta property="og:description" content="Intro Hi folks.
+Today, I would like demonstrate how to use Ansible in order to construct a server hosting multiple HTTPS domains with Nginx and LetsEncrypt. Are you ready? Let&rsquo;s dive in.
+TL;DR What you will need There is really only one thing you need in order for this to work and that is Ansible. If you would like to run local tests without a remote server, than you will need Vagrant and VirtualBox." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://skarlso.github.io/2018/01/23/nginx-certbot-ansible/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2018-01-23T22:34:00&#43;01:00" />
+<meta property="article:modified_time" content="2018-01-23T22:34:00&#43;01:00" />
+
+<meta itemprop="name" content="Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios">
+<meta itemprop="description" content="Intro Hi folks.
+Today, I would like demonstrate how to use Ansible in order to construct a server hosting multiple HTTPS domains with Nginx and LetsEncrypt. Are you ready? Let&rsquo;s dive in.
+TL;DR What you will need There is really only one thing you need in order for this to work and that is Ansible. If you would like to run local tests without a remote server, than you will need Vagrant and VirtualBox."><meta itemprop="datePublished" content="2018-01-23T22:34:00&#43;01:00" />
+<meta itemprop="dateModified" content="2018-01-23T22:34:00&#43;01:00" />
+<meta itemprop="wordCount" content="2203">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios"/>
+<meta name="twitter:description" content="Intro Hi folks.
+Today, I would like demonstrate how to use Ansible in order to construct a server hosting multiple HTTPS domains with Nginx and LetsEncrypt. Are you ready? Let&rsquo;s dive in.
+TL;DR What you will need There is really only one thing you need in order for this to work and that is Ansible. If you would like to run local tests without a remote server, than you will need Vagrant and VirtualBox."/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
 
 </head>
-
-<body class="single-page">
-<div class="page layout__page layout__sidebar-second">
-<header class="header layout__header">
-<a href="/" title="Home" rel="home" class="header__logo"><img src="/images/logo.png" alt="Home" class="header__logo-image"></a>
-<h1 class="header__site-name">
-<a href="/" title="Home" class="header__site-link" rel="home"><span>Ramblings of a cloud engineer</span></a>
-</h1>
-<div class="region header__region">
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">Ramblings of a cloud engineer</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
 </div>
-</header>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/blog/">
+        <li class="mobile-menu-item">Archive</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">Tags</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">Categories</li>
+      </a>
+  </ul>
 
-<nav class="main-menu layout__navigation">
-<h2 class="visually-hidden">Main menu</h2>
-<ul class="navbar">
-<li><a href="/">Home</a></li>
-<li><a href="/blog/" class="active" aria-current="page">Blog</a></li>
-</ul>
+  
+
+
 </nav>
 
-
-<main class="main layout__main">
-<article class="section-blog single-view">
-<header>
-<h1 class="title title-submitted">Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios</h1>
-<div class="submitted">
-<span class="author" itemprop="author">hannibal</span> - <time class="created-date" datetime="2018-01-23T22:34:00&#43;01:00">23 January, 2018</time>
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">Ramblings of a cloud engineer</a>
 </div>
-</header>
-<div class="content">
-<h1 id="intro">Intro</h1>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/blog/">Archive</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">Tags</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">Categories</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2018-01-23 </span>
+        <div class="post-category">
+            <a href="/categories/ansible/"> Ansible </a>
+            <a href="/categories/nginx/"> Nginx </a>
+            <a href="/categories/certbot/"> Certbot </a>
+            </div>
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#intro">Intro</a>
+      <ul>
+        <li><a href="#tldr">TL;DR</a></li>
+        <li><a href="#what-you-will-need">What you will need</a></li>
+        <li><a href="#what-we-are-going-to-set-up">What We Are Going To Set Up</a>
+          <ul>
+            <li><a href="#nagios">Nagios</a></li>
+            <li><a href="#hugo-website">Hugo Website</a></li>
+            <li><a href="#wiki">Wiki</a></li>
+            <li><a href="#https--nginx">HTTPS + Nginx</a></li>
+            <li><a href="#repository">Repository</a></li>
+          </ul>
+        </li>
+        <li><a href="#ansible">Ansible</a>
+          <ul>
+            <li><a href="#some-basics">Some Basics</a></li>
+            <li><a href="#ssh-access">SSH Access</a></li>
+            <li><a href="#further-reading">Further reading</a></li>
+            <li><a href="#vault">Vault</a></li>
+            <li><a href="#tasks">Tasks</a></li>
+            <li><a href="#test-run-using-vagrant">Test Run using Vagrant</a></li>
+          </ul>
+        </li>
+        <li><a href="#room-for-improvement">Room for improvement</a>
+          <ul>
+            <li><a href="#tests-and-checks">Tests and Checks</a></li>
+            <li><a href="#multiple-domains">Multiple Domains</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#conclusion">Conclusion</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="intro">Intro</h1>
 <p>Hi folks.</p>
 <p>Today, I would like demonstrate how to use <a href="https://www.ansible.com/">Ansible</a> in order to construct a server hosting multiple HTTPS domains with <a href="https://www.nginx.com/">Nginx</a> and <a href="https://letsencrypt.org/">LetsEncrypt</a>. Are you ready? Let&rsquo;s dive in.</p>
 <h2 id="tldr">TL;DR</h2>
@@ -131,33 +208,76 @@ if (!doNotTrack) {
 <p>I won&rsquo;t be writing everything down to the basics about Ansible. For that you will need to go and read its documentation. But I will provide ample of clarification for using what I&rsquo;ll be using.</p>
 <h3 id="some-basics">Some Basics</h3>
 <p>Ansible is a configuration management tool which, unlike chef or puppet, isn&rsquo;t master - slave based. It&rsquo;s using SSH to run a set of instructions on a target machine. The instructions are written in yaml files and look something like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">---
-<span style="color:#75715e"># tasks file for ssh</span>
-- <span style="color:#f92672">name</span>: <span style="color:#ae81ff">Copy sshd_config</span>
-  <span style="color:#f92672">copy</span>: <span style="color:#ae81ff">content=&#34;{{sshd_config}}&#34; dest=/etc/ssh/sshd_config</span>
-  <span style="color:#f92672">notify</span>:
-  - <span style="color:#ae81ff">SSHD Restart</span>
-</code></pre></div><p>This is a basic Task which copies over an <code>sshd_config</code> file overwriting the one already being there. It can execute in priviliged mode if root password is provided or the user has sudo rights.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nn">---</span><span class="w">
+</span><span class="w"></span><span class="c"># tasks file for ssh</span><span class="w">
+</span><span class="w"></span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Copy sshd_config</span><span class="w">
+</span><span class="w">  </span><span class="nt">copy</span><span class="p">:</span><span class="w"> </span><span class="l">content=&#34;{{sshd_config}}&#34; dest=/etc/ssh/sshd_config</span><span class="w">
+</span><span class="w">  </span><span class="nt">notify</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="l">SSHD Restart</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>This is a basic Task which copies over an <code>sshd_config</code> file overwriting the one already being there. It can execute in priviliged mode if root password is provided or the user has sudo rights.</p>
 <p>It works from so called <code>hosts</code> files where the server details are described. This is how a basic host file would look like:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>local<span style="color:#f92672">]</span>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="o">[</span>local<span class="o">]</span>
 127.0.0.1
 
-<span style="color:#f92672">[</span>webserver1<span style="color:#f92672">]</span>
+<span class="o">[</span>webserver1<span class="o">]</span>
 1.23.4.5
-</code></pre></div><p>Ansible will use these settings to try and access the server. To test if the connection is working, you can send a <code>ping</code> task like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">ansible all -m ping
-</code></pre></div><p>Ansible uses <code>variables</code> for things that change. They are defined under each task&rsquo;s subfolder called <code>vars</code>. Please feel free to change the varialbes there to your liking.</p>
+</code></pre></td></tr></table>
+</div>
+</div><p>Ansible will use these settings to try and access the server. To test if the connection is working, you can send a <code>ping</code> task like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">ansible all -m ping
+</code></pre></td></tr></table>
+</div>
+</div><p>Ansible uses <code>variables</code> for things that change. They are defined under each task&rsquo;s subfolder called <code>vars</code>. Please feel free to change the varialbes there to your liking.</p>
 <h3 id="ssh-access">SSH Access</h3>
 <p>You can either define SSH information per host or per group or globally. In this example I have it under the groups wars called
 <code>webserver1</code> like this (vars.yaml):</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">---
-<span style="color:#75715e"># SSH sudo keys and pass</span>
-<span style="color:#f92672">ansible_become_pass</span>: <span style="color:#e6db74">&#39;{{vault_ansible_become_pass}}&#39;</span>
-<span style="color:#f92672">ansible_ssh_port</span>: <span style="color:#e6db74">&#39;{{vault_ansible_ssh_port}}&#39;</span>
-<span style="color:#f92672">ansible_ssh_user</span>: <span style="color:#e6db74">&#39;{{vault_ansible_ssh_user}}&#39;</span>
-<span style="color:#f92672">ansible_ssh_private_key_file</span>: <span style="color:#e6db74">&#39;{{vault_ansible_ssh_private_key_file}}&#39;</span>
-<span style="color:#f92672">home_dir</span>: <span style="color:#ae81ff">/root</span>
-</code></pre></div><h3 id="further-reading">Further reading</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nn">---</span><span class="w">
+</span><span class="w"></span><span class="c"># SSH sudo keys and pass</span><span class="w">
+</span><span class="w"></span><span class="nt">ansible_become_pass</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{{vault_ansible_become_pass}}&#39;</span><span class="w">
+</span><span class="w"></span><span class="nt">ansible_ssh_port</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{{vault_ansible_ssh_port}}&#39;</span><span class="w">
+</span><span class="w"></span><span class="nt">ansible_ssh_user</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{{vault_ansible_ssh_user}}&#39;</span><span class="w">
+</span><span class="w"></span><span class="nt">ansible_ssh_private_key_file</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{{vault_ansible_ssh_private_key_file}}&#39;</span><span class="w">
+</span><span class="w"></span><span class="nt">home_dir</span><span class="p">:</span><span class="w"> </span><span class="l">/root</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><h3 id="further-reading">Further reading</h3>
 <p>Further readings are:</p>
 <ul>
 <li><a href="https://serversforhackers.com/c/an-ansible-tutorial">Servers For Hackers</a></li>
@@ -175,131 +295,298 @@ if (!doNotTrack) {
 <p>Either way, in the end, ansible will look for a file called <code>.vault_password</code> for when it&rsquo;s trying to decrypt the file. You can
 define a different file in the <code>ansible.cfg</code> file using the <code>vault_password_file</code> option.</p>
 <p>You can create a vault like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">ansible-vault create vault
-</code></pre></div><p>If you are following along, you are going to need these variables in the vault:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">vault_ansible_become_pass</span>: <span style="color:#ae81ff">&lt;your_sudo_password&gt;</span> <span style="color:#75715e"># if applicable</span>
-<span style="color:#f92672">vault_ansible_ssh_user</span>: <span style="color:#ae81ff">&lt;ssh_user&gt;</span>
-<span style="color:#f92672">vault_ansible_ssh_private_key_file</span>: <span style="color:#ae81ff">/Users/user/.ssh/ida_rsa</span>
-<span style="color:#f92672">vault_nagios_password</span>: <span style="color:#ae81ff">supersecurenagiosadminpassword</span>
-<span style="color:#f92672">vault_nagios_username</span>: <span style="color:#ae81ff">nagiosadmin</span>
-<span style="color:#f92672">vault_noip_username</span>: <span style="color:#ae81ff">youruser@gmail.com</span>
-<span style="color:#f92672">vault_noip_password</span>: <span style="color:#e6db74">&#34;SuperSecureNoIPPassword&#34;</span>
-<span style="color:#f92672">vault_nginx_user</span>: <span style="color:#ae81ff">&lt;localuser&gt;</span>
-</code></pre></div><p>You can always edit the vault later on with:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">ansible-vault edit group_vars/webserver1/vault --vault-password-file<span style="color:#f92672">=</span>.vault_pass
-</code></pre></div><h3 id="tasks">Tasks</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">ansible-vault create vault
+</code></pre></td></tr></table>
+</div>
+</div><p>If you are following along, you are going to need these variables in the vault:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">vault_ansible_become_pass</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;your_sudo_password&gt;</span><span class="w"> </span><span class="c"># if applicable</span><span class="w">
+</span><span class="w"></span><span class="nt">vault_ansible_ssh_user</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;ssh_user&gt;</span><span class="w">
+</span><span class="w"></span><span class="nt">vault_ansible_ssh_private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l">/Users/user/.ssh/ida_rsa</span><span class="w">
+</span><span class="w"></span><span class="nt">vault_nagios_password</span><span class="p">:</span><span class="w"> </span><span class="l">supersecurenagiosadminpassword</span><span class="w">
+</span><span class="w"></span><span class="nt">vault_nagios_username</span><span class="p">:</span><span class="w"> </span><span class="l">nagiosadmin</span><span class="w">
+</span><span class="w"></span><span class="nt">vault_noip_username</span><span class="p">:</span><span class="w"> </span><span class="l">youruser@gmail.com</span><span class="w">
+</span><span class="w"></span><span class="nt">vault_noip_password</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;SuperSecureNoIPPassword&#34;</span><span class="w">
+</span><span class="w"></span><span class="nt">vault_nginx_user</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;localuser&gt;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>You can always edit the vault later on with:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">ansible-vault edit group_vars/webserver1/vault --vault-password-file<span class="o">=</span>.vault_pass
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="tasks">Tasks</h3>
 <p>The following are a collection of tasks which execute in order. The end task, which is letsencrypt, relies on all the hosts being present and configured under Nginx. Otherwise it will throw an error that the host you are trying to configure HTTPS for, isn&rsquo;t defined.</p>
 <h4 id="no-ip">No-IP</h4>
 <p>I&rsquo;m choosing No-ip as a DNS provider because it&rsquo;s cheap and the sync tool is easy to automate. To automate the CLI of No-IP, I&rsquo;m using a package called <code>expect</code>. This looks something like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd <span style="color:#f92672">{{</span>home_dir<span style="color:#f92672">}}</span>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">cd</span> <span class="o">{{</span>home_dir<span class="o">}}</span>
 wget http://www.no-ip.com/client/linux/noip-duc-linux.tar.gz
 mkdir -p noip
 tar zxf noip-duc-linux.tar.gz -C noip
-cd noip/*
+<span class="nb">cd</span> noip/*
 make
 
-/usr/bin/expect <span style="color:#e6db74">&lt;&lt;END_SCRIPT
-</span><span style="color:#e6db74">spawn make install
-</span><span style="color:#e6db74">expect &#34;Please enter the login/email*&#34; { send &#34;{{noip_username}}\r&#34; }
-</span><span style="color:#e6db74">expect &#34;Please enter the password for user*&#34; { send &#34;{{noip_password}}\r&#34; }
-</span><span style="color:#e6db74">expect {
-</span><span style="color:#e6db74">    &#34;Do you wish to have them all updated*&#34; {
-</span><span style="color:#e6db74">        send &#34;y&#34;
-</span><span style="color:#e6db74">        exp_continue
-</span><span style="color:#e6db74">    }
-</span><span style="color:#e6db74">}
-</span><span style="color:#e6db74">expect &#34;Please enter an update interval*&#34; { send &#34;30\r&#34; }
-</span><span style="color:#e6db74">expect &#34;Do you wish to run something at successful update*&#34; {send &#34;N&#34; }
-</span><span style="color:#e6db74">END_SCRIPT</span>
-</code></pre></div><p>The interesting part is the command running expect. Basically, it&rsquo;s expecting some kind of output which is outlined there. And has canned answers for those which it <code>send</code>s to the waiting command.</p>
+/usr/bin/expect <span class="s">&lt;&lt;END_SCRIPT
+</span><span class="s">spawn make install
+</span><span class="s">expect &#34;Please enter the login/email*&#34; { send &#34;{{noip_username}}\r&#34; }
+</span><span class="s">expect &#34;Please enter the password for user*&#34; { send &#34;{{noip_password}}\r&#34; }
+</span><span class="s">expect {
+</span><span class="s">    &#34;Do you wish to have them all updated*&#34; {
+</span><span class="s">        send &#34;y&#34;
+</span><span class="s">        exp_continue
+</span><span class="s">    }
+</span><span class="s">}
+</span><span class="s">expect &#34;Please enter an update interval*&#34; { send &#34;30\r&#34; }
+</span><span class="s">expect &#34;Do you wish to run something at successful update*&#34; {send &#34;N&#34; }
+</span><span class="s">END_SCRIPT</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>The interesting part is the command running expect. Basically, it&rsquo;s expecting some kind of output which is outlined there. And has canned answers for those which it <code>send</code>s to the waiting command.</p>
 <h4 id="to-util-or-not-to-util">To Util or Not To Util</h4>
 <p>So, there are small tasks, like installing vim and wget and such which could warrant the existance of a <code>utils</code> task. Utils task would install the packages that are used as convinience and don&rsquo;t really relate to a singe task.</p>
 <p>Yet I settled for the following. Each of my tasks has a dependency part. The given tasks takes care of all the packages it needs so they can be executed on their own as well as in unison.</p>
 <p>This looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#75715e"># Install dependencies</span>
-- <span style="color:#f92672">name</span>: <span style="color:#ae81ff">Install dependencies</span>
-  <span style="color:#f92672">apt</span>: <span style="color:#ae81ff">pkg=&#34;{{item}}&#34; state=installed</span>
-  <span style="color:#f92672">with_items</span>:
-    - <span style="color:#e6db74">&#34;{{deps}}&#34;</span>
-</code></pre></div><p>For which the <code>deps</code> variable is defined as follows:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#75715e"># Defined dependencies for letsencrypt task.</span>
-<span style="color:#f92672">deps</span>: [<span style="color:#e6db74">&#39;git&#39;</span>, <span style="color:#e6db74">&#39;python-dev&#39;</span>, <span style="color:#e6db74">&#39;build-essential&#39;</span>, <span style="color:#e6db74">&#39;libpython-dev&#39;</span>, <span style="color:#e6db74">&#39;libpython2.7&#39;</span>, <span style="color:#e6db74">&#39;augeas-lenses&#39;</span>, <span style="color:#e6db74">&#39;libaugeas0&#39;</span>, <span style="color:#e6db74">&#39;libffi-dev&#39;</span>, <span style="color:#e6db74">&#39;libssl-dev&#39;</span>, <span style="color:#e6db74">&#39;python-virtualenv&#39;</span>, <span style="color:#e6db74">&#39;python3-virtualenv&#39;</span>, <span style="color:#e6db74">&#39;virtualenv&#39;</span>]
-</code></pre></div><p>This is much cleaner. And if a task is no longer needed, it&rsquo;s dependencies will no longer be needed either in most of the cases.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="c"># Install dependencies</span><span class="w">
+</span><span class="w"></span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Install dependencies</span><span class="w">
+</span><span class="w">  </span><span class="nt">apt</span><span class="p">:</span><span class="w"> </span><span class="l">pkg=&#34;{{item}}&#34; state=installed</span><span class="w">
+</span><span class="w">  </span><span class="nt">with_items</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span>- <span class="s2">&#34;{{deps}}&#34;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>For which the <code>deps</code> variable is defined as follows:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="c"># Defined dependencies for letsencrypt task.</span><span class="w">
+</span><span class="w"></span><span class="nt">deps</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;git&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;python-dev&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;build-essential&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;libpython-dev&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;libpython2.7&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;augeas-lenses&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;libaugeas0&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;libffi-dev&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;libssl-dev&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;python-virtualenv&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;python3-virtualenv&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;virtualenv&#39;</span><span class="p">]</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>This is much cleaner. And if a task is no longer needed, it&rsquo;s dependencies will no longer be needed either in most of the cases.</p>
 <h4 id="nagios-1">Nagios</h4>
 <p>I&rsquo;m using Nagios 4 which is a real pain in the butt to install. Luckily, thanks to Ansiblei, I only ever had to figure it out once. Now I have a script for that. Installing Nagios demands several, smaller components to be installed. Thus our task uses import from outside tasks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">- <span style="color:#f92672">name</span>: <span style="color:#ae81ff">Install Nagios</span>
-  <span style="color:#f92672">block</span>:
-    - <span style="color:#f92672">include</span>: <span style="color:#ae81ff">create_users.yml</span> <span style="color:#75715e"># creates the Nagios user</span>
-    - <span style="color:#f92672">include</span>: <span style="color:#ae81ff">install_dependencies.yml</span> <span style="color:#75715e"># installs Nagios dependencies</span>
-    - <span style="color:#f92672">include</span>: <span style="color:#ae81ff">core_install.yml</span> <span style="color:#75715e"># Installs Nagios Core</span>
-    - <span style="color:#f92672">include</span>: <span style="color:#ae81ff">plugin_install.yml</span> <span style="color:#75715e"># Installs Nagios Plugins</span>
-    - <span style="color:#f92672">include</span>: <span style="color:#ae81ff">create_htpasswd.yml</span> <span style="color:#75715e"># Creates a password for Nagios&#39; admin user</span>
-    - <span style="color:#f92672">include</span>: <span style="color:#ae81ff">setup_custom_check.yml</span> <span style="color:#75715e"># Adds a custom check which is to check how many security updates are pending</span>
-  <span style="color:#f92672">when</span>: <span style="color:#ae81ff">st.stat.exists == False</span>
-</code></pre></div><p>The <code>when</code> is a check for a variable created by a file check.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">- <span style="color:#f92672">stat</span>:
-    <span style="color:#f92672">path</span>: <span style="color:#ae81ff">/usr/local/nagios/bin/nagios</span>
-  <span style="color:#f92672">register</span>: <span style="color:#ae81ff">st</span>
-</code></pre></div><p>It checks if Nagios is installed or not. If yes, skip.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml">- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Install Nagios</span><span class="w">
+</span><span class="w">  </span><span class="nt">block</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">include</span><span class="p">:</span><span class="w"> </span><span class="l">create_users.yml</span><span class="w"> </span><span class="c"># creates the Nagios user</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">include</span><span class="p">:</span><span class="w"> </span><span class="l">install_dependencies.yml</span><span class="w"> </span><span class="c"># installs Nagios dependencies</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">include</span><span class="p">:</span><span class="w"> </span><span class="l">core_install.yml</span><span class="w"> </span><span class="c"># Installs Nagios Core</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">include</span><span class="p">:</span><span class="w"> </span><span class="l">plugin_install.yml</span><span class="w"> </span><span class="c"># Installs Nagios Plugins</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">include</span><span class="p">:</span><span class="w"> </span><span class="l">create_htpasswd.yml</span><span class="w"> </span><span class="c"># Creates a password for Nagios&#39; admin user</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">include</span><span class="p">:</span><span class="w"> </span><span class="l">setup_custom_check.yml</span><span class="w"> </span><span class="c"># Adds a custom check which is to check how many security updates are pending</span><span class="w">
+</span><span class="w">  </span><span class="nt">when</span><span class="p">:</span><span class="w"> </span><span class="l">st.stat.exists == False</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>The <code>when</code> is a check for a variable created by a file check.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml">- <span class="nt">stat</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/usr/local/nagios/bin/nagios</span><span class="w">
+</span><span class="w">  </span><span class="nt">register</span><span class="p">:</span><span class="w"> </span><span class="l">st</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>It checks if Nagios is installed or not. If yes, skip.</p>
 <p>I&rsquo;m not going to paste in here all the subtasks because that would be huge. You can check those out in the repository under Nagios.</p>
 <h4 id="hugo">Hugo</h4>
 <p>Hugo is easy to install. Its sole requirement is Go. To install hugo you simply run <code>apt-get install hugo</code>. Setting up the
 site for me was just checking out the git repo and than execute hugo from the root folder like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">hugo server --bind<span style="color:#f92672">=</span>127.0.0.1 --port<span style="color:#f92672">=</span><span style="color:#ae81ff">8080</span> --baseUrl<span style="color:#f92672">=</span>https://example.com --appendPort<span style="color:#f92672">=</span>false --logFile hugo.log --verboseLog --verbose -v &amp;
-</code></pre></div><h4 id="wiki-1">Wiki</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">hugo server --bind<span class="o">=</span>127.0.0.1 --port<span class="o">=</span><span class="m">8080</span> --baseUrl<span class="o">=</span>https://example.com --appendPort<span class="o">=</span><span class="nb">false</span> --logFile hugo.log --verboseLog --verbose -v <span class="p">&amp;</span>
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="wiki-1">Wiki</h4>
 <p>I used DokuWiki because it&rsquo;s a file based wiki so installation is basically just downloading the archive, extracting it and done. The only thing that&rsquo;s needed for it, is php-fpm to run it and a few php modules which I&rsquo;ll outline in the ansible playbook.</p>
 <p>The VHOST file for DokuWiki is provided by them and looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">server <span style="color:#f92672">{</span>
-    server_name   <span style="color:#f92672">{{</span> wiki_server_name <span style="color:#f92672">}}</span>;
-    root <span style="color:#f92672">{{</span> wiki_root <span style="color:#f92672">}}</span>;
-    index index.php index.html index.htm;
-    client_max_body_size 2M;
-    client_body_buffer_size 128k;
-    location / <span style="color:#f92672">{</span>
-        index doku.php;
-        try_files $uri $uri/ @dokuwiki;
-    <span style="color:#f92672">}</span>
-    location @dokuwiki <span style="color:#f92672">{</span>
-        rewrite ^/_media/<span style="color:#f92672">(</span>.*<span style="color:#f92672">)</span> /lib/exe/fetch.php?media<span style="color:#f92672">=</span>$1 last;
-        rewrite ^/_detail/<span style="color:#f92672">(</span>.*<span style="color:#f92672">)</span> /lib/exe/detail.php?media<span style="color:#f92672">=</span>$1 last;
-        rewrite ^/_export/<span style="color:#f92672">([</span>^/<span style="color:#f92672">]</span>+<span style="color:#f92672">)</span>/<span style="color:#f92672">(</span>.*<span style="color:#f92672">)</span> /doku.php?do<span style="color:#f92672">=</span>export_$1&amp;id<span style="color:#f92672">=</span>$2 last;
-        rewrite ^/<span style="color:#f92672">(</span>.*<span style="color:#f92672">)</span> /doku.php?id<span style="color:#f92672">=</span>$1 last;
-    <span style="color:#f92672">}</span>
-    location ~ <span style="color:#ae81ff">\.</span>php$ <span style="color:#f92672">{</span>
-        try_files $uri <span style="color:#f92672">=</span>404;
-        fastcgi_pass unix:/var/run/php5-fpm.sock;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
-    <span style="color:#f92672">}</span>
-    location ~ /<span style="color:#ae81ff">\.</span>ht <span style="color:#f92672">{</span>
-        deny all;
-    <span style="color:#f92672">}</span>
-    location ~ /<span style="color:#f92672">(</span>data|conf|bin|inc<span style="color:#f92672">)</span>/ <span style="color:#f92672">{</span>
-        deny all;
-    <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span>
-</code></pre></div><h4 id="nginx">Nginx</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">server <span class="o">{</span>
+    server_name   <span class="o">{{</span> wiki_server_name <span class="o">}}</span><span class="p">;</span>
+    root <span class="o">{{</span> wiki_root <span class="o">}}</span><span class="p">;</span>
+    index index.php index.html index.htm<span class="p">;</span>
+    client_max_body_size 2M<span class="p">;</span>
+    client_body_buffer_size 128k<span class="p">;</span>
+    location / <span class="o">{</span>
+        index doku.php<span class="p">;</span>
+        try_files <span class="nv">$uri</span> <span class="nv">$uri</span>/ @dokuwiki<span class="p">;</span>
+    <span class="o">}</span>
+    location @dokuwiki <span class="o">{</span>
+        rewrite ^/_media/<span class="o">(</span>.*<span class="o">)</span> /lib/exe/fetch.php?media<span class="o">=</span><span class="nv">$1</span> last<span class="p">;</span>
+        rewrite ^/_detail/<span class="o">(</span>.*<span class="o">)</span> /lib/exe/detail.php?media<span class="o">=</span><span class="nv">$1</span> last<span class="p">;</span>
+        rewrite ^/_export/<span class="o">([</span>^/<span class="o">]</span>+<span class="o">)</span>/<span class="o">(</span>.*<span class="o">)</span> /doku.php?do<span class="o">=</span>export_<span class="nv">$1</span><span class="p">&amp;</span><span class="nv">id</span><span class="o">=</span><span class="nv">$2</span> last<span class="p">;</span>
+        rewrite ^/<span class="o">(</span>.*<span class="o">)</span> /doku.php?id<span class="o">=</span><span class="nv">$1</span> last<span class="p">;</span>
+    <span class="o">}</span>
+    location ~ <span class="se">\.</span>php$ <span class="o">{</span>
+        try_files <span class="nv">$uri</span> <span class="o">=</span>404<span class="p">;</span>
+        fastcgi_pass unix:/var/run/php5-fpm.sock<span class="p">;</span>
+        fastcgi_index index.php<span class="p">;</span>
+        fastcgi_param SCRIPT_FILENAME <span class="nv">$document_root$fastcgi_script_name</span><span class="p">;</span>
+        include fastcgi_params<span class="p">;</span>
+    <span class="o">}</span>
+    location ~ /<span class="se">\.</span>ht <span class="o">{</span>
+        deny all<span class="p">;</span>
+    <span class="o">}</span>
+    location ~ /<span class="o">(</span>data<span class="p">|</span>conf<span class="p">|</span>bin<span class="p">|</span>inc<span class="o">)</span>/ <span class="o">{</span>
+        deny all<span class="p">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="nginx">Nginx</h4>
 <p>Nginx install is through apt as well. Here, however, there is a bit of magic going on with templates. The templates provide the
 vhost files for the three hosts we will be running. This looks as follows:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">- <span style="color:#f92672">name</span>: <span style="color:#ae81ff">Install vhosts</span>
-  <span style="color:#f92672">block</span>:
-    - <span style="color:#f92672">template</span>: <span style="color:#ae81ff">src=01_example.com.j2 dest=/etc/nginx/vhosts/01_example.com</span>
-      <span style="color:#f92672">notify</span>:
-      - <span style="color:#ae81ff">Restart Nginx</span>
-    - <span style="color:#f92672">template</span>: <span style="color:#ae81ff">src=02_wiki.example.com.j2 dest=/etc/nginx/vhosts/02_wiki_example.com</span>
-      <span style="color:#f92672">notify</span>:
-      - <span style="color:#ae81ff">Restart Nginx</span>
-    - <span style="color:#f92672">template</span>: <span style="color:#ae81ff">src=03_nagios.example.com.j2 dest=/etc/nginx/vhosts/03_nagios.example.com</span>
-      <span style="color:#f92672">notify</span>:
-      - <span style="color:#ae81ff">Restart Nginx</span>
-</code></pre></div><p>Now, you might be wondering what <code>notify</code> is? It&rsquo;s basically a handler that gets notified to restart nginx. The great part about
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml">- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Install vhosts</span><span class="w">
+</span><span class="w">  </span><span class="nt">block</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l">src=01_example.com.j2 dest=/etc/nginx/vhosts/01_example.com</span><span class="w">
+</span><span class="w">      </span><span class="nt">notify</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">Restart Nginx</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l">src=02_wiki.example.com.j2 dest=/etc/nginx/vhosts/02_wiki_example.com</span><span class="w">
+</span><span class="w">      </span><span class="nt">notify</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">Restart Nginx</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l">src=03_nagios.example.com.j2 dest=/etc/nginx/vhosts/03_nagios.example.com</span><span class="w">
+</span><span class="w">      </span><span class="nt">notify</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">Restart Nginx</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>Now, you might be wondering what <code>notify</code> is? It&rsquo;s basically a handler that gets notified to restart nginx. The great part about
 it is that it does this only once, even if it was called multiple times. The handler looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">- <span style="color:#f92672">name</span>: <span style="color:#ae81ff">Restart Nginx</span>
-  <span style="color:#f92672">service</span>:
-    <span style="color:#f92672">name</span>: <span style="color:#ae81ff">nginx</span>
-    <span style="color:#f92672">state</span>: <span style="color:#ae81ff">restarted</span>
-</code></pre></div><p>And lives under <code>handlers</code> sub-folder.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml">- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Restart Nginx</span><span class="w">
+</span><span class="w">  </span><span class="nt">service</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">nginx</span><span class="w">
+</span><span class="w">    </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="l">restarted</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>And lives under <code>handlers</code> sub-folder.</p>
 <p>With this, Nginx is done and should be providing our sites under plain HTTP.</p>
 <h4 id="letsencrypt">LetsEncrypt</h4>
 <p>Now comes the part where we enable HTTPS for all these three domains. Which is as follows:</p>
@@ -311,20 +598,41 @@ it is that it does this only once, even if it was called multiple times. The han
 <p>This is actually quiet simple now-a-days with <code>certbot-auto</code>. In fact, it will insert the configurations we need all by itself.
 The only thing for us to do is to specify what domains we have and what our challenge would be. Also, we have to pass in some
 variables for <code>certbot-auto</code> to run in a non-interactive mode. This looks as follows:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">- <span style="color:#f92672">name</span>: <span style="color:#ae81ff">Generate Certificate for Domains</span>
-  <span style="color:#f92672">shell</span>: <span style="color:#ae81ff">./certbot-auto --authenticator standalone --installer nginx -d &#39;{{ domain_example }}&#39; -d &#39;{{ domain_wiki }}&#39; -d &#39;{{ domain_nagios }}&#39; --email example@gmail.com --agree-tos -n --no-verify-ssl --pre-hook &#34;sudo systemctl stop nginx&#34; --post-hook &#34;sudo systemctl start nginx&#34; --redirect</span>
-  <span style="color:#f92672">args</span>:
-    <span style="color:#f92672">chdir</span>: <span style="color:#ae81ff">/opt/letsencrypt</span>
-</code></pre></div><p>And that&rsquo;s that. The interesting and required part here is the <code>pre-hook</code> and <code>post-hook</code>. Without those it wouldn&rsquo;t work because
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml">- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Generate Certificate for Domains</span><span class="w">
+</span><span class="w">  </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l">./certbot-auto --authenticator standalone --installer nginx -d &#39;{{ domain_example }}&#39; -d &#39;{{ domain_wiki }}&#39; -d &#39;{{ domain_nagios }}&#39; --email example@gmail.com --agree-tos -n --no-verify-ssl --pre-hook &#34;sudo systemctl stop nginx&#34; --post-hook &#34;sudo systemctl start nginx&#34; --redirect</span><span class="w">
+</span><span class="w">  </span><span class="nt">args</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">chdir</span><span class="p">:</span><span class="w"> </span><span class="l">/opt/letsencrypt</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>And that&rsquo;s that. The interesting and required part here is the <code>pre-hook</code> and <code>post-hook</code>. Without those it wouldn&rsquo;t work because
 the ports that certbot is performing the challenge on would be taken already. This stops nginx, performs the challenge and
 generates the certs, and starts nginx again. Also note <code>--redirect</code>. This will force HTTPS on the sites and disables plain HTTP.</p>
 <p>If all went well our sites should contain information like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">    listen <span style="color:#ae81ff">443</span> ssl; <span style="color:#75715e"># managed by Certbot</span>
-    ssl_certificate /etc/letsencrypt/live/example.com-0001/fullchain.pem; <span style="color:#75715e"># managed by Certbot</span>
-    ssl_certificate_key /etc/letsencrypt/live/example.com-0001/privkey.pem; <span style="color:#75715e"># managed by Certbot</span>
-    include /etc/letsencrypt/options-ssl-nginx.conf; <span style="color:#75715e"># managed by Certbot</span>
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; <span style="color:#75715e"># managed by Certbot</span>
-</code></pre></div><h3 id="test-run-using-vagrant">Test Run using Vagrant</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">    listen <span class="m">443</span> ssl<span class="p">;</span> <span class="c1"># managed by Certbot</span>
+    ssl_certificate /etc/letsencrypt/live/example.com-0001/fullchain.pem<span class="p">;</span> <span class="c1"># managed by Certbot</span>
+    ssl_certificate_key /etc/letsencrypt/live/example.com-0001/privkey.pem<span class="p">;</span> <span class="c1"># managed by Certbot</span>
+    include /etc/letsencrypt/options-ssl-nginx.conf<span class="p">;</span> <span class="c1"># managed by Certbot</span>
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem<span class="p">;</span> <span class="c1"># managed by Certbot</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="test-run-using-vagrant">Test Run using Vagrant</h3>
 <p>If you don&rsquo;t want to run all this on a live server to test out, you can do either of these two things:</p>
 <ul>
 <li>Use a remote dedicated test server</li>
@@ -332,32 +640,63 @@ generates the certs, and starts nginx again. Also note <code>--redirect</code>. 
 </ul>
 <p>Here, I&rsquo;m giving you an option for the later.</p>
 <p>It&rsquo;s possible for most of the things to be tested on a local Vagrant machine. Most of the time a Vagrant box is enough to test out installing things. A sample Vagrant file looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby"><span style="color:#75715e"># encoding: utf-8</span>
-<span style="color:#75715e"># -*- mode: ruby -*-</span>
-<span style="color:#75715e"># vi: set ft=ruby :</span>
-<span style="color:#75715e"># Box / OS</span>
-<span style="color:#66d9ef">VAGRANT_BOX</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;ubuntu/xenial64&#39;</span>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="c1"># encoding: utf-8</span>
+<span class="c1"># -*- mode: ruby -*-</span>
+<span class="c1"># vi: set ft=ruby :</span>
+<span class="c1"># Box / OS</span>
+<span class="no">VAGRANT_BOX</span> <span class="o">=</span> <span class="s1">&#39;ubuntu/xenial64&#39;</span>
 
-<span style="color:#66d9ef">VM_NAME</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;ansible-practice&#39;</span>
+<span class="no">VM_NAME</span> <span class="o">=</span> <span class="s1">&#39;ansible-practice&#39;</span>
 
-<span style="color:#66d9ef">Vagrant</span><span style="color:#f92672">.</span>configure(<span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">do</span> <span style="color:#f92672">|</span>config<span style="color:#f92672">|</span>
-  <span style="color:#75715e"># Vagrant box from Hashicorp</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>box <span style="color:#f92672">=</span> <span style="color:#66d9ef">VAGRANT_BOX</span>
-  <span style="color:#75715e"># Actual machine name</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>hostname <span style="color:#f92672">=</span> <span style="color:#66d9ef">VM_NAME</span>
-  <span style="color:#75715e"># Set VM name in Virtualbox</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>provider <span style="color:#e6db74">&#39;virtualbox&#39;</span> <span style="color:#66d9ef">do</span> <span style="color:#f92672">|</span>v<span style="color:#f92672">|</span>
-    v<span style="color:#f92672">.</span>name <span style="color:#f92672">=</span> <span style="color:#66d9ef">VM_NAME</span>
-    v<span style="color:#f92672">.</span>memory <span style="color:#f92672">=</span> <span style="color:#ae81ff">2048</span>
-  <span style="color:#66d9ef">end</span>
-  <span style="color:#75715e"># Ansible provision</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>provision <span style="color:#e6db74">&#39;ansible_local&#39;</span> <span style="color:#66d9ef">do</span> <span style="color:#f92672">|</span>ansible<span style="color:#f92672">|</span>
-    ansible<span style="color:#f92672">.</span>limit <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;all&#39;</span>
-    ansible<span style="color:#f92672">.</span>inventory_path <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;hosts&#39;</span>
-    ansible<span style="color:#f92672">.</span>playbook <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;local.yml&#39;</span>
-  <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">end</span>
-</code></pre></div><p>This interesting part here is the ansible provision section. It&rsquo;s running a version of Ansible that is called <code>ansible_local</code>. It&rsquo;s local, becuase it will be only on the VirtualBox. Meaning, you don&rsquo;t have to have Ansible installed to test it on a vagrant box. Neat, huh?</p>
+<span class="no">Vagrant</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
+  <span class="c1"># Vagrant box from Hashicorp</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box</span> <span class="o">=</span> <span class="no">VAGRANT_BOX</span>
+  <span class="c1"># Actual machine name</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">hostname</span> <span class="o">=</span> <span class="no">VM_NAME</span>
+  <span class="c1"># Set VM name in Virtualbox</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provider</span> <span class="s1">&#39;virtualbox&#39;</span> <span class="k">do</span> <span class="o">|</span><span class="n">v</span><span class="o">|</span>
+    <span class="n">v</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="no">VM_NAME</span>
+    <span class="n">v</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="mi">2048</span>
+  <span class="k">end</span>
+  <span class="c1"># Ansible provision</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s1">&#39;ansible_local&#39;</span> <span class="k">do</span> <span class="o">|</span><span class="n">ansible</span><span class="o">|</span>
+    <span class="n">ansible</span><span class="o">.</span><span class="n">limit</span> <span class="o">=</span> <span class="s1">&#39;all&#39;</span>
+    <span class="n">ansible</span><span class="o">.</span><span class="n">inventory_path</span> <span class="o">=</span> <span class="s1">&#39;hosts&#39;</span>
+    <span class="n">ansible</span><span class="o">.</span><span class="n">playbook</span> <span class="o">=</span> <span class="s1">&#39;local.yml&#39;</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This interesting part here is the ansible provision section. It&rsquo;s running a version of Ansible that is called <code>ansible_local</code>. It&rsquo;s local, becuase it will be only on the VirtualBox. Meaning, you don&rsquo;t have to have Ansible installed to test it on a vagrant box. Neat, huh?</p>
 <p>To test your playbook, simply run <code>vagrant up</code> and you should see the provisioning happening.</p>
 <h2 id="room-for-improvement">Room for improvement</h2>
 <p>And that should be all. Note that this setup isn&rsquo;t quiet enterprise ready. I would add the following things:</p>
@@ -374,185 +713,105 @@ worry about adding another server into the bunch.</p>
 <p>Thank you for reading,
 Gergely.</p>
 
-
-</div>
-</article>
-</main>
-
-
-<aside class="sidebar layout__second-sidebar">
-<section>
-<h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
-<ul class="menu">
-<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
-<li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
-<li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
-<li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>
-<li><a href="/2020/07/23/kubernetes-deploy-golang-react-apps-separately-part1/">How to deploy a Go (Golang) backend with a React frontend separately on Kubernetes - Part One</a></li>
-<li><a href="/2020/05/11/good-code-reviews/">How to do a good code review</a></li>
-<li><a href="/2020/02/17/making-spa-refresh-work-with-go-backend/">How to Make SPA refresh work with a Go backend</a></li>
-<li><a href="/2019/10/15/kubernetes-cluster-part2/">Using a Kubernetes based Cluster for Various Services with auto HTTPS - Part 2</a></li>
-<li><a href="/2019/10/10/practical-go-summary/">Summary of Practical Go workshop from Dave Cheney</a></li>
-<li><a href="/2019/10/01/killing-kubernetes-cluster/">How I killed my entire Kubernetes cluster</a></li>
-<li><a href="/2019/09/21/kubernetes-cluster/">Using a Kubernetes based Cluster for Various Services with auto HTTPS</a></li>
-<li><a href="/2019/09/19/updated-face-recog-drawing/">Updated Face-recog architecture drawing</a></li>
-<li><a href="/2019/04/21/efferent-and-afferent-metrics-in-go/">Efferent and Afferent metrics in Go</a></li>
-<li><a href="/2019/04/12/living-with-a-parser/">Living with a new Parser for a year</a></li>
-<li><a href="/2019/03/19/deploy-hugo-blog-github-actions/">Deploy a Hugo Blog Github Actions</a></li>
-<li><a href="/2019/03/19/cronohub/">Cronohub: Archive from anywhere to anywhere</a></li>
-<li><a href="/2019/03/18/hugo-blog-with-travis-deployment/">Deploy a Hugo Blog with Travis on Git Push</a></li>
-<li><a href="/2019/02/17/go-ssh-with-host-key-verification/">Go SSH with Host Key Verification</a></li>
-<li><a href="/2018/10/29/go-plugin-tutorial/">Extensive tutorial on go-plugin.</a></li>
-<li><a href="/2018/09/17/furnace-plugin-update/">Furnace with a new Plugin System</a></li>
-<li><a href="/2018/09/13/gotp/">TOTP generator with account handling for multiple tokens</a></li>
-<li><a href="/2018/06/08/fork-updater/">Keep your git forks updated all the time</a></li>
-<li><a href="/2018/03/15/kubernetes-distributed-application/">Kubernetes distributed application deployment with sample Face Recognition App</a></li>
-<li><a href="/2018/02/06/go-budapest-meetup/">Go Budapest Meetup</a></li>
-<li><a href="/2018/01/23/nginx-certbot-ansible/" class="active" aria-current="page">Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios</a></li>
-<li><a href="/2018/01/13/furnace-massive-update/">Huge Furnace Update</a></li>
-<li><a href="/2017/12/04/commit-build-deploy/">Commit-Build-Deploy With AWS CodeBuild and Lambda</a></li>
-<li><a href="/2017/11/06/furnace-ikea-manual/">Furnace Ikea Manual</a></li>
-<li><a href="/2017/09/03/furnace-binaries/">Furnace Binaries</a></li>
-<li><a href="/2017/05/31/notetaking/">Notetaking</a></li>
-<li><a href="/2017/05/28/replace-eval-with-object-send-and-a-parser/">Replacing Eval with Object.send and a self written Parser</a></li>
-<li><a href="/2017/04/16/building-furnace-part-4/">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 4</a></li>
-<li><a href="/2017/03/22/building-furnace-part-3/">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 3</a></li>
-<li><a href="/2017/03/19/building-furnace-part-2/">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2</a></li>
-<li><a href="/2017/03/17/test-new-hugo/">Testing new Hugo if posts are generated properly</a></li>
-<li><a href="/2017/03/16/building-furnace-part-1/">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1</a></li>
-<li><a href="/2017/03/03/images-on-old-posts/">Images on older posts</a></li>
-<li><a href="/2017/02/15/how-to-https-with-hugo-letsencrypt-haproxy/">How to HTTPS with Hugo LetsEncrypt and HAProxy</a></li>
-<li><a href="/2016/11/02/google-signin-with-go-part2/">How to do Google Sign-In with Go - Part 2</a></li>
-<li><a href="/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/">RScrap scraper</a></li>
-<li><a href="/2016/09/17/simple-hometheater-with-remote-and-flirc/">Budget Home Theather with a Headless Raspberry Pi and Flirc for Remote Controlling</a></li>
-<li><a href="/2016/08/19/always-go-with-bytes/">Always Go with []byte</a></li>
-<li><a href="/2016/08/16/never-changing-regex/">Global variable for never changing regex</a></li>
-<li><a href="/2016/08/13/drupal-missing-toolbar-and-settings-not-saving/">Drupal missing ToolBar and settings not saving</a></li>
-<li><a href="/2016/07/28/jenkins-best-practices/">Jenkins Best Practices Talk</a></li>
-<li><a href="/2016/07/12/ruby-sieve/">Ruby Sieve</a></li>
-<li><a href="/2016/07/12/simple-hook-to-rid-of-trouble/">Simple hook to rid of trouble</a></li>
-<li><a href="/2016/06/12/google-signin-with-go/">How to do Google sign-in with Go</a></li>
-<li><a href="/2016/04/17/minecraft-server-aws-s3-backup-part2/">Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</a></li>
-<li><a href="/2016/04/16/minecraft-server-aws-s3-backup/">Minecraft world automatic backup to AWS S3 bucket</a></li>
-<li><a href="/2016/03/29/minecraft-server-with-docker-and-osx/">Minecraft Server with Docker on OSX &#43; Mods</a></li>
-<li><a href="/2016/03/09/wercker-fixed/">Wercker Fixed</a></li>
-<li><a href="/2016/03/04/wercker-test-2/">Wercker Test</a></li>
-<li><a href="/2016/02/10/hugo-autodeploy-with-wercker/">Hugo Autodeploy with Wercker and Github - Pages</a></li>
-<li><a href="/2016/02/10/wercker-test/">Wercker Test</a></li>
-<li><a href="/2016/02/02/doing-cors-in-go-with-gin-and-json/">Doing CORS in Go with Gin and JSON</a></li>
-<li><a href="/2016/01/22/my-journey-in-advent-of-code/">My Journey in advent of code</a></li>
-<li><a href="/2016/01/05/improving-performance-with-byte-slice-and-int-map/">Improving performance with byte slice and int map</a></li>
-<li><a href="/2016/01/01/byte-arrays-and-channels/">Byte arrays and Channels</a></li>
-<li><a href="/2015/12/29/use-byte-array-instead-of-strings/">Use Byte Array Instead of Strings</a></li>
-<li><a href="/2015/12/29/use-byte-slice-instead-of-strings/">Use Byte Slice Instead of Strings</a></li>
-<li><a href="/2015/12/23/recursive-freq-count/">Recursive Letter Frequency Count</a></li>
-<li><a href="/2015/12/08/go-development-environment/">Go Development Environment</a></li>
-<li><a href="/2015/12/07/welcome-to-my-new-blog/">Welcome To My New Blog</a></li>
-<li><a href="/2015/11/20/go-jira-api-client/">Go JIRA API client</a></li>
-<li><a href="/2015/11/15/the-one-hundred-day-github-challenge/">The One Hundred Day GitHub Challenge</a></li>
-<li><a href="/2015/11/09/go-progress-quest/">Go Progress Quest</a></li>
-<li><a href="/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/">Kill a Program on Connecting to a specific WiFi – OSX</a></li>
-<li><a href="/2015/10/15/circular-buffer-in-go/">Circular buffer in Go</a></li>
-<li><a href="/2015/10/15/jenkins-job-dsl-and-groovy-goodness/">Jenkins Job DSL and Groovy goodness</a></li>
-<li><a href="/2015/10/04/datamunger-kata-with-go/">DataMunger Kata with Go</a></li>
-<li><a href="/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/">How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs</a></li>
-<li><a href="/2015/09/07/i-used-to-have-great-ideas-on-the-toilet-but-i-no-longer-do/">I used to have great ideas on the toilet, but I no longer do.</a></li>
-<li><a href="/2015/07/30/sieve-of-eratosthenes-in-go/">Sieve of Eratosthenes in Go</a></li>
-<li><a href="/2015/07/22/quick-tip-for-debugging-headless-locally/">Quick Tip for Debugging Headless Locally</a></li>
-<li><a href="/2015/07/19/converting-numbers-into-string-representations/">Converting numbers into string representations</a></li>
-<li><a href="/2015/07/16/selenium-testing-with-packer-and-vagrant/">Selenium Testing with Packer and Vagrant</a></li>
-<li><a href="/2015/07/15/bitwise-operator/">Bitwise &amp; Operator</a></li>
-<li><a href="/2015/07/01/packer-0-8-1/">Packer 0.8.1.</a></li>
-<li><a href="/2015/06/30/powershell-can-also-be-nice-or-installing-java-silently-and-waiting/">Powershell can also be nice -Or Installing Java silently and waiting</a></li>
-<li><a href="/2015/06/27/the-packer-the-windows-and-the-vagrant-box/">The Packer, The Windows, and the Vagrant box</a></li>
-<li><a href="/2015/06/06/docker-ruby-lotus-go-cd/">Docker &#43; Java &#43; Vagrant&#43; GO.CD</a></li>
-<li><a href="/2015/05/21/setting-up-a-new-laptop-with-puppet/">Setting up a new Laptop with Puppet</a></li>
-<li><a href="/2015/05/19/busy-building-the-future/">Busy building the future</a></li>
-<li><a href="/2015/04/21/django-rpg-part-3/">Django – RPG – Part 3</a></li>
-<li><a href="/2015/04/12/django-rpg-part-2/">Django – RPG – Part 2</a></li>
-<li><a href="/2015/04/10/django-rpg-2/">Django – RPG – Part 1</a></li>
-<li><a href="/2015/04/10/small-python-gui-to-calculate-lever-distance/">Small Python GUI to Calculate Lever Distance</a></li>
-<li><a href="/2015/03/15/python-and-my-math-commitment/">Python and my Math commitment</a></li>
-<li><a href="/2015/03/02/sphere-judge-online-python-kivy-android-app-part-2/">Sphere Judge Online – Python Kivy Android app – Part 2</a></li>
-<li><a href="/2015/02/26/sphere-judge-online-python-kivy-android-app/">Sphere Judge Online – Python Kivy Android app</a></li>
-<li><a href="/2015/02/08/why-lock-picking-is-like-testing/">Why Lock Picking is like Testing</a></li>
-<li><a href="/2015/02/01/building-an-rpg-app-with-meteor-part-one-the-struggle/">Building an RPG App with Meteor – Part One – The struggle</a></li>
-<li><a href="/2015/01/29/javascript-web-framework-meteor/">JavaScript Web Framework – Meteor</a></li>
-<li><a href="/2015/01/28/when-cucumber-goes-wrong/">When cucumber goes wrong</a></li>
-<li><a href="/2015/01/27/from-zero-to-hundred-in-four-seconds/">From Zero to Hundred in Four seconds</a></li>
-<li><a href="/2015/01/26/why-testers-are-like-scientists/">Why Testers are, like scientists</a></li>
-<li><a href="/2014/11/15/why-the-expressiveness-of-your-tests-is-important-part-one/">Why the expressiveness of your Tests is important – Part One</a></li>
-<li><a href="/2014/11/07/updating-all-jenkins-jobs-via-jenkins-api-python/">Updating All Jenkins Jobs Via Jenkins API – Python</a></li>
-<li><a href="/2014/10/23/the-seven-guidelines-of-context-driven-testing/">The seven Principles of Context Driven Testing – Mind Map</a></li>
-<li><a href="/2014/08/25/python-course-review/">Python Course Review</a></li>
-<li><a href="/2014/05/31/five-reasons-why-a-tester-should-learn-sql/">Five reasons why a tester should learn SQL</a></li>
-<li><a href="/2014/05/26/tdd-is-dead-not-really/">TDD is Dead – Not really</a></li>
-<li><a href="/2014/05/23/five-reasons-why-a-front-end-tester-should-learn-javascript/">Five reasons why a front-end tester should learn Javascript</a></li>
-<li><a href="/2014/05/20/note-taking-what-when-how-often/">Note taking what when how often</a></li>
-<li><a href="/2014/05/18/using-chrome-search-engine-multiple-search-params/">Using Chrome Search Engine – Multiple Search Params</a></li>
-<li><a href="/2014/05/16/how-i-started-running/">How I started Running</a></li>
-<li><a href="/2014/04/13/how-the-past-influences-the-present/">How the past influences the present</a></li>
-<li><a href="/2014/02/19/example-when-to-use-the-strategy-pattern/">Example when to use the Strategy Pattern</a></li>
-<li><a href="/2014/02/13/how-to-write-a-blog-why-long-posts-rarely-work/">How to write a blog – Why long posts rarely work</a></li>
-<li><a href="/2014/02/11/how-to-check-content-header-on-unknown-number-of-items-python/">How to check content header on unknown number of items – Python</a></li>
-<li><a href="/2014/02/11/the-method-of-loci-and-how-it-works-for-me/">The method of Loci and how it works for me</a></li>
-<li><a href="/2014/02/10/why-you-should-learn-using-vim/">Why you should learn using Vim</a></li>
-<li><a href="/2014/02/09/why-does-it-matter-if-i-sit-in-an-office-or-in-a-park/">Why does it matter if I sit in an office or in a park</a></li>
-<li><a href="/2014/02/04/how-i-recruit-why-tool-requirements-are-stupid/">How I recruit – Why tool requirements are stupid</a></li>
-<li><a href="/2013/11/02/why-you-should-care-about-the-quality-of-your-test-code/">Why you should care about the quality of your test code</a></li>
-<li><a href="/2013/10/11/diary-of-a-bit/">Diary of a Bit</a></li>
-<li><a href="/2013/08/26/low-tech-why-having-less-will-fell-more/">Low Tech – Why having less will fell more</a></li>
-<li><a href="/2013/07/31/why-not-to-automate-everything/">Why not to automate everything…</a></li>
-<li><a href="/2013/06/24/sublime-text-5/">Sublime text</a></li>
-<li><a href="/2013/04/18/cucumber-jvm-and-afterall/">Cucumber-Jvm And @AfterAll</a></li>
-<li><a href="/2013/04/15/cucumber-test-name-and-tags-on-feature/">Cucumber Test Name and Tags on Feature</a></li>
-<li><a href="/2013/04/11/groovy-and-grails-course-summary/">Groovy and Grails course summary</a></li>
-<li><a href="/2013/04/11/my-history-in-testing/">My history in testing</a></li>
-<li><a href="/2013/01/31/its-all-about-human-interaction/">It’s all about human interaction.</a></li>
-<li><a href="/2013/01/21/what-you-really-need-to-become-a-testing-expert/">What you really need to know to become a Testing Expert</a></li>
-<li><a href="/2013/01/04/from-chaos-there-shall-be-order/">From Chaos There Shall Be Order</a></li>
-<li><a href="/2012/12/12/methodologies-thought-patterns-lies/">Methodologies, Thought Patterns, Lies</a></li>
-<li><a href="/2012/12/01/teas-testing-exploration-adventure-session/">TEAS: Testing Exploration Adventure Session</a></li>
-<li><a href="/2012/10/09/how-to-eliminate-a-parameter-boom/">How to eliminate a parameter boom</a></li>
-<li><a href="/2012/09/30/89/">Coderetreat London</a></li>
-<li><a href="/2012/09/20/what-my-brain-is-up-to-the-whole-day/">What my brain is up to the whole day…</a></li>
-<li><a href="/2012/09/09/learning-programming-with-a-visual-mind/">Learning programming with a visual mind</a></li>
-<li><a href="/2012/07/12/tdd-and-game-of-life/">TDD and Game of Life</a></li>
-<li><a href="/2012/06/28/journey-into-an-unknown-system/">Journey into an unknown system</a></li>
-<li><a href="/2012/06/26/solution-to-wrap-kata/">Solution to Wrap Kata</a></li>
-<li><a href="/2012/06/18/how-to-read-a-professional-book-for-slow-learners/">How to read a professional book for slow learners</a></li>
-<li><a href="/2012/06/13/dont-throw-exception/">Don’t throw Exception</a></li>
-<li><a href="/2012/06/13/how-to-write-a-professional-blog/">How to write a professional blog</a></li>
-<li><a href="/2012/06/13/making-your-code-understandable/">Making your code understandable</a></li>
-<li><a href="/2012/04/11/getting-dual-card-to-work-on-ubuntu-12-04/">Getting Dual Card to work on Ubuntu 12.04.</a></li>
-<li><a href="/2012/03/04/jms-connection-setup-and-framework/">JMS Connection setup and Framework</a></li>
-<li><a href="/2012/02/27/configuration/">Configuration</a></li>
-<li><a href="/2012/02/26/hello-and-welcome/">Hello and welcome</a></li>
-<li><a href="/2012/02/26/testing-code-tag/">Testing ‘code’ tag.</a></li>
-</ul>
-</section>
-</aside>
-<footer class="footer layout__footer">
-<p><!-- raw HTML omitted --></p>
-<p>Powered by <a href="https://gohugo.io/">Hugo</a> and the <a href="https://github.com/frjo/hugo-theme-zen">Zen theme</a>.</p>
-
-</footer>
-</div>
-<div class="mobile-nav" dir="ltr">
-  <div class="mobile-nav__cover"></div>
-  <a href="#navigation" class="mobile-nav__toggle" aria-haspopup="true" role="button">Menu</a>
-  <div class="mobile-nav__sheet">
-    <div class="mobile-nav__region">
-    
     </div>
-    <nav class="mobile-nav__main-menu">
-    <h2 class="visually-hidden">Main menu</h2>
-    <ul class="mobile-nav__navbar">
-    <li><a href="/">Home</a></li>
-    <li><a href="/blog/" class="active" aria-current="page">Blog</a></li>
-    </ul>
-    </nav>
-  </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/2018/02/06/go-budapest-meetup/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Go Budapest Meetup</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/2018/01/13/furnace-massive-update/">
+            <span class="next-text nav-default">Huge Furnace Update</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        <div id="disqus_thread"></div>
+    <script type="text/javascript">
+    (function() {
+      
+      
+      if (window.location.hostname === 'localhost') return;
+
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      var disqus_shortname = 'hannibalDisqus';
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="https://twitter.com/skarlso" class="iconfont icon-twitter" title="twitter"></a>
+      <a href="https://github.com/Skarlso" class="iconfont icon-github" title="github"></a>
+  <a href="https://skarlso.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
 </div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+     - 
+    2021<span class="heart"><i class="iconfont icon-heart"></i></span><span>Gergely Brautigam</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  <script type="text/javascript" src="/lib/jquery/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="/lib/slideout/slideout-1.0.1.min.js"></script>
+  
+
+
+
+<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-69463020-2', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+
 </body>
 </html>

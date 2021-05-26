@@ -1,131 +1,20 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>travis on Ramblings of a cloud engineer</title>
     <link>https://skarlso.github.io/categories/travis/</link>
     <description>Recent content in travis on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-GB</language>
-    <lastBuildDate>Mon, 18 Mar 2019 21:01:00 +0100</lastBuildDate>
-    <atom:link href="https://skarlso.github.io/categories/travis/index.xml" rel="self" type="application/rss+xml" />
-    
+    <language>en</language>
+    <lastBuildDate>Mon, 18 Mar 2019 21:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/travis/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Deploy a Hugo Blog with Travis on Git Push</title>
       <link>https://skarlso.github.io/2019/03/18/hugo-blog-with-travis-deployment/</link>
       <pubDate>Mon, 18 Mar 2019 21:01:00 +0100</pubDate>
+      
       <guid>https://skarlso.github.io/2019/03/18/hugo-blog-with-travis-deployment/</guid>
-      <description>&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-&lt;p&gt;Hi folks.&lt;/p&gt;
-&lt;p&gt;I&amp;rsquo;ve been using the Hugo build for wercker for a long time now. Recent problems occurred though where I did not understand at first
-what the problem was. It was quite difficult to debug since I did not have too much insight on the wercker build itself. Turned
-out that I deleted the GITHUB token that the process was using. However, the error message was telling me that a function failed
-to load some other function. Which was totally unrelated.&lt;/p&gt;
-&lt;p&gt;Thus, I thought that I&amp;rsquo;m going to shift away from this outside medium to a different one that I&amp;rsquo;m already familiar with and have
-greater control over.&lt;/p&gt;
-&lt;p&gt;Hence, Travis. Incidentally, since I will no longer be dependend on a third party component (which was the image wercker was
-using), I&amp;rsquo;ll be able to switch away from this build platform easily. For example, to CircleCI.&lt;/p&gt;
-&lt;p&gt;I&amp;rsquo;m using github pages, but without the whole convoluted submodule init, different branch stuff. I find that that simply adds unnecessary complexity to the whole thing. I&amp;rsquo;m keeping the source and the website in a different repository.&lt;/p&gt;
-&lt;p&gt;The steps are simple:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Get the source&lt;/li&gt;
-&lt;li&gt;Generate the content locally using &lt;code&gt;hugo&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;Setup Git&lt;/li&gt;
-&lt;li&gt;Get the source for the generated web site&lt;/li&gt;
-&lt;li&gt;Copy in the newly generated code&lt;/li&gt;
-&lt;li&gt;Push the code up to git&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Sounds simple&amp;hellip; In fact it&amp;rsquo;s so simple, it&amp;rsquo;s three files.&lt;/p&gt;
-&lt;h3 id=&#34;travis&#34;&gt;Travis&lt;/h3&gt;
-&lt;p&gt;The travis modification is such:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;language&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;go&lt;/span&gt;
-
-&lt;span style=&#34;color:#f92672&#34;&gt;install&lt;/span&gt;:
-    - &lt;span style=&#34;color:#ae81ff&#34;&gt;go get github.com/gohugoio/hugo&lt;/span&gt;
-    - &lt;span style=&#34;color:#ae81ff&#34;&gt;sudo apt-get install -y git&lt;/span&gt;
-
-&lt;span style=&#34;color:#f92672&#34;&gt;script&lt;/span&gt;:
-    - &lt;span style=&#34;color:#ae81ff&#34;&gt;.travis/build.sh&lt;/span&gt;
-
-&lt;span style=&#34;color:#f92672&#34;&gt;after_success&lt;/span&gt;:
-    - &lt;span style=&#34;color:#ae81ff&#34;&gt;cd ${TRAVIS_BUILD_DIR} &amp;amp;&amp;amp; .travis/push.sh&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Easy, it&amp;rsquo;s a standard Go based travis file. There are two things here which stand out. The &lt;code&gt;scripts&lt;/code&gt; section and the
-&lt;code&gt;after_success&lt;/code&gt; section. Why &lt;code&gt;after_success&lt;/code&gt;? Because if we made a mistake, we don&amp;rsquo;t want to destroy the website. Thus we only
-push in case build.sh was successful.&lt;/p&gt;
-&lt;h3 id=&#34;building&#34;&gt;Building&lt;/h3&gt;
-&lt;p&gt;In this light, building the blog is simple. In fact the whole script is such:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#!/bin/sh
-&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
-set -e
-set -x
-
-mkdir /opt/blog
-git clone --recurse-submodules https://github.com/Skarlso/blogsource.git /opt/app
-echo Build started on &lt;span style=&#34;color:#e6db74&#34;&gt;`&lt;/span&gt;date&lt;span style=&#34;color:#e6db74&#34;&gt;`&lt;/span&gt;
-cd /opt/app
-hugo --theme hermit
-cp -R public/* /opt/blog
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;For clone, &lt;code&gt;--recurse-submodules&lt;/code&gt; is required because the theme is a submodule. Once this script runs successfull,
-we can push the new version of the site.&lt;/p&gt;
-&lt;h3 id=&#34;pushing&#34;&gt;Pushing&lt;/h3&gt;
-&lt;p&gt;Pushing is a bit more involved. There are four steps involved in this process.&lt;/p&gt;
-&lt;h4 id=&#34;setup-git&#34;&gt;Setup git&lt;/h4&gt;
-&lt;p&gt;First, we set up git to use some specific name so we know where the push came from.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;setup_git&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-  git config --global user.email &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;travis@travis-ci.org&amp;#34;&lt;/span&gt;
-  git config --global user.name &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Travis CI&amp;#34;&lt;/span&gt;
-  git init
-  git remote add origin https://&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;GITHUB_TOKEN&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;@github.com/Skarlso/skarlso.github.io.git &amp;gt; /dev/null 2&amp;gt;&amp;amp;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-  git pull origin master
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Github token is a secret environment property. We also pull the blog source in this step.&lt;/p&gt;
-&lt;h4 id=&#34;copy&#34;&gt;Copy&lt;/h4&gt;
-&lt;p&gt;Then copy everything from the built site&amp;rsquo;s public folder (which was we already copied to /opt/blog) to this folder.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;cp -R /opt/blog/* .
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;commit-the-changes&#34;&gt;Commit the changes&lt;/h4&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;commit_website_files&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-  git add .
-  git commit -am &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Travis build: &lt;/span&gt;$TRAVIS_BUILD_NUMBER&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is extracted for clarity.&lt;/p&gt;
-&lt;h4 id=&#34;pushing-the-changes&#34;&gt;Pushing the changes&lt;/h4&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;upload_files&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-  git push --quiet --set-upstream origin master
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The script in it&amp;rsquo;s entirety here: &lt;a href=&#34;#push-sh&#34;&gt;push.sh&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;And that&amp;rsquo;s it. The site is changed and updated. This can be executed in any environment and the only requirement is hugo and git being present. If you still prefer the branch method of Github pages, this is easily altered to checkout the right branch and push the changes from there.&lt;/p&gt;
-&lt;p&gt;No dependency on anything. Just how I like my build processes.&lt;/p&gt;
-&lt;p&gt;Thanks for reading!&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;
-&lt;h1 id=&#34;appendix&#34;&gt;Appendix&lt;/h1&gt;
-&lt;h2 id=&#34;pushsh&#34;&gt;push.sh&lt;/h2&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#!/bin/sh
-&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
-set -e
-set -x
-
-setup_git&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-  git config --global user.email &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;travis@travis-ci.org&amp;#34;&lt;/span&gt;
-  git config --global user.name &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Travis CI&amp;#34;&lt;/span&gt;
-  git init
-  git remote add origin https://&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;GITHUB_TOKEN&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;@github.com/Skarlso/skarlso.github.io.git &amp;gt; /dev/null 2&amp;gt;&amp;amp;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-  git pull origin master
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-commit_website_files&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-  git add .
-  git commit -am &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Travis build: &lt;/span&gt;$TRAVIS_BUILD_NUMBER&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-upload_files&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
-  git push --quiet --set-upstream origin master
-&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
-
-mkdir /opt/publish &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; cd /opt/publish
-setup_git
-cp -R /opt/blog/* .
-commit_website_files
-upload_files
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</description>
+      <description>Intro Hi folks.
+I&amp;rsquo;ve been using the Hugo build for wercker for a long time now. Recent problems occurred though where I did not understand at first what the problem was. It was quite difficult to debug since I did not have too much insight on the wercker build itself. Turned out that I deleted the GITHUB token that the process was using. However, the error message was telling me that a function failed to load some other function.</description>
     </item>
     
   </channel>

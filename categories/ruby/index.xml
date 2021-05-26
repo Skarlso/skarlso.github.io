@@ -1,463 +1,67 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Ruby on Ramblings of a cloud engineer</title>
     <link>https://skarlso.github.io/categories/ruby/</link>
     <description>Recent content in Ruby on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-GB</language>
-    <lastBuildDate>Fri, 12 Apr 2019 08:01:00 +0100</lastBuildDate>
-    <atom:link href="https://skarlso.github.io/categories/ruby/index.xml" rel="self" type="application/rss+xml" />
-    
+    <language>en</language>
+    <lastBuildDate>Fri, 12 Apr 2019 08:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/ruby/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Living with a new Parser for a year</title>
       <link>https://skarlso.github.io/2019/04/12/living-with-a-parser/</link>
       <pubDate>Fri, 12 Apr 2019 08:01:00 +0100</pubDate>
+      
       <guid>https://skarlso.github.io/2019/04/12/living-with-a-parser/</guid>
-      <description>&lt;p&gt;Hi folks!&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/hi.jpg&#34; alt=&#34;hi&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Today’s post is a retrospective. I would like to gather some thoughts about living with the new parser that I wrote for &lt;a href=&#34;https://github.com/joshbuddy/jsonpath/&#34;&gt;JsonPath&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;After a little over a year, some interesting problems surfaced that I thought I’d share for people who also would like to endeavor on this path. Let’s begin.&lt;/p&gt;
-&lt;h1 id=&#34;previously&#34;&gt;Previously&lt;/h1&gt;
-&lt;p&gt;About, two years ago, I took over managing / fixing / improving this ruby gem: &lt;a href=&#34;https://github.com/joshbuddy/jsonpath&#34;&gt;Json Parser&lt;/a&gt;. It&amp;rsquo;s a json parser in ruby. Amongst other problems, it used &lt;code&gt;eval&lt;/code&gt; in the background to evaluate expressions. It was a security risk to use this gem to its full extent. Something had to be done about that.&lt;/p&gt;
-&lt;p&gt;I proceeded to write a semi-language parser which replaced eval that can be found here: &lt;a href=&#34;https://github.com/joshbuddy/jsonpath/blob/master/lib/jsonpath/parser.rb&#34;&gt;Parser&lt;/a&gt;. The basic intention was to replace the bare minimum of the eval behavior, and so, it was lacking some serious logic. That got improved as time went by.&lt;/p&gt;
-&lt;p&gt;This is a one year retrospective on living with a self-written parser. Enjoy some of the quirks I faced so you don&amp;rsquo;t have to.&lt;/p&gt;
-&lt;h1 id=&#34;ast&#34;&gt;AST&lt;/h1&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/ast.jpg&#34; alt=&#34;ast&#34;&gt;&lt;/p&gt;
-&lt;p&gt;AST is short for &lt;a href=&#34;https://en.wikipedia.org/wiki/Abstract_syntax_tree&#34;&gt;Abstract Syntax Tree&lt;/a&gt;. It’s a data structure that is ideal for representing and parsing language syntax. All major lexers use some kind of AST in the background like this old Ruby language parser gem: &lt;a href=&#34;https://github.com/whitequark/parser&#34;&gt;Whitequark Parser&lt;/a&gt;. This parser is used by projects like Rubocop and line coverage reports. It&amp;rsquo;s usage is not trivial right out of the box. But as you move along you get a firm grasp of true potential.&lt;/p&gt;
-&lt;p&gt;I decided to not use that parser a year ago mainly because I thought it’s too much for what I’m trying to accomplish. Maybe I was right, maybe not. I tried to play with Parser recently but it’s none trivial nature and lack of documentation makes it cumbersome to use.&lt;/p&gt;
-&lt;h1 id=&#34;the-first-problems&#34;&gt;The first problems&lt;/h1&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/infinity.jpg&#34; alt=&#34;infinity&#34;&gt;&lt;/p&gt;
-&lt;p&gt;What was then the first trouble that arose after I replaced eval? The parser back then was dumbed down a lot. The bug I faced was a simple infinite loop. The parser works like a lexer. It identifies tokens of certain type and tries to parse them into variables. This lexing had an error.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/(\s+)?&amp;#39;?(\w+)?[.,]?(\w+)?&amp;#39;?(\s+)?/&lt;/span&gt;) &lt;span style=&#34;color:#75715e&#34;&gt;# @TODO: At this point I should trim somewhere...&lt;/span&gt;
-&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/(\s+)?&amp;#39;?.*&amp;#39;?(\s+)?/&lt;/span&gt;)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;It was caught by this Json Path:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$.acceptNewTasks.[?(@.taskEndpoint == &amp;quot;mps/awesome&amp;quot;)].lastTaskPollTime
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The culprit was the &lt;code&gt;/&lt;/code&gt; character. The tokenizer wasn’t prepared…&lt;/p&gt;
-&lt;p&gt;Eval would have no problem but the parser is using strict regex-s. This is where an AST would have had more luck.&lt;/p&gt;
-&lt;h1 id=&#34;numbers&#34;&gt;Numbers&lt;/h1&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/twins1.jpg&#34; alt=&#34;twins1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;The second problem was the fact that the parser is using strings. Who would have thought that the string &lt;code&gt;2.0&lt;/code&gt; in fact does not equal to string &lt;code&gt;2&lt;/code&gt;? In Ruby the simplest way of making sure a variable is a Number is by casting the variable to Number or Float. In case it’s not a Number we rescue and move on.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;el &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Float(el) &lt;span style=&#34;color:#66d9ef&#34;&gt;rescue&lt;/span&gt; el
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Incidentally this also solved the problem where the json path contained a number but since everything is a string this, also did not equal: &lt;code&gt;&#39;1&#39; == 1&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;Since first the string needed to be a Number.&lt;/p&gt;
-&lt;h1 id=&#34;supporting-regexes&#34;&gt;Supporting regexes&lt;/h1&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/bouncer1.jpg&#34; alt=&#34;bouncer1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Next came supported operators. The parser only supported the basic operators: &lt;code&gt;&amp;lt;&amp;gt;=&lt;/code&gt;. It was missing &lt;code&gt;=~&lt;/code&gt; from this. Which meant people who would use regexes to filter JSON would no longer be able to do so. This was only a tiny modification actually:&lt;/p&gt;
-&lt;p&gt;First, the operator filter needed to be aware&amp;hellip;&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/(\s+)?[&amp;lt;&amp;gt;=][=&amp;lt;&amp;gt;]?(\s+)?/&lt;/span&gt;)
-&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/(\s+)?[&amp;lt;&amp;gt;=][=~]?(\s+)?/&lt;/span&gt;)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;With that done, we just &lt;code&gt;.to_regexp&lt;/code&gt; it with the power of ruby and &lt;code&gt;send&lt;/code&gt; would automatically pick it up. And of course test coverage.&lt;/p&gt;
-&lt;h1 id=&#34;regression&#34;&gt;Regression&lt;/h1&gt;
-&lt;p&gt;Once the parser was introduced I knew that it would create problems, since eval did many things that the parser could not handle. And they started to arrive slowly. One-by-one.&lt;/p&gt;
-&lt;h2 id=&#34;booleans&#34;&gt;Booleans&lt;/h2&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/twins2.jpg&#34; alt=&#34;twins2&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Aka, the story of &lt;code&gt;true == &#39;true&#39;&lt;/code&gt;&amp;hellip; Inherently working with strings here makes it difficult to detect when the type boolean is meant or a string which happens to say &lt;code&gt;true&lt;/code&gt;. This one was easy to solve as well in the end:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;operand &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;true&amp;#39;&lt;/span&gt;
-            &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;false&amp;#39;&lt;/span&gt;
-            &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;
-            operator&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;to_s&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;strip &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;=~&amp;#39;&lt;/span&gt; ? t&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;to_regexp : t&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;gsub(&lt;span style=&#34;color:#e6db74&#34;&gt;%r{^&amp;#39;|&amp;#39;$}&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;strip &lt;span style=&#34;color:#75715e&#34;&gt;# We also handle regexp here.&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Ignoring the regex part, this was all it needed.&lt;/p&gt;
-&lt;h2 id=&#34;syntax&#34;&gt;Syntax&lt;/h2&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/bouncer3.jpg&#34; alt=&#34;bouncer3&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Some smaller tid-bits here and there also started to crop up. Things that eval did not mind at all, but my poor Parser couldn&amp;rsquo;t handle. The regex started out tightly tied. This meant that certain characters weren&amp;rsquo;t properly detected. Characters like the underscore, or &lt;code&gt;@&lt;/code&gt; or &lt;code&gt;/&lt;/code&gt;&amp;hellip; All these weren&amp;rsquo;t picked up by my tight regexp. I had to widen it a bit using .* at certain places.&lt;/p&gt;
-&lt;h2 id=&#34;number-formatting&#34;&gt;Number formatting&lt;/h2&gt;
-&lt;p&gt;Formatting and comparing numbers gave me a lot of headache. I had to detect whether I’m dealing with a number or a string parsed as a number or a number but that was converted into string or a string that happened to be a number. Geez…&lt;/p&gt;
-&lt;p&gt;I ended up making it simple like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;el &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Float(el) &lt;span style=&#34;color:#66d9ef&#34;&gt;rescue&lt;/span&gt; el
-operand &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Float(operand) &lt;span style=&#34;color:#66d9ef&#34;&gt;rescue&lt;/span&gt; operand
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Basically everything is a number. Doesn’t matter where it came from, what it was in the past… It’s a number if it can be converted. This, of course, also means that a test like this one fails:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;test_number_match&lt;/span&gt;
-    json &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; {
-      &lt;span style=&#34;color:#e6db74&#34;&gt;channels&lt;/span&gt;:&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;
-        {
-          &lt;span style=&#34;color:#e6db74&#34;&gt;elem&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;,
-        },
-        {
-          &lt;span style=&#34;color:#e6db74&#34;&gt;elem&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;1&amp;#39;&lt;/span&gt;
-        }
-      &lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;
-    }&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;to_json
-
-    assert_equal &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;{ &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;elem&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt; }&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;JsonPath&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;on(json, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$..channels[?(@.elem == 1)]&amp;#34;&lt;/span&gt;)
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Both will match… Even though you’d expect it only to match one. Luckily though… this is exactly how &lt;a href=&#34;http://jsonpath.com/&#34;&gt;http://jsonpath.com/&lt;/a&gt; works as well. An AST would detect that it’s a number type… But since I’m parsing strings here, that would be almost impossible a feat to accomplish in a nice manner.&lt;/p&gt;
-&lt;h2 id=&#34;groups&#34;&gt;Groups&lt;/h2&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/parser/bouncer2.jpg&#34; alt=&#34;bouncer2&#34;&gt;&lt;/p&gt;
-&lt;p&gt;And finally, the biggest one… Groups in conditions. A query like this one for example:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$..book[?((@[&#39;author&#39;] == &#39;Evelyn Waugh&#39; || @[&#39;author&#39;] == &#39;Herman Melville&#39; &amp;amp;&amp;amp; (@[&#39;price&#39;] == 33 || @[&#39;price&#39;] == 9))]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Something like this was never parsed correctly. Since the parser didn’t understand grouping and order of evaluation. Let’s break it down. How do we get from a monstrous like that one above to something that can be handled? We take it one group at a time.&lt;/p&gt;
-&lt;h3 id=&#34;parentheses&#34;&gt;Parentheses&lt;/h3&gt;
-&lt;p&gt;As a first step, we make sure that the parentheses match. It’s possible that someone didn’t pay attention and left out a closing parentheses. Now, there are a couple of way of doing that in Ruby, but I went for the most plain blatant one.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;check_parenthesis_count&lt;/span&gt;(exp)
-      &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;unless&lt;/span&gt; exp&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;include?(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;(&amp;#34;&lt;/span&gt;)
-      depth &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;
-      exp&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;chars&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;each &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;c&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; c &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;(&amp;#39;&lt;/span&gt;
-          depth &lt;span style=&#34;color:#f92672&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; c &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;)&amp;#39;&lt;/span&gt;
-          depth &lt;span style=&#34;color:#f92672&#34;&gt;-=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-        &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-      &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-      depth &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;A basic depth counter. We do this first, to avoid parsing an invalid query.&lt;/p&gt;
-&lt;h3 id=&#34;breaking-it-down&#34;&gt;Breaking it down&lt;/h3&gt;
-&lt;p&gt;Next we break down this complex thing into a query that makes more sense to the parser. To do that, we take each group and extract the operation in them and replace it with the value they provide. Meaning a query like the one above essentially should look like this:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;((false || false) &amp;amp;&amp;amp; (false || true))
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Neat. This is handled by this code segment: &lt;a href=&#34;https://github.com/joshbuddy/jsonpath/blob/b2525b8e8c596ddf1c8b40982529300b5a98132b/lib/jsonpath/parser.rb#L112&#34;&gt;Parser&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;The parsing function is called over and over again until there are no parentheses left in the expression. Aka, a single true or false or number remains.&lt;/p&gt;
-&lt;p&gt;Now, who can spot an issue with that? The function &lt;code&gt;bool_or_exp&lt;/code&gt; is there to return a float or a boolean value. If it returns a float, we still &amp;amp;&amp;amp;= -it together with the result&amp;hellip; Thus, if there is a query like this one for example:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$..book[?(@.length-5 &amp;amp;&amp;amp; @.type == &#39;asdf&#39;)]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This would fail horribly. Which means, asking for a specific index in a json in a grouped expression is not supported at the moment.&lt;/p&gt;
-&lt;h3 id=&#34;return-value&#34;&gt;Return Value&lt;/h3&gt;
-&lt;p&gt;The parser doesn’t just return a bool value and call it a day. It also returns indexes like you read above. Indexes in cases when there is a query that returns the location of an item in the node and not if the node contains something or matches some data. For example:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$..book[(@.length-5)]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Returns the length-5-th book.&lt;/p&gt;
-&lt;h1 id=&#34;outstanding-issues&#34;&gt;Outstanding issues&lt;/h1&gt;
-&lt;p&gt;Right now there are two outstanding issues. The one mentioned above, where you can’t nest indexes and true/false notations. And the other is a submitted issue in which it’s described that it’s not possible to use something like this:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$.phoneNumbers[?(@[0].type == &#39;home&#39;)]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Which basically boils down to the fact that Jsonpath can’t handle nested lists like these:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;{
-  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;phoneNumbers&amp;#34;&lt;/span&gt;: [
-    [{
-      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;  : &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;iPhone&amp;#34;&lt;/span&gt;,
-      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;number&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0123-4567-8888&amp;#34;&lt;/span&gt;
-    }],
-    [{
-      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;  : &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;home&amp;#34;&lt;/span&gt;,
-      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;number&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0123-4567-8910&amp;#34;&lt;/span&gt;
-    }]
-  ]
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;That isn’t actually the problem of the parser, but Jsonpath itself.&lt;/p&gt;
-&lt;h1 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h1&gt;
-&lt;p&gt;Like a good marriage, living with a Parser is a lot of compromise and ironing out edges and working on making it better for both parties involved. I have no doubt that there are more bugs in this code, but I&amp;rsquo;m trying to keep it concise and clear to read as much as possible.&lt;/p&gt;
-&lt;p&gt;I hope this was as fun to read as it was to write.&lt;/p&gt;
-&lt;p&gt;Thank you for reading,&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <description>Hi folks!
+Today’s post is a retrospective. I would like to gather some thoughts about living with the new parser that I wrote for JsonPath.
+After a little over a year, some interesting problems surfaced that I thought I’d share for people who also would like to endeavor on this path. Let’s begin.
+Previously About, two years ago, I took over managing / fixing / improving this ruby gem: Json Parser.</description>
     </item>
     
     <item>
       <title>Keep your git forks updated all the time</title>
       <link>https://skarlso.github.io/2018/06/08/fork-updater/</link>
       <pubDate>Fri, 08 Jun 2018 08:01:00 +0100</pubDate>
+      
       <guid>https://skarlso.github.io/2018/06/08/fork-updater/</guid>
-      <description>&lt;p&gt;Hi folks.&lt;/p&gt;
-&lt;p&gt;Today&amp;rsquo;s is a quick tip for keeping your forks updated.&lt;/p&gt;
-&lt;p&gt;If you are like me, and have at least a 100 forks in your repository because:
-* You would like to contribute at some point
-* Save it for yourself because you are afraid that it disappears
-* Would like to make modifications for your own benefit
-* Whatever the reason&lt;/p&gt;
-&lt;p&gt;&amp;hellip;then you probably have a lot of trouble keeping them updated and making sure you always see the latest change.&lt;/p&gt;
-&lt;p&gt;Upstream can change a lot especially if it&amp;rsquo;s a busy repository.&lt;/p&gt;
-&lt;p&gt;Fret not. Help is here. This little ruby script will solve your troubles:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;
-&lt;span style=&#34;color:#75715e&#34;&gt;#!/usr/bin/env ruby&lt;/span&gt;
-
-require &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;octokit&amp;#39;&lt;/span&gt;
-require &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;logger&amp;#39;&lt;/span&gt;
-
-@logger &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Logger&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;new(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;output.log&amp;#34;&lt;/span&gt;)
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;update_fork&lt;/span&gt;(repo)
-  repo_name &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; repo&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;name
-  &lt;span style=&#34;color:#75715e&#34;&gt;# clone the repository -- octokit doesn&amp;#39;t provide this feature as it&amp;#39;s a github api library&lt;/span&gt;
-  @logger&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;info(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;cloning into &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;repo&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;ssh_url&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;)
-  system(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;git clone &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;repo&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;ssh_url&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;repo_name&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;)
-  &lt;span style=&#34;color:#75715e&#34;&gt;# setup upstream for updating&lt;/span&gt;
-  @logger&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;info(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;setup upstream to &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;repo&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;parent&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;ssh_url&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;)
-  system(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;cd &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;repo_name&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; &amp;amp;&amp;amp; git remote add upstream &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;repo&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;parent&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;ssh_url&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;)
-  &lt;span style=&#34;color:#75715e&#34;&gt;# do the update&lt;/span&gt;
-  @logger&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;info(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;doing the update with push&amp;#34;&lt;/span&gt;)
-  system(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;cd &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;repo_name&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; &amp;amp;&amp;amp; git fetch upstream &amp;amp;&amp;amp; git rebase upstream/master &amp;amp;&amp;amp; git push origin&amp;#34;&lt;/span&gt;)
-&lt;span style=&#34;color:#66d9ef&#34;&gt;ensure&lt;/span&gt;
-  &lt;span style=&#34;color:#75715e&#34;&gt;# ensure that the folder is cleaned up&lt;/span&gt;
-  @logger&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;info(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;cleanup: removing the repository folder&amp;#34;&lt;/span&gt;)
-  system(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;rm -fr &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;repo_name&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;)
-&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-
-client &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Octokit&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;Client&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;new(&lt;span style=&#34;color:#e6db74&#34;&gt;:access_token&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;ENV&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;GIT_TOKEN&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;per_page&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;100&lt;/span&gt;)
-repos &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; client&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;repos({}, &lt;span style=&#34;color:#e6db74&#34;&gt;query&lt;/span&gt;: {&lt;span style=&#34;color:#e6db74&#34;&gt;type&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;owner&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;sort&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;asc&amp;#39;&lt;/span&gt;})
-
-&lt;span style=&#34;color:#75715e&#34;&gt;# Go through all the pages and add them to the list of repositories.&lt;/span&gt;
-repos&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;concat(client&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;last_response&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;rels&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;:next&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;].&lt;/span&gt;get&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;data)
-
-repos &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; repos&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;select{ &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;r&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; r&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;fork }
-
-@logger&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;info(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;going to update &amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;repos&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;length&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39; repositories&amp;#34;&lt;/span&gt;)
-
-repos&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;each &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;repo&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
-  &lt;span style=&#34;color:#75715e&#34;&gt;# get the repositories information&lt;/span&gt;
-  @logger&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;info(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;updating &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;repo&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;name&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;)
-  r &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; client&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;repository(repo&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;id)
-  update_fork(r)
-&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This script is also available as a Gist located &lt;a href=&#34;https://gist.github.com/Skarlso/fd5bd5971a78a5fa9760b31683de690e&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;Put this into a cron job, or a Jenkins job on a schedule and you should be good to go.&lt;/p&gt;
-&lt;p&gt;Note two things:
-First: &lt;code&gt;ENV[&#39;GIT_TOKEN&#39;]&lt;/code&gt; this should be set to a token which you can acquire by navigating to
-&lt;a href=&#34;https://github.com/settings/tokens&#34;&gt;tokens&lt;/a&gt;. Add a token which has &lt;code&gt;repo&lt;/code&gt; access.&lt;/p&gt;
-&lt;p&gt;Second: Obviously this script will push to your local repository. So wherever you run this, make sure git is set-up and can push
-to your repository via SSH. This script is using &lt;code&gt;ssh_url&lt;/code&gt; for the repositories. It won&amp;rsquo;t ask for a username or a password.&lt;/p&gt;
-&lt;p&gt;That&amp;rsquo;s it. Enjoy and keep updating.&lt;/p&gt;
-&lt;p&gt;Thanks for reading&lt;/p&gt;
-&lt;p&gt;Gergely.&lt;/p&gt;
-</description>
+      <description>Hi folks.
+Today&amp;rsquo;s is a quick tip for keeping your forks updated.
+If you are like me, and have at least a 100 forks in your repository because: * You would like to contribute at some point * Save it for yourself because you are afraid that it disappears * Would like to make modifications for your own benefit * Whatever the reason
+&amp;hellip;then you probably have a lot of trouble keeping them updated and making sure you always see the latest change.</description>
     </item>
     
     <item>
       <title>Replacing Eval with Object.send and a self written Parser</title>
       <link>https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/</link>
       <pubDate>Sun, 28 May 2017 19:23:00 +0100</pubDate>
+      
       <guid>https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/</guid>
-      <description>&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-&lt;p&gt;A while ago, I was added as a curator for a Gem called &lt;a href=&#34;https://github.com/joshbuddy/jsonpath&#34;&gt;JsonPath&lt;/a&gt;. It&amp;rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.&lt;/p&gt;
-&lt;p&gt;You could opt in using &lt;code&gt;eval&lt;/code&gt; with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like &lt;a href=&#34;https://github.com/huginn/huginn&#34;&gt;Huginn&lt;/a&gt; they had to opt out by default, thus missing out on sweet parsing like this: &lt;code&gt;$..book[?(@[&#39;price&#39;] &amp;gt; 20)]&lt;/code&gt;.&lt;/p&gt;
-&lt;h2 id=&#34;eval&#34;&gt;Eval&lt;/h2&gt;
-&lt;p&gt;In order to remove eval, first I had to understand what it is actually doing. I had to take it apart.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/takeevalapart.jpg&#34; alt=&#34;apart&#34;&gt;&lt;/p&gt;
-&lt;p&gt;After much digging and understanding the code, I found, all it does is perform the given operations on the current node. And if the operation is true, it will select that node, otherwise, return false, and ignore that node.&lt;/p&gt;
-&lt;p&gt;For example &lt;code&gt;$..book[?(@[&#39;price&#39;] &amp;gt; 20)]&lt;/code&gt; could be translated to:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; @_current_node&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;price&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;20&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Checking first if &lt;code&gt;&#39;price&#39;&lt;/code&gt; is even a key in &lt;code&gt;@_current_node&lt;/code&gt;. Once I&amp;rsquo;ve understood this part, I set on trying to fix eval.&lt;/p&gt;
-&lt;h3 id=&#34;safe--4&#34;&gt;SAFE = 4&lt;/h3&gt;
-&lt;p&gt;In ruby, you could extract the part where you Eval and put it into its own proc and set &lt;code&gt;SAFE = 4&lt;/code&gt; which will disable some things like system calls.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;proc &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt;
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;SAFE&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;
-  eval(some_expression)
-&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;call
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;SAFE levels:&lt;/p&gt;
-&lt;p&gt;$SAFE	Description
-0	No checking of the use of externally supplied (tainted) data is performed. This is Ruby&amp;rsquo;s default mode.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;= 1	Ruby disallows the use of tainted data by potentially dangerous operations.
-= 2	Ruby prohibits the loading of program files from globally writable locations.
-= 3	All newly created objects are considered tainted.
-= 4	Ruby effectively partitions the running program in two. None - tainted objects may not be modified. Typically, this will be used to create a sandbox: the program sets up an environment using a lower $SAFE level, then resets $SAFE to 4 to prevent subsequent changes to that environment.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;This has the disadvantage that anything below 4 is just, meh. But nothing above 1 will actually work with JsonPath so&amp;hellip; scratch that.&lt;/p&gt;
-&lt;h3 id=&#34;sandboxing&#34;&gt;Sandboxing&lt;/h3&gt;
-&lt;p&gt;We could technically try and sandbox eval into it&amp;rsquo;s own process with a PID and whitelist methods which are allowed to be called.&lt;/p&gt;
-&lt;p&gt;Not bad, and there are a few gems out there which are trying to do that like &lt;a href=&#34;https://github.com/ukutaht/safe_ruby&#34;&gt;SafeRuby&lt;/a&gt;. But all of these project have been abandoned years ago for a good reason.&lt;/p&gt;
-&lt;h3 id=&#34;objectsend&#34;&gt;Object.send&lt;/h3&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/nobodylikesyou.jpg&#34; alt=&#34;nobodylikesyou&#34;&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;Object.send&lt;/code&gt; is the best way to get some flexibility while still being safe. You basically just call methods on objects by describing said method on an object and giving parameters to it, like:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;send(&lt;span style=&#34;color:#e6db74&#34;&gt;:+&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is a very powerful tool in our toolbox which we will exploit immensely.&lt;/p&gt;
-&lt;p&gt;So let&amp;rsquo;s get to it.&lt;/p&gt;
-&lt;h1 id=&#34;writing-a-parser&#34;&gt;Writing a parser&lt;/h1&gt;
-&lt;p&gt;Writing a parser in Ruby is a very fluid experience. It has nice tools which support that, and the one I used is &lt;code&gt;StringScanner&lt;/code&gt;. It has the ability to track where you are currently at in a string and move a pointer along with regex matches. In fact, JsonPath already employs this method when parsing a json expression. So reusing that logic was in fact&amp;hellip; elementary.&lt;/p&gt;
-&lt;h2 id=&#34;the-expression&#34;&gt;The expression&lt;/h2&gt;
-&lt;p&gt;How do we get from this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$..book&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;?&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;@&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;price&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt; &amp;lt; 20&lt;span style=&#34;color:#f92672&#34;&gt;)]&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;@_current_node&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;price&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;20&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Well. By simple elimination. There are a couple of problems along the way of course. Because this wouldn&amp;rsquo;t be a parser if it couldn&amp;rsquo;t handle ALL the other cases&amp;hellip;&lt;/p&gt;
-&lt;h3 id=&#34;removing-clutter&#34;&gt;Removing Clutter&lt;/h3&gt;
-&lt;p&gt;Some of this we don&amp;rsquo;t need. Like, &lt;code&gt;$..book&lt;/code&gt; part.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/dontneed1.jpg&#34; alt=&#34;dontneed1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;The other things we don&amp;rsquo;t need are all the &lt;code&gt;&#39;[]?()&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/dontneed2.jpg&#34; alt=&#34;dontneed2&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Once this is done, we can move to isolating the important bits.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/takingaim.jpg&#34; alt=&#34;takingaim&#34;&gt;&lt;/p&gt;
-&lt;h3 id=&#34;breakdown&#34;&gt;BreakDown&lt;/h3&gt;
-&lt;h4 id=&#34;elements&#34;&gt;Elements&lt;/h4&gt;
-&lt;p&gt;How does an expression actually look like?&lt;/p&gt;
-&lt;p&gt;Let&amp;rsquo;s break it down.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/confused.jpg&#34; alt=&#34;confused&#34;&gt;&lt;/p&gt;
-&lt;p&gt;So, this is a handful. Operations can be &lt;code&gt;&amp;lt;=,&amp;gt;=,&amp;lt;,&amp;gt;,==,!=&lt;/code&gt; and operands can be either numbers, or words, and element accessor can be nested since something like this is perfectly valid: &lt;code&gt;$..book[?(@.written.year == 1997)]&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/feedline.jpg&#34; alt=&#34;feedline&#34;&gt;&lt;/p&gt;
-&lt;p&gt;To avoid being overwhelmed, ruby has our back with a method called &lt;code&gt;dig&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/dig.jpg&#34; alt=&#34;dig&#34;&gt;&lt;/p&gt;
-&lt;p&gt;This, basically lets us pass in some parameters into a dig function on a hash or an array with variadic parameters, which will go on and access those elements in order how they were supplied. Until it either returns a &lt;code&gt;nil&lt;/code&gt; or an end result.&lt;/p&gt;
-&lt;p&gt;For example:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt; :&lt;span style=&#34;color:#ae81ff&#34;&gt;001&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; a &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; {&lt;span style=&#34;color:#e6db74&#34;&gt;a&lt;/span&gt;: {&lt;span style=&#34;color:#e6db74&#34;&gt;b&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;c&amp;#39;&lt;/span&gt;}}
- &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; {&lt;span style=&#34;color:#e6db74&#34;&gt;:a&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt;{&lt;span style=&#34;color:#e6db74&#34;&gt;:b&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c&amp;#34;&lt;/span&gt;}}
-&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt; :&lt;span style=&#34;color:#ae81ff&#34;&gt;002&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; a&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;dig(&lt;span style=&#34;color:#e6db74&#34;&gt;:a&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;:b&lt;/span&gt;)
- &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c&amp;#34;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Easy. However&amp;hellip; Dig was only added after ruby 2.3 thus, I had to write my own dig for now, until I stop supporting anything below 2.3.&lt;/p&gt;
-&lt;p&gt;At first, I wanted to add it to the hash class, but it proved to be a futile attempt if I wanted to do it nicely, thus the parser got it as a private method.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;dig&lt;/span&gt;(keys, hash)
-      &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; hash &lt;span style=&#34;color:#66d9ef&#34;&gt;unless&lt;/span&gt; hash&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;is_a? &lt;span style=&#34;color:#66d9ef&#34;&gt;Hash&lt;/span&gt;
-      &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;unless&lt;/span&gt; hash&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;key?(keys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;first)
-      &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; hash&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;fetch(keys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;first) &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; keys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;size &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
-      prev &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; keys&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;shift
-      dig(keys, hash&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;fetch(prev))
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And the corresponding regex behind getting a multitude of elements is as follows:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
-&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/\[&amp;#39;\w+&amp;#39;\]+/&lt;/span&gt;)
-&lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;operator&#34;&gt;Operator&lt;/h4&gt;
-&lt;p&gt;Selecting the operator is another interesting part as it can be a single one or multiple and all sorts. Until I realized that no&amp;hellip; it can actually be only a couple.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/whatone.jpg&#34; alt=&#34;whatone&#34;&gt;&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/whattwo.jpg&#34; alt=&#34;whattwo&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Also, after a bit of fiddling and doing and doing a silly case statement first:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;case&lt;/span&gt; op
-&lt;span style=&#34;color:#66d9ef&#34;&gt;when&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;gt;&amp;#39;&lt;/span&gt;
-  dig(@_current_node, &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;elements) &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; operand
-&lt;span style=&#34;color:#66d9ef&#34;&gt;when&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;lt;&amp;#39;&lt;/span&gt;
-  dig(@_current_node, &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;elements) &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; operand
-&lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;
-&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&amp;hellip;I promptly saw that this is not how it should be done.&lt;/p&gt;
-&lt;p&gt;And here comes Object.send.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/send.jpg&#34; alt=&#34;send&#34;&gt;&lt;/p&gt;
-&lt;p&gt;This gave me the opportunity to write this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;dig(elements, @_current_node)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;send(operator, operand)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Much better. Now I could send all the things in the way of a node.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/sendtwo.jpg&#34; alt=&#34;send&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Parsing an op be like:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/\s+[&amp;lt;&amp;gt;=][&amp;lt;&amp;gt;=]?\s+?/&lt;/span&gt;)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;operand&#34;&gt;Operand&lt;/h4&gt;
-&lt;p&gt;Now comes the final piece. The value which we are comparing. This could either be a simple integer, a floating number, or a word. Hah. So coming up with a regex which fits this tightly took a little fiddling, but eventually I ended up with this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;elsif&lt;/span&gt; t &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/(\s+)?&amp;#39;?(\w+)?[.,]?(\w+)?&amp;#39;?(\s+)?/&lt;/span&gt;)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because an this expression &lt;code&gt;$..book[?(@.price)]&lt;/code&gt; is valid. Which is basically just asserting if a given node has a price element.&lt;/p&gt;
-&lt;h4 id=&#34;logical-operators&#34;&gt;Logical Operators&lt;/h4&gt;
-&lt;p&gt;The last thing that remains is logical operators, which if you are using eval, is pretty straight forward. It takes care of anything that you might add in like &lt;code&gt;&amp;amp;&amp;amp;, ||, |, &amp;amp;, ^&lt;/code&gt; etc etc.&lt;/p&gt;
-&lt;p&gt;Now, that&amp;rsquo;s something I did with a case though. Until I find a nicer solution. Since we can already parse a single expression it&amp;rsquo;s just a question of breaking down a multi structure expression as the following one: &lt;code&gt;$..book[?(@[&#39;price&#39;] &amp;gt; 20 &amp;amp;&amp;amp; @.written.year == 1998)]&lt;/code&gt;.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;exps &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; exp&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;split(&lt;span style=&#34;color:#e6db74&#34;&gt;/(&amp;amp;&amp;amp;)|(\|\|)/&lt;/span&gt;)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This splits up the string by either &lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt; or &lt;code&gt;||&lt;/code&gt; and the usage of groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like &lt;code&gt;[true, &#39;&amp;amp;&amp;amp;&#39;, false]&lt;/code&gt;. You know what could immediately resolve this? Yep&amp;hellip;&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://skarlso.github.io/img/saynotoeval.jpg&#34; alt=&#34;saynotoeval&#34;&gt;.&lt;/p&gt;
-&lt;p&gt;I&amp;rsquo;d rather just parse it although technically an eval at this stage wouldn&amp;rsquo;t be that big of a problem&amp;hellip;&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;parse&lt;/span&gt;(exp)
-  exps &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; exp&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;split(&lt;span style=&#34;color:#e6db74&#34;&gt;/(&amp;amp;&amp;amp;)|(\|\|)/&lt;/span&gt;)
-  ret &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; parse_exp(exps&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;shift)
-  exps&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;each_with_index &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;item, index&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;case&lt;/span&gt; item
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;when&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;amp;&amp;amp;&amp;#39;&lt;/span&gt;
-      ret &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;=&lt;/span&gt; parse_exp(exps&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;index &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;)
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;when&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;||&amp;#39;&lt;/span&gt;
-      ret &lt;span style=&#34;color:#f92672&#34;&gt;||=&lt;/span&gt; parse_exp(exps&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;index &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;)
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-  ret
-&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h1 id=&#34;closing-words&#34;&gt;Closing words&lt;/h1&gt;
-&lt;p&gt;That&amp;rsquo;s it folks. The parser is done. And there is no eval being used. There are some more things here that are interesting. Like, array indexing is allowed in jsonpath which is solved by sending &lt;code&gt;.length&lt;/code&gt; to a current node. For example:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/\./&lt;/span&gt;)
-  sym &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/\w+/&lt;/span&gt;)
-  op &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/./&lt;/span&gt;)
-  num &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; scanner&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;scan(&lt;span style=&#34;color:#e6db74&#34;&gt;/\d+/&lt;/span&gt;)
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; @_current_node&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;send(sym&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;to_sym)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;send(op&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;to_sym, num&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;to_i)
-&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;If an expression begins with a &lt;code&gt;.&lt;/code&gt;. So you see that using &lt;code&gt;send&lt;/code&gt; will help a lot, and understanding what eval is trying to evaluate and rather writing your own parser, isn&amp;rsquo;t that hard at all using ruby.&lt;/p&gt;
-&lt;p&gt;I hope you enjoyed reading this little tid-bit as much as I enjoyed writing and drawing it. Leave a comment if your liked the drawings or if you did not and I should never do them again (( I don&amp;rsquo;t really care, this is my blog haha. )). Note to self: I shouldn&amp;rsquo;t draw on the other side of the drawing because of bleed-through.&lt;/p&gt;
-&lt;p&gt;Thank you!
-Gergely.&lt;/p&gt;
-</description>
+      <description>Intro A while ago, I was added as a curator for a Gem called JsonPath. It&amp;rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
+You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $.</description>
     </item>
     
     <item>
       <title>RScrap scraper</title>
       <link>https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/</link>
       <pubDate>Thu, 06 Oct 2016 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/</guid>
-      <description>&lt;h1 id=&#34;intro&#34;&gt;Intro&lt;/h1&gt;
-&lt;p&gt;Hey folks.&lt;/p&gt;
-&lt;p&gt;So, there is this project called &lt;a href=&#34;https://github.com/cantino/huginn&#34;&gt;Huginn&lt;/a&gt; which I absolutely love.&lt;/p&gt;
-&lt;p&gt;But the thing is, that for a couple of scrappers ( at least for me ), I don&amp;rsquo;t want to spin up a whole rails app.&lt;/p&gt;
-&lt;p&gt;Hence, I&amp;rsquo;ve come up with &lt;a href=&#34;https://github.com/Skarlso/rscrap&#34;&gt;RScrap&lt;/a&gt;. Which is a bunch of Ruby scripts run as cron jobs on a raspberry pi. And because I dislike emails as well, and most of the time, I don&amp;rsquo;t read them, I opted for a nicer solution. Enter the world of &lt;a href=&#34;https://telegram.org&#34;&gt;Telegram&lt;/a&gt;. They provide you with the ability to create bots. You basically get an API key, and than using that key, you can send private messages, or even create an interactive bot which you can send messages too.&lt;/p&gt;
-&lt;p&gt;In my simple example, I&amp;rsquo;m using it to send private messages to myself, but I could just as well, make it interactive and than tell it to run one of the scripts.&lt;/p&gt;
-&lt;h1 id=&#34;the-code&#34;&gt;The Code&lt;/h1&gt;
-&lt;p&gt;Let&amp;rsquo;s take a look at what we got.&lt;/p&gt;
-&lt;h2 id=&#34;the-main-scraper&#34;&gt;The main scraper&lt;/h2&gt;
-&lt;p&gt;The main scraper, is simply bunch of convenience methods that wrap handling and working with the database and the telegram bot. That&amp;rsquo;s all. It&amp;rsquo;s very simple. Very short. The Telegram part is just this bit:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;send_message&lt;/span&gt;(text)
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;Telegram&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;Bot&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;Client&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;run(@token) &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;bot&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
-    bot&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;api&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;send_message(&lt;span style=&#34;color:#e6db74&#34;&gt;chat_id&lt;/span&gt;: @id, &lt;span style=&#34;color:#e6db74&#34;&gt;text&lt;/span&gt;: text)
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Straightforward. Creating an interactive bot, would look something like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#!/usr/bin/env ruby&lt;/span&gt;
-require &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;telegram/bot&amp;#39;&lt;/span&gt;
-
-token &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;YOUR_TELEGRAM_BOT_API_TOKEN&amp;#39;&lt;/span&gt;
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;Telegram&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;Bot&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;Client&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;run(token) &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;bot&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
-  bot&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;listen &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;message&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;case&lt;/span&gt; message&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;text
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;when&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;/start&amp;#39;&lt;/span&gt;
-      bot&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;api&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;send_message(&lt;span style=&#34;color:#e6db74&#34;&gt;chat_id&lt;/span&gt;: message&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;chat&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;id, &lt;span style=&#34;color:#e6db74&#34;&gt;text&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Hello, &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;message&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;from&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;first_name&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;)
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;when&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;/stop&amp;#39;&lt;/span&gt;
-      bot&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;api&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;send_message(&lt;span style=&#34;color:#e6db74&#34;&gt;chat_id&lt;/span&gt;: message&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;chat&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;id, &lt;span style=&#34;color:#e6db74&#34;&gt;text&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Bye, &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;message&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;from&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;first_name&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;)
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Basically, it will listen, and than you can send it messages and based on the parsed &lt;code&gt;message.text&lt;/code&gt; you can define functions to call. For example, for rscrap I could define something like &lt;code&gt;run_script(script)&lt;/code&gt;. And the command would be: &lt;code&gt;/run reddit&lt;/code&gt;. Which will execute my reddit script. The possibilities are endless.&lt;/p&gt;
-&lt;h2 id=&#34;the-scripts&#34;&gt;The scripts&lt;/h2&gt;
-&lt;p&gt;The scripts use nokogiri to parse a web page, and than return a URL which will be sent by the TelegramBot. They are also saved in the database so that when a new comic strip comes out, I know that it&amp;rsquo;s new. For reddit, I&amp;rsquo;m saving a timestamp as well, and I collect everything after that timestamp through the reddit API as JSON, and send it as a bundled message with shortified links to the posts using bit.ly.&lt;/p&gt;
-&lt;p&gt;The scraping is most of the times the same for every comic. Thus, there is a helper method for it. The script itself, is very short. For example, lets look at gunnerkrigg court.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;require_relative &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;../rscrap&amp;#39;&lt;/span&gt;
-require &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;nokogiri&amp;#39;&lt;/span&gt;
-require &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;open-uri&amp;#39;&lt;/span&gt;
-
-url &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;http://www.gunnerkrigg.com&amp;#39;&lt;/span&gt;
-scrap &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Rscrap&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;new
-page &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Nokogiri&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;HTML&lt;/span&gt;(open(url))
-comic_id &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; page&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;css(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;img.comic_image&amp;#39;&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;].&lt;/span&gt;select { &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;e&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; e &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; e&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;src&amp;#39;&lt;/span&gt; }&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;][&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;
-new_comic &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;#{&lt;/span&gt;url&lt;span style=&#34;color:#e6db74&#34;&gt;}#{&lt;/span&gt;comic_id&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
-scrap&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;send_new_comic(url, new_comic)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The interesting part of it is this bit: &lt;code&gt;comic_id = page.css(&#39;img.comic_image&#39;)[0].select { |e| e if e[0] == &#39;src&#39; }[0][1]&lt;/code&gt;. It extracts the URL for the comic image, and stores it as an &amp;ldquo;id&amp;rdquo; of the comic. This than, is sent as a message which Telegram will embed. There is no need to visit the web page, the image is in your feed and you can view it directly. Just like an RSS ready.&lt;/p&gt;
-&lt;h2 id=&#34;cron&#34;&gt;Cron&lt;/h2&gt;
-&lt;p&gt;These scripts are best used in a cron job. The comics are usually running with a daily frequency, where as the reddit gatherer is running with an hour frequency. Basically, I&amp;rsquo;m receiving updates on an hourly basis if there are new posts by then. Running ruby from cron was a bit tricky. I&amp;rsquo;m using bundler for the environment, and came up with this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt; 6-23 * * * /bin/bash -l -c &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/reddit.rb&amp;#39;&lt;/span&gt;
-&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt; 8,22 * * * /bin/bash -l -c &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/gunnerkrigg.rb&amp;#39;&lt;/span&gt;
-&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt; 8,22 * * * /bin/bash -l -c &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/aws_blog.rb&amp;#39;&lt;/span&gt;
-&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt; 5,23 * * * /bin/bash -l -c &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/goblinscomic.rb&amp;#39;&lt;/span&gt;
-&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt; 6,20 * * * /bin/bash -l -c &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/xkcd.rb&amp;#39;&lt;/span&gt;
-&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt; 7,19 * * * /bin/bash -l -c &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/commitstrip.rb&amp;#39;&lt;/span&gt;
-&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt; * * * /bin/bash -l -c &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cd /home/&amp;lt;youruser&amp;gt;/rubyproj/rscrap &amp;amp;&amp;amp; bundle exec ruby scripts/sequiential_art.rb&amp;#39;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And a telegram message for all these things, looks like this:
-Reddit:
-&lt;img src=&#34;https://github.com/Skarlso/rscrap/raw/master/shorten.png&#34; alt=&#34;TelegramIMReddit&#34;&gt;
-Comics:
-&lt;img src=&#34;https://github.com/Skarlso/rscrap/raw/master/rscrap2.png&#34; alt=&#34;TelegramIMComics&#34;&gt;&lt;/p&gt;
-&lt;h1 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h1&gt;
-&lt;p&gt;That&amp;rsquo;s it folks. Adding a new scraper is easy. I added the aws blog as a new entry as well by just copying the comics scripts. And I&amp;rsquo;m also getting Weather Reports delivered every morning to me.&lt;/p&gt;
-&lt;p&gt;Have fun. Any questions, please feel free to leave a comment!&lt;/p&gt;
-&lt;p&gt;Thanks,
-Gergely.&lt;/p&gt;
-</description>
+      <description>Intro Hey folks.
+So, there is this project called Huginn which I absolutely love.
+But the thing is, that for a couple of scrappers ( at least for me ), I don&amp;rsquo;t want to spin up a whole rails app.
+Hence, I&amp;rsquo;ve come up with RScrap. Which is a bunch of Ruby scripts run as cron jobs on a raspberry pi. And because I dislike emails as well, and most of the time, I don&amp;rsquo;t read them, I opted for a nicer solution.</description>
     </item>
     
     <item>
       <title>Ruby Sieve</title>
       <link>https://skarlso.github.io/2016/07/12/ruby-sieve/</link>
       <pubDate>Tue, 12 Jul 2016 00:00:00 +0000</pubDate>
+      
       <guid>https://skarlso.github.io/2016/07/12/ruby-sieve/</guid>
-      <description>&lt;p&gt;Though it could be done better, I&amp;rsquo;m sure, but I&amp;rsquo;m actually pretty satisfied with this one. It loops only twice as opposed to filtered ranges and whatnot other solutions to the sieve. I was thinking of rather creating a list and deleting elements from it, but that&amp;rsquo;s already three loops.&lt;/p&gt;
-&lt;p&gt;Maybe I&amp;rsquo;ll do a benchmark later on more solutions.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Sieve contains a function to return a set of primes&lt;/span&gt;
-&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Sieve&lt;/span&gt;
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;initialize&lt;/span&gt;(n)
-    @n &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; n
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-
-  &lt;span style=&#34;color:#75715e&#34;&gt;# Returns a list of primes up to a certain limit&lt;/span&gt;
-  &lt;span style=&#34;color:#75715e&#34;&gt;# @param n limit&lt;/span&gt;
-  &lt;span style=&#34;color:#75715e&#34;&gt;# @return list of primes&lt;/span&gt;
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;primes&lt;/span&gt;
-    marked &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt;
-    primes &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt;
-    (&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;..&lt;/span&gt;@n)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;each &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;e&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
-      &lt;span style=&#34;color:#66d9ef&#34;&gt;unless&lt;/span&gt; marked&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;include?(e)
-        primes&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;push e
-        (e&lt;span style=&#34;color:#f92672&#34;&gt;..&lt;/span&gt;@n)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;step(e) { &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;s&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; marked&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;push s }
-      &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-    &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-    primes
-  &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Cheers,
-Gergely.&lt;/p&gt;
-</description>
+      <description>Though it could be done better, I&amp;rsquo;m sure, but I&amp;rsquo;m actually pretty satisfied with this one. It loops only twice as opposed to filtered ranges and whatnot other solutions to the sieve. I was thinking of rather creating a list and deleting elements from it, but that&amp;rsquo;s already three loops.
+Maybe I&amp;rsquo;ll do a benchmark later on more solutions.
+1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21  # Sieve contains a function to return a set of primes class Sieve def initialize(n) @n = n end # Returns a list of primes up to a certain limit # @param n limit # @return list of primes def primes marked = [] primes = [] (2.</description>
     </item>
     
   </channel>

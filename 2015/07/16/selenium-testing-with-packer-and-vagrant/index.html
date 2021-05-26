@@ -1,434 +1,820 @@
 <!DOCTYPE html>
-<html class="nojs" lang="en-GB" dir="ltr">
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-<title>Selenium Testing with Packer and Vagrant – Ramblings of a cloud engineer</title>
-<meta name="description" content="So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they …">
-<meta name="created" content="2015-07-16T00:00:00+0000">
-<meta name="modified" content="2015-07-16T00:00:00+0000">
-<meta name="author" content="hannibal">
-<meta name="contact" content="skarslo777@gmail.com">
-<meta property="og:site_name" content="Ramblings of a cloud engineer">
-<meta property="og:title" content="Selenium Testing with Packer and Vagrant">
-<meta property="og:url" content="https://skarlso.github.io/2015/07/16/selenium-testing-with-packer-and-vagrant/">
-<meta property="og:type" content="article">
-<meta property="og:image" content="https://skarlso.github.io/apple-touch-icon.png">
-<meta name="generator" content="Hugo 0.83.1" />
-<meta name="msapplication-TileColor" content="#ffffff">
-<meta name="theme-color" content="#ffffff">
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Selenium Testing with Packer and Vagrant - Ramblings of a cloud engineer</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
 
 
-<link rel="canonical" href="https://skarlso.github.io/2015/07/16/selenium-testing-with-packer-and-vagrant/">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="author" content="hannibal" /><meta name="description" content="So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution.
+" />
 
-<link rel="stylesheet" href="/css/mobile.2ab74aa64785dcab8114959e76ca140cf76207cd85989bc6d4fc3b12f734a09e.css" media="screen">
-<link rel="stylesheet" href="/css/styles.934ca64e1cd8b39bd18393dc4fa4788aab68ce041fa7830964c671eed3da2b40.css">
-<link rel="stylesheet" href="/css/print.27fc184f8670f41a2690985390779e7b20335a8fadff8fa015cf9417ffe50c36.css" media="print">
 
-<script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    "headline": "Selenium Testing with Packer and Vagrant",
-    "datePublished": "2015-07-16T00:00:00Z",
-    "dateModified": "2015-07-16T00:00:00Z",
-    "url" : "https://skarlso.github.io/2015/07/16/selenium-testing-with-packer-and-vagrant/",
-    "description": "So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they …",
-    "keywords": ["jenkins","Packer","vagrant"],
-    "image" : "https://skarlso.github.io/apple-touch-icon.png",
-    "author": {
-      "@type": "Person",
-      "name": "hannibal"
-    },
-    "mainEntityOfPage": {
-      "@type": "WebPage",
-      "@id": "https://skarlso.github.io"
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "Ramblings of a cloud engineer",
-      "logo" : {
-        "@type": "ImageObject",
-        "url": "https://skarlso.github.io/apple-touch-icon.png"
-      },
-      "url": "https://skarlso.github.io"
-    }
-  }
-</script>
 
-<script src="/js/script-early.min.3b0e641814c87f6a1d6ffa5e7d597f29faa8ce11482541e8801dc34013817c91.js"></script>
-<script defer src="/js/lib/umbrella.min.6e17830ccdded0a13b96d6993865b58202bc2ee750e5892a51858ab048b2bebb.js"></script>
-<script defer src="/js/mobile.min.abb9438113cb72181ecda30b9375cc0771c7ce2e7354414a7c1296b45cf47135.js"></script>
-<script defer src="/js/script.min.a71d161caff0970fa29a345da3bd9b444f629eccf1e4922585879b44f8f30160.js"></script>
 
-<script src="/js/tracking.min.cab571d19167308ad205e765770573e4bae7f3dab20f07533ba563eea84c8202.js"></script>
 
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-	ga('create', 'UA-69463020-2', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
+
+<meta name="generator" content="Hugo 0.83.1 with theme even" />
+
+
+<link rel="canonical" href="https://skarlso.github.io/2015/07/16/selenium-testing-with-packer-and-vagrant/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
+
+
+
+<meta property="og:title" content="Selenium Testing with Packer and Vagrant" />
+<meta property="og:description" content="So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://skarlso.github.io/2015/07/16/selenium-testing-with-packer-and-vagrant/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2015-07-16T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2015-07-16T00:00:00&#43;00:00" />
+
+<meta itemprop="name" content="Selenium Testing with Packer and Vagrant">
+<meta itemprop="description" content="So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution."><meta itemprop="datePublished" content="2015-07-16T00:00:00&#43;00:00" />
+<meta itemprop="dateModified" content="2015-07-16T00:00:00&#43;00:00" />
+<meta itemprop="wordCount" content="1711">
+<meta itemprop="keywords" content="jenkins,Packer,vagrant," /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Selenium Testing with Packer and Vagrant"/>
+<meta name="twitter:description" content="So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution."/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
 
 </head>
-
-<body class="single-page">
-<div class="page layout__page layout__sidebar-second">
-<header class="header layout__header">
-<a href="/" title="Home" rel="home" class="header__logo"><img src="/images/logo.png" alt="Home" class="header__logo-image"></a>
-<h1 class="header__site-name">
-<a href="/" title="Home" class="header__site-link" rel="home"><span>Ramblings of a cloud engineer</span></a>
-</h1>
-<div class="region header__region">
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">Ramblings of a cloud engineer</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
 </div>
-</header>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/blog/">
+        <li class="mobile-menu-item">Archive</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">Tags</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">Categories</li>
+      </a>
+  </ul>
 
-<nav class="main-menu layout__navigation">
-<h2 class="visually-hidden">Main menu</h2>
-<ul class="navbar">
-<li><a href="/">Home</a></li>
-<li><a href="/blog/" class="active" aria-current="page">Blog</a></li>
-</ul>
+  
+
+
 </nav>
 
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">Ramblings of a cloud engineer</a>
+</div>
 
-<main class="main layout__main">
-<article class="section-blog single-view">
-<header>
-<h1 class="title title-submitted">Selenium Testing with Packer and Vagrant</h1>
-<div class="submitted">
-<span class="author" itemprop="author">hannibal</span> - <time class="created-date" datetime="2015-07-16T00:00:00Z">16 July, 2015</time>
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/blog/">Archive</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">Tags</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">Categories</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Selenium Testing with Packer and Vagrant</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2015-07-16 </span>
+        <div class="post-category">
+            <a href="/categories/devops/"> devops </a>
+            <a href="/categories/problem-solving/"> problem solving </a>
+            </div>
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#same-old">Same old.</a></li>
+    <li><a href="#installation">Installation</a>
+      <ul>
+        <li>
+          <ul>
+            <li></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#provision">Provision</a>
+      <ul>
+        <li>
+          <ul>
+            <li></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#vagrant-and-using-the-packer-box">Vagrant and Using the Packer Box</a>
+      <ul>
+        <li>
+          <ul>
+            <li></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#closing-words">Closing words</a></li>
+  </ul>
+</nav>
+  </div>
 </div>
-<div class="tags">
-Tags:
-<ul>
-<li><a href="/tags/jenkins">jenkins</a></li>
-<li><a href="/tags/packer">Packer</a></li>
-<li><a href="/tags/vagrant">vagrant</a></li>
-</ul>
-</div>
-</header>
-<div class="content">
-<p>So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution.</p>
+    <div class="post-content">
+      <p>So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution.</p>
 <h1 id="same-old">Same old.</h1>
 <p>Same as in my previous post, we are going to build a Windows Machine for this purpose. The only addition to my previous settings, will be some Java install, downloading selenium and installing Chrome, and Firefox.</p>
 <h1 id="installation">Installation</h1>
 <h4 id="answer-file">Answer File</h4>
 <p>Here is the configuration and setup of Windows before the provision phase.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml">
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-xml" data-lang="xml">
 ...
-               <span style="color:#f92672">&lt;SynchronousCommand</span> <span style="color:#a6e22e">wcm:action=</span><span style="color:#e6db74">&#34;add&#34;</span><span style="color:#f92672">&gt;</span>
-                  <span style="color:#f92672">&lt;CommandLine&gt;</span>cmd.exe /c C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\jdk_inst.ps1 -AutoStart<span style="color:#f92672">&lt;/CommandLine&gt;</span>
-                  <span style="color:#f92672">&lt;Description&gt;</span>Install Java<span style="color:#f92672">&lt;/Description&gt;</span>
-                  <span style="color:#f92672">&lt;Order&gt;</span>103<span style="color:#f92672">&lt;/Order&gt;</span>
-                  <span style="color:#f92672">&lt;RequiresUserInput&gt;</span>true<span style="color:#f92672">&lt;/RequiresUserInput&gt;</span>
-               <span style="color:#f92672">&lt;/SynchronousCommand&gt;</span>
+               <span class="nt">&lt;SynchronousCommand</span> <span class="na">wcm:action=</span><span class="s">&#34;add&#34;</span><span class="nt">&gt;</span>
+                  <span class="nt">&lt;CommandLine&gt;</span>cmd.exe /c C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\jdk_inst.ps1 -AutoStart<span class="nt">&lt;/CommandLine&gt;</span>
+                  <span class="nt">&lt;Description&gt;</span>Install Java<span class="nt">&lt;/Description&gt;</span>
+                  <span class="nt">&lt;Order&gt;</span>103<span class="nt">&lt;/Order&gt;</span>
+                  <span class="nt">&lt;RequiresUserInput&gt;</span>true<span class="nt">&lt;/RequiresUserInput&gt;</span>
+               <span class="nt">&lt;/SynchronousCommand&gt;</span>
 ...
-</code></pre></div><p>This is the part were I&rsquo;m installing Java. The script for the jdk_inst.ps1 is in my previous post, but I&rsquo;ll paste it here for ease of read.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-powershell" data-lang="powershell">
-<span style="color:#66d9ef">function</span> LogWrite {
-   <span style="color:#66d9ef">Param</span> (<span style="color:#66d9ef">[string]</span>$logstring)
-   $now = Get-Date -format s
-   Add-Content $Logfile -value <span style="color:#e6db74">&#34;$now $logstring&#34;</span>
-   Write-Host $logstring
-}
+</code></pre></td></tr></table>
+</div>
+</div><p>This is the part were I&rsquo;m installing Java. The script for the jdk_inst.ps1 is in my previous post, but I&rsquo;ll paste it here for ease of read.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-powershell" data-lang="powershell">
+<span class="k">function</span> <span class="n">LogWrite</span> <span class="p">{</span>
+   <span class="k">Param</span> <span class="p">(</span><span class="no">[string]</span><span class="nv">$logstring</span><span class="p">)</span>
+   <span class="nv">$now</span> <span class="p">=</span> <span class="nb">Get-Date</span> <span class="n">-format</span> <span class="n">s</span>
+   <span class="nb">Add-Content</span> <span class="nv">$Logfile</span> <span class="n">-value</span> <span class="s2">&#34;$now $logstring&#34;</span>
+   <span class="nb">Write-Host</span> <span class="nv">$logstring</span>
+<span class="p">}</span>
 
-$Logfile = <span style="color:#e6db74">&#34;C:\Windows\Temp\jdk-install.log&#34;</span>
+<span class="nv">$Logfile</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\jdk-install.log&#34;</span>
 
-$JDK_VER=<span style="color:#e6db74">&#34;7u75&#34;</span>
-$JDK_FULL_VER=<span style="color:#e6db74">&#34;7u75-b13&#34;</span>
-$JDK_PATH=<span style="color:#e6db74">&#34;1.7.0_75&#34;</span>
-$source86 = <span style="color:#e6db74">&#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-i586.exe&#34;</span>
-$source64 = <span style="color:#e6db74">&#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-x64.exe&#34;</span>
-$destination86 = <span style="color:#e6db74">&#34;C:\Windows\Temp\$JDK_VER-x86.exe&#34;</span>
-$destination64 = <span style="color:#e6db74">&#34;C:\Windows\Temp\$JDK_VER-x64.exe&#34;</span>
-$client = new-object System.Net.WebClient
-$cookie = <span style="color:#e6db74">&#34;oraclelicense=accept-securebackup-cookie&#34;</span>
-$client.Headers.Add(<span style="color:#66d9ef">[System.Net.HttpRequestHeader]</span>::Cookie, $cookie)
+<span class="nv">$JDK_VER</span><span class="p">=</span><span class="s2">&#34;7u75&#34;</span>
+<span class="nv">$JDK_FULL_VER</span><span class="p">=</span><span class="s2">&#34;7u75-b13&#34;</span>
+<span class="nv">$JDK_PATH</span><span class="p">=</span><span class="s2">&#34;1.7.0_75&#34;</span>
+<span class="nv">$source86</span> <span class="p">=</span> <span class="s2">&#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-i586.exe&#34;</span>
+<span class="nv">$source64</span> <span class="p">=</span> <span class="s2">&#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-x64.exe&#34;</span>
+<span class="nv">$destination86</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\$JDK_VER-x86.exe&#34;</span>
+<span class="nv">$destination64</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\$JDK_VER-x64.exe&#34;</span>
+<span class="nv">$client</span> <span class="p">=</span> <span class="nb">new-object</span> <span class="n">System</span><span class="p">.</span><span class="n">Net</span><span class="p">.</span><span class="n">WebClient</span>
+<span class="nv">$cookie</span> <span class="p">=</span> <span class="s2">&#34;oraclelicense=accept-securebackup-cookie&#34;</span>
+<span class="nv">$client</span><span class="p">.</span><span class="n">Headers</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="no">[System.Net.HttpRequestHeader]</span><span class="p">::</span><span class="n">Cookie</span><span class="p">,</span> <span class="nv">$cookie</span><span class="p">)</span>
 
-LogWrite <span style="color:#e6db74">&#34;Setting Execution Policy level to Bypass&#34;</span>
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Bypass -Force
+<span class="n">LogWrite</span> <span class="s2">&#34;Setting Execution Policy level to Bypass&#34;</span>
+<span class="nb">Set-ExecutionPolicy</span> <span class="n">-Scope</span> <span class="n">CurrentUser</span> <span class="n">-ExecutionPolicy</span> <span class="n">Bypass</span> <span class="n">-Force</span>
 
-LogWrite <span style="color:#e6db74">&#39;Checking if Java is already installed&#39;</span>
-<span style="color:#66d9ef">if</span> ((Test-Path <span style="color:#e6db74">&#34;c:\Program Files (x86)\Java&#34;</span>) <span style="color:#f92672">-Or</span> (Test-Path <span style="color:#e6db74">&#34;c:\Program Files\Java&#34;</span>)) {
-    LogWrite <span style="color:#e6db74">&#39;No need to Install Java&#39;</span>
-    Exit
-}
+<span class="n">LogWrite</span> <span class="s1">&#39;Checking if Java is already installed&#39;</span>
+<span class="k">if</span> <span class="p">((</span><span class="nb">Test-Path</span> <span class="s2">&#34;c:\Program Files (x86)\Java&#34;</span><span class="p">)</span> <span class="o">-Or</span> <span class="p">(</span><span class="nb">Test-Path</span> <span class="s2">&#34;c:\Program Files\Java&#34;</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;No need to Install Java&#39;</span>
+    <span class="n">Exit</span>
+<span class="p">}</span>
 
-LogWrite <span style="color:#e6db74">&#39;Downloading x86 to $destination86&#39;</span>
-<span style="color:#66d9ef">try</span> {
-  $client.downloadFile($source86, $destination86)
-  <span style="color:#66d9ef">if</span> (!(Test-Path $destination86)) {
-      LogWrite <span style="color:#e6db74">&#34;Downloading $destination86 failed&#34;</span>
-      Exit
-  }
-  LogWrite <span style="color:#e6db74">&#39;Downloading x64 to $destination64&#39;</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Downloading x86 to $destination86&#39;</span>
+<span class="k">try</span> <span class="p">{</span>
+  <span class="nv">$client</span><span class="p">.</span><span class="n">downloadFile</span><span class="p">(</span><span class="nv">$source86</span><span class="p">,</span> <span class="nv">$destination86</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(!(</span><span class="nb">Test-Path</span> <span class="nv">$destination86</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">LogWrite</span> <span class="s2">&#34;Downloading $destination86 failed&#34;</span>
+      <span class="n">Exit</span>
+  <span class="p">}</span>
+  <span class="n">LogWrite</span> <span class="s1">&#39;Downloading x64 to $destination64&#39;</span>
 
-  $client.downloadFile($source64, $destination64)
-  <span style="color:#66d9ef">if</span> (!(Test-Path $destination64)) {
-      LogWrite <span style="color:#e6db74">&#34;Downloading $destination64 failed&#34;</span>
-      Exit
-  }
-} <span style="color:#66d9ef">catch</span> <span style="color:#66d9ef">[Exception]</span> {
-  LogWrite <span style="color:#e6db74">&#39;$_.Exception is&#39;</span> $_.Exception
-}
+  <span class="nv">$client</span><span class="p">.</span><span class="n">downloadFile</span><span class="p">(</span><span class="nv">$source64</span><span class="p">,</span> <span class="nv">$destination64</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(!(</span><span class="nb">Test-Path</span> <span class="nv">$destination64</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">LogWrite</span> <span class="s2">&#34;Downloading $destination64 failed&#34;</span>
+      <span class="n">Exit</span>
+  <span class="p">}</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[Exception]</span> <span class="p">{</span>
+  <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+<span class="p">}</span>
 
-<span style="color:#66d9ef">try</span> {
-    LogWrite <span style="color:#e6db74">&#39;Installing JDK-x64&#39;</span>
-    $proc1 = Start-Process -FilePath <span style="color:#e6db74">&#34;$destination64&#34;</span> -ArgumentList <span style="color:#e6db74">&#34;/s REBOOT=ReallySuppress&#34;</span> -Wait -PassThru
-    $proc1.waitForExit()
-    LogWrite <span style="color:#e6db74">&#39;Installation Done.&#39;</span>
+<span class="k">try</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Installing JDK-x64&#39;</span>
+    <span class="nv">$proc1</span> <span class="p">=</span> <span class="nb">Start-Process</span> <span class="n">-FilePath</span> <span class="s2">&#34;$destination64&#34;</span> <span class="n">-ArgumentList</span> <span class="s2">&#34;/s REBOOT=ReallySuppress&#34;</span> <span class="n">-Wait</span> <span class="n">-PassThru</span>
+    <span class="nv">$proc1</span><span class="p">.</span><span class="n">waitForExit</span><span class="p">()</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Installation Done.&#39;</span>
 
-    LogWrite <span style="color:#e6db74">&#39;Installing JDK-x86&#39;</span>
-    $proc2 = Start-Process -FilePath <span style="color:#e6db74">&#34;$destination86&#34;</span> -ArgumentList <span style="color:#e6db74">&#34;/s REBOOT=ReallySuppress&#34;</span> -Wait -PassThru
-    $proc2.waitForExit()
-    LogWrite <span style="color:#e6db74">&#39;Installtion Done.&#39;</span>
-} <span style="color:#66d9ef">catch</span> <span style="color:#66d9ef">[exception]</span> {
-    LogWrite <span style="color:#e6db74">&#39;$_ is&#39;</span> $_
-    LogWrite <span style="color:#e6db74">&#39;$_.GetType().FullName is&#39;</span> $_.GetType().FullName
-    LogWrite <span style="color:#e6db74">&#39;$_.Exception is&#39;</span> $_.Exception
-    LogWrite <span style="color:#e6db74">&#39;$_.Exception.GetType().FullName is&#39;</span> $_.Exception.GetType().FullName
-    LogWrite <span style="color:#e6db74">&#39;$_.Exception.Message is&#39;</span> $_.Exception.Message
-}
+    <span class="n">LogWrite</span> <span class="s1">&#39;Installing JDK-x86&#39;</span>
+    <span class="nv">$proc2</span> <span class="p">=</span> <span class="nb">Start-Process</span> <span class="n">-FilePath</span> <span class="s2">&#34;$destination86&#34;</span> <span class="n">-ArgumentList</span> <span class="s2">&#34;/s REBOOT=ReallySuppress&#34;</span> <span class="n">-Wait</span> <span class="n">-PassThru</span>
+    <span class="nv">$proc2</span><span class="p">.</span><span class="n">waitForExit</span><span class="p">()</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Installtion Done.&#39;</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[exception]</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_ is&#39;</span> <span class="nv">$_</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.GetType().FullName is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">GetType</span><span class="p">().</span><span class="n">FullName</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception.GetType().FullName is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span><span class="p">.</span><span class="n">GetType</span><span class="p">().</span><span class="n">FullName</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception.Message is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span><span class="p">.</span><span class="n">Message</span>
+<span class="p">}</span>
 
-<span style="color:#66d9ef">if</span> ((Test-Path <span style="color:#e6db74">&#34;c:\Program Files (x86)\Java&#34;</span>) <span style="color:#f92672">-Or</span> (Test-Path <span style="color:#e6db74">&#34;c:\Program Files\Java&#34;</span>)) {
-    LogWrite <span style="color:#e6db74">&#39;Java installed successfully.&#39;</span>
-} <span style="color:#66d9ef">else</span> {
-    LogWrite <span style="color:#e6db74">&#39;Java install Failed!&#39;</span>
-}
-LogWrite <span style="color:#e6db74">&#39;Setting up Path variables.&#39;</span>
-<span style="color:#66d9ef">[System.Environment]</span>::SetEnvironmentVariable(<span style="color:#e6db74">&#34;JAVA_HOME&#34;</span>, <span style="color:#e6db74">&#34;c:\Program Files (x86)\Java\jdk$JDK_PATH&#34;</span>, <span style="color:#e6db74">&#34;Machine&#34;</span>)
-<span style="color:#66d9ef">[System.Environment]</span>::SetEnvironmentVariable(<span style="color:#e6db74">&#34;PATH&#34;</span>, $Env:Path + <span style="color:#e6db74">&#34;;c:\Program Files (x86)\Java\jdk$JDK_PATH\bin&#34;</span>, <span style="color:#e6db74">&#34;Machine&#34;</span>)
-LogWrite <span style="color:#e6db74">&#39;Done. Goodbye.&#39;</span>
-</code></pre></div><p>This installs both x86 and 64 bit version of Java.</p>
+<span class="k">if</span> <span class="p">((</span><span class="nb">Test-Path</span> <span class="s2">&#34;c:\Program Files (x86)\Java&#34;</span><span class="p">)</span> <span class="o">-Or</span> <span class="p">(</span><span class="nb">Test-Path</span> <span class="s2">&#34;c:\Program Files\Java&#34;</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Java installed successfully.&#39;</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Java install Failed!&#39;</span>
+<span class="p">}</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Setting up Path variables.&#39;</span>
+<span class="no">[System.Environment]</span><span class="p">::</span><span class="n">SetEnvironmentVariable</span><span class="p">(</span><span class="s2">&#34;JAVA_HOME&#34;</span><span class="p">,</span> <span class="s2">&#34;c:\Program Files (x86)\Java\jdk$JDK_PATH&#34;</span><span class="p">,</span> <span class="s2">&#34;Machine&#34;</span><span class="p">)</span>
+<span class="no">[System.Environment]</span><span class="p">::</span><span class="n">SetEnvironmentVariable</span><span class="p">(</span><span class="s2">&#34;PATH&#34;</span><span class="p">,</span> <span class="nv">$Env:Path</span> <span class="p">+</span> <span class="s2">&#34;;c:\Program Files (x86)\Java\jdk$JDK_PATH\bin&#34;</span><span class="p">,</span> <span class="s2">&#34;Machine&#34;</span><span class="p">)</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Done. Goodbye.&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This installs both x86 and 64 bit version of Java.</p>
 <h1 id="provision">Provision</h1>
 <p>I decided to put these into the provision phase to get log messages written out properly. Because in the unattended file, you can&rsquo;t see any progress.</p>
 <h4 id="chrome-and-firefox">Chrome And Firefox</h4>
 <p>Installing these two proved a little bit more difficult. Chrome didn&rsquo;t really like me to download their installer without accepting something first, like Java. Luckily, after a LOT of digging, I found a chrome installer which lets you install silently. Here is the script to install the two.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-powershell" data-lang="powershell">
-<span style="color:#66d9ef">function</span> LogWrite {
-    <span style="color:#66d9ef">Param</span> (<span style="color:#66d9ef">[string]</span>$logstring)
-    $now = Get-Date -format s
-    Add-Content $Logfile -value <span style="color:#e6db74">&#34;$now $logstring&#34;</span>
-    Write-Host $logstring
-}
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-powershell" data-lang="powershell">
+<span class="k">function</span> <span class="n">LogWrite</span> <span class="p">{</span>
+    <span class="k">Param</span> <span class="p">(</span><span class="no">[string]</span><span class="nv">$logstring</span><span class="p">)</span>
+    <span class="nv">$now</span> <span class="p">=</span> <span class="nb">Get-Date</span> <span class="n">-format</span> <span class="n">s</span>
+    <span class="nb">Add-Content</span> <span class="nv">$Logfile</span> <span class="n">-value</span> <span class="s2">&#34;$now $logstring&#34;</span>
+    <span class="nb">Write-Host</span> <span class="nv">$logstring</span>
+<span class="p">}</span>
 
-<span style="color:#66d9ef">function</span> CheckLocation {
-    <span style="color:#66d9ef">Param</span> (<span style="color:#66d9ef">[string]</span>$location)
-    <span style="color:#66d9ef">if</span> (!(Test-Path  $location)) {
-        <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">[System.IO.FileNotFoundException]</span> <span style="color:#e6db74">&#34;Could not download to Destination $location.&#34;</span>
-    }
-}
+<span class="k">function</span> <span class="n">CheckLocation</span> <span class="p">{</span>
+    <span class="k">Param</span> <span class="p">(</span><span class="no">[string]</span><span class="nv">$location</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(!(</span><span class="nb">Test-Path</span>  <span class="nv">$location</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">throw</span> <span class="no">[System.IO.FileNotFoundException]</span> <span class="s2">&#34;Could not download to Destination $location.&#34;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 
-$Logfile = <span style="color:#e6db74">&#34;C:\Windows\Temp\chrome-firefox-install.log&#34;</span>
+<span class="nv">$Logfile</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\chrome-firefox-install.log&#34;</span>
 
-$chrome_source = <span style="color:#e6db74">&#34;http://dl.google.com/chrome/install/375.126/chrome_installer.exe&#34;</span>
-$chrome_destination = <span style="color:#e6db74">&#34;C:\Windows\Temp\chrome_installer.exe&#34;</span>
-$firefox_source = <span style="color:#e6db74">&#34;https://download-installer.cdn.mozilla.net/pub/firefox/releases/39.0/win32/hu/Firefox%20Setup%2039.0.exe&#34;</span>
-$firefox_destination = <span style="color:#e6db74">&#34;C:\Windows\Temp\firefoxinstaller.exe&#34;</span>
+<span class="nv">$chrome_source</span> <span class="p">=</span> <span class="s2">&#34;http://dl.google.com/chrome/install/375.126/chrome_installer.exe&#34;</span>
+<span class="nv">$chrome_destination</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\chrome_installer.exe&#34;</span>
+<span class="nv">$firefox_source</span> <span class="p">=</span> <span class="s2">&#34;https://download-installer.cdn.mozilla.net/pub/firefox/releases/39.0/win32/hu/Firefox%20Setup%2039.0.exe&#34;</span>
+<span class="nv">$firefox_destination</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\firefoxinstaller.exe&#34;</span>
 
-LogWrite <span style="color:#e6db74">&#39;Starting to download files.&#39;</span>
-<span style="color:#66d9ef">try</span> {
-    LogWrite <span style="color:#e6db74">&#39;Downloading Chrome...&#39;</span>
-    (New-Object System.Net.WebClient).DownloadFile($chrome_source, $chrome_destination)
-    CheckLocation $chrome_destination
-    LogWrite <span style="color:#e6db74">&#39;Done...&#39;</span>
-    LogWrite <span style="color:#e6db74">&#39;Downloading Firefox...&#39;</span>
-    (New-Object System.Net.WebClient).DownloadFile($firefox_source, $firefox_destination)
-    CheckLocation $firefox_destination
-} <span style="color:#66d9ef">catch</span> <span style="color:#66d9ef">[Exception]</span> {
-    LogWrite <span style="color:#e6db74">&#34;Exception during download. Probable cause could be that the directory or the file didn&#39;t exist.&#34;</span>
-    LogWrite <span style="color:#e6db74">&#39;$_.Exception is&#39;</span> $_.Exception
-}
+<span class="n">LogWrite</span> <span class="s1">&#39;Starting to download files.&#39;</span>
+<span class="k">try</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Downloading Chrome...&#39;</span>
+    <span class="p">(</span><span class="nb">New-Object</span> <span class="n">System</span><span class="p">.</span><span class="n">Net</span><span class="p">.</span><span class="n">WebClient</span><span class="p">).</span><span class="n">DownloadFile</span><span class="p">(</span><span class="nv">$chrome_source</span><span class="p">,</span> <span class="nv">$chrome_destination</span><span class="p">)</span>
+    <span class="n">CheckLocation</span> <span class="nv">$chrome_destination</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Done...&#39;</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Downloading Firefox...&#39;</span>
+    <span class="p">(</span><span class="nb">New-Object</span> <span class="n">System</span><span class="p">.</span><span class="n">Net</span><span class="p">.</span><span class="n">WebClient</span><span class="p">).</span><span class="n">DownloadFile</span><span class="p">(</span><span class="nv">$firefox_source</span><span class="p">,</span> <span class="nv">$firefox_destination</span><span class="p">)</span>
+    <span class="n">CheckLocation</span> <span class="nv">$firefox_destination</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[Exception]</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s2">&#34;Exception during download. Probable cause could be that the directory or the file didn&#39;t exist.&#34;</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+<span class="p">}</span>
 
-LogWrite <span style="color:#e6db74">&#39;Starting firefox install process.&#39;</span>
-<span style="color:#66d9ef">try</span> {
-    Start-Process -FilePath $firefox_destination -ArgumentList <span style="color:#e6db74">&#34;-ms&#34;</span> -Wait -PassThru
-} <span style="color:#66d9ef">catch</span> <span style="color:#66d9ef">[Exception]</span> {
-    LogWrite <span style="color:#e6db74">&#39;Exception during install process.&#39;</span>
-    LogWrite <span style="color:#e6db74">&#39;$_.Exception is&#39;</span> $_.Exception
-}
-LogWrite <span style="color:#e6db74">&#39;Starting chrome install process.&#39;</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Starting firefox install process.&#39;</span>
+<span class="k">try</span> <span class="p">{</span>
+    <span class="nb">Start-Process</span> <span class="n">-FilePath</span> <span class="nv">$firefox_destination</span> <span class="n">-ArgumentList</span> <span class="s2">&#34;-ms&#34;</span> <span class="n">-Wait</span> <span class="n">-PassThru</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[Exception]</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Exception during install process.&#39;</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+<span class="p">}</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Starting chrome install process.&#39;</span>
 
-<span style="color:#66d9ef">try</span> {
-    Start-Process -FilePath $chrome_destination -ArgumentList <span style="color:#e6db74">&#34;/silent /install&#34;</span> -Wait -PassThru
-} <span style="color:#66d9ef">catch</span> <span style="color:#66d9ef">[Exception]</span> {
-    LogWrite <span style="color:#e6db74">&#39;Exception during install process.&#39;</span>
-    LogWrite <span style="color:#e6db74">&#39;$_.Exception is&#39;</span> $_.Exception
-}
+<span class="k">try</span> <span class="p">{</span>
+    <span class="nb">Start-Process</span> <span class="n">-FilePath</span> <span class="nv">$chrome_destination</span> <span class="n">-ArgumentList</span> <span class="s2">&#34;/silent /install&#34;</span> <span class="n">-Wait</span> <span class="n">-PassThru</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[Exception]</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Exception during install process.&#39;</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+<span class="p">}</span>
 
-LogWrite <span style="color:#e6db74">&#39;All done. Goodbye.&#39;</span>
-</code></pre></div><p>They both install silently. Pretty neat.</p>
+<span class="n">LogWrite</span> <span class="s1">&#39;All done. Goodbye.&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>They both install silently. Pretty neat.</p>
 <h4 id="selenium">Selenium</h4>
 <p>This only has to be downloaded, so this is pretty simple. Vagrant will handle the startup of course when it does a vagrant up.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-powershell" data-lang="powershell">
-<span style="color:#66d9ef">function</span> LogWrite {
-   <span style="color:#66d9ef">Param</span> (<span style="color:#66d9ef">[string]</span>$logstring)
-   $now = Get-Date -format s
-   Add-Content $Logfile -value <span style="color:#e6db74">&#34;$now $logstring&#34;</span>
-   Write-Host $logstring
-}
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-powershell" data-lang="powershell">
+<span class="k">function</span> <span class="n">LogWrite</span> <span class="p">{</span>
+   <span class="k">Param</span> <span class="p">(</span><span class="no">[string]</span><span class="nv">$logstring</span><span class="p">)</span>
+   <span class="nv">$now</span> <span class="p">=</span> <span class="nb">Get-Date</span> <span class="n">-format</span> <span class="n">s</span>
+   <span class="nb">Add-Content</span> <span class="nv">$Logfile</span> <span class="n">-value</span> <span class="s2">&#34;$now $logstring&#34;</span>
+   <span class="nb">Write-Host</span> <span class="nv">$logstring</span>
+<span class="p">}</span>
 
-$Logfile = <span style="color:#e6db74">&#34;C:\Windows\Temp\selenium-install.log&#34;</span>
+<span class="nv">$Logfile</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\selenium-install.log&#34;</span>
 
-$source = <span style="color:#e6db74">&#34;http://selenium-release.storage.googleapis.com/2.46/selenium-server-standalone-2.46.0.jar&#34;</span>
-$destination = <span style="color:#e6db74">&#34;C:\Windows\Temp\selenium-server.jar&#34;</span>
-LogWrite <span style="color:#e6db74">&#39;Starting to download selenium file.&#39;</span>
-<span style="color:#66d9ef">try</span> {
-  (New-Object System.Net.WebClient).DownloadFile($source, $destination)
-} <span style="color:#66d9ef">catch</span> <span style="color:#66d9ef">[Exception]</span> {
-  LogWrite <span style="color:#e6db74">&#34;Exception during download. Probable cause could be that the directory or the file didn&#39;t exist.&#34;</span>
-  LogWrite <span style="color:#e6db74">&#39;$_.Exception is&#39;</span> $_.Exception
-}
-LogWrite <span style="color:#e6db74">&#39;Download done. Checking if file exists.&#39;</span>
-<span style="color:#66d9ef">if</span> (!(Test-Path $destination)) {
-  LogWrite <span style="color:#e6db74">&#39;Downloading dotnet Failed!&#39;</span>
-} <span style="color:#66d9ef">else</span> {
-  LogWrite <span style="color:#e6db74">&#39;Download successful.&#39;</span>
-}
+<span class="nv">$source</span> <span class="p">=</span> <span class="s2">&#34;http://selenium-release.storage.googleapis.com/2.46/selenium-server-standalone-2.46.0.jar&#34;</span>
+<span class="nv">$destination</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\selenium-server.jar&#34;</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Starting to download selenium file.&#39;</span>
+<span class="k">try</span> <span class="p">{</span>
+  <span class="p">(</span><span class="nb">New-Object</span> <span class="n">System</span><span class="p">.</span><span class="n">Net</span><span class="p">.</span><span class="n">WebClient</span><span class="p">).</span><span class="n">DownloadFile</span><span class="p">(</span><span class="nv">$source</span><span class="p">,</span> <span class="nv">$destination</span><span class="p">)</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[Exception]</span> <span class="p">{</span>
+  <span class="n">LogWrite</span> <span class="s2">&#34;Exception during download. Probable cause could be that the directory or the file didn&#39;t exist.&#34;</span>
+  <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+<span class="p">}</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Download done. Checking if file exists.&#39;</span>
+<span class="k">if</span> <span class="p">(!(</span><span class="nb">Test-Path</span> <span class="nv">$destination</span><span class="p">))</span> <span class="p">{</span>
+  <span class="n">LogWrite</span> <span class="s1">&#39;Downloading dotnet Failed!&#39;</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="n">LogWrite</span> <span class="s1">&#39;Download successful.&#39;</span>
+<span class="p">}</span>
 
-LogWrite <span style="color:#e6db74">&#39;All done. Goodbye.&#39;</span>
-</code></pre></div><p>Straightforward.</p>
+<span class="n">LogWrite</span> <span class="s1">&#39;All done. Goodbye.&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Straightforward.</p>
 <h4 id="the-packer-json-file">The Packer Json File</h4>
 <p>So putting this all together, here is the Packer JSON file for this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">
-{
-      <span style="color:#f92672">&#34;variables&#34;</span>: {
-      <span style="color:#f92672">&#34;vm_name&#34;</span>: <span style="color:#e6db74">&#34;win7x64selenium&#34;</span>,
-      <span style="color:#f92672">&#34;output_dir&#34;</span>: <span style="color:#e6db74">&#34;output_win7_x64_selenium&#34;</span>,
-      <span style="color:#f92672">&#34;vagrant_box_output&#34;</span>: <span style="color:#e6db74">&#34;box_output&#34;</span>,
-      <span style="color:#f92672">&#34;cpu_number&#34;</span>: <span style="color:#e6db74">&#34;2&#34;</span>,
-      <span style="color:#f92672">&#34;memory_size&#34;</span>: <span style="color:#e6db74">&#34;4096&#34;</span>,
-      <span style="color:#f92672">&#34;machine_type&#34;</span>: <span style="color:#e6db74">&#34;pc-1.2&#34;</span>,
-      <span style="color:#f92672">&#34;accelerator&#34;</span>: <span style="color:#e6db74">&#34;kvm&#34;</span>,
-      <span style="color:#f92672">&#34;disk_format&#34;</span>: <span style="color:#e6db74">&#34;qcow2&#34;</span>,
-      <span style="color:#f92672">&#34;disk_interface&#34;</span>: <span style="color:#e6db74">&#34;virtio&#34;</span>,
-      <span style="color:#f92672">&#34;net_device&#34;</span>: <span style="color:#e6db74">&#34;virtio-net&#34;</span>,
-      <span style="color:#f92672">&#34;cpu_model&#34;</span>: <span style="color:#e6db74">&#34;host&#34;</span>,
-      <span style="color:#f92672">&#34;disk_cache&#34;</span>: <span style="color:#e6db74">&#34;writeback&#34;</span>,
-      <span style="color:#f92672">&#34;disk_io&#34;</span>: <span style="color:#e6db74">&#34;native&#34;</span>
-   },
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-json" data-lang="json">
+<span class="p">{</span>
+      <span class="nt">&#34;variables&#34;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;vm_name&#34;</span><span class="p">:</span> <span class="s2">&#34;win7x64selenium&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;output_dir&#34;</span><span class="p">:</span> <span class="s2">&#34;output_win7_x64_selenium&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;vagrant_box_output&#34;</span><span class="p">:</span> <span class="s2">&#34;box_output&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;cpu_number&#34;</span><span class="p">:</span> <span class="s2">&#34;2&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;memory_size&#34;</span><span class="p">:</span> <span class="s2">&#34;4096&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;machine_type&#34;</span><span class="p">:</span> <span class="s2">&#34;pc-1.2&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;accelerator&#34;</span><span class="p">:</span> <span class="s2">&#34;kvm&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;disk_format&#34;</span><span class="p">:</span> <span class="s2">&#34;qcow2&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;disk_interface&#34;</span><span class="p">:</span> <span class="s2">&#34;virtio&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;net_device&#34;</span><span class="p">:</span> <span class="s2">&#34;virtio-net&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;cpu_model&#34;</span><span class="p">:</span> <span class="s2">&#34;host&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;disk_cache&#34;</span><span class="p">:</span> <span class="s2">&#34;writeback&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;disk_io&#34;</span><span class="p">:</span> <span class="s2">&#34;native&#34;</span>
+   <span class="p">},</span>
 
-  <span style="color:#f92672">&#34;builders&#34;</span>: [
-    {
-      <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;virtualbox-iso&#34;</span>,
-      <span style="color:#f92672">&#34;iso_url&#34;</span>: <span style="color:#e6db74">&#34;/home/user/vms/windows7.iso&#34;</span>,
-      <span style="color:#f92672">&#34;iso_checksum_type&#34;</span>: <span style="color:#e6db74">&#34;sha1&#34;</span>,
-      <span style="color:#f92672">&#34;iso_checksum&#34;</span>: <span style="color:#e6db74">&#34;0BCFC54019EA175B1EE51F6D2B207A3D14DD2B58&#34;</span>,
-      <span style="color:#f92672">&#34;headless&#34;</span>: <span style="color:#66d9ef">true</span>,
-      <span style="color:#f92672">&#34;boot_wait&#34;</span>: <span style="color:#e6db74">&#34;2m&#34;</span>,
-      <span style="color:#f92672">&#34;ssh_username&#34;</span>: <span style="color:#e6db74">&#34;vagrant&#34;</span>,
-      <span style="color:#f92672">&#34;ssh_password&#34;</span>: <span style="color:#e6db74">&#34;vagrant&#34;</span>,
-      <span style="color:#f92672">&#34;ssh_wait_timeout&#34;</span>: <span style="color:#e6db74">&#34;8h&#34;</span>,
-      <span style="color:#f92672">&#34;shutdown_command&#34;</span>: <span style="color:#e6db74">&#34;shutdown /s /t 10 /f /d p:4:1 /c \&#34;Packer Shutdown\&#34;&#34;</span>,
-      <span style="color:#f92672">&#34;guest_os_type&#34;</span>: <span style="color:#e6db74">&#34;Windows7_64&#34;</span>,
-      <span style="color:#f92672">&#34;disk_size&#34;</span>: <span style="color:#ae81ff">61440</span>,
-      <span style="color:#f92672">&#34;floppy_files&#34;</span>: [
-        <span style="color:#e6db74">&#34;./answer_files/7-selenium/Autounattend.xml&#34;</span>,
-        <span style="color:#e6db74">&#34;./scripts/dis-updates.ps1&#34;</span>,
-        <span style="color:#e6db74">&#34;./scripts/microsoft-updates.bat&#34;</span>,
-        <span style="color:#e6db74">&#34;./scripts/openssh.ps1&#34;</span>,
-        <span style="color:#e6db74">&#34;./scripts/jdk_inst.ps1&#34;</span>
-      ],
-      <span style="color:#f92672">&#34;vboxmanage&#34;</span>: [
-        [
-          <span style="color:#e6db74">&#34;modifyvm&#34;</span>,
-          <span style="color:#e6db74">&#34;{{.Name}}&#34;</span>,
-          <span style="color:#e6db74">&#34;--memory&#34;</span>,
-          <span style="color:#e6db74">&#34;{{user `memory_size`}}&#34;</span>
-        ],
-        [
-          <span style="color:#e6db74">&#34;modifyvm&#34;</span>,
-          <span style="color:#e6db74">&#34;{{.Name}}&#34;</span>,
-          <span style="color:#e6db74">&#34;--cpus&#34;</span>,
-          <span style="color:#e6db74">&#34;{{user `cpu_number`}}&#34;</span>
-        ]
-      ]
-    }
-  ],
-  <span style="color:#f92672">&#34;provisioners&#34;</span>: [
-    {
-      <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;powershell&#34;</span>,
-      <span style="color:#f92672">&#34;scripts&#34;</span> : [
-        <span style="color:#e6db74">&#34;./scripts/install-selenium-server.ps1&#34;</span>,
-        <span style="color:#e6db74">&#34;./scripts/install-chrome-firefox.ps1&#34;</span>
-      ]
-    },{
-      <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;shell&#34;</span>,
-      <span style="color:#f92672">&#34;remote_path&#34;</span>: <span style="color:#e6db74">&#34;/tmp/script.bat&#34;</span>,
-      <span style="color:#f92672">&#34;execute_command&#34;</span>: <span style="color:#e6db74">&#34;{{.Vars}} cmd /c C:/Windows/Temp/script.bat&#34;</span>,
-      <span style="color:#f92672">&#34;scripts&#34;</span>: [
-        <span style="color:#e6db74">&#34;./scripts/vm-guest-tools.bat&#34;</span>,
-        <span style="color:#e6db74">&#34;./scripts/vagrant-ssh.bat&#34;</span>,
-        <span style="color:#e6db74">&#34;./scripts/rsync.bat&#34;</span>,
-        <span style="color:#e6db74">&#34;./scripts/enable-rdp.bat&#34;</span>
-      ]
-    }
-  ],
-    <span style="color:#f92672">&#34;post-processors&#34;</span>: [
-    {
-      <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;vagrant&#34;</span>,
-      <span style="color:#f92672">&#34;keep_input_artifact&#34;</span>: <span style="color:#66d9ef">false</span>,
-      <span style="color:#f92672">&#34;output&#34;</span>: <span style="color:#e6db74">&#34;{{user `vm_name`}}_{{.Provider}}.box&#34;</span>,
-      <span style="color:#f92672">&#34;vagrantfile_template&#34;</span>: <span style="color:#e6db74">&#34;vagrantfile-template&#34;</span>
-    }
-    ]
-}
-</code></pre></div><h4 id="additional-software">Additional Software</h4>
+  <span class="nt">&#34;builders&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;virtualbox-iso&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;iso_url&#34;</span><span class="p">:</span> <span class="s2">&#34;/home/user/vms/windows7.iso&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;iso_checksum_type&#34;</span><span class="p">:</span> <span class="s2">&#34;sha1&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;iso_checksum&#34;</span><span class="p">:</span> <span class="s2">&#34;0BCFC54019EA175B1EE51F6D2B207A3D14DD2B58&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;headless&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="nt">&#34;boot_wait&#34;</span><span class="p">:</span> <span class="s2">&#34;2m&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;ssh_username&#34;</span><span class="p">:</span> <span class="s2">&#34;vagrant&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;ssh_password&#34;</span><span class="p">:</span> <span class="s2">&#34;vagrant&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;ssh_wait_timeout&#34;</span><span class="p">:</span> <span class="s2">&#34;8h&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;shutdown_command&#34;</span><span class="p">:</span> <span class="s2">&#34;shutdown /s /t 10 /f /d p:4:1 /c \&#34;Packer Shutdown\&#34;&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;guest_os_type&#34;</span><span class="p">:</span> <span class="s2">&#34;Windows7_64&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;disk_size&#34;</span><span class="p">:</span> <span class="mi">61440</span><span class="p">,</span>
+      <span class="nt">&#34;floppy_files&#34;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&#34;./answer_files/7-selenium/Autounattend.xml&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/dis-updates.ps1&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/microsoft-updates.bat&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/openssh.ps1&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/jdk_inst.ps1&#34;</span>
+      <span class="p">],</span>
+      <span class="nt">&#34;vboxmanage&#34;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">[</span>
+          <span class="s2">&#34;modifyvm&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;{{.Name}}&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;--memory&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;{{user `memory_size`}}&#34;</span>
+        <span class="p">],</span>
+        <span class="p">[</span>
+          <span class="s2">&#34;modifyvm&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;{{.Name}}&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;--cpus&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;{{user `cpu_number`}}&#34;</span>
+        <span class="p">]</span>
+      <span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="nt">&#34;provisioners&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;powershell&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;scripts&#34;</span> <span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&#34;./scripts/install-selenium-server.ps1&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/install-chrome-firefox.ps1&#34;</span>
+      <span class="p">]</span>
+    <span class="p">},{</span>
+      <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;remote_path&#34;</span><span class="p">:</span> <span class="s2">&#34;/tmp/script.bat&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;execute_command&#34;</span><span class="p">:</span> <span class="s2">&#34;{{.Vars}} cmd /c C:/Windows/Temp/script.bat&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;scripts&#34;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&#34;./scripts/vm-guest-tools.bat&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/vagrant-ssh.bat&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/rsync.bat&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/enable-rdp.bat&#34;</span>
+      <span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+    <span class="nt">&#34;post-processors&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;vagrant&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;keep_input_artifact&#34;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+      <span class="nt">&#34;output&#34;</span><span class="p">:</span> <span class="s2">&#34;{{user `vm_name`}}_{{.Provider}}.box&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;vagrantfile_template&#34;</span><span class="p">:</span> <span class="s2">&#34;vagrantfile-template&#34;</span>
+    <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="additional-software">Additional Software</h4>
 <p>This is not done here. Obviously, in order to test your stuff, you first need to install your software on this box. Ideally, everything you need should be in the code you clone to this box, and should be contained mostly. And your application deployment should take core of that. But, if you require something like a DB, postgres, oracle, whatnot, than this is the place where you would install all that.</p>
 <h1 id="vagrant-and-using-the-packer-box">Vagrant and Using the Packer Box</h1>
 <p>Now, this has been interesting so far, but how do you actually go about using this image? That&rsquo;s the real question now, isn&rsquo;t it? Having a box, just sitting on a shared folder, doesn&rsquo;t do you too much good. So let&rsquo;s create a Jenkins job, which utilizes this box in a job which runs a bunch of tests for some application.</p>
 <h4 id="vagrantfile">Vagrantfile</h4>
 <p>Your vagrant file, could either be generated automatically, under source control ( which is preferred ) or sitting somewhere entirely elsewhere. In any case, it would look something like this.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby">
-<span style="color:#75715e"># -*- mode: ruby -*-</span>
-<span style="color:#75715e"># vi: set ft=ruby :</span>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-ruby" data-lang="ruby">
+<span class="c1"># -*- mode: ruby -*-</span>
+<span class="c1"># vi: set ft=ruby :</span>
 
-<span style="color:#66d9ef">VAGRANTFILE_API_VERSION</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;2&#34;</span>
+<span class="no">VAGRANTFILE_API_VERSION</span> <span class="o">=</span> <span class="s2">&#34;2&#34;</span>
 
-<span style="color:#66d9ef">Vagrant</span><span style="color:#f92672">.</span>configure(<span style="color:#66d9ef">VAGRANTFILE_API_VERSION</span>) <span style="color:#66d9ef">do</span> <span style="color:#f92672">|</span>config<span style="color:#f92672">|</span>
+<span class="no">Vagrant</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="no">VAGRANTFILE_API_VERSION</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
 
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>provider <span style="color:#e6db74">&#34;virtualbox&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provider</span> <span class="s2">&#34;virtualbox&#34;</span>
 
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>define <span style="color:#e6db74">&#34;selenium-box&#34;</span> <span style="color:#66d9ef">do</span> <span style="color:#f92672">|</span>vs2013<span style="color:#f92672">|</span>
-    vs2013<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>box <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;windows7-x64-04-selenium&#34;</span>
-    vs2013<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>box_url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;path/to/your/share/win7x64_selenium_virtualbox.box&#34;</span>
-  <span style="color:#66d9ef">end</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">define</span> <span class="s2">&#34;selenium-box&#34;</span> <span class="k">do</span> <span class="o">|</span><span class="n">vs2013</span><span class="o">|</span>
+    <span class="n">vs2013</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box</span> <span class="o">=</span> <span class="s2">&#34;windows7-x64-04-selenium&#34;</span>
+    <span class="n">vs2013</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box_url</span> <span class="o">=</span> <span class="s2">&#34;path/to/your/share/win7x64_selenium_virtualbox.box&#34;</span>
+  <span class="k">end</span>
 
-  config<span style="color:#f92672">.</span>env<span style="color:#f92672">.</span>enable
+  <span class="n">config</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">enable</span>
 
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>guest <span style="color:#f92672">=</span> <span style="color:#e6db74">:windows</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>communicator <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;winrm&#34;</span>
-  config<span style="color:#f92672">.</span>winrm<span style="color:#f92672">.</span>username <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;vagrant&#34;</span>
-  config<span style="color:#f92672">.</span>winrm<span style="color:#f92672">.</span>password <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;vagrant&#34;</span>
-  config<span style="color:#f92672">.</span>windows<span style="color:#f92672">.</span>set_work_network <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>network <span style="color:#e6db74">:forwarded_port</span>, <span style="color:#e6db74">guest</span>: <span style="color:#ae81ff">3389</span>, <span style="color:#e6db74">host</span>: <span style="color:#66d9ef">ENV</span><span style="color:#f92672">[</span><span style="color:#e6db74">&#39;RDESKTOP_PORT&#39;</span><span style="color:#f92672">]</span>, <span style="color:#e6db74">host_ip</span>: <span style="color:#e6db74">&#34;0.0.0.0&#34;</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>network <span style="color:#e6db74">:forwarded_port</span>, <span style="color:#e6db74">guest</span>: <span style="color:#ae81ff">5985</span>, <span style="color:#e6db74">host</span>: <span style="color:#ae81ff">5985</span>, id: <span style="color:#e6db74">&#34;winrm&#34;</span>, <span style="color:#e6db74">auto_correct</span>: <span style="color:#66d9ef">true</span>, <span style="color:#e6db74">host_ip</span>: <span style="color:#e6db74">&#34;0.0.0.0&#34;</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>network <span style="color:#e6db74">:forwarded_port</span>, <span style="color:#e6db74">guest</span>: <span style="color:#ae81ff">9991</span>, <span style="color:#e6db74">host</span>: <span style="color:#ae81ff">9991</span>, id: <span style="color:#e6db74">&#34;selenium&#34;</span>, <span style="color:#e6db74">auto_correct</span>: <span style="color:#66d9ef">true</span>, <span style="color:#e6db74">host_ip</span>: <span style="color:#e6db74">&#34;0.0.0.0&#34;</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>provider <span style="color:#e6db74">:virtualbox</span> <span style="color:#66d9ef">do</span> <span style="color:#f92672">|</span>vbox<span style="color:#f92672">|</span>
-    vbox<span style="color:#f92672">.</span>gui <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>
-    vbox<span style="color:#f92672">.</span>memory <span style="color:#f92672">=</span> <span style="color:#ae81ff">4096</span>
-    vbox<span style="color:#f92672">.</span>cpus <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>
-  <span style="color:#66d9ef">end</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">guest</span> <span class="o">=</span> <span class="ss">:windows</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">communicator</span> <span class="o">=</span> <span class="s2">&#34;winrm&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">winrm</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="s2">&#34;vagrant&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">winrm</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="s2">&#34;vagrant&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">set_work_network</span> <span class="o">=</span> <span class="kp">true</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:forwarded_port</span><span class="p">,</span> <span class="ss">guest</span><span class="p">:</span> <span class="mi">3389</span><span class="p">,</span> <span class="ss">host</span><span class="p">:</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;RDESKTOP_PORT&#39;</span><span class="o">]</span><span class="p">,</span> <span class="ss">host_ip</span><span class="p">:</span> <span class="s2">&#34;0.0.0.0&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:forwarded_port</span><span class="p">,</span> <span class="ss">guest</span><span class="p">:</span> <span class="mi">5985</span><span class="p">,</span> <span class="ss">host</span><span class="p">:</span> <span class="mi">5985</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="s2">&#34;winrm&#34;</span><span class="p">,</span> <span class="ss">auto_correct</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">host_ip</span><span class="p">:</span> <span class="s2">&#34;0.0.0.0&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:forwarded_port</span><span class="p">,</span> <span class="ss">guest</span><span class="p">:</span> <span class="mi">9991</span><span class="p">,</span> <span class="ss">host</span><span class="p">:</span> <span class="mi">9991</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="s2">&#34;selenium&#34;</span><span class="p">,</span> <span class="ss">auto_correct</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">host_ip</span><span class="p">:</span> <span class="s2">&#34;0.0.0.0&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provider</span> <span class="ss">:virtualbox</span> <span class="k">do</span> <span class="o">|</span><span class="n">vbox</span><span class="o">|</span>
+    <span class="n">vbox</span><span class="o">.</span><span class="n">gui</span> <span class="o">=</span> <span class="kp">false</span>
+    <span class="n">vbox</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="mi">4096</span>
+    <span class="n">vbox</span><span class="o">.</span><span class="n">cpus</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="k">end</span>
 
 
-  config<span style="color:#f92672">.</span>winrm<span style="color:#f92672">.</span>max_tries <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>synced_folder <span style="color:#e6db74">&#34;.&#34;</span>, <span style="color:#e6db74">&#34;/vagrant&#34;</span>, <span style="color:#e6db74">type</span>: <span style="color:#e6db74">&#34;rsync&#34;</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>provision <span style="color:#e6db74">&#34;shell&#34;</span>, <span style="color:#e6db74">path</span>: <span style="color:#e6db74">&#34;init.bat&#34;</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>provision <span style="color:#e6db74">&#34;shell&#34;</span>, <span style="color:#e6db74">path</span>: <span style="color:#e6db74">&#34;utils_inst.bat&#34;</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>provision <span style="color:#e6db74">&#34;shell&#34;</span>, <span style="color:#e6db74">path</span>: <span style="color:#e6db74">&#34;jenkins_reg.ps1&#34;</span>
-  config<span style="color:#f92672">.</span>vm<span style="color:#f92672">.</span>provision <span style="color:#e6db74">&#34;shell&#34;</span>, <span style="color:#e6db74">path</span>: <span style="color:#e6db74">&#34;start_selenium.bat&#34;</span>
-<span style="color:#66d9ef">end</span>
-</code></pre></div><p>Easy, no? Here is the script to start selenium.</p>
-<pre><code>java -jar c:\Windows\Temp\selenium-server.jar -Dhttp.proxyPort=9991
-</code></pre><p>Straight forward. We also are forwarding the port on which Selenium is running in order for the test to see it.</p>
+  <span class="n">config</span><span class="o">.</span><span class="n">winrm</span><span class="o">.</span><span class="n">max_tries</span> <span class="o">=</span> <span class="mi">10</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">synced_folder</span> <span class="s2">&#34;.&#34;</span><span class="p">,</span> <span class="s2">&#34;/vagrant&#34;</span><span class="p">,</span> <span class="ss">type</span><span class="p">:</span> <span class="s2">&#34;rsync&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span> <span class="ss">path</span><span class="p">:</span> <span class="s2">&#34;init.bat&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span> <span class="ss">path</span><span class="p">:</span> <span class="s2">&#34;utils_inst.bat&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span> <span class="ss">path</span><span class="p">:</span> <span class="s2">&#34;jenkins_reg.ps1&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span> <span class="ss">path</span><span class="p">:</span> <span class="s2">&#34;start_selenium.bat&#34;</span>
+<span class="k">end</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Easy, no? Here is the script to start selenium.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">java -jar c:\Windows\Temp\selenium-server.jar -Dhttp.proxyPort=9991
+</code></pre></td></tr></table>
+</div>
+</div><p>Straight forward. We also are forwarding the port on which Selenium is running in order for the test to see it.</p>
 <h4 id="the-jenkins-job">The Jenkins Job</h4>
 <p>The job can be anything. This is actually too large to cover here. It could be a gradle job, a maven job, an ant, a nant - or whatever is running the test -, job; it&rsquo;s up to you.</p>
 <p>Just make sure that before the test runs, do a <strong>vagrant up</strong> and after the test finishes, in an ALWAYS TO BE EXECUTED HOOK -like gradle&rsquo;s finalizedBy , call a <strong>vagrant destroy</strong>. This way, your test will always run on a clean instance that has the necessary stuff on it.</p>
@@ -437,185 +823,109 @@ LogWrite <span style="color:#e6db74">&#39;All done. Goodbye.&#39;</span>
 <p>Also, you could run the whole deployment and test phase on a vagrant box, from the start, which is tied to jenkins as a slave and gets started when the job starts and destroyed when the job ends. That way you wouldn&rsquo;t have to create a, box in a box running on a box, kind of effect.</p>
 <p>Thanks for reading,</p>
 <p>Gergely.</p>
-
-</div>
-</article>
-</main>
-
-
-<aside class="sidebar layout__second-sidebar">
-<section>
-<h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
-<ul class="menu">
-<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
-<li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
-<li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
-<li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>
-<li><a href="/2020/07/23/kubernetes-deploy-golang-react-apps-separately-part1/">How to deploy a Go (Golang) backend with a React frontend separately on Kubernetes - Part One</a></li>
-<li><a href="/2020/05/11/good-code-reviews/">How to do a good code review</a></li>
-<li><a href="/2020/02/17/making-spa-refresh-work-with-go-backend/">How to Make SPA refresh work with a Go backend</a></li>
-<li><a href="/2019/10/15/kubernetes-cluster-part2/">Using a Kubernetes based Cluster for Various Services with auto HTTPS - Part 2</a></li>
-<li><a href="/2019/10/10/practical-go-summary/">Summary of Practical Go workshop from Dave Cheney</a></li>
-<li><a href="/2019/10/01/killing-kubernetes-cluster/">How I killed my entire Kubernetes cluster</a></li>
-<li><a href="/2019/09/21/kubernetes-cluster/">Using a Kubernetes based Cluster for Various Services with auto HTTPS</a></li>
-<li><a href="/2019/09/19/updated-face-recog-drawing/">Updated Face-recog architecture drawing</a></li>
-<li><a href="/2019/04/21/efferent-and-afferent-metrics-in-go/">Efferent and Afferent metrics in Go</a></li>
-<li><a href="/2019/04/12/living-with-a-parser/">Living with a new Parser for a year</a></li>
-<li><a href="/2019/03/19/deploy-hugo-blog-github-actions/">Deploy a Hugo Blog Github Actions</a></li>
-<li><a href="/2019/03/19/cronohub/">Cronohub: Archive from anywhere to anywhere</a></li>
-<li><a href="/2019/03/18/hugo-blog-with-travis-deployment/">Deploy a Hugo Blog with Travis on Git Push</a></li>
-<li><a href="/2019/02/17/go-ssh-with-host-key-verification/">Go SSH with Host Key Verification</a></li>
-<li><a href="/2018/10/29/go-plugin-tutorial/">Extensive tutorial on go-plugin.</a></li>
-<li><a href="/2018/09/17/furnace-plugin-update/">Furnace with a new Plugin System</a></li>
-<li><a href="/2018/09/13/gotp/">TOTP generator with account handling for multiple tokens</a></li>
-<li><a href="/2018/06/08/fork-updater/">Keep your git forks updated all the time</a></li>
-<li><a href="/2018/03/15/kubernetes-distributed-application/">Kubernetes distributed application deployment with sample Face Recognition App</a></li>
-<li><a href="/2018/02/06/go-budapest-meetup/">Go Budapest Meetup</a></li>
-<li><a href="/2018/01/23/nginx-certbot-ansible/">Ansible &#43; Nginx &#43; LetsEncrypt &#43; Wiki &#43; Nagios</a></li>
-<li><a href="/2018/01/13/furnace-massive-update/">Huge Furnace Update</a></li>
-<li><a href="/2017/12/04/commit-build-deploy/">Commit-Build-Deploy With AWS CodeBuild and Lambda</a></li>
-<li><a href="/2017/11/06/furnace-ikea-manual/">Furnace Ikea Manual</a></li>
-<li><a href="/2017/09/03/furnace-binaries/">Furnace Binaries</a></li>
-<li><a href="/2017/05/31/notetaking/">Notetaking</a></li>
-<li><a href="/2017/05/28/replace-eval-with-object-send-and-a-parser/">Replacing Eval with Object.send and a self written Parser</a></li>
-<li><a href="/2017/04/16/building-furnace-part-4/">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 4</a></li>
-<li><a href="/2017/03/22/building-furnace-part-3/">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 3</a></li>
-<li><a href="/2017/03/19/building-furnace-part-2/">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 2</a></li>
-<li><a href="/2017/03/17/test-new-hugo/">Testing new Hugo if posts are generated properly</a></li>
-<li><a href="/2017/03/16/building-furnace-part-1/">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1</a></li>
-<li><a href="/2017/03/03/images-on-old-posts/">Images on older posts</a></li>
-<li><a href="/2017/02/15/how-to-https-with-hugo-letsencrypt-haproxy/">How to HTTPS with Hugo LetsEncrypt and HAProxy</a></li>
-<li><a href="/2016/11/02/google-signin-with-go-part2/">How to do Google Sign-In with Go - Part 2</a></li>
-<li><a href="/2016/10/06/rscrap-ruby-scraping-with-cronjob-scripts/">RScrap scraper</a></li>
-<li><a href="/2016/09/17/simple-hometheater-with-remote-and-flirc/">Budget Home Theather with a Headless Raspberry Pi and Flirc for Remote Controlling</a></li>
-<li><a href="/2016/08/19/always-go-with-bytes/">Always Go with []byte</a></li>
-<li><a href="/2016/08/16/never-changing-regex/">Global variable for never changing regex</a></li>
-<li><a href="/2016/08/13/drupal-missing-toolbar-and-settings-not-saving/">Drupal missing ToolBar and settings not saving</a></li>
-<li><a href="/2016/07/28/jenkins-best-practices/">Jenkins Best Practices Talk</a></li>
-<li><a href="/2016/07/12/ruby-sieve/">Ruby Sieve</a></li>
-<li><a href="/2016/07/12/simple-hook-to-rid-of-trouble/">Simple hook to rid of trouble</a></li>
-<li><a href="/2016/06/12/google-signin-with-go/">How to do Google sign-in with Go</a></li>
-<li><a href="/2016/04/17/minecraft-server-aws-s3-backup-part2/">Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</a></li>
-<li><a href="/2016/04/16/minecraft-server-aws-s3-backup/">Minecraft world automatic backup to AWS S3 bucket</a></li>
-<li><a href="/2016/03/29/minecraft-server-with-docker-and-osx/">Minecraft Server with Docker on OSX &#43; Mods</a></li>
-<li><a href="/2016/03/09/wercker-fixed/">Wercker Fixed</a></li>
-<li><a href="/2016/03/04/wercker-test-2/">Wercker Test</a></li>
-<li><a href="/2016/02/10/hugo-autodeploy-with-wercker/">Hugo Autodeploy with Wercker and Github - Pages</a></li>
-<li><a href="/2016/02/10/wercker-test/">Wercker Test</a></li>
-<li><a href="/2016/02/02/doing-cors-in-go-with-gin-and-json/">Doing CORS in Go with Gin and JSON</a></li>
-<li><a href="/2016/01/22/my-journey-in-advent-of-code/">My Journey in advent of code</a></li>
-<li><a href="/2016/01/05/improving-performance-with-byte-slice-and-int-map/">Improving performance with byte slice and int map</a></li>
-<li><a href="/2016/01/01/byte-arrays-and-channels/">Byte arrays and Channels</a></li>
-<li><a href="/2015/12/29/use-byte-array-instead-of-strings/">Use Byte Array Instead of Strings</a></li>
-<li><a href="/2015/12/29/use-byte-slice-instead-of-strings/">Use Byte Slice Instead of Strings</a></li>
-<li><a href="/2015/12/23/recursive-freq-count/">Recursive Letter Frequency Count</a></li>
-<li><a href="/2015/12/08/go-development-environment/">Go Development Environment</a></li>
-<li><a href="/2015/12/07/welcome-to-my-new-blog/">Welcome To My New Blog</a></li>
-<li><a href="/2015/11/20/go-jira-api-client/">Go JIRA API client</a></li>
-<li><a href="/2015/11/15/the-one-hundred-day-github-challenge/">The One Hundred Day GitHub Challenge</a></li>
-<li><a href="/2015/11/09/go-progress-quest/">Go Progress Quest</a></li>
-<li><a href="/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/">Kill a Program on Connecting to a specific WiFi – OSX</a></li>
-<li><a href="/2015/10/15/circular-buffer-in-go/">Circular buffer in Go</a></li>
-<li><a href="/2015/10/15/jenkins-job-dsl-and-groovy-goodness/">Jenkins Job DSL and Groovy goodness</a></li>
-<li><a href="/2015/10/04/datamunger-kata-with-go/">DataMunger Kata with Go</a></li>
-<li><a href="/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/">How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs</a></li>
-<li><a href="/2015/09/07/i-used-to-have-great-ideas-on-the-toilet-but-i-no-longer-do/">I used to have great ideas on the toilet, but I no longer do.</a></li>
-<li><a href="/2015/07/30/sieve-of-eratosthenes-in-go/">Sieve of Eratosthenes in Go</a></li>
-<li><a href="/2015/07/22/quick-tip-for-debugging-headless-locally/">Quick Tip for Debugging Headless Locally</a></li>
-<li><a href="/2015/07/19/converting-numbers-into-string-representations/">Converting numbers into string representations</a></li>
-<li><a href="/2015/07/16/selenium-testing-with-packer-and-vagrant/" class="active" aria-current="page">Selenium Testing with Packer and Vagrant</a></li>
-<li><a href="/2015/07/15/bitwise-operator/">Bitwise &amp; Operator</a></li>
-<li><a href="/2015/07/01/packer-0-8-1/">Packer 0.8.1.</a></li>
-<li><a href="/2015/06/30/powershell-can-also-be-nice-or-installing-java-silently-and-waiting/">Powershell can also be nice -Or Installing Java silently and waiting</a></li>
-<li><a href="/2015/06/27/the-packer-the-windows-and-the-vagrant-box/">The Packer, The Windows, and the Vagrant box</a></li>
-<li><a href="/2015/06/06/docker-ruby-lotus-go-cd/">Docker &#43; Java &#43; Vagrant&#43; GO.CD</a></li>
-<li><a href="/2015/05/21/setting-up-a-new-laptop-with-puppet/">Setting up a new Laptop with Puppet</a></li>
-<li><a href="/2015/05/19/busy-building-the-future/">Busy building the future</a></li>
-<li><a href="/2015/04/21/django-rpg-part-3/">Django – RPG – Part 3</a></li>
-<li><a href="/2015/04/12/django-rpg-part-2/">Django – RPG – Part 2</a></li>
-<li><a href="/2015/04/10/django-rpg-2/">Django – RPG – Part 1</a></li>
-<li><a href="/2015/04/10/small-python-gui-to-calculate-lever-distance/">Small Python GUI to Calculate Lever Distance</a></li>
-<li><a href="/2015/03/15/python-and-my-math-commitment/">Python and my Math commitment</a></li>
-<li><a href="/2015/03/02/sphere-judge-online-python-kivy-android-app-part-2/">Sphere Judge Online – Python Kivy Android app – Part 2</a></li>
-<li><a href="/2015/02/26/sphere-judge-online-python-kivy-android-app/">Sphere Judge Online – Python Kivy Android app</a></li>
-<li><a href="/2015/02/08/why-lock-picking-is-like-testing/">Why Lock Picking is like Testing</a></li>
-<li><a href="/2015/02/01/building-an-rpg-app-with-meteor-part-one-the-struggle/">Building an RPG App with Meteor – Part One – The struggle</a></li>
-<li><a href="/2015/01/29/javascript-web-framework-meteor/">JavaScript Web Framework – Meteor</a></li>
-<li><a href="/2015/01/28/when-cucumber-goes-wrong/">When cucumber goes wrong</a></li>
-<li><a href="/2015/01/27/from-zero-to-hundred-in-four-seconds/">From Zero to Hundred in Four seconds</a></li>
-<li><a href="/2015/01/26/why-testers-are-like-scientists/">Why Testers are, like scientists</a></li>
-<li><a href="/2014/11/15/why-the-expressiveness-of-your-tests-is-important-part-one/">Why the expressiveness of your Tests is important – Part One</a></li>
-<li><a href="/2014/11/07/updating-all-jenkins-jobs-via-jenkins-api-python/">Updating All Jenkins Jobs Via Jenkins API – Python</a></li>
-<li><a href="/2014/10/23/the-seven-guidelines-of-context-driven-testing/">The seven Principles of Context Driven Testing – Mind Map</a></li>
-<li><a href="/2014/08/25/python-course-review/">Python Course Review</a></li>
-<li><a href="/2014/05/31/five-reasons-why-a-tester-should-learn-sql/">Five reasons why a tester should learn SQL</a></li>
-<li><a href="/2014/05/26/tdd-is-dead-not-really/">TDD is Dead – Not really</a></li>
-<li><a href="/2014/05/23/five-reasons-why-a-front-end-tester-should-learn-javascript/">Five reasons why a front-end tester should learn Javascript</a></li>
-<li><a href="/2014/05/20/note-taking-what-when-how-often/">Note taking what when how often</a></li>
-<li><a href="/2014/05/18/using-chrome-search-engine-multiple-search-params/">Using Chrome Search Engine – Multiple Search Params</a></li>
-<li><a href="/2014/05/16/how-i-started-running/">How I started Running</a></li>
-<li><a href="/2014/04/13/how-the-past-influences-the-present/">How the past influences the present</a></li>
-<li><a href="/2014/02/19/example-when-to-use-the-strategy-pattern/">Example when to use the Strategy Pattern</a></li>
-<li><a href="/2014/02/13/how-to-write-a-blog-why-long-posts-rarely-work/">How to write a blog – Why long posts rarely work</a></li>
-<li><a href="/2014/02/11/how-to-check-content-header-on-unknown-number-of-items-python/">How to check content header on unknown number of items – Python</a></li>
-<li><a href="/2014/02/11/the-method-of-loci-and-how-it-works-for-me/">The method of Loci and how it works for me</a></li>
-<li><a href="/2014/02/10/why-you-should-learn-using-vim/">Why you should learn using Vim</a></li>
-<li><a href="/2014/02/09/why-does-it-matter-if-i-sit-in-an-office-or-in-a-park/">Why does it matter if I sit in an office or in a park</a></li>
-<li><a href="/2014/02/04/how-i-recruit-why-tool-requirements-are-stupid/">How I recruit – Why tool requirements are stupid</a></li>
-<li><a href="/2013/11/02/why-you-should-care-about-the-quality-of-your-test-code/">Why you should care about the quality of your test code</a></li>
-<li><a href="/2013/10/11/diary-of-a-bit/">Diary of a Bit</a></li>
-<li><a href="/2013/08/26/low-tech-why-having-less-will-fell-more/">Low Tech – Why having less will fell more</a></li>
-<li><a href="/2013/07/31/why-not-to-automate-everything/">Why not to automate everything…</a></li>
-<li><a href="/2013/06/24/sublime-text-5/">Sublime text</a></li>
-<li><a href="/2013/04/18/cucumber-jvm-and-afterall/">Cucumber-Jvm And @AfterAll</a></li>
-<li><a href="/2013/04/15/cucumber-test-name-and-tags-on-feature/">Cucumber Test Name and Tags on Feature</a></li>
-<li><a href="/2013/04/11/groovy-and-grails-course-summary/">Groovy and Grails course summary</a></li>
-<li><a href="/2013/04/11/my-history-in-testing/">My history in testing</a></li>
-<li><a href="/2013/01/31/its-all-about-human-interaction/">It’s all about human interaction.</a></li>
-<li><a href="/2013/01/21/what-you-really-need-to-become-a-testing-expert/">What you really need to know to become a Testing Expert</a></li>
-<li><a href="/2013/01/04/from-chaos-there-shall-be-order/">From Chaos There Shall Be Order</a></li>
-<li><a href="/2012/12/12/methodologies-thought-patterns-lies/">Methodologies, Thought Patterns, Lies</a></li>
-<li><a href="/2012/12/01/teas-testing-exploration-adventure-session/">TEAS: Testing Exploration Adventure Session</a></li>
-<li><a href="/2012/10/09/how-to-eliminate-a-parameter-boom/">How to eliminate a parameter boom</a></li>
-<li><a href="/2012/09/30/89/">Coderetreat London</a></li>
-<li><a href="/2012/09/20/what-my-brain-is-up-to-the-whole-day/">What my brain is up to the whole day…</a></li>
-<li><a href="/2012/09/09/learning-programming-with-a-visual-mind/">Learning programming with a visual mind</a></li>
-<li><a href="/2012/07/12/tdd-and-game-of-life/">TDD and Game of Life</a></li>
-<li><a href="/2012/06/28/journey-into-an-unknown-system/">Journey into an unknown system</a></li>
-<li><a href="/2012/06/26/solution-to-wrap-kata/">Solution to Wrap Kata</a></li>
-<li><a href="/2012/06/18/how-to-read-a-professional-book-for-slow-learners/">How to read a professional book for slow learners</a></li>
-<li><a href="/2012/06/13/dont-throw-exception/">Don’t throw Exception</a></li>
-<li><a href="/2012/06/13/how-to-write-a-professional-blog/">How to write a professional blog</a></li>
-<li><a href="/2012/06/13/making-your-code-understandable/">Making your code understandable</a></li>
-<li><a href="/2012/04/11/getting-dual-card-to-work-on-ubuntu-12-04/">Getting Dual Card to work on Ubuntu 12.04.</a></li>
-<li><a href="/2012/03/04/jms-connection-setup-and-framework/">JMS Connection setup and Framework</a></li>
-<li><a href="/2012/02/27/configuration/">Configuration</a></li>
-<li><a href="/2012/02/26/hello-and-welcome/">Hello and welcome</a></li>
-<li><a href="/2012/02/26/testing-code-tag/">Testing ‘code’ tag.</a></li>
-</ul>
-</section>
-</aside>
-<footer class="footer layout__footer">
-<p><!-- raw HTML omitted --></p>
-<p>Powered by <a href="https://gohugo.io/">Hugo</a> and the <a href="https://github.com/frjo/hugo-theme-zen">Zen theme</a>.</p>
-
-</footer>
-</div>
-<div class="mobile-nav" dir="ltr">
-  <div class="mobile-nav__cover"></div>
-  <a href="#navigation" class="mobile-nav__toggle" aria-haspopup="true" role="button">Menu</a>
-  <div class="mobile-nav__sheet">
-    <div class="mobile-nav__region">
-    
     </div>
-    <nav class="mobile-nav__main-menu">
-    <h2 class="visually-hidden">Main menu</h2>
-    <ul class="mobile-nav__navbar">
-    <li><a href="/">Home</a></li>
-    <li><a href="/blog/" class="active" aria-current="page">Blog</a></li>
-    </ul>
-    </nav>
-  </div>
+
+    
+<footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/jenkins/">jenkins</a>
+          <a href="/tags/packer/">Packer</a>
+          <a href="/tags/vagrant/">vagrant</a>
+          </div>
+      <nav class="post-nav">
+        <a class="prev" href="/2015/07/19/converting-numbers-into-string-representations/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Converting numbers into string representations</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/2015/07/15/bitwise-operator/">
+            <span class="next-text nav-default">Bitwise &amp; Operator</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        <div id="disqus_thread"></div>
+    <script type="text/javascript">
+    (function() {
+      
+      
+      if (window.location.hostname === 'localhost') return;
+
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      var disqus_shortname = 'hannibalDisqus';
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="https://twitter.com/skarlso" class="iconfont icon-twitter" title="twitter"></a>
+      <a href="https://github.com/Skarlso" class="iconfont icon-github" title="github"></a>
+  <a href="https://skarlso.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
 </div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+     - 
+    2021<span class="heart"><i class="iconfont icon-heart"></i></span><span>Gergely Brautigam</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  <script type="text/javascript" src="/lib/jquery/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="/lib/slideout/slideout-1.0.1.min.js"></script>
+  
+
+
+
+<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-69463020-2', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+
 </body>
 </html>
