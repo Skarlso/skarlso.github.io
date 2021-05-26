@@ -16,13 +16,77 @@
       <guid>https://skarlso.github.io/2015/06/30/powershell-can-also-be-nice-or-installing-java-silently-and-waiting/</guid>
       <description>&lt;p&gt;Hello folks.&lt;/p&gt;
 &lt;p&gt;Today, I would like to show you a small script. It installs Java JDK, both version, x86 and 64 bit, silently, and wait for that process to finish.&lt;/p&gt;
-&lt;p&gt;The wait is necessary because /s on a java install has the nasty habit of running in the background. If you are using a .bat file, &lt;strong&gt;you shouldn’t&lt;/strong&gt;, than you would use something like: start /w jdk-setup.exe /s. This gets it done, but is ugly. Also, if you are using Packer and PowerShell provisioning, you might want to set up some environment variables as well for the next script. And you want that property to be available and you don’t want to mess it up with setting a path into a file and then re-setting your path on the begin of your other script. Or pass it around with Packer. No. Use a proper PowerShell script. Learn it. It’s not that hard. Be a professional. Don’t hack something together for the next person to suffer at.&lt;/p&gt;
+&lt;p&gt;The wait is necessary because /s on a java install has the nasty habit of running in the background. If you are using a .bat file, &lt;strong&gt;you shouldn&amp;rsquo;t&lt;/strong&gt;, than you would use something like: start /w jdk-setup.exe /s. This gets it done, but is ugly. Also, if you are using Packer and PowerShell provisioning, you might want to set up some environment variables as well for the next script. And you want that property to be available and you don&amp;rsquo;t want to mess it up with setting a path into a file and then re-setting your path on the begin of your other script. Or pass it around with Packer. No. Use a proper PowerShell script. Learn it. It&amp;rsquo;s not that hard. Be a professional. Don&amp;rsquo;t hack something together for the next person to suffer at.&lt;/p&gt;
 &lt;p&gt;Here is how I did it. Hope it helps somebody out.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Now, there is room for improvement here. Like checking exit code, doing something extra after a failed exit. Throwing an exception, and so on and so forth. But this is a much needed improvement from calling a BAT file.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-powershell&#34; data-lang=&#34;powershell&#34;&gt;
+$JDK_VER=&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;7u75&amp;#34;&lt;/span&gt;
+$JDK_FULL_VER=&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;7u75-b13&amp;#34;&lt;/span&gt;
+$JDK_PATH=&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1.7.0_75&amp;#34;&lt;/span&gt;
+$source86 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-i586.exe&amp;#34;&lt;/span&gt;
+$source64 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-x64.exe&amp;#34;&lt;/span&gt;
+$destination86 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\vagrant\$JDK_VER-x86.exe&amp;#34;&lt;/span&gt;
+$destination64 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\vagrant\$JDK_VER-x64.exe&amp;#34;&lt;/span&gt;
+$client = new-object System.Net.WebClient
+$cookie = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;oraclelicense=accept-securebackup-cookie&amp;#34;&lt;/span&gt;
+$client.Headers.Add(&lt;span style=&#34;color:#66d9ef&#34;&gt;[System.Net.HttpRequestHeader]&lt;/span&gt;::Cookie, $cookie)
+
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Checking if Java is already installed&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; ((Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files (x86)\Java&amp;#34;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;-Or&lt;/span&gt; (Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files\Java&amp;#34;&lt;/span&gt;)) {
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;No need to Install Java&amp;#39;&lt;/span&gt;
+    Exit
+}
+
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Downloading x86 to $destination86&amp;#39;&lt;/span&gt;
+
+$client.downloadFile($source86, $destination86)
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (!(Test-Path $destination86)) {
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Downloading $destination86 failed&amp;#34;&lt;/span&gt;
+    Exit
+}
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Downloading x64 to $destination64&amp;#39;&lt;/span&gt;
+
+$client.downloadFile($source64, $destination64)
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (!(Test-Path $destination64)) {
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Downloading $destination64 failed&amp;#34;&lt;/span&gt;
+    Exit
+}
+
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installing JDK-x64&amp;#39;&lt;/span&gt;
+    $proc1 = Start-Process -FilePath &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$destination64&amp;#34;&lt;/span&gt; -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/s REBOOT=ReallySuppress&amp;#34;&lt;/span&gt; -Wait -PassThru
+    $proc1.waitForExit()
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installation Done.&amp;#39;&lt;/span&gt;
+
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installing JDK-x86&amp;#39;&lt;/span&gt;
+    $proc2 = Start-Process -FilePath &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$destination86&amp;#34;&lt;/span&gt; -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/s REBOOT=ReallySuppress&amp;#34;&lt;/span&gt; -Wait -PassThru
+    $proc2.waitForExit()
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installtion Done.&amp;#39;&lt;/span&gt;
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[exception]&lt;/span&gt; {
+    write-host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_ is&amp;#39;&lt;/span&gt; $_
+    write-host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.GetType().FullName is&amp;#39;&lt;/span&gt; $_.GetType().FullName
+    write-host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception is&amp;#39;&lt;/span&gt; $_.Exception
+    write-host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception.GetType().FullName is&amp;#39;&lt;/span&gt; $_.Exception.GetType().FullName
+    write-host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception.Message is&amp;#39;&lt;/span&gt; $_.Exception.Message
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; ((Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files (x86)\Java&amp;#34;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;-Or&lt;/span&gt; (Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files\Java&amp;#34;&lt;/span&gt;)) {
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Java installed successfully.&amp;#39;&lt;/span&gt;
+}
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Setting up Path variables.&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;[System.Environment]&lt;/span&gt;::SetEnvironmentVariable(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;JAVA_HOME&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files (x86)\Java\jdk$JDK_PATH&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Machine&amp;#34;&lt;/span&gt;)
+&lt;span style=&#34;color:#66d9ef&#34;&gt;[System.Environment]&lt;/span&gt;::SetEnvironmentVariable(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;PATH&amp;#34;&lt;/span&gt;, $Env:Path + &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;;c:\Program Files (x86)\Java\jdk$JDK_PATH\bin&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Machine&amp;#34;&lt;/span&gt;)
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Done. Goodbye.&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now, there is room for improvement here. Like checking exit code, doing something extra after a failed exit. Throwing an exception, and so on and so forth. But this is a much needed improvement from calling a BAT file.&lt;/p&gt;
 &lt;p&gt;And you would use this in a Packer JSON file like this..&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Easy. And at the end, the System.Environment actually writes out into the registry permanently so no need to pass it around in a file or something ugly like that.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;
+{
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;powershell&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;scripts&amp;#34;&lt;/span&gt;: [
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/jdk_inst.ps1&amp;#34;&lt;/span&gt;
+      ]
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Easy. And at the end, the System.Environment actually writes out into the registry permanently so no need to pass it around in a file or something ugly like that.&lt;/p&gt;
 &lt;p&gt;Hope this helps somebody.&lt;/p&gt;
 &lt;p&gt;Thanks for reading.&lt;/p&gt;
 &lt;p&gt;Gergely.&lt;/p&gt;

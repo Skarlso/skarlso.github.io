@@ -246,13 +246,102 @@ Gergely.&lt;/p&gt;
       <guid>https://skarlso.github.io/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/</guid>
       <description>&lt;p&gt;Hi folks.&lt;/p&gt;
 &lt;p&gt;If you have the tendency, like me, to forget that you are on the corporate VPN, or leave a certain software open when you bring your laptop to work, this might be helpful to you too.&lt;/p&gt;
-&lt;p&gt;It’s a small script which kills a program when you change your Wifi network.&lt;/p&gt;
+&lt;p&gt;It&amp;rsquo;s a small script which kills a program when you change your Wifi network.&lt;/p&gt;
 &lt;p&gt;Script:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Now, the trick is, on OSX to only trigger this when your network changes. For this, you can have a ‘launchd’ daemon, which is configured to watch three files which relate to a network being changed.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;#!/bin/bash&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt; log &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    directory&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/Users/&amp;lt;username&amp;gt;/wifi_detect&amp;#34;&lt;/span&gt;
+    log_dir_exists&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;true
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt; ! -d $directory &lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+        echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Attempting to create =&amp;gt; &lt;/span&gt;$directory&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+        mkdir -p $directory
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt; ! -d $directory &lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+            echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Could not create directory. Continue to log to echo.&amp;#34;&lt;/span&gt;
+            log_dir_exists&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;false
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; $log_dir_exists ; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+        echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;date&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;:&lt;/span&gt;$1&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &amp;gt;&amp;gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$directory&lt;span style=&#34;color:#e6db74&#34;&gt;/log.txt&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;
+        echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;date&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;:&lt;/span&gt;$1&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt; check_program &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    to_kill&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;1::1&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;${&lt;/span&gt;1:1&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+    log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Checking if &lt;/span&gt;$to_kill&lt;span style=&#34;color:#e6db74&#34;&gt; really quit.&amp;#34;&lt;/span&gt;
+    ps&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;ps aux |grep &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$to_kill&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
+    log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;ps =&amp;gt; &lt;/span&gt;$ps&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt; -z &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$ps&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+	&lt;span style=&#34;color:#75715e&#34;&gt;# 0 - True&lt;/span&gt;
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;
+	&lt;span style=&#34;color:#75715e&#34;&gt;# 1 - False&lt;/span&gt;
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt; kill_program &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Killing program&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#e6db74&#34;&gt;`&lt;/span&gt;pkill -f &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$1&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;`&lt;/span&gt;
+    sleep &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; ! check_program $1 ; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+	log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$1&lt;span style=&#34;color:#e6db74&#34;&gt; Did not quit!&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;
+	log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$1&lt;span style=&#34;color:#e6db74&#34;&gt; quit successfully&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+wifi_name&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;networksetup -getairportnetwork en0 |awk -F&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;: &amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;{print $2}&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
+log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Wifi name: &lt;/span&gt;$wifi_name&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$wifi_name&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;lt;wifi_name&amp;gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+    log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;On corporate network... Killing Program&amp;#34;&lt;/span&gt;
+    kill_program &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;lt;programname&amp;gt;&amp;#34;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;elif&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;$wifi_name&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;lt;home_wifi_name&amp;gt;&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Kill &amp;lt;program&amp;gt; if enabled and if on &amp;lt;home_wifi&amp;gt; and if Tunnelblick is running.&lt;/span&gt;
+    log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Not on corporate network... Killing &amp;lt;program&amp;gt; if Tunnelblick is active.&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; ! check_program &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Tunnelblick&amp;#34;&lt;/span&gt; ; &lt;span style=&#34;color:#66d9ef&#34;&gt;then&lt;/span&gt;
+	log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Tunnelblick is active. Killing &amp;lt;program&amp;gt;&amp;#34;&lt;/span&gt;
+	kill_program &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;lt;program&amp;gt;&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;
+	log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;All good... Happy coding.&amp;#34;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt;
+    log &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;No known Network...&amp;#34;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;fi&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now, the trick is, on OSX to only trigger this when your network changes. For this, you can have a &amp;lsquo;launchd&amp;rsquo; daemon, which is configured to watch three files which relate to a network being changed.&lt;/p&gt;
 &lt;p&gt;The script sits under your ~/Library/LaunchAgents folder. Create something like, com.username.checknetwork.plist.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Now, when you change your network, to whatever your corporate network is, you’ll kill Sublime.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;?xml version=&amp;#34;1.0&amp;#34; encoding=&amp;#34;UTF-8&amp;#34;?&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;!DOCTYPE plist PUBLIC &amp;#34;-//Apple Computer//DTD PLIST 1.0//EN&amp;#34; \
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt; &amp;#34;http://www.apple.com/DTDs/PropertyList-1.0.dtd&amp;#34;&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;plist&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;version=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;dict&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;key&amp;gt;&lt;/span&gt;Label&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/key&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;string&amp;gt;&lt;/span&gt;ifup.ddns&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/string&amp;gt;&lt;/span&gt;
+
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;key&amp;gt;&lt;/span&gt;LowPriorityIO&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/key&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;true/&amp;gt;&lt;/span&gt;
+
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;key&amp;gt;&lt;/span&gt;ProgramArguments&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/key&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;array&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;string&amp;gt;&lt;/span&gt;/Users/username/scripts/ddns-update.sh&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/string&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/array&amp;gt;&lt;/span&gt;
+
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;key&amp;gt;&lt;/span&gt;WatchPaths&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/key&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;array&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;string&amp;gt;&lt;/span&gt;/etc/resolv.conf&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/string&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;string&amp;gt;&lt;/span&gt;/Library/Preferences/SystemConfiguration/NetworkInterfaces.plist&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/string&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;string&amp;gt;&lt;/span&gt;/Library/Preferences/SystemConfiguration/com.apple.airport.preferences.plist&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/string&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/array&amp;gt;&lt;/span&gt;
+
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;key&amp;gt;&lt;/span&gt;RunAtLoad&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/key&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;true/&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/dict&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/plist&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now, when you change your network, to whatever your corporate network is, you&amp;rsquo;ll kill Sublime.&lt;/p&gt;
 &lt;p&gt;Hope this helps somebody.&lt;/p&gt;
 &lt;p&gt;Cheers,&lt;/p&gt;
 &lt;p&gt;Gergely.&lt;/p&gt;
@@ -265,23 +354,122 @@ Gergely.&lt;/p&gt;
       <pubDate>Thu, 15 Oct 2015 00:00:00 +0000</pubDate>
       <guid>https://skarlso.github.io/2015/10/15/jenkins-job-dsl-and-groovy-goodness/</guid>
       <description>&lt;p&gt;Hi Folks.&lt;/p&gt;
-&lt;p&gt;Ever used &lt;!-- raw HTML omitted --&gt;Job DSL plugin&lt;!-- raw HTML omitted --&gt; for Jenkins? What is that you say? Well, it’s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.&lt;/p&gt;
-&lt;p&gt;Today, however, I’m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.&lt;/p&gt;
+&lt;p&gt;Ever used &lt;!-- raw HTML omitted --&gt;Job DSL plugin&lt;!-- raw HTML omitted --&gt; for Jenkins? What is that you say? Well, it&amp;rsquo;s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.&lt;/p&gt;
+&lt;p&gt;Today, however, I&amp;rsquo;m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.&lt;/p&gt;
 &lt;p&gt;Today, I would like to write about a part of it which is even more interesting. And that is, extracting re-occurring parts in your job configurations.&lt;/p&gt;
-&lt;p&gt;If you have jobs, which have a common part that is repeated everywhere, you usually have an urge to extracted that into one place, lest it changes and you have to go an apply the change everywhere. That’s not very efficient. But how do you do that in something which looks like a JSON descriptor?&lt;/p&gt;
+&lt;p&gt;If you have jobs, which have a common part that is repeated everywhere, you usually have an urge to extracted that into one place, lest it changes and you have to go an apply the change everywhere. That&amp;rsquo;s not very efficient. But how do you do that in something which looks like a JSON descriptor?&lt;/p&gt;
 &lt;p&gt;Fret not, it is just Groovy. And being just groovy, you can use Groovy to implement parts of the job description and then apply that implementation to the job in the DSL.&lt;/p&gt;
 &lt;p&gt;Suppose you have an email which you send after every job for which the DSL looks like this:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Now, that big chunk of email setting is copied into a bunch of files, which is pretty ugly. And once you try to change it, you’ll have to change it everywhere. Also, the interesting bits here are those readFileFromWorkspace parts. Those allow us to export even larger chunks of the script into external files. Now, because the slave might be located somewhere else, you should not use new File(‘file’).text in your job DSL. readFileFromWorkspace in the background does that, but applies correct way to the PATH it looks on for the file specified.&lt;/p&gt;
-&lt;p&gt;Let’s put this into a groovy script, shall we? Create a utilities folder where the DSL is and create a groovy file in it like this one:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;The function addEmailTemplate gets two parameters. A job, which is an implementation of a Job, and a dslFactory which is a DslFactory. That factory is an interface which defines our readFileFromWorkspace. Where do we get the implementation from then? That will be from the Job. Let’s alter our job to apply this Groovy script.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Notice three things here.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;
+job&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;MyTestJob&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    description &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;lt;strong&amp;gt;GENERATED - do not modify&amp;lt;/strong&amp;gt;&amp;#39;&lt;/span&gt;
+    label&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;machine_label&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+    logRotator&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;30&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+    parameters &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        stringParam&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;somestringparam&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;default_valye&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Description&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    wrappers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        timeout &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+            noActivity&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;600&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+            abortBuild&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+            failBuild&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+            writeDescription&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Build failed due to timeout after {0} minutes&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    deliveryPipelineConfiguration&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Main&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;MyTestJob&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+    wrappers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        preBuildCleanup &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+            deleteDirectories&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+        timestamps&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    triggers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        cron&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;H 12 * * 1,2&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    steps &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        batchFile&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;readFileFromWorkspace&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;relative/path/to/file&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;))&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+            publishers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+                wsCleanup&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+                extendedEmail&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;email@address.com&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_SUBJECT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_CONTENT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+                    configure &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; node &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;gt;&lt;/span&gt;
+                        node &lt;span style=&#34;color:#e6db74&#34;&gt;/ presendScript &amp;lt;&amp;lt; readFileFromWorkspace(&amp;#39;email_templates/&lt;/span&gt;emailtemplate&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;groovy&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;)
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                        node / replyTo &amp;lt;&amp;lt; &amp;#39;&lt;/span&gt;$DEFAULT_REPLYTO&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                        node / contentType &amp;lt;&amp;lt; &amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;default&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                    }
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                    trigger(triggerName: &amp;#39;&lt;/span&gt;StillUnstable&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, subject: &amp;#39;&lt;/span&gt;$DEFAULT_SUBJECT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, body: &amp;#39;&lt;/span&gt;$DEFAULT_CONTENT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, replyTo: &amp;#39;&lt;/span&gt;$DEFAULT_REPLYTO&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, sendToDevelopers: true, sendToRecipientList: true)
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                    trigger(triggerName: &amp;#39;&lt;/span&gt;Fixed&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, subject: &amp;#39;&lt;/span&gt;$DEFAULT_SUBJECT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, body: &amp;#39;&lt;/span&gt;$DEFAULT_CONTENT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, replyTo: &amp;#39;&lt;/span&gt;$DEFAULT_REPLYTO&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, sendToDevelopers: true, sendToRecipientList: true)
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                    trigger(triggerName: &amp;#39;&lt;/span&gt;Failure&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, subject: &amp;#39;&lt;/span&gt;$DEFAULT_SUBJECT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, body: &amp;#39;&lt;/span&gt;$DEFAULT_CONTENT&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;, replyTo: &amp;#39;&lt;/span&gt;$DEFAULT_REPLYTO&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToDevelopers: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToRecipientList: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+            &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now, that big chunk of email setting is copied into a bunch of files, which is pretty ugly. And once you try to change it, you&amp;rsquo;ll have to change it everywhere. Also, the interesting bits here are those readFileFromWorkspace parts. Those allow us to export even larger chunks of the script into external files. Now, because the slave might be located somewhere else, you should not use new File(&amp;lsquo;file&amp;rsquo;).text in your job DSL. readFileFromWorkspace in the background does that, but applies correct way to the PATH it looks on for the file specified.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s put this into a groovy script, shall we? Create a utilities folder where the DSL is and create a groovy file in it like this one:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;package&lt;/span&gt; utilities
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;JobCommonTemplate&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;addEmailTemplate&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; job&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; dslFactory&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        String emailScript &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; dslFactory&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;readFileFromWorkspace&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;email_template/EmailTemplate.groovy&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        job&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;with&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+            publishers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+                wsCleanup&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+                extendedEmail&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;email@address.com&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_SUBJECT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_CONTENT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+                    configure &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; node &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;gt;&lt;/span&gt;
+                        node &lt;span style=&#34;color:#e6db74&#34;&gt;/ presendScript &amp;lt;&amp;lt; emailScript
+&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;                        node /&lt;/span&gt; replyTo &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_REPLYTO&amp;#39;&lt;/span&gt;
+                        node &lt;span style=&#34;color:#f92672&#34;&gt;/&lt;/span&gt; contentType &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;default&amp;#39;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+                    trigger&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;triggerName: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;StillUnstable&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; subject: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_SUBJECT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; body: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_CONTENT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; replyTo: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_REPLYTO&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToDevelopers: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToRecipientList: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+                    trigger&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;triggerName: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Fixed&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; subject: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_SUBJECT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; body: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_CONTENT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; replyTo: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_REPLYTO&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToDevelopers: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToRecipientList: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+                    trigger&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;triggerName: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Failure&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; subject: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_SUBJECT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; body: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_CONTENT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; replyTo: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$DEFAULT_REPLYTO&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToDevelopers: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; sendToRecipientList: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+            &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The function addEmailTemplate gets two parameters. A job, which is an implementation of a Job, and a dslFactory which is a DslFactory. That factory is an interface which defines our readFileFromWorkspace. Where do we get the implementation from then? That will be from the Job. Let&amp;rsquo;s alter our job to apply this Groovy script.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-groovy&#34; data-lang=&#34;groovy&#34;&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; utilities.JobCommonTemplate
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; myJob &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; job&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;MyTestJob&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    description &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&amp;lt;strong&amp;gt;GENERATED - do not modify&amp;lt;/strong&amp;gt;&amp;#39;&lt;/span&gt;
+    label&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;machine_label&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+    logRotator&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;30&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+    parameters &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        stringParam&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;somestringparam&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;default_valye&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Description&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    wrappers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        timeout &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+            noActivity&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;600&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+            abortBuild&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+            failBuild&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+            writeDescription&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Build failed due to timeout after {0} minutes&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    deliveryPipelineConfiguration&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Main&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;MyTestJob&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+    wrappers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        preBuildCleanup &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+            deleteDirectories&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+        timestamps&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    triggers &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        cron&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;H 12 * * 1,2&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    steps &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        batchFile&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;readFileFromWorkspace&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;relative/path/to/file&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;))&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+JobCommonTemplate&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addEmailTemplate&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;myJob&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;this&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Notice three things here.&lt;/p&gt;
 &lt;p&gt;#1 =&amp;gt; &lt;strong&gt;import&lt;/strong&gt;. We import the script from utilities folder which we created and placed the script into it.&lt;/p&gt;
-&lt;p&gt;#2 =&amp;gt; &lt;strong&gt;def myJob&lt;/strong&gt;. We create a variable which will contain our job’s description.&lt;/p&gt;
-&lt;p&gt;#3 =&amp;gt; &lt;strong&gt;this&lt;/strong&gt;. ‘this’ will be the DslFactory. That’s where we get our readFileFromWorkspace implementation.&lt;/p&gt;
-&lt;p&gt;And that’s it. We have extracted a part of our job which is re-occurring and we found our implementation for our readFileFromWorkspace. DslFactory has most of the things which you need in a job description, would you want to expand on this and extract other bits and pieces.&lt;/p&gt;
+&lt;p&gt;#2 =&amp;gt; &lt;strong&gt;def myJob&lt;/strong&gt;. We create a variable which will contain our job&amp;rsquo;s description.&lt;/p&gt;
+&lt;p&gt;#3 =&amp;gt; &lt;strong&gt;this&lt;/strong&gt;. &amp;lsquo;this&amp;rsquo; will be the DslFactory. That&amp;rsquo;s where we get our readFileFromWorkspace implementation.&lt;/p&gt;
+&lt;p&gt;And that&amp;rsquo;s it. We have extracted a part of our job which is re-occurring and we found our implementation for our readFileFromWorkspace. DslFactory has most of the things which you need in a job description, would you want to expand on this and extract other bits and pieces.&lt;/p&gt;
 &lt;p&gt;Have fun, and happy coding!&lt;/p&gt;
 &lt;p&gt;As always,&lt;/p&gt;
 &lt;p&gt;Thanks for reading!&lt;/p&gt;
@@ -296,23 +484,120 @@ Gergely.&lt;/p&gt;
       <guid>https://skarlso.github.io/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/</guid>
       <description>&lt;p&gt;Hello folks.&lt;/p&gt;
 &lt;p&gt;Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.&lt;/p&gt;
-&lt;p&gt;So I’m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work. So here is how, I fixed the issue.&lt;/p&gt;
+&lt;p&gt;So I&amp;rsquo;m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work. So here is how, I fixed the issue.&lt;/p&gt;
 &lt;h1 id=&#34;connection&#34;&gt;Connection&lt;/h1&gt;
-&lt;p&gt;In order for the aggregation to work, there needs to be an &lt;strong&gt;artifact connection&lt;/strong&gt; between the upstream and downstream projects. And that is the key. But if you don’t have that, well, let’s create one. I have a parent job configured like this one. =&amp;gt;&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;As you can see, it’s pretty basic. It isn’t much. It’s supposed to be a trigger job for downstream projects. You could have this one at anything. Maybe scheduled, or have some kind of gathering here of some results, and so on and so forth. The end part of the configuration is the interesting bit.&lt;/p&gt;
-&lt;p&gt;Aggregation is setup, but it won’t work, because despite there being an upstream/downstream relationship, there also needs to be an artifact connection which uses &lt;strong&gt;fingerprinting&lt;/strong&gt;. Fingerprinting for Jenkins is needed in oder to make the physical connection between the jobs via hashes. This is what you will get if that is not setup:&lt;/p&gt;
+&lt;p&gt;In order for the aggregation to work, there needs to be an &lt;strong&gt;artifact connection&lt;/strong&gt; between the upstream and downstream projects. And that is the key. But if you don&amp;rsquo;t have that, well, let&amp;rsquo;s create one. I have a parent job configured like this one. =&amp;gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;?xml version=&amp;#39;1.0&amp;#39; encoding=&amp;#39;UTF-8&amp;#39;?&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;project&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;actions/&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;description&amp;gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;keepDependencies&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/keepDependencies&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;properties/&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;scm&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;class=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;hudson.scm.NullSCM&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;/&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;canRoam&amp;gt;&lt;/span&gt;true&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/canRoam&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;disabled&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/disabled&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;blockBuildWhenDownstreamBuilding&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/blockBuildWhenDownstreamBuilding&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;blockBuildWhenUpstreamBuilding&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/blockBuildWhenUpstreamBuilding&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;triggers/&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;concurrentBuild&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/concurrentBuild&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;builders/&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;publishers&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;hudson.tasks.test.AggregatedTestResultPublisher&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;plugin=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;junit@1.9&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;includeFailedBuilds&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/includeFailedBuilds&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/hudson.tasks.test.AggregatedTestResultPublisher&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;hudson.tasks.BuildTrigger&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;childProjects&amp;gt;&lt;/span&gt;ChildJob&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/childProjects&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;threshold&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;SUCCESS&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;ordinal&amp;gt;&amp;lt;/ordinal&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;color&amp;gt;&lt;/span&gt;BLUE&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/color&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;completeBuild&amp;gt;&lt;/span&gt;true&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/completeBuild&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/threshold&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/hudson.tasks.BuildTrigger&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/publishers&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;buildWrappers/&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/project&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;As you can see, it&amp;rsquo;s pretty basic. It isn&amp;rsquo;t much. It&amp;rsquo;s supposed to be a trigger job for downstream projects. You could have this one at anything. Maybe scheduled, or have some kind of gathering here of some results, and so on and so forth. The end part of the configuration is the interesting bit.&lt;/p&gt;
+&lt;p&gt;Aggregation is setup, but it won&amp;rsquo;t work, because despite there being an upstream/downstream relationship, there also needs to be an artifact connection which uses &lt;strong&gt;fingerprinting&lt;/strong&gt;. Fingerprinting for Jenkins is needed in oder to make the physical connection between the jobs via hashes. This is what you will get if that is not setup:&lt;/p&gt;
 &lt;p&gt;But if there is no artifact between them, what do you do? You create one.&lt;/p&gt;
 &lt;h1 id=&#34;the-artifact-which-binds-us&#34;&gt;The Artifact which Binds Us&lt;/h1&gt;
-&lt;p&gt;Adding a simple &lt;strong&gt;timestamp file&lt;/strong&gt; is enough to make a connection. So let’s do that. This is how it will look like =&amp;gt;&lt;/p&gt;
+&lt;p&gt;Adding a simple &lt;strong&gt;timestamp file&lt;/strong&gt; is enough to make a connection. So let&amp;rsquo;s do that. This is how it will look like =&amp;gt;&lt;/p&gt;
 &lt;p&gt;The important bits about this picture are the small echo which simply creates a file which will contain some time stamp data, and after that the archive artifact, which also fingerprints that file, marking it with a hash which identifies this job as using that particular artifact.&lt;/p&gt;
 &lt;p&gt;Now, the next step is to create the connection. For that, you need the artifact copy plugin =&amp;gt; &lt;!-- raw HTML omitted --&gt;Copy Artifact Plugin&lt;!-- raw HTML omitted --&gt;.&lt;/p&gt;
 &lt;p&gt;With this, we create the childs configuration like this:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Again, the improtant bit is this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;?xml version=&amp;#39;1.0&amp;#39; encoding=&amp;#39;UTF-8&amp;#39;?&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;project&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;actions/&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;description&amp;gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;keepDependencies&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/keepDependencies&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;properties/&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;scm&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;class=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;hudson.plugins.git.GitSCM&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;plugin=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;git@2.4.0&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;configVersion&amp;gt;&lt;/span&gt;2&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/configVersion&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;userRemoteConfigs&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;hudson.plugins.git.UserRemoteConfig&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;url&amp;gt;&lt;/span&gt;https://github.com/Skarlso/DataMung.git&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/url&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/hudson.plugins.git.UserRemoteConfig&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/userRemoteConfigs&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;branches&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;hudson.plugins.git.BranchSpec&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;*/master&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/hudson.plugins.git.BranchSpec&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/branches&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;doGenerateSubmoduleConfigurations&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/doGenerateSubmoduleConfigurations&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;submoduleCfg&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;class=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;list&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;/&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;extensions/&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/scm&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;canRoam&amp;gt;&lt;/span&gt;true&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/canRoam&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;disabled&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/disabled&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;blockBuildWhenDownstreamBuilding&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/blockBuildWhenDownstreamBuilding&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;blockBuildWhenUpstreamBuilding&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/blockBuildWhenUpstreamBuilding&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;triggers/&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;concurrentBuild&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/concurrentBuild&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;builders&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;hudson.plugins.gradle.Gradle&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;plugin=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;gradle@1.24&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;description&amp;gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;switches&amp;gt;&amp;lt;/switches&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;tasks&amp;gt;&lt;/span&gt;assemble check&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/tasks&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;rootBuildScriptDir&amp;gt;&amp;lt;/rootBuildScriptDir&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;buildFile&amp;gt;&lt;/span&gt;build.gradle&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/buildFile&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;gradleName&amp;gt;&lt;/span&gt;(Default)&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/gradleName&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;useWrapper&amp;gt;&lt;/span&gt;true&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/useWrapper&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;makeExecutable&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/makeExecutable&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;fromRootBuildScriptDir&amp;gt;&lt;/span&gt;true&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/fromRootBuildScriptDir&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;useWorkspaceAsHome&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/useWorkspaceAsHome&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/hudson.plugins.gradle.Gradle&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;hudson.plugins.copyartifact.CopyArtifact&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;plugin=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;copyartifact@1.36&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;project&amp;gt;&lt;/span&gt;ParentJob&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/project&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;filter&amp;gt;&lt;/span&gt;timestamp.data&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/filter&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;target&amp;gt;&amp;lt;/target&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;excludes&amp;gt;&amp;lt;/excludes&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;selector&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;class=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;hudson.plugins.copyartifact.TriggeredBuildSelector&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;upstreamFilterStrategy&amp;gt;&lt;/span&gt;UseGlobalSetting&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/upstreamFilterStrategy&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/selector&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;doNotFingerprintArtifacts&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/doNotFingerprintArtifacts&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/hudson.plugins.copyartifact.CopyArtifact&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/builders&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;publishers&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;hudson.tasks.junit.JUnitResultArchiver&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;plugin=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;junit@1.9&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;testResults&amp;gt;&lt;/span&gt;build/test-results/*.xml&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/testResults&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;keepLongStdio&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/keepLongStdio&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;healthScaleFactor&amp;gt;&lt;/span&gt;1.0&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/healthScaleFactor&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/hudson.tasks.junit.JUnitResultArchiver&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/publishers&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;buildWrappers&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;hudson.plugins.ws__cleanup.PreBuildCleanup&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;plugin=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;ws-cleanup@0.28&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;deleteDirs&amp;gt;&lt;/span&gt;false&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/deleteDirs&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;cleanupParameter&amp;gt;&amp;lt;/cleanupParameter&amp;gt;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;externalDelete&amp;gt;&amp;lt;/externalDelete&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/hudson.plugins.ws__cleanup.PreBuildCleanup&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/buildWrappers&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/project&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Again, the improtant bit is this:&lt;/p&gt;
 &lt;p&gt;After the copy is setup, we launch our parent job and if everything is correct, you should see something like this:&lt;/p&gt;
 &lt;h1 id=&#34;wrapping-it-up&#34;&gt;Wrapping it Up&lt;/h1&gt;
-&lt;p&gt;For final words, important bit to take away from this is that you need an &lt;strong&gt;artifact connection between the jobs&lt;/strong&gt; to make this work. Whatever your downstream / upstream connection is, it doesn’t matter. Also, there can be a problem that you have everything set up, and there are artifacts which bind the jobs together but you still can’t see the results, then your best option is to specify the jobs BY NAME in the aggregate test plug-in like this:&lt;/p&gt;
+&lt;p&gt;For final words, important bit to take away from this is that you need an &lt;strong&gt;artifact connection between the jobs&lt;/strong&gt; to make this work. Whatever your downstream / upstream connection is, it doesn&amp;rsquo;t matter. Also, there can be a problem that you have everything set up, and there are artifacts which bind the jobs together but you still can&amp;rsquo;t see the results, then your best option is to specify the jobs BY NAME in the aggregate test plug-in like this:&lt;/p&gt;
 &lt;p&gt;I know this is a pain if there are multiple jobs, but at least, jenkins is providing you with Autoexpande once you start typing.&lt;/p&gt;
 &lt;p&gt;Of course this also works with multiple downstream jobs if they copy the artifact to themselves.&lt;/p&gt;
 &lt;p&gt;Any questions, please feel free to comment and I will answer to the best of my knowledge.&lt;/p&gt;
@@ -326,45 +611,325 @@ Gergely.&lt;/p&gt;
       <link>https://skarlso.github.io/2015/07/16/selenium-testing-with-packer-and-vagrant/</link>
       <pubDate>Thu, 16 Jul 2015 00:00:00 +0000</pubDate>
       <guid>https://skarlso.github.io/2015/07/16/selenium-testing-with-packer-and-vagrant/</guid>
-      <description>&lt;p&gt;So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution…&lt;/p&gt;
-&lt;h1 id=&#34;same-old8230&#34;&gt;Same old…&lt;/h1&gt;
+      <description>&lt;p&gt;So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution.&lt;/p&gt;
+&lt;h1 id=&#34;same-old&#34;&gt;Same old.&lt;/h1&gt;
 &lt;p&gt;Same as in my previous post, we are going to build a Windows Machine for this purpose. The only addition to my previous settings, will be some Java install, downloading selenium and installing Chrome, and Firefox.&lt;/p&gt;
 &lt;h1 id=&#34;installation&#34;&gt;Installation&lt;/h1&gt;
 &lt;h4 id=&#34;answer-file&#34;&gt;Answer File&lt;/h4&gt;
 &lt;p&gt;Here is the configuration and setup of Windows before the provision phase.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;This is the part were I’m installing Java. The script for the jdk_inst.ps1 is in my previous post, but I’ll paste it here for ease of read.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;This installs both x86 and 64 bit version of Java.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;
+...
+               &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;SynchronousCommand&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;wcm:action=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;add&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+                  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;CommandLine&amp;gt;&lt;/span&gt;cmd.exe /c C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\jdk_inst.ps1 -AutoStart&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/CommandLine&amp;gt;&lt;/span&gt;
+                  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;Description&amp;gt;&lt;/span&gt;Install Java&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/Description&amp;gt;&lt;/span&gt;
+                  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;Order&amp;gt;&lt;/span&gt;103&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/Order&amp;gt;&lt;/span&gt;
+                  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;RequiresUserInput&amp;gt;&lt;/span&gt;true&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/RequiresUserInput&amp;gt;&lt;/span&gt;
+               &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/SynchronousCommand&amp;gt;&lt;/span&gt;
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is the part were I&amp;rsquo;m installing Java. The script for the jdk_inst.ps1 is in my previous post, but I&amp;rsquo;ll paste it here for ease of read.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-powershell&#34; data-lang=&#34;powershell&#34;&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt; LogWrite {
+   &lt;span style=&#34;color:#66d9ef&#34;&gt;Param&lt;/span&gt; (&lt;span style=&#34;color:#66d9ef&#34;&gt;[string]&lt;/span&gt;$logstring)
+   $now = Get-Date -format s
+   Add-Content $Logfile -value &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$now $logstring&amp;#34;&lt;/span&gt;
+   Write-Host $logstring
+}
+
+$Logfile = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\jdk-install.log&amp;#34;&lt;/span&gt;
+
+$JDK_VER=&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;7u75&amp;#34;&lt;/span&gt;
+$JDK_FULL_VER=&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;7u75-b13&amp;#34;&lt;/span&gt;
+$JDK_PATH=&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1.7.0_75&amp;#34;&lt;/span&gt;
+$source86 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-i586.exe&amp;#34;&lt;/span&gt;
+$source64 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-x64.exe&amp;#34;&lt;/span&gt;
+$destination86 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\$JDK_VER-x86.exe&amp;#34;&lt;/span&gt;
+$destination64 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\$JDK_VER-x64.exe&amp;#34;&lt;/span&gt;
+$client = new-object System.Net.WebClient
+$cookie = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;oraclelicense=accept-securebackup-cookie&amp;#34;&lt;/span&gt;
+$client.Headers.Add(&lt;span style=&#34;color:#66d9ef&#34;&gt;[System.Net.HttpRequestHeader]&lt;/span&gt;::Cookie, $cookie)
+
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Setting Execution Policy level to Bypass&amp;#34;&lt;/span&gt;
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Bypass -Force
+
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Checking if Java is already installed&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; ((Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files (x86)\Java&amp;#34;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;-Or&lt;/span&gt; (Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files\Java&amp;#34;&lt;/span&gt;)) {
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;No need to Install Java&amp;#39;&lt;/span&gt;
+    Exit
+}
+
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Downloading x86 to $destination86&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+  $client.downloadFile($source86, $destination86)
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (!(Test-Path $destination86)) {
+      LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Downloading $destination86 failed&amp;#34;&lt;/span&gt;
+      Exit
+  }
+  LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Downloading x64 to $destination64&amp;#39;&lt;/span&gt;
+
+  $client.downloadFile($source64, $destination64)
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (!(Test-Path $destination64)) {
+      LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Downloading $destination64 failed&amp;#34;&lt;/span&gt;
+      Exit
+  }
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[Exception]&lt;/span&gt; {
+  LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception is&amp;#39;&lt;/span&gt; $_.Exception
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installing JDK-x64&amp;#39;&lt;/span&gt;
+    $proc1 = Start-Process -FilePath &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$destination64&amp;#34;&lt;/span&gt; -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/s REBOOT=ReallySuppress&amp;#34;&lt;/span&gt; -Wait -PassThru
+    $proc1.waitForExit()
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installation Done.&amp;#39;&lt;/span&gt;
+
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installing JDK-x86&amp;#39;&lt;/span&gt;
+    $proc2 = Start-Process -FilePath &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$destination86&amp;#34;&lt;/span&gt; -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/s REBOOT=ReallySuppress&amp;#34;&lt;/span&gt; -Wait -PassThru
+    $proc2.waitForExit()
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installtion Done.&amp;#39;&lt;/span&gt;
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[exception]&lt;/span&gt; {
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_ is&amp;#39;&lt;/span&gt; $_
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.GetType().FullName is&amp;#39;&lt;/span&gt; $_.GetType().FullName
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception is&amp;#39;&lt;/span&gt; $_.Exception
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception.GetType().FullName is&amp;#39;&lt;/span&gt; $_.Exception.GetType().FullName
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception.Message is&amp;#39;&lt;/span&gt; $_.Exception.Message
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; ((Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files (x86)\Java&amp;#34;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;-Or&lt;/span&gt; (Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files\Java&amp;#34;&lt;/span&gt;)) {
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Java installed successfully.&amp;#39;&lt;/span&gt;
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt; {
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Java install Failed!&amp;#39;&lt;/span&gt;
+}
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Setting up Path variables.&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;[System.Environment]&lt;/span&gt;::SetEnvironmentVariable(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;JAVA_HOME&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files (x86)\Java\jdk$JDK_PATH&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Machine&amp;#34;&lt;/span&gt;)
+&lt;span style=&#34;color:#66d9ef&#34;&gt;[System.Environment]&lt;/span&gt;::SetEnvironmentVariable(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;PATH&amp;#34;&lt;/span&gt;, $Env:Path + &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;;c:\Program Files (x86)\Java\jdk$JDK_PATH\bin&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Machine&amp;#34;&lt;/span&gt;)
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Done. Goodbye.&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This installs both x86 and 64 bit version of Java.&lt;/p&gt;
 &lt;h1 id=&#34;provision&#34;&gt;Provision&lt;/h1&gt;
-&lt;p&gt;I decided to put these into the provision phase to get log messages written out properly. Because in the unattended file, you can’t see any progress.&lt;/p&gt;
+&lt;p&gt;I decided to put these into the provision phase to get log messages written out properly. Because in the unattended file, you can&amp;rsquo;t see any progress.&lt;/p&gt;
 &lt;h4 id=&#34;chrome-and-firefox&#34;&gt;Chrome And Firefox&lt;/h4&gt;
-&lt;p&gt;Installing these two proved a little bit more difficult. Chrome didn’t really like me to download their installer without accepting something first, like Java. Luckily, after a LOT of digging, I found a chrome installer which lets you install silently. Here is the script to install the two.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;They both install silently. Pretty neat.&lt;/p&gt;
+&lt;p&gt;Installing these two proved a little bit more difficult. Chrome didn&amp;rsquo;t really like me to download their installer without accepting something first, like Java. Luckily, after a LOT of digging, I found a chrome installer which lets you install silently. Here is the script to install the two.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-powershell&#34; data-lang=&#34;powershell&#34;&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt; LogWrite {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;Param&lt;/span&gt; (&lt;span style=&#34;color:#66d9ef&#34;&gt;[string]&lt;/span&gt;$logstring)
+    $now = Get-Date -format s
+    Add-Content $Logfile -value &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$now $logstring&amp;#34;&lt;/span&gt;
+    Write-Host $logstring
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt; CheckLocation {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;Param&lt;/span&gt; (&lt;span style=&#34;color:#66d9ef&#34;&gt;[string]&lt;/span&gt;$location)
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (!(Test-Path  $location)) {
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[System.IO.FileNotFoundException]&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Could not download to Destination $location.&amp;#34;&lt;/span&gt;
+    }
+}
+
+$Logfile = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\chrome-firefox-install.log&amp;#34;&lt;/span&gt;
+
+$chrome_source = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://dl.google.com/chrome/install/375.126/chrome_installer.exe&amp;#34;&lt;/span&gt;
+$chrome_destination = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\chrome_installer.exe&amp;#34;&lt;/span&gt;
+$firefox_source = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;https://download-installer.cdn.mozilla.net/pub/firefox/releases/39.0/win32/hu/Firefox%20Setup%2039.0.exe&amp;#34;&lt;/span&gt;
+$firefox_destination = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\firefoxinstaller.exe&amp;#34;&lt;/span&gt;
+
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Starting to download files.&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Downloading Chrome...&amp;#39;&lt;/span&gt;
+    (New-Object System.Net.WebClient).DownloadFile($chrome_source, $chrome_destination)
+    CheckLocation $chrome_destination
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Done...&amp;#39;&lt;/span&gt;
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Downloading Firefox...&amp;#39;&lt;/span&gt;
+    (New-Object System.Net.WebClient).DownloadFile($firefox_source, $firefox_destination)
+    CheckLocation $firefox_destination
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[Exception]&lt;/span&gt; {
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Exception during download. Probable cause could be that the directory or the file didn&amp;#39;t exist.&amp;#34;&lt;/span&gt;
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception is&amp;#39;&lt;/span&gt; $_.Exception
+}
+
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Starting firefox install process.&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+    Start-Process -FilePath $firefox_destination -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;-ms&amp;#34;&lt;/span&gt; -Wait -PassThru
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[Exception]&lt;/span&gt; {
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Exception during install process.&amp;#39;&lt;/span&gt;
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception is&amp;#39;&lt;/span&gt; $_.Exception
+}
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Starting chrome install process.&amp;#39;&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+    Start-Process -FilePath $chrome_destination -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/silent /install&amp;#34;&lt;/span&gt; -Wait -PassThru
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[Exception]&lt;/span&gt; {
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Exception during install process.&amp;#39;&lt;/span&gt;
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception is&amp;#39;&lt;/span&gt; $_.Exception
+}
+
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;All done. Goodbye.&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;They both install silently. Pretty neat.&lt;/p&gt;
 &lt;h4 id=&#34;selenium&#34;&gt;Selenium&lt;/h4&gt;
 &lt;p&gt;This only has to be downloaded, so this is pretty simple. Vagrant will handle the startup of course when it does a vagrant up.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Straightforward.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-powershell&#34; data-lang=&#34;powershell&#34;&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt; LogWrite {
+   &lt;span style=&#34;color:#66d9ef&#34;&gt;Param&lt;/span&gt; (&lt;span style=&#34;color:#66d9ef&#34;&gt;[string]&lt;/span&gt;$logstring)
+   $now = Get-Date -format s
+   Add-Content $Logfile -value &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$now $logstring&amp;#34;&lt;/span&gt;
+   Write-Host $logstring
+}
+
+$Logfile = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\selenium-install.log&amp;#34;&lt;/span&gt;
+
+$source = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://selenium-release.storage.googleapis.com/2.46/selenium-server-standalone-2.46.0.jar&amp;#34;&lt;/span&gt;
+$destination = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\selenium-server.jar&amp;#34;&lt;/span&gt;
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Starting to download selenium file.&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+  (New-Object System.Net.WebClient).DownloadFile($source, $destination)
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[Exception]&lt;/span&gt; {
+  LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Exception during download. Probable cause could be that the directory or the file didn&amp;#39;t exist.&amp;#34;&lt;/span&gt;
+  LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception is&amp;#39;&lt;/span&gt; $_.Exception
+}
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Download done. Checking if file exists.&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (!(Test-Path $destination)) {
+  LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Downloading dotnet Failed!&amp;#39;&lt;/span&gt;
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt; {
+  LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Download successful.&amp;#39;&lt;/span&gt;
+}
+
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;All done. Goodbye.&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Straightforward.&lt;/p&gt;
 &lt;h4 id=&#34;the-packer-json-file&#34;&gt;The Packer Json File&lt;/h4&gt;
 &lt;p&gt;So putting this all together, here is the Packer JSON file for this:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;h4 id=&#34;additional-software&#34;&gt;Additional Software&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;
+{
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;variables&amp;#34;&lt;/span&gt;: {
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;vm_name&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;win7x64selenium&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;output_dir&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;output_win7_x64_selenium&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;vagrant_box_output&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;box_output&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;cpu_number&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;2&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;memory_size&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;4096&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;machine_type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;pc-1.2&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;accelerator&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;kvm&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;disk_format&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;qcow2&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;disk_interface&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;virtio&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;net_device&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;virtio-net&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;cpu_model&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;host&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;disk_cache&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;writeback&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;disk_io&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;native&amp;#34;&lt;/span&gt;
+   },
+
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;builders&amp;#34;&lt;/span&gt;: [
+    {
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;virtualbox-iso&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;iso_url&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/home/user/vms/windows7.iso&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;iso_checksum_type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;sha1&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;iso_checksum&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0BCFC54019EA175B1EE51F6D2B207A3D14DD2B58&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;headless&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;boot_wait&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;2m&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;ssh_username&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrant&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;ssh_password&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrant&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;ssh_wait_timeout&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;8h&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;shutdown_command&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;shutdown /s /t 10 /f /d p:4:1 /c \&amp;#34;Packer Shutdown\&amp;#34;&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;guest_os_type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Windows7_64&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;disk_size&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;61440&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;floppy_files&amp;#34;&lt;/span&gt;: [
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./answer_files/7-selenium/Autounattend.xml&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/dis-updates.ps1&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/microsoft-updates.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/openssh.ps1&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/jdk_inst.ps1&amp;#34;&lt;/span&gt;
+      ],
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;vboxmanage&amp;#34;&lt;/span&gt;: [
+        [
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;modifyvm&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;{{.Name}}&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;--memory&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;{{user `memory_size`}}&amp;#34;&lt;/span&gt;
+        ],
+        [
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;modifyvm&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;{{.Name}}&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;--cpus&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;{{user `cpu_number`}}&amp;#34;&lt;/span&gt;
+        ]
+      ]
+    }
+  ],
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;provisioners&amp;#34;&lt;/span&gt;: [
+    {
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;powershell&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;scripts&amp;#34;&lt;/span&gt; : [
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/install-selenium-server.ps1&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/install-chrome-firefox.ps1&amp;#34;&lt;/span&gt;
+      ]
+    },{
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;shell&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;remote_path&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/tmp/script.bat&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;execute_command&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;{{.Vars}} cmd /c C:/Windows/Temp/script.bat&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;scripts&amp;#34;&lt;/span&gt;: [
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/vm-guest-tools.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/vagrant-ssh.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/rsync.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/enable-rdp.bat&amp;#34;&lt;/span&gt;
+      ]
+    }
+  ],
+    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;post-processors&amp;#34;&lt;/span&gt;: [
+    {
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrant&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;keep_input_artifact&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;output&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;{{user `vm_name`}}_{{.Provider}}.box&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;vagrantfile_template&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrantfile-template&amp;#34;&lt;/span&gt;
+    }
+    ]
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;additional-software&#34;&gt;Additional Software&lt;/h4&gt;
 &lt;p&gt;This is not done here. Obviously, in order to test your stuff, you first need to install your software on this box. Ideally, everything you need should be in the code you clone to this box, and should be contained mostly. And your application deployment should take core of that. But, if you require something like a DB, postgres, oracle, whatnot, than this is the place where you would install all that.&lt;/p&gt;
 &lt;h1 id=&#34;vagrant-and-using-the-packer-box&#34;&gt;Vagrant and Using the Packer Box&lt;/h1&gt;
-&lt;p&gt;Now, this has been interesting so far, but how do you actually go about using this image? That’s the real question now, isn’t it? Having a box, just sitting on a shared folder, doesn’t do you too much good. So let’s create a Jenkins job, which utilizes this box in a job which runs a bunch of tests for some application.&lt;/p&gt;
+&lt;p&gt;Now, this has been interesting so far, but how do you actually go about using this image? That&amp;rsquo;s the real question now, isn&amp;rsquo;t it? Having a box, just sitting on a shared folder, doesn&amp;rsquo;t do you too much good. So let&amp;rsquo;s create a Jenkins job, which utilizes this box in a job which runs a bunch of tests for some application.&lt;/p&gt;
 &lt;h4 id=&#34;vagrantfile&#34;&gt;Vagrantfile&lt;/h4&gt;
 &lt;p&gt;Your vagrant file, could either be generated automatically, under source control ( which is preferred ) or sitting somewhere entirely elsewhere. In any case, it would look something like this.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Easy, no? Here is the script to start selenium.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Straight forward. We also are forwarding the port on which Selenium is running in order for the test to see it.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# -*- mode: ruby -*-&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# vi: set ft=ruby :&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;VAGRANTFILE_API_VERSION&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;2&amp;#34;&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;Vagrant&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;configure(&lt;span style=&#34;color:#66d9ef&#34;&gt;VAGRANTFILE_API_VERSION&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;config&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
+
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;provider &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;virtualbox&amp;#34;&lt;/span&gt;
+
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;define &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;selenium-box&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;vs2013&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
+    vs2013&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;box &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;windows7-x64-04-selenium&amp;#34;&lt;/span&gt;
+    vs2013&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;box_url &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;path/to/your/share/win7x64_selenium_virtualbox.box&amp;#34;&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
+
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;env&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;enable
+
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;guest &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;:windows&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;communicator &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;winrm&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;winrm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;username &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrant&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;winrm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;password &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrant&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;windows&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;set_work_network &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;network &lt;span style=&#34;color:#e6db74&#34;&gt;:forwarded_port&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;guest&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;3389&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;host&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;ENV&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;RDESKTOP_PORT&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;host_ip&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0.0.0.0&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;network &lt;span style=&#34;color:#e6db74&#34;&gt;:forwarded_port&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;guest&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;5985&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;host&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;5985&lt;/span&gt;, id: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;winrm&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;auto_correct&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;host_ip&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0.0.0.0&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;network &lt;span style=&#34;color:#e6db74&#34;&gt;:forwarded_port&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;guest&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;9991&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;host&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;9991&lt;/span&gt;, id: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;selenium&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;auto_correct&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;host_ip&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;0.0.0.0&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;provider &lt;span style=&#34;color:#e6db74&#34;&gt;:virtualbox&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;vbox&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
+    vbox&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;gui &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;
+    vbox&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;memory &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;4096&lt;/span&gt;
+    vbox&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;cpus &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
+
+
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;winrm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;max_tries &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;10&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;synced_folder &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;.&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/vagrant&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;type&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;rsync&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;provision &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;shell&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;path&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;init.bat&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;provision &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;shell&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;path&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;utils_inst.bat&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;provision &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;shell&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;path&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;jenkins_reg.ps1&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;provision &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;shell&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;path&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;start_selenium.bat&amp;#34;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Easy, no? Here is the script to start selenium.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;java -jar c:\Windows\Temp\selenium-server.jar -Dhttp.proxyPort=9991
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Straight forward. We also are forwarding the port on which Selenium is running in order for the test to see it.&lt;/p&gt;
 &lt;h4 id=&#34;the-jenkins-job&#34;&gt;The Jenkins Job&lt;/h4&gt;
-&lt;p&gt;The job can be anything. This is actually too large to cover here. It could be a gradle job, a maven job, an ant, a nant – or whatever is running the test -, job; it’s up to you.&lt;/p&gt;
-&lt;p&gt;Just make sure that before the test runs, do a &lt;strong&gt;vagrant up&lt;/strong&gt; and after the test finishes, in an ALWAYS TO BE EXECUTED HOOK -like gradle’s finalizedBy , call a &lt;strong&gt;vagrant destroy&lt;/strong&gt;. This way, your test will always run on a clean instance that has the necessary stuff on it.&lt;/p&gt;
+&lt;p&gt;The job can be anything. This is actually too large to cover here. It could be a gradle job, a maven job, an ant, a nant - or whatever is running the test -, job; it&amp;rsquo;s up to you.&lt;/p&gt;
+&lt;p&gt;Just make sure that before the test runs, do a &lt;strong&gt;vagrant up&lt;/strong&gt; and after the test finishes, in an ALWAYS TO BE EXECUTED HOOK -like gradle&amp;rsquo;s finalizedBy , call a &lt;strong&gt;vagrant destroy&lt;/strong&gt;. This way, your test will always run on a clean instance that has the necessary stuff on it.&lt;/p&gt;
 &lt;h1 id=&#34;closing-words&#34;&gt;Closing words&lt;/h1&gt;
-&lt;p&gt;So, there you have it. It’s relatively simple. Tying this all into your infrastructure might prove difficult though depending on how rigid your deployment is. But it will always help you make your tests a bit more robust.&lt;/p&gt;
-&lt;p&gt;Also, you could run the whole deployment and test phase on a vagrant box, from the start, which is tied to jenkins as a slave and gets started when the job starts and destroyed when the job ends. That way you wouldn’t have to create a, box in a box running on a box, kind of effect.&lt;/p&gt;
+&lt;p&gt;So, there you have it. It&amp;rsquo;s relatively simple. Tying this all into your infrastructure might prove difficult though depending on how rigid your deployment is. But it will always help you make your tests a bit more robust.&lt;/p&gt;
+&lt;p&gt;Also, you could run the whole deployment and test phase on a vagrant box, from the start, which is tied to jenkins as a slave and gets started when the job starts and destroyed when the job ends. That way you wouldn&amp;rsquo;t have to create a, box in a box running on a box, kind of effect.&lt;/p&gt;
 &lt;p&gt;Thanks for reading,&lt;/p&gt;
 &lt;p&gt;Gergely.&lt;/p&gt;</description>
     </item>
@@ -374,11 +939,36 @@ Gergely.&lt;/p&gt;
       <link>https://skarlso.github.io/2015/07/01/packer-0-8-1/</link>
       <pubDate>Wed, 01 Jul 2015 00:00:00 +0000</pubDate>
       <guid>https://skarlso.github.io/2015/07/01/packer-0-8-1/</guid>
-      <description>&lt;p&gt;Previously I wrote that the scripts I’m writing, are failing because Packer hangs.&lt;/p&gt;
+      <description>&lt;p&gt;Previously I wrote that the scripts I&amp;rsquo;m writing, are failing because Packer hangs.&lt;/p&gt;
 &lt;p&gt;Apparently, this was a known issue. And apparently, I was using an older version, 0.7.5. After I updated everything is working wonderfully!!!&lt;/p&gt;
 &lt;p&gt;And for my thanks, here is an updated PowerShell script for provisioning my dotnet stuff.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Thanks for reading!&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-powershell&#34; data-lang=&#34;powershell&#34;&gt;
+$source = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://download.microsoft.com/download/1/6/7/167F0D79-9317-48AE-AEDB-17120579F8E2/NDP451-KB2858728-x86-x64-AllOS-ENU.exe&amp;#34;&lt;/span&gt;
+$destination = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\dotnet.exe&amp;#34;&lt;/span&gt;
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Starting to download dotnet file.&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+  (New-Object System.Net.WebClient).DownloadFile($source, $destination)
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[Exception]&lt;/span&gt; {
+  Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Exception during download. Probable cause could be that the directory or the file didn&amp;#39;t exist.&amp;#34;&lt;/span&gt;
+  Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception is&amp;#39;&lt;/span&gt; $_.Exception
+}
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Download done. Checking if file exists.&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (!(Test-Path $destination)) {
+  Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Downloading dotnet Failed!&amp;#39;&lt;/span&gt;
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt; {
+  Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Download successful.&amp;#39;&lt;/span&gt;
+}
+
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Starting install process.&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+  Start-Process -FilePath $source -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/q /norestart&amp;#34;&lt;/span&gt; -Wait -PassThru
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[Exception]&lt;/span&gt; {
+  Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Exception during install process.&amp;#39;&lt;/span&gt;
+  Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception is&amp;#39;&lt;/span&gt; $_.Exception
+}
+
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;All done. Goodbye.&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Thanks for reading!&lt;/p&gt;
 &lt;p&gt;Gergely.&lt;/p&gt;
 </description>
     </item>
@@ -390,13 +980,77 @@ Gergely.&lt;/p&gt;
       <guid>https://skarlso.github.io/2015/06/30/powershell-can-also-be-nice-or-installing-java-silently-and-waiting/</guid>
       <description>&lt;p&gt;Hello folks.&lt;/p&gt;
 &lt;p&gt;Today, I would like to show you a small script. It installs Java JDK, both version, x86 and 64 bit, silently, and wait for that process to finish.&lt;/p&gt;
-&lt;p&gt;The wait is necessary because /s on a java install has the nasty habit of running in the background. If you are using a .bat file, &lt;strong&gt;you shouldn’t&lt;/strong&gt;, than you would use something like: start /w jdk-setup.exe /s. This gets it done, but is ugly. Also, if you are using Packer and PowerShell provisioning, you might want to set up some environment variables as well for the next script. And you want that property to be available and you don’t want to mess it up with setting a path into a file and then re-setting your path on the begin of your other script. Or pass it around with Packer. No. Use a proper PowerShell script. Learn it. It’s not that hard. Be a professional. Don’t hack something together for the next person to suffer at.&lt;/p&gt;
+&lt;p&gt;The wait is necessary because /s on a java install has the nasty habit of running in the background. If you are using a .bat file, &lt;strong&gt;you shouldn&amp;rsquo;t&lt;/strong&gt;, than you would use something like: start /w jdk-setup.exe /s. This gets it done, but is ugly. Also, if you are using Packer and PowerShell provisioning, you might want to set up some environment variables as well for the next script. And you want that property to be available and you don&amp;rsquo;t want to mess it up with setting a path into a file and then re-setting your path on the begin of your other script. Or pass it around with Packer. No. Use a proper PowerShell script. Learn it. It&amp;rsquo;s not that hard. Be a professional. Don&amp;rsquo;t hack something together for the next person to suffer at.&lt;/p&gt;
 &lt;p&gt;Here is how I did it. Hope it helps somebody out.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Now, there is room for improvement here. Like checking exit code, doing something extra after a failed exit. Throwing an exception, and so on and so forth. But this is a much needed improvement from calling a BAT file.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-powershell&#34; data-lang=&#34;powershell&#34;&gt;
+$JDK_VER=&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;7u75&amp;#34;&lt;/span&gt;
+$JDK_FULL_VER=&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;7u75-b13&amp;#34;&lt;/span&gt;
+$JDK_PATH=&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1.7.0_75&amp;#34;&lt;/span&gt;
+$source86 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-i586.exe&amp;#34;&lt;/span&gt;
+$source64 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-x64.exe&amp;#34;&lt;/span&gt;
+$destination86 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\vagrant\$JDK_VER-x86.exe&amp;#34;&lt;/span&gt;
+$destination64 = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\vagrant\$JDK_VER-x64.exe&amp;#34;&lt;/span&gt;
+$client = new-object System.Net.WebClient
+$cookie = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;oraclelicense=accept-securebackup-cookie&amp;#34;&lt;/span&gt;
+$client.Headers.Add(&lt;span style=&#34;color:#66d9ef&#34;&gt;[System.Net.HttpRequestHeader]&lt;/span&gt;::Cookie, $cookie)
+
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Checking if Java is already installed&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; ((Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files (x86)\Java&amp;#34;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;-Or&lt;/span&gt; (Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files\Java&amp;#34;&lt;/span&gt;)) {
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;No need to Install Java&amp;#39;&lt;/span&gt;
+    Exit
+}
+
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Downloading x86 to $destination86&amp;#39;&lt;/span&gt;
+
+$client.downloadFile($source86, $destination86)
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (!(Test-Path $destination86)) {
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Downloading $destination86 failed&amp;#34;&lt;/span&gt;
+    Exit
+}
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Downloading x64 to $destination64&amp;#39;&lt;/span&gt;
+
+$client.downloadFile($source64, $destination64)
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (!(Test-Path $destination64)) {
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Downloading $destination64 failed&amp;#34;&lt;/span&gt;
+    Exit
+}
+
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installing JDK-x64&amp;#39;&lt;/span&gt;
+    $proc1 = Start-Process -FilePath &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$destination64&amp;#34;&lt;/span&gt; -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/s REBOOT=ReallySuppress&amp;#34;&lt;/span&gt; -Wait -PassThru
+    $proc1.waitForExit()
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installation Done.&amp;#39;&lt;/span&gt;
+
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installing JDK-x86&amp;#39;&lt;/span&gt;
+    $proc2 = Start-Process -FilePath &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$destination86&amp;#34;&lt;/span&gt; -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/s REBOOT=ReallySuppress&amp;#34;&lt;/span&gt; -Wait -PassThru
+    $proc2.waitForExit()
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Installtion Done.&amp;#39;&lt;/span&gt;
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;[exception]&lt;/span&gt; {
+    write-host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_ is&amp;#39;&lt;/span&gt; $_
+    write-host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.GetType().FullName is&amp;#39;&lt;/span&gt; $_.GetType().FullName
+    write-host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception is&amp;#39;&lt;/span&gt; $_.Exception
+    write-host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception.GetType().FullName is&amp;#39;&lt;/span&gt; $_.Exception.GetType().FullName
+    write-host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;$_.Exception.Message is&amp;#39;&lt;/span&gt; $_.Exception.Message
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; ((Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files (x86)\Java&amp;#34;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;-Or&lt;/span&gt; (Test-Path &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files\Java&amp;#34;&lt;/span&gt;)) {
+    Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Java installed successfully.&amp;#39;&lt;/span&gt;
+}
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Setting up Path variables.&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;[System.Environment]&lt;/span&gt;::SetEnvironmentVariable(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;JAVA_HOME&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;c:\Program Files (x86)\Java\jdk$JDK_PATH&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Machine&amp;#34;&lt;/span&gt;)
+&lt;span style=&#34;color:#66d9ef&#34;&gt;[System.Environment]&lt;/span&gt;::SetEnvironmentVariable(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;PATH&amp;#34;&lt;/span&gt;, $Env:Path + &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;;c:\Program Files (x86)\Java\jdk$JDK_PATH\bin&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Machine&amp;#34;&lt;/span&gt;)
+Write-Host &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Done. Goodbye.&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now, there is room for improvement here. Like checking exit code, doing something extra after a failed exit. Throwing an exception, and so on and so forth. But this is a much needed improvement from calling a BAT file.&lt;/p&gt;
 &lt;p&gt;And you would use this in a Packer JSON file like this..&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Easy. And at the end, the System.Environment actually writes out into the registry permanently so no need to pass it around in a file or something ugly like that.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;
+{
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;powershell&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;scripts&amp;#34;&lt;/span&gt;: [
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/jdk_inst.ps1&amp;#34;&lt;/span&gt;
+      ]
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Easy. And at the end, the System.Environment actually writes out into the registry permanently so no need to pass it around in a file or something ugly like that.&lt;/p&gt;
 &lt;p&gt;Hope this helps somebody.&lt;/p&gt;
 &lt;p&gt;Thanks for reading.&lt;/p&gt;
 &lt;p&gt;Gergely.&lt;/p&gt;
@@ -409,53 +1063,192 @@ Gergely.&lt;/p&gt;
       <pubDate>Sat, 27 Jun 2015 00:00:00 +0000</pubDate>
       <guid>https://skarlso.github.io/2015/06/27/the-packer-the-windows-and-the-vagrant-box/</guid>
       <description>&lt;p&gt;Hello folks.&lt;/p&gt;
-&lt;p&gt;Today, I would like to write about something close to my heart recently. I’ve been fiddling with Packer, Windows and Vagrant these days. Trying to get a Windows box up in running is a pain in the arse though, so I thought I share my pain with you nice folks out there. Let’s begin.&lt;/p&gt;
+&lt;p&gt;Today, I would like to write about something close to my heart recently. I&amp;rsquo;ve been fiddling with Packer, Windows and Vagrant these days. Trying to get a Windows box up in running is a pain in the arse though, so I thought I share my pain with you nice folks out there. Let&amp;rsquo;s begin.&lt;/p&gt;
 &lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
-&lt;p&gt;First things first. You need &lt;!-- raw HTML omitted --&gt;Packer&lt;!-- raw HTML omitted --&gt;, and &lt;!-- raw HTML omitted --&gt;Vagrant&lt;!-- raw HTML omitted --&gt; obviously. I’ll leave the install up to you. Next, you should clone this git repo =&amp;gt; &lt;!-- raw HTML omitted --&gt;Packer Windows Plugin&lt;!-- raw HTML omitted --&gt;. This plugin contains all the files necessary to get, install, and provision Windows boxes. Luckily, some very nice and clever folks, figured out a lot of things about how to install stuff on Windows. And given that people at Microsoft realised that sys admins would like to install stuff remotely, there are a bunch of forums and places where you can search for how to install software without user interaction. And this is the keyword you should look for =&amp;gt; &lt;strong&gt;unattended Windows install&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;First things first. You need &lt;!-- raw HTML omitted --&gt;Packer&lt;!-- raw HTML omitted --&gt;, and &lt;!-- raw HTML omitted --&gt;Vagrant&lt;!-- raw HTML omitted --&gt; obviously. I&amp;rsquo;ll leave the install up to you. Next, you should clone this git repo =&amp;gt; &lt;!-- raw HTML omitted --&gt;Packer Windows Plugin&lt;!-- raw HTML omitted --&gt;. This plugin contains all the files necessary to get, install, and provision Windows boxes. Luckily, some very nice and clever folks, figured out a lot of things about how to install stuff on Windows. And given that people at Microsoft realised that sys admins would like to install stuff remotely, there are a bunch of forums and places where you can search for how to install software without user interaction. And this is the keyword you should look for =&amp;gt; &lt;strong&gt;unattended Windows install&lt;/strong&gt;.&lt;/p&gt;
 &lt;p&gt;This will lead you further into the bowls of Windows technology and silent / quiet installs all over the place.&lt;/p&gt;
 &lt;h1 id=&#34;packer-and-answer-files&#34;&gt;Packer and Answer Files&lt;/h1&gt;
-&lt;p&gt;When it comes to installing software on Windows, you have quite a few obstacles to overtake. One of the biggest obstacle you are facing, are restarts. Windows has a special place in hell for that. Every time you install something important which requires system libraries or other kind of configuration which “will only take effect after you restart Windows” you have to do a restart. Now, a little background on how Packer interacts with Windows. At the moment, it uses OpenSSH to talk to the box which has to be the last which comes up. If it looses connection to openssh because, I don’t know, it restarted itself, you loose communication to the box, and the setup process stops in mid tracks.&lt;/p&gt;
-&lt;p&gt;If you read about that in an earlier attempt to overtake this, you saw that you could use time-outs. You could kill ssh process which presumably makes packer do an attempt to start a new connection. If you are like me, you experienced that Packer does indeed NOT re-try. Because the previous task couldn’t finish, the restart killed the ssh service which could tell Packer that the previous task, an install for example, has finished. Hence, Packer will stay there and wait for that task to complete; which will never happen at this point.&lt;/p&gt;
-&lt;p&gt;What can we do? Enter the world of &lt;!-- raw HTML omitted --&gt;Answer Files&lt;!-- raw HTML omitted --&gt;. Basically, it’s an xml file which sets up Windows. When Packer is running this file, the last service which should be installed, must be openSSH. And after that, in the provisioning phase, you should only install software which does not require restarts.&lt;/p&gt;
-&lt;p&gt;Let’s look at an example.&lt;/p&gt;
+&lt;p&gt;When it comes to installing software on Windows, you have quite a few obstacles to overtake. One of the biggest obstacle you are facing, are restarts. Windows has a special place in hell for that. Every time you install something important which requires system libraries or other kind of configuration which &amp;ldquo;will only take effect after you restart Windows&amp;rdquo; you have to do a restart. Now, a little background on how Packer interacts with Windows. At the moment, it uses OpenSSH to talk to the box which has to be the last which comes up. If it looses connection to openssh because, I don&amp;rsquo;t know, it restarted itself, you loose communication to the box, and the setup process stops in mid tracks.&lt;/p&gt;
+&lt;p&gt;If you read about that in an earlier attempt to overtake this, you saw that you could use time-outs. You could kill ssh process which presumably makes packer do an attempt to start a new connection. If you are like me, you experienced that Packer does indeed NOT re-try. Because the previous task couldn&amp;rsquo;t finish, the restart killed the ssh service which could tell Packer that the previous task, an install for example, has finished. Hence, Packer will stay there and wait for that task to complete; which will never happen at this point.&lt;/p&gt;
+&lt;p&gt;What can we do? Enter the world of &lt;!-- raw HTML omitted --&gt;Answer Files&lt;!-- raw HTML omitted --&gt;. Basically, it&amp;rsquo;s an xml file which sets up Windows. When Packer is running this file, the last service which should be installed, must be openSSH. And after that, in the provisioning phase, you should only install software which does not require restarts.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s look at an example.&lt;/p&gt;
 &lt;h1 id=&#34;example-1-windows-updates&#34;&gt;Example #1: Windows Updates&lt;/h1&gt;
-&lt;p&gt;This is another layer of purgatory for Windows. It’s updates. The updates take massive amount of times, if you are doing them from scratch, and also require several restart before it’s actually done. You **could **speed up the process a little bit, if you have a private network share where all of the Windows updates are sitting. At least that way you don’t have to download them every time you are creating a box. But you can’t avert the install process itself.&lt;/p&gt;
-&lt;p&gt;Let’s look at a setup for packer. Packer works with JSON files for it’s configuration. An example for a Windows 7 box would look something like this:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;If it feels daunting, don’t worry. You’ll get used to it fairly quickly. Let’s go over section by section on what this does.&lt;/p&gt;
+&lt;p&gt;This is another layer of purgatory for Windows. It&amp;rsquo;s updates. The updates take massive amount of times, if you are doing them from scratch, and also require several restart before it&amp;rsquo;s actually done. You **could **speed up the process a little bit, if you have a private network share where all of the Windows updates are sitting. At least that way you don&amp;rsquo;t have to download them every time you are creating a box. But you can&amp;rsquo;t avert the install process itself.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s look at a setup for packer. Packer works with JSON files for it&amp;rsquo;s configuration. An example for a Windows 7 box would look something like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;
+{
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;builders&amp;#34;&lt;/span&gt;: [
+    {
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vmware-iso&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;iso_url&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://care.dlservice.microsoft.com/dl/download/evalx/win7/x64/EN/7600.16385.090713-1255_x64fre_enterprise_en-us_EVAL_Eval_Enterprise-GRMCENXEVAL_EN_DVD.iso&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;iso_checksum_type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;md5&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;iso_checksum&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1d0d239a252cb53e466d39e752b17c28&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;headless&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;boot_wait&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;2m&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;ssh_username&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrant&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;ssh_password&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrant&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;ssh_wait_timeout&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;8h&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;shutdown_command&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;shutdown /s /t 10 /f /d p:4:1 /c \&amp;#34;Packer Shutdown\&amp;#34;&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;guest_os_type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;windows7-64&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;tools_upload_flavor&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;windows&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;disk_size&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;61440&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;vnc_port_min&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;5900&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;vnc_port_max&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;5980&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;floppy_files&amp;#34;&lt;/span&gt;: [
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./answer_files/7/Autounattend.xml&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/dis-updates.ps1&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/microsoft-updates.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/win-updates.ps1&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/openssh.ps1&amp;#34;&lt;/span&gt;
+      ],
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;vmx_data&amp;#34;&lt;/span&gt;: {
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;RemoteDisplay.vnc.enabled&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;false&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;RemoteDisplay.vnc.port&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;5900&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;memsize&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;2048&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;numvcpus&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;2&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;scsi0.virtualDev&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;lsisas1068&amp;#34;&lt;/span&gt;
+      }
+    },
+    {
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;virtualbox-iso&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;iso_url&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://care.dlservice.microsoft.com/dl/download/evalx/win7/x64/EN/7600.16385.090713-1255_x64fre_enterprise_en-us_EVAL_Eval_Enterprise-GRMCENXEVAL_EN_DVD.iso&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;iso_checksum_type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;md5&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;iso_checksum&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1d0d239a252cb53e466d39e752b17c28&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;headless&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;boot_wait&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;2m&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;ssh_username&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrant&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;ssh_password&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrant&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;ssh_wait_timeout&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;8h&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;shutdown_command&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;shutdown /s /t 10 /f /d p:4:1 /c \&amp;#34;Packer Shutdown\&amp;#34;&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;guest_os_type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Windows7_64&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;disk_size&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;61440&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;floppy_files&amp;#34;&lt;/span&gt;: [
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./answer_files/7/Autounattend.xml&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/dis-updates.ps1&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/microsoft-updates.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/win-updates.ps1&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/openssh.ps1&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/oracle-cert.cer&amp;#34;&lt;/span&gt;
+      ],
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;vboxmanage&amp;#34;&lt;/span&gt;: [
+        [
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;modifyvm&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;{{.Name}}&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;--memory&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;2048&amp;#34;&lt;/span&gt;
+        ],
+        [
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;modifyvm&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;{{.Name}}&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;--cpus&amp;#34;&lt;/span&gt;,
+          &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;2&amp;#34;&lt;/span&gt;
+        ]
+      ]
+    }
+  ],
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;provisioners&amp;#34;&lt;/span&gt;: [
+    {
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;shell&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;remote_path&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/tmp/script.bat&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;execute_command&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;{{.Vars}} cmd /c C:/Windows/Temp/script.bat&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;scripts&amp;#34;&lt;/span&gt;: [
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/vm-guest-tools.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/chef.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/vagrant-ssh.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/disable-auto-logon.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/enable-rdp.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/compile-dotnet-assemblies.bat&amp;#34;&lt;/span&gt;,
+        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/compact.bat&amp;#34;&lt;/span&gt;
+      ]
+    }
+  ],
+  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;post-processors&amp;#34;&lt;/span&gt;: [
+    {
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrant&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;keep_input_artifact&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;output&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;windows_7_{{.Provider}}.box&amp;#34;&lt;/span&gt;,
+      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;#34;vagrantfile_template&amp;#34;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;vagrantfile-windows_7.template&amp;#34;&lt;/span&gt;
+    }
+  ]
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;If it feels daunting, don&amp;rsquo;t worry. You&amp;rsquo;ll get used to it fairly quickly. Let&amp;rsquo;s go over section by section on what this does.&lt;/p&gt;
 &lt;h4 id=&#34;builders&#34;&gt;Builders&lt;/h4&gt;
-&lt;p&gt;Packer uses builders for, well, building stuff. These two builders are virtualbox and vmware. I’m only interested in virtualbox. This builder downloads win7 and sets up some virtual box details like, disk size, vagrant user, memory, and so and so forth. The interesting part is the floppy part. Here, we can add in some files for setup. We will use this part later on.&lt;/p&gt;
+&lt;p&gt;Packer uses builders for, well, building stuff. These two builders are virtualbox and vmware. I&amp;rsquo;m only interested in virtualbox. This builder downloads win7 and sets up some virtual box details like, disk size, vagrant user, memory, and so and so forth. The interesting part is the floppy part. Here, we can add in some files for setup. We will use this part later on.&lt;/p&gt;
 &lt;h4 id=&#34;provisioners&#34;&gt;Provisioners&lt;/h4&gt;
-&lt;p&gt;Now here is an interesting tid-bit. There are a bunch of provisioners available as plugin for packer. Installing them is fairly easy. Packer needs binary plugins. Just copy them into ~/.packer.d/plugins or directly into the packer home directly. I’d advice against that. Have them in your own packer.d, that’s much cleaner. For binary plugin releases in the Windows side, look here =&amp;gt; &lt;!-- raw HTML omitted --&gt;&lt;a href=&#34;https://github.com/packer-community/packer-windows-plugins/releases&#34;&gt;https://github.com/packer-community/packer-windows-plugins/releases&lt;/a&gt;&lt;!-- raw HTML omitted --&gt;. If you would like to build them yourself from source, download the source and use go gcc to build it. You will have to &lt;strong&gt;go get&lt;/strong&gt; a few packages though. Also you will have to have &lt;strong&gt;$GOPATH&lt;/strong&gt; (pointing to your own workspace) and &lt;strong&gt;$GOROOT&lt;/strong&gt; (pointing to your working go) setup. But this is not a Go guide. After that just do **go build main.go **and you have your plugin.&lt;/p&gt;
+&lt;p&gt;Now here is an interesting tid-bit. There are a bunch of provisioners available as plugin for packer. Installing them is fairly easy. Packer needs binary plugins. Just copy them into ~/.packer.d/plugins or directly into the packer home directly. I&amp;rsquo;d advice against that. Have them in your own packer.d, that&amp;rsquo;s much cleaner. For binary plugin releases in the Windows side, look here =&amp;gt; &lt;!-- raw HTML omitted --&gt;&lt;a href=&#34;https://github.com/packer-community/packer-windows-plugins/releases&#34;&gt;https://github.com/packer-community/packer-windows-plugins/releases&lt;/a&gt;&lt;!-- raw HTML omitted --&gt;. If you would like to build them yourself from source, download the source and use go gcc to build it. You will have to &lt;strong&gt;go get&lt;/strong&gt; a few packages though. Also you will have to have &lt;strong&gt;$GOPATH&lt;/strong&gt; (pointing to your own workspace) and &lt;strong&gt;$GOROOT&lt;/strong&gt; (pointing to your working go) setup. But this is not a Go guide. After that just do **go build main.go **and you have your plugin.&lt;/p&gt;
 &lt;p&gt;Provisioners are like vagrant provision they will execute post setup stuff on your box. Like installing utils, 7zip, choco, nuget, and so and so forth. There are a few interesting Windows provisioners, like restart-windows, powershell, and Windows shell. Which is like shell, but without the need of pre-setup if you are trying to use it on Windows. The basic shell on Windows is a little clanky and can hang from time-to-time so I recommend using PowerShell or WindowsShell provisioner if you are dealing with Windows post-setup Setup.&lt;/p&gt;
 &lt;h4 id=&#34;post-processor&#34;&gt;Post-Processor&lt;/h4&gt;
 &lt;p&gt;This will create the Vagrant box after everything is done.&lt;/p&gt;
 &lt;h4 id=&#34;running-the-update&#34;&gt;Running the Update&lt;/h4&gt;
 &lt;p&gt;For use, two things are interesting from here at this moment. These guys =&amp;gt;&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;These two contain most of the logic which is part of the update process. You should see it in your checked out source. There is some very interesting logic in there which describes how the update happens. Basically it’s a loop which re-checks if there are updates available or if a re-start is needed. Packer handles re-starts well at this point in the install because it simply waits for SSH to come only. The rest is handled by Windows.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/microsoft-updates.bat&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;,&lt;/span&gt;
+&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;./scripts/win-updates.ps1&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;,&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;These two contain most of the logic which is part of the update process. You should see it in your checked out source. There is some very interesting logic in there which describes how the update happens. Basically it&amp;rsquo;s a loop which re-checks if there are updates available or if a re-start is needed. Packer handles re-starts well at this point in the install because it simply waits for SSH to come only. The rest is handled by Windows.&lt;/p&gt;
 &lt;p&gt;These scripts are called in the Answer File which the Windows Setup uses for configuration purposes. Take a look at this section:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;This is were the floppy part comes on handy. This part uses the scripts bound by floppy and which will be available from a:.&lt;/p&gt;
-&lt;p&gt;This will install all the updates available. It will take a while. A very very long while… But let’s go a step further.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;SynchronousCommand&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;wcm:action=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;add&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;CommandLine&amp;gt;&lt;/span&gt;cmd.exe /c a:\microsoft-updates.bat&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/CommandLine&amp;gt;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;Order&amp;gt;&lt;/span&gt;98&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/Order&amp;gt;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;Description&amp;gt;&lt;/span&gt;Enable Microsoft Updates&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/Description&amp;gt;&lt;/span&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/SynchronousCommand&amp;gt;&lt;/span&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;SynchronousCommand&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;wcm:action=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;add&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;CommandLine&amp;gt;&lt;/span&gt;cmd.exe /c C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\win-updates.ps1 -MaxUpdatesPerCycle 30&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/CommandLine&amp;gt;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;Description&amp;gt;&lt;/span&gt;Install Windows Updates&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/Description&amp;gt;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;Order&amp;gt;&lt;/span&gt;100&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/Order&amp;gt;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;RequiresUserInput&amp;gt;&lt;/span&gt;true&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/RequiresUserInput&amp;gt;&lt;/span&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/SynchronousCommand&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is were the floppy part comes on handy. This part uses the scripts bound by floppy and which will be available from a:.&lt;/p&gt;
+&lt;p&gt;This will install all the updates available. It will take a while. A very very long while. But let&amp;rsquo;s go a step further.&lt;/p&gt;
 &lt;h1 id=&#34;example-2-installing-dotnet-45&#34;&gt;Example #2: Installing DotNet 4.5&lt;/h1&gt;
-&lt;p&gt;Let’s assume you want to create a box with visual studio 2013, office, and have choco on it, and a couple of more things for which you need lots of restarts. You could try installing with /norestart switch, which also works; however if you definitely need it to restart I suggest installing stuff with the Answer File. For this, let’s create a PowerShell script which downloads and installs dotnet 451 which is needed for visual studio ultimate 2013.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;So this downloads it right from the source. As mentioned earlier, you could have this on a nice shared drive so downloading from the internet is not necessary. The installer is in fact a bit friendly. It has a switch called /q /norestart. The /q is called silent install and the /norestart speaks for itself. If you leave it out, you can use /forcerestart or you could have the following two lines after this finishes: &lt;em&gt;LogWrite “Resarting Computer.” Restart-Computer -Force&lt;/em&gt;. This will force a restart. You need the -Force because otherwise it won’t let it restart while there are active sessions logged on the computer.&lt;/p&gt;
-&lt;p&gt;Now, let’s add this to the answer file:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;See, how easy this is? And now we make use of the floppy part of the windows-7.json by adding this line: &lt;strong&gt;“./scripts/install-dotnet-451.ps1”&lt;/strong&gt;. Don’t forget to append the “,” at the end of the previous line. This is an array.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s assume you want to create a box with visual studio 2013, office, and have choco on it, and a couple of more things for which you need lots of restarts. You could try installing with /norestart switch, which also works; however if you definitely need it to restart I suggest installing stuff with the Answer File. For this, let&amp;rsquo;s create a PowerShell script which downloads and installs dotnet 451 which is needed for visual studio ultimate 2013.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-powershell&#34; data-lang=&#34;powershell&#34;&gt;
+$Logfile = &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\dotnet-install.log&amp;#34;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt; LogWrite {
+   &lt;span style=&#34;color:#66d9ef&#34;&gt;Param&lt;/span&gt; (&lt;span style=&#34;color:#66d9ef&#34;&gt;[string]&lt;/span&gt;$logstring)
+   $now = Get-Date -format s
+   Add-Content $Logfile -value &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;$now $logstring&amp;#34;&lt;/span&gt;
+   Write-Host $logstring
+}
+
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Downlading dotNetFx40_Full_x86_x64.&amp;#34;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+    (New-Object System.Net.WebClient).DownloadFile(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;http://download.microsoft.com/download/1/6/7/167F0D79-9317-48AE-AEDB-17120579F8E2/NDP451-KB2858728-x86-x64-AllOS-ENU.exe&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;C:\Windows\Temp\dotnet.exe&amp;#39;&lt;/span&gt;)
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; {
+    LogWrite $_.Exception | Format-List -force
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Failed to download file.&amp;#34;&lt;/span&gt;
+}
+
+LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Starting installation process...&amp;#34;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; {
+    Start-Process -FilePath &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\dotnet.exe&amp;#34;&lt;/span&gt; -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/I /q /norestart&amp;#34;&lt;/span&gt; -Wait -PassThru
+} &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; {
+    LogWrite $_.Exception | Format-List -force
+    LogWrite &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Exception during install process.&amp;#34;&lt;/span&gt;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;So this downloads it right from the source. As mentioned earlier, you could have this on a nice shared drive so downloading from the internet is not necessary. The installer is in fact a bit friendly. It has a switch called /q /norestart. The /q is called silent install and the /norestart speaks for itself. If you leave it out, you can use /forcerestart or you could have the following two lines after this finishes: &lt;em&gt;LogWrite &amp;ldquo;Resarting Computer.&amp;rdquo; Restart-Computer -Force&lt;/em&gt;. This will force a restart. You need the -Force because otherwise it won&amp;rsquo;t let it restart while there are active sessions logged on the computer.&lt;/p&gt;
+&lt;p&gt;Now, let&amp;rsquo;s add this to the answer file:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;SynchronousCommand&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;wcm:action=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;add&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;CommandLine&amp;gt;&lt;/span&gt;cmd.exe /c C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\install-dotnet-451.ps1 -AutoStart&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/CommandLine&amp;gt;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;Order&amp;gt;&lt;/span&gt;98&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/Order&amp;gt;&lt;/span&gt;
+                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;Description&amp;gt;&lt;/span&gt;Install DotNet 4.5.1.&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/Description&amp;gt;&lt;/span&gt;
+                &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;/SynchronousCommand&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;See, how easy this is? And now we make use of the floppy part of the windows-7.json by adding this line: &lt;strong&gt;&amp;quot;./scripts/install-dotnet-451.ps1&amp;quot;&lt;/strong&gt;. Don&amp;rsquo;t forget to append the &amp;ldquo;,&amp;rdquo; at the end of the previous line. This is an array.&lt;/p&gt;
 &lt;p&gt;We are ready to go. Just run &lt;strong&gt;packer build -only=virtualbox-iso windows-7.json&lt;/strong&gt; and you should be done!&lt;/p&gt;
 &lt;h1 id=&#34;example-3-installing-visual-studio-ultimate&#34;&gt;Example #3: Installing Visual Studio Ultimate&lt;/h1&gt;
 &lt;p&gt;Installing visual studio is almost trivial as well. With the addition that visual studio requires an admin.xml for silent install which has a bunch of settings. When you have the admin.xml just bind it into the floppy drive as well and call the visual studio install powershell script like this:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Again, this will take a while………….&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-powershell&#34; data-lang=&#34;powershell&#34;&gt;    Start-Process -FilePath &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C:\Windows\Temp\visualstudioultimate.exe&amp;#34;&lt;/span&gt; -ArgumentList &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/Quiet /NoRestart /admin a:\admin.xml&amp;#34;&lt;/span&gt; -Wait -PassThru
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Again, this will take a while&amp;hellip;..&lt;/p&gt;
 &lt;h1 id=&#34;post-setup-provisioning&#34;&gt;Post Setup Provisioning&lt;/h1&gt;
 &lt;p&gt;When all this is done, you can still add some provisioning steps to add some utils with PowerShell or WindowsShell provisioner. I would advice against using simple shell. Bare in mind one other thing. If you have a batch file, and you are calling another batch file in that batch file, like choco install 7zip, it will happen that the install process will hang on installing 7zip. Because in Windows land the called script will not return the exec handler to the caller unless specifically asking for it with &lt;strong&gt;call&lt;/strong&gt;. Which means your bat file will look something like this:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;or&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;And so on, and so forth.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;
+call choco install 7zip
+call choco install notepadplusplus
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;or&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;
+cmd /c choco install 7zip
+cmd /c choco install notepadplusplus
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And so on, and so forth.&lt;/p&gt;
 &lt;h1 id=&#34;wrap-up&#34;&gt;Wrap-Up&lt;/h1&gt;
 &lt;p&gt;So, what have we learned? We have learned that installing software which requires re-start is better left to Windows itself with an answer file. Batch files will not return the handler. SSH &lt;strong&gt;MUST&lt;/strong&gt; be the last thing you start up in the answer file. Use PowerShell provisioner or WindowsShell provisioner on Windows.&lt;/p&gt;
 &lt;p&gt;Hope this helped.&lt;/p&gt;
@@ -470,47 +1263,104 @@ Gergely.&lt;/p&gt;
       <pubDate>Sat, 06 Jun 2015 00:00:00 +0000</pubDate>
       <guid>https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/</guid>
       <description>&lt;p&gt;Hello folks.&lt;/p&gt;
-&lt;p&gt;Today, I would like to write about something interesting and close to me at the moment. I’m going to setup Go.cd with Docker, and I’m going to get a Ruby Lotus app running. Let’s get started.&lt;/p&gt;
+&lt;p&gt;Today, I would like to write about something interesting and close to me at the moment. I&amp;rsquo;m going to setup Go.cd with Docker, and I&amp;rsquo;m going to get a Ruby Lotus app running. Let&amp;rsquo;s get started.&lt;/p&gt;
 &lt;h1 id=&#34;fluff&#34;&gt;Fluff&lt;/h1&gt;
-&lt;p&gt;Now, obviously, you don’t really need Go.Cd or Docker to setup a Java Gradle application, since it’s dead easy. But I’m going to do it just for the heck of it.&lt;/p&gt;
+&lt;p&gt;Now, obviously, you don&amp;rsquo;t really need Go.Cd or Docker to setup a Java Gradle application, since it&amp;rsquo;s dead easy. But I&amp;rsquo;m going to do it just for the heck of it.&lt;/p&gt;
 &lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
-&lt;p&gt;Okay, lets start with Vagrant. Docker’s strength is coming from Linux’s process isolation capabilities it’s not yet properly working on OSX or Windows. You have a couple of options if you’d like to try never the less, like boot2docker, or a Tiny Linux kernel, but at that point, I think it’s easier to use a VM.&lt;/p&gt;
+&lt;p&gt;Okay, lets start with Vagrant. Docker&amp;rsquo;s strength is coming from Linux&amp;rsquo;s process isolation capabilities it&amp;rsquo;s not yet properly working on OSX or Windows. You have a couple of options if you&amp;rsquo;d like to try never the less, like boot2docker, or a Tiny Linux kernel, but at that point, I think it&amp;rsquo;s easier to use a VM.&lt;/p&gt;
 &lt;h4 id=&#34;vagrant&#34;&gt;Vagrant&lt;/h4&gt;
-&lt;p&gt;So, let’s start with my small Vagrantfile.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Very simple. I’m setting up a trusty64(because docker requires 3.10 &amp;lt;= x) box and then doing a simple shell provision. Also, I gave it a bit juice, since go-server requires a raw power. Here is the shell script:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;The debconf at the end accepts java8’s terms and conditions. And the last line installs docker in my box. This runs for a little while…&lt;/p&gt;
-&lt;p&gt;The routing on the end routes every traffic from 172.17.*.* to my vagrant box, which in turn I’ll be able to use from my mac local, like 127.0.0.1:8153/go/home.&lt;/p&gt;
+&lt;p&gt;So, let&amp;rsquo;s start with my small Vagrantfile.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# -*- mode: ruby -*-&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# vi: set ft=ruby :&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# All Vagrant configuration is done below. The &amp;#34;2&amp;#34; in Vagrant.configure&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# configures the configuration version (we support older styles for&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# backwards compatibility). Please don&amp;#39;t change it unless you know what&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# you&amp;#39;re doing.&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;Vagrant&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;configure(&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;config&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;# The most common configuration options are documented and commented below.&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;# For a complete reference, please see the online documentation at&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;# https://docs.vagrantup.com.&lt;/span&gt;
+
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Every Vagrant development environment requires a box. You can search for&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;# boxes at https://atlas.hashicorp.com/search.&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;box &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;trusty&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;box_url &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;network &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;forwarded_port&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;guest&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;2300&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;host&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;2300&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;network &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;forwarded_port&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;guest&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;8153&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;host&lt;/span&gt;: &lt;span style=&#34;color:#ae81ff&#34;&gt;8153&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;provision &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;shell&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;path&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;setup.sh&amp;#34;&lt;/span&gt;
+  config&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vm&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;provider &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;virtualbox&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;do&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;v&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;
+    v&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;memory &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;8192&lt;/span&gt;
+    v&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;cpus &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Very simple. I&amp;rsquo;m setting up a trusty64(because docker requires 3.10 &amp;lt;= x) box and then doing a simple shell provision. Also, I gave it a bit juice, since go-server requires a raw power. Here is the shell script:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;
+!#/bin/bash
+sudo apt-get update
+sudo apt-get install -y software-properties-common python-software-properties
+sudo apt-get update
+sudo apt-get install -y vim
+sudo add-apt-repository -y &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;ppa:webupd8team/java&amp;#34;&lt;/span&gt;
+sudo apt-get update
+echo debconf shared/accepted-oracle-license-v1-1 &lt;span style=&#34;color:#66d9ef&#34;&gt;select&lt;/span&gt; true | sudo debconf-set-selections &amp;amp;amp;&amp;amp;amp; echo debconf shared/accepted-oracle-license-v1-1 seen true | sudo debconf-set-selections
+sudo apt-get install -y oracle-java8-installer
+sudo apt-get update
+wget -qO- https://get.docker.com/ | sh
+route add -net 172.17.0.0 netmask 255.255.255.0 gw 172.17.42.1
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The debconf at the end accepts java8&amp;rsquo;s terms and conditions. And the last line installs docker in my box. This runs for a little while.&lt;/p&gt;
+&lt;p&gt;The routing on the end routes every traffic from 172.17.*.* to my vagrant box, which in turn I&amp;rsquo;ll be able to use from my mac local, like 127.0.0.1:8153/go/home.&lt;/p&gt;
 &lt;p&gt;After a vagrant up, my box is ready to be used.&lt;/p&gt;
 &lt;h4 id=&#34;docker&#34;&gt;Docker&lt;/h4&gt;
-&lt;p&gt;When that’s finished, we can move on to the next part, which is writing a little Dockerfile for our image. Go.cd will require java and a couple of other things, so let’s automate the installation of that so we don’t have to do it by hand.&lt;/p&gt;
+&lt;p&gt;When that&amp;rsquo;s finished, we can move on to the next part, which is writing a little Dockerfile for our image. Go.cd will require java and a couple of other things, so let&amp;rsquo;s automate the installation of that so we don&amp;rsquo;t have to do it by hand.&lt;/p&gt;
 &lt;p&gt;Here is a Dockerfile I came up with:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;So, our docker images have to be setup with Java as well for go.cd which I’m taking care of here, and a little bit extra, to add vim, and unzip, which is required for dpkg later.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-Dockerfile&#34; data-lang=&#34;Dockerfile&#34;&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;FROM&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; ubuntu&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;MAINTAINER&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; Skarlso&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;############ SETUP #############&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; apt-get update&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; apt-get install -y software-properties-common python-software-properties&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; add-apt-repository -y &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;ppa:webupd8team/java&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; echo debconf shared/accepted-oracle-license-v1-1 &lt;span style=&#34;color:#66d9ef&#34;&gt;select&lt;/span&gt; true | sudo debconf-set-selections &amp;amp;amp;&amp;amp;amp; echo debconf shared/accepted-oracle-license-v1-1 seen true | sudo debconf-set-selections&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; apt-get update&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; apt-get install -y oracle-java8-installer&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; apt-get install -y vim&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; apt-get install -y unzip&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;RUN&lt;/span&gt; apt-get install -y git&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;So, our docker images have to be setup with Java as well for go.cd which I&amp;rsquo;m taking care of here, and a little bit extra, to add vim, and unzip, which is required for dpkg later.&lt;/p&gt;
 &lt;p&gt;At this point run: &lt;strong&gt;docker build -t ubuntu:go .&lt;/strong&gt; -&amp;gt; This will use the dockerfile and create the ubuntu:go image. Note the **. **at the end.&lt;/p&gt;
 &lt;h4 id=&#34;gocd&#34;&gt;Go.cd&lt;/h4&gt;
-&lt;p&gt;Now, I’m creating two containers. One, go-server, will be the go server, and the other, go-agent, will be the go agent.&lt;/p&gt;
+&lt;p&gt;Now, I&amp;rsquo;m creating two containers. One, go-server, will be the go server, and the other, go-agent, will be the go agent.&lt;/p&gt;
 &lt;p&gt;First, go-server:&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;Pretty straight forward, no? We forward 8153 to vagrant (which forwards it to my mac), so after we start go-server service we should be able to visit: http://127.0.0.1:8153/go/home.&lt;/p&gt;
-&lt;p&gt;Lo’, and behold, go server. Let’s add an agent too.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;No need to forward anything here. And as you can see, my agent was added successfully.&lt;/p&gt;
-&lt;p&gt;All nice, and dandy. The agent is there, and I enabled it, so it’s ready to work. Let’s give it something to do, shall we?&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;
+docker run -i -t --name go-server --hostname=go-server -p 8153:8153 ubuntu:go /bin/bash
+wget http://download.go.cd/gocd-deb/go-server-15.1.0-1863.deb
+dpkg -i go-server-15.1.0-1863.deb
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Pretty straight forward, no? We forward 8153 to vagrant (which forwards it to my mac), so after we start go-server service we should be able to visit: http://127.0.0.1:8153/go/home.&lt;/p&gt;
+&lt;p&gt;Lo&#39;, and behold, go server. Let&amp;rsquo;s add an agent too.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;docker run -i -t --name go-agent --hostname=go-agent ubuntu:go /bin/bash
+wget http://download.go.cd/gocd-deb/go-agent-15.1.0-1863.deb
+dpkg -i go-agent-15.1.0-1863.deb
+vim /etc/default/go-agent
+GO_SERVER=172.17.0.1
+service go-agent start
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;No need to forward anything here. And as you can see, my agent was added successfully.&lt;/p&gt;
+&lt;p&gt;All nice, and dandy. The agent is there, and I enabled it, so it&amp;rsquo;s ready to work. Let&amp;rsquo;s give it something to do, shall we?&lt;/p&gt;
 &lt;h1 id=&#34;the-app&#34;&gt;The App&lt;/h1&gt;
-&lt;p&gt;I’m going to use my gradle project which is on github. This one =&amp;gt; https://github.com/Skarlso/DataMung.git.&lt;/p&gt;
+&lt;p&gt;I&amp;rsquo;m going to use my gradle project which is on github. This one =&amp;gt; https://github.com/Skarlso/DataMung.git.&lt;/p&gt;
 &lt;p&gt;Very basic setup. Just check it out and then build &amp;amp; run tests. Easy, right?&lt;/p&gt;
-&lt;p&gt;First step in this process, define the pipeline. I’m going to keep it simple. Name the pipeline DataMunger. Group is Linux. Now, in go.cd you have to define something called, an &lt;strong&gt;environment&lt;/strong&gt;. Environment can be anything you want, I’m going to go with Linux. You have to assign &lt;strong&gt;agents&lt;/strong&gt; to this environment who fulfil it and the pipeline which will use that environment. More on that you can read in the go.cd documentation. This is how you would handle a pipeline which uses linux, and a windows environment at the same time.&lt;/p&gt;
+&lt;p&gt;First step in this process, define the pipeline. I&amp;rsquo;m going to keep it simple. Name the pipeline DataMunger. Group is Linux. Now, in go.cd you have to define something called, an &lt;strong&gt;environment&lt;/strong&gt;. Environment can be anything you want, I&amp;rsquo;m going to go with Linux. You have to assign &lt;strong&gt;agents&lt;/strong&gt; to this environment who fulfil it and the pipeline which will use that environment. More on that you can read in the go.cd documentation. This is how you would handle a pipeline which uses linux, and a windows environment at the same time.&lt;/p&gt;
 &lt;p&gt;In step one you have to define something called the &lt;strong&gt;Material&lt;/strong&gt;. That will be the source on which the agent will work. This can be multiple, in different folders within the confines of the pipeline, or singular.&lt;/p&gt;
 &lt;p&gt;I defined my git project and tested the connection OK. Next up is the first **Stage **and the initial **Job **to perform. This, for me, will be a compile or an assemble, and later on a test run.&lt;/p&gt;
-&lt;p&gt;Now, Go is awesome in parallelising jobs. If my project would be large enough, I could have multiple jobs here. But for now, I’ll use stages because they run subsequently. So, first stage, compile. Next stage, testing and archiving the results.&lt;/p&gt;
+&lt;p&gt;Now, Go is awesome in parallelising jobs. If my project would be large enough, I could have multiple jobs here. But for now, I&amp;rsquo;ll use stages because they run subsequently. So, first stage, compile. Next stage, testing and archiving the results.&lt;/p&gt;
 &lt;p&gt;I added the next stage and defined the artefact. Go supports test-reports. If you define the path to a test artefact than go will parse it and create a nice report out of it.&lt;/p&gt;
-&lt;p&gt;Now, let’s run it. It will probably fail on something. 😉&lt;/p&gt;
-&lt;p&gt;Well, I’ll be… It worked on the first run.&lt;/p&gt;
+&lt;p&gt;Now, let&amp;rsquo;s run it. It will probably fail on something. 😉&lt;/p&gt;
+&lt;p&gt;Well, I&amp;rsquo;ll be. It worked on the first run.&lt;/p&gt;
 &lt;p&gt;And here are the test results.&lt;/p&gt;
 &lt;h1 id=&#34;wrap-up&#34;&gt;Wrap-up&lt;/h1&gt;
-&lt;p&gt;Well, that’s it folks. Gradle project, with vagrant, docker, and go.cd. I hope you all enjoyed reading about it as much as I did doing it.&lt;/p&gt;
+&lt;p&gt;Well, that&amp;rsquo;s it folks. Gradle project, with vagrant, docker, and go.cd. I hope you all enjoyed reading about it as much as I did doing it.&lt;/p&gt;
 &lt;p&gt;Any questions, please feel free to ask it in the comment section below.&lt;/p&gt;
 &lt;p&gt;Cheers,
 Have a nice weekend,
@@ -523,10 +1373,68 @@ Gergely.&lt;/p&gt;</description>
       <pubDate>Thu, 21 May 2015 00:00:00 +0000</pubDate>
       <guid>https://skarlso.github.io/2015/05/21/setting-up-a-new-laptop-with-puppet/</guid>
       <description>&lt;p&gt;Hello folks.&lt;/p&gt;
-&lt;p&gt;So, some of you know &lt;!-- raw HTML omitted --&gt;puppet&lt;!-- raw HTML omitted --&gt;, some of you don’t. Puppet is a configuration management system. It’s quite awesome. I like working with it. One of the benefits of puppet is, that I never, ever, EVER have to setup a new laptop from scratch, EVER again.&lt;/p&gt;
-&lt;p&gt;I’m writing a puppet manifest file which sets up my new laptop to my liking. I will improve it as I go along. Here is version 1.0.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;I’ll improve upon it as I go, and you can check it out later from my git repo. I removed the parts which required extra libraries for now, as I want it to run without the need of getting extra stuff installed. I might automate that part as well later on.&lt;/p&gt;
+&lt;p&gt;So, some of you know &lt;!-- raw HTML omitted --&gt;puppet&lt;!-- raw HTML omitted --&gt;, some of you don&amp;rsquo;t. Puppet is a configuration management system. It&amp;rsquo;s quite awesome. I like working with it. One of the benefits of puppet is, that I never, ever, EVER have to setup a new laptop from scratch, EVER again.&lt;/p&gt;
+&lt;p&gt;I&amp;rsquo;m writing a puppet manifest file which sets up my new laptop to my liking. I will improve it as I go along. Here is version 1.0.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# include apt&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;basics {
+        $packages &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;git&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;subversion&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;mc&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;vim&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;maven&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;gradle&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;update&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/apt-get update&amp;#34;&lt;/span&gt;,
+        }
+
+        package { $packages:
+                &lt;span style=&#34;color:#66d9ef&#34;&gt;ensure&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; installed,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;update&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;skype {
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;add-arc&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/dpkg --add-architecture i386&amp;#34;&lt;/span&gt;,
+        }
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;add-repo-skype&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/add-apt-repository &lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;deb http://archive.canonical.com/ \$(lsb_release -sc) partner&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;add-arc&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;update-and-install&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/apt-get update &amp;amp;&amp;amp; /usr/bin/apt-get install skype&amp;#34;&lt;/span&gt;,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;add-repo-skype&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;java8 {
+        &lt;span style=&#34;color:#75715e&#34;&gt;# Automatically does an update afterwards&lt;/span&gt;
+        &lt;span style=&#34;color:#75715e&#34;&gt;# apt::ppa { &amp;#39;ppa:webupd8team/java&amp;#39;: }&lt;/span&gt;
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;add-repo-java&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/add-apt-repository -y &lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;ppa:webupd8team/java&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; &amp;amp;&amp;amp; /usr/bin/apt-get update&amp;#34;&lt;/span&gt;
+        }
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;set-accept&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/bin/echo /usr/bin/debconf shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections &amp;amp;&amp;amp; /bin/echo /usr/bin/debconf shared/accepted-oracle-license-v1-1 seen true | sudo /usr/bin/debconf-set-selections&amp;#34;&lt;/span&gt;,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;add-repo-java&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;install&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/apt-get install -y oracle-java8-installer&amp;#34;&lt;/span&gt;,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;set-accept&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;setup_home&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/bin/echo &lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;export JDK18_HOME=/usr/lib/jvm/java-8-oracle/&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; &amp;gt;&amp;gt; /etc/environment&amp;#34;&lt;/span&gt;,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;install&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;include&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;basics
+&lt;span style=&#34;color:#66d9ef&#34;&gt;include&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;skype
+&lt;span style=&#34;color:#66d9ef&#34;&gt;include&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;java8
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;I&amp;rsquo;ll improve upon it as I go, and you can check it out later from my git repo. I removed the parts which required extra libraries for now, as I want it to run without the need of getting extra stuff installed. I might automate that part as well later on.&lt;/p&gt;
 &lt;p&gt;EDIT: &lt;!-- raw HTML omitted --&gt;&lt;a href=&#34;https://github.com/Skarlso/puppet/blob/master/manifests/base_setup.pp&#34;&gt;https://github.com/Skarlso/puppet/blob/master/manifests/base_setup.pp&lt;/a&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
 &lt;p&gt;Have fun.&lt;/p&gt;
 &lt;p&gt;Gergely.&lt;/p&gt;
@@ -538,11 +1446,11 @@ Gergely.&lt;/p&gt;</description>
       <link>https://skarlso.github.io/2015/05/19/busy-building-the-future/</link>
       <pubDate>Tue, 19 May 2015 00:00:00 +0000</pubDate>
       <guid>https://skarlso.github.io/2015/05/19/busy-building-the-future/</guid>
-      <description>&lt;p&gt;Fact is, I’ve been busy.&lt;/p&gt;
-&lt;p&gt;I’ve got a new job as a build engineer. As sort of a devops kind of guy. It’s extremely interesting considering that I made a career as a tester. Granted, I always was technical, and never really knew my path; but it seems my path is finding me after all.&lt;/p&gt;
-&lt;p&gt;In the past years, I got better at Docker, Puppet, Chef, AWS, Packer, Vagrant, Gradle, and a hell of a lot more. Also honed my linux skills from the ability of doing an ls -l to do an find . -type f -atime +5 | xargs rm -fr (find all the files which are 5 days older and pipe them to a delete command). I already read many books about devops but this time, it’s different. This time, I can actually do these things as well in a live environment.&lt;/p&gt;
-&lt;p&gt;As once a friend of mine told me: “You ain’t gonna learn anything unless you are getting payed for it.” Wise words. True words.&lt;/p&gt;
-&lt;p&gt;So stayed tuned for some devops and engineering type posts. I would like to continue working on the Django parts as well, however given my priorities and lack of time ( family and stuff, must choose what I learned in the hour I get each day), it might fall behind. I might stick it into some kind of provision practice or even give it a Travis.ci and put it into a gradle project. Now THAT’S interesting.&lt;/p&gt;
+      <description>&lt;p&gt;Fact is, I&amp;rsquo;ve been busy.&lt;/p&gt;
+&lt;p&gt;I&amp;rsquo;ve got a new job as a build engineer. As sort of a devops kind of guy. It&amp;rsquo;s extremely interesting considering that I made a career as a tester. Granted, I always was technical, and never really knew my path; but it seems my path is finding me after all.&lt;/p&gt;
+&lt;p&gt;In the past years, I got better at Docker, Puppet, Chef, AWS, Packer, Vagrant, Gradle, and a hell of a lot more. Also honed my linux skills from the ability of doing an ls -l to do an find . -type f -atime +5 | xargs rm -fr (find all the files which are 5 days older and pipe them to a delete command). I already read many books about devops but this time, it&amp;rsquo;s different. This time, I can actually do these things as well in a live environment.&lt;/p&gt;
+&lt;p&gt;As once a friend of mine told me: &amp;ldquo;You ain&amp;rsquo;t gonna learn anything unless you are getting payed for it.&amp;rdquo; Wise words. True words.&lt;/p&gt;
+&lt;p&gt;So stayed tuned for some devops and engineering type posts. I would like to continue working on the Django parts as well, however given my priorities and lack of time ( family and stuff, must choose what I learned in the hour I get each day), it might fall behind. I might stick it into some kind of provision practice or even give it a Travis.ci and put it into a gradle project. Now THAT&amp;rsquo;S interesting.&lt;/p&gt;
 &lt;p&gt;Cheers folks.&lt;/p&gt;
 &lt;p&gt;And as always,&lt;/p&gt;
 &lt;p&gt;Thanks for reading.&lt;/p&gt;

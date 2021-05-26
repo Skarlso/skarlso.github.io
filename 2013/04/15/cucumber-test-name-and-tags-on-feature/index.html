@@ -118,18 +118,39 @@ Tags:
 <p>I would like to show you a gem today that I found out.</p>
 <p>Apparently there is no easy way to get to the name of an executing cucumber scenario in cucumber-jvm</p>
 <p>You can try something like that:</p>
-<!-- raw HTML omitted -->
-<p>But that isn’t giving you too much now is it? And the API of scenario is as small as it can get. It offers you four options:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@After</span> <span style="color:#75715e">//this is cucumbers @Afters
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">afterExecution</span><span style="color:#f92672">(</span>Scenario scenario<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    logger<span style="color:#f92672">.</span><span style="color:#a6e22e">log</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;The status of the test is: &#34;</span> <span style="color:#f92672">+</span> scenario<span style="color:#f92672">.</span><span style="color:#a6e22e">getStatus</span><span style="color:#f92672">());</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>But that isn&rsquo;t giving you too much now is it? And the API of scenario is as small as it can get. It offers you four options:</p>
 <ul>
 <li>Ember</li>
 <li>getStatus</li>
 <li>isFailed</li>
 <li>write</li>
 </ul>
-<p>That doesn’t help me. I wanted to get the name of the executed feature and the tags on that particular feature. I thought that’s got to be as easy as just getting a scenario accessing the feature and get the tags. Hooooowww boy I was wrong.</p>
-<p>I ended up with this….</p>
-<!-- raw HTML omitted -->
-<p>Ohhhhh yes! The fields which I wanted were all private and not accessible. I’m sure there was a reason behind this decision but if it was sensible it eludes me. But in the world of programming nothing is impossible they say so there.</p>
+<p>That doesn&rsquo;t help me. I wanted to get the name of the executed feature and the tags on that particular feature. I thought that&rsquo;s got to be as easy as just getting a scenario accessing the feature and get the tags. Hooooowww boy I was wrong.</p>
+<p>I ended up with this..</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">Field f <span style="color:#f92672">=</span> scenario<span style="color:#f92672">.</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getDeclaredField</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;reporter&#34;</span><span style="color:#f92672">);</span>
+f<span style="color:#f92672">.</span><span style="color:#a6e22e">setAccessible</span><span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">);</span>
+JUnitReporter reporter <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>JUnitReporter<span style="color:#f92672">)</span> f<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>scenario<span style="color:#f92672">);</span>
+
+Field executionRunnerField <span style="color:#f92672">=</span> reporter<span style="color:#f92672">.</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getDeclaredField</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;executionUnitRunner&#34;</span><span style="color:#f92672">);</span>
+executionRunnerField<span style="color:#f92672">.</span><span style="color:#a6e22e">setAccessible</span><span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">);</span>
+ExecutionUnitRunner executionUnitRunner <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>ExecutionUnitRunner<span style="color:#f92672">)</span> executionRunnerField<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>reporter<span style="color:#f92672">);</span>
+
+Field cucumberScenarioField <span style="color:#f92672">=</span> executionUnitRunner<span style="color:#f92672">.</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getDeclaredField</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;cucumberScenario&#34;</span><span style="color:#f92672">);</span>
+cucumberScenarioField<span style="color:#f92672">.</span><span style="color:#a6e22e">setAccessible</span><span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">);</span>
+CucumberScenario cucumberScenario <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>CucumberScenario<span style="color:#f92672">)</span> cucumberScenarioField<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>executionUnitRunner<span style="color:#f92672">);</span>
+
+Field cucumberBackgroundField <span style="color:#f92672">=</span> cucumberScenario<span style="color:#f92672">.</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getDeclaredField</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;cucumberBackground&#34;</span><span style="color:#f92672">);</span>
+cucumberBackgroundField<span style="color:#f92672">.</span><span style="color:#a6e22e">setAccessible</span><span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">);</span>
+CucumberBackground cucumberBackground <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>CucumberBackground<span style="color:#f92672">)</span> cucumberBackgroundField<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>cucumberScenario<span style="color:#f92672">);</span>
+
+Field cucumberFeatureField <span style="color:#f92672">=</span> cucumberBackground<span style="color:#f92672">.</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getSuperclass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getDeclaredField</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;cucumberFeature&#34;</span><span style="color:#f92672">);</span>
+cucumberFeatureField<span style="color:#f92672">.</span><span style="color:#a6e22e">setAccessible</span><span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">);</span>
+CucumberFeature cucumberFeature <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>CucumberFeature<span style="color:#f92672">)</span> cucumberFeatureField<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>cucumberBackground<span style="color:#f92672">);</span>
+</code></pre></div><p>Ohhhhh yes! The fields which I wanted were all private and not accessible. I&rsquo;m sure there was a reason behind this decision but if it was sensible it eludes me. But in the world of programming nothing is impossible they say so there.</p>
 <p>In cucumberFeature there will be everything what you need. Tags, Names, Tests, Execution time. Everything.</p>
 <p>I know that cucumber runs with jUnit so if there is a better way to do this please for the love of my sanity share it with me.</p>
 <p>Thank you for reading.</p>
@@ -147,6 +168,7 @@ Tags:
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

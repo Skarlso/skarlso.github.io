@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>How to Aggregate Tests with Jenkins with Aggregate Plugin on non-relating jobs – Ramblings of a cloud engineer</title>
-<meta name="description" content="Hello folks. Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it. So I’m writing this down to …">
+<meta name="description" content="Hello folks. Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it. So I&amp;amp;rsquo;m writing this down to …">
 <meta name="created" content="2015-10-02T00:00:00+0000">
 <meta name="modified" content="2015-10-02T00:00:00+0000">
 <meta name="author" content="hannibal">
@@ -34,7 +34,7 @@
     "datePublished": "2015-10-02T00:00:00Z",
     "dateModified": "2015-10-02T00:00:00Z",
     "url" : "https://skarlso.github.io/2015/10/02/how-to-aggregate-tests-with-jenkins-with-aggregate-plugin-on-non-relating-jobs/",
-    "description": "Hello folks. Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it. So I’m writing this down to …",
+    "description": "Hello folks. Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it. So I\u0026amp;rsquo;m writing this down to …",
     "keywords": ["jenkins"],
     "image" : "https://skarlso.github.io/apple-touch-icon.png",
     "author": {
@@ -116,23 +116,120 @@ Tags:
 <div class="content">
 <p>Hello folks.</p>
 <p>Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.</p>
-<p>So I’m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work. So here is how, I fixed the issue.</p>
+<p>So I&rsquo;m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work. So here is how, I fixed the issue.</p>
 <h1 id="connection">Connection</h1>
-<p>In order for the aggregation to work, there needs to be an <strong>artifact connection</strong> between the upstream and downstream projects. And that is the key. But if you don’t have that, well, let’s create one. I have a parent job configured like this one. =&gt;</p>
-<!-- raw HTML omitted -->
-<p>As you can see, it’s pretty basic. It isn’t much. It’s supposed to be a trigger job for downstream projects. You could have this one at anything. Maybe scheduled, or have some kind of gathering here of some results, and so on and so forth. The end part of the configuration is the interesting bit.</p>
-<p>Aggregation is setup, but it won’t work, because despite there being an upstream/downstream relationship, there also needs to be an artifact connection which uses <strong>fingerprinting</strong>. Fingerprinting for Jenkins is needed in oder to make the physical connection between the jobs via hashes. This is what you will get if that is not setup:</p>
+<p>In order for the aggregation to work, there needs to be an <strong>artifact connection</strong> between the upstream and downstream projects. And that is the key. But if you don&rsquo;t have that, well, let&rsquo;s create one. I have a parent job configured like this one. =&gt;</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml">
+<span style="color:#75715e">&lt;?xml version=&#39;1.0&#39; encoding=&#39;UTF-8&#39;?&gt;</span>
+<span style="color:#f92672">&lt;project&gt;</span>
+  <span style="color:#f92672">&lt;actions/&gt;</span>
+  <span style="color:#f92672">&lt;description&gt;&lt;/description&gt;</span>
+  <span style="color:#f92672">&lt;keepDependencies&gt;</span>false<span style="color:#f92672">&lt;/keepDependencies&gt;</span>
+  <span style="color:#f92672">&lt;properties/&gt;</span>
+  <span style="color:#f92672">&lt;scm</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;hudson.scm.NullSCM&#34;</span><span style="color:#f92672">/&gt;</span>
+  <span style="color:#f92672">&lt;canRoam&gt;</span>true<span style="color:#f92672">&lt;/canRoam&gt;</span>
+  <span style="color:#f92672">&lt;disabled&gt;</span>false<span style="color:#f92672">&lt;/disabled&gt;</span>
+  <span style="color:#f92672">&lt;blockBuildWhenDownstreamBuilding&gt;</span>false<span style="color:#f92672">&lt;/blockBuildWhenDownstreamBuilding&gt;</span>
+  <span style="color:#f92672">&lt;blockBuildWhenUpstreamBuilding&gt;</span>false<span style="color:#f92672">&lt;/blockBuildWhenUpstreamBuilding&gt;</span>
+  <span style="color:#f92672">&lt;triggers/&gt;</span>
+  <span style="color:#f92672">&lt;concurrentBuild&gt;</span>false<span style="color:#f92672">&lt;/concurrentBuild&gt;</span>
+  <span style="color:#f92672">&lt;builders/&gt;</span>
+  <span style="color:#f92672">&lt;publishers&gt;</span>
+    <span style="color:#f92672">&lt;hudson.tasks.test.AggregatedTestResultPublisher</span> <span style="color:#a6e22e">plugin=</span><span style="color:#e6db74">&#34;junit@1.9&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#f92672">&lt;includeFailedBuilds&gt;</span>false<span style="color:#f92672">&lt;/includeFailedBuilds&gt;</span>
+    <span style="color:#f92672">&lt;/hudson.tasks.test.AggregatedTestResultPublisher&gt;</span>
+    <span style="color:#f92672">&lt;hudson.tasks.BuildTrigger&gt;</span>
+      <span style="color:#f92672">&lt;childProjects&gt;</span>ChildJob<span style="color:#f92672">&lt;/childProjects&gt;</span>
+      <span style="color:#f92672">&lt;threshold&gt;</span>
+        <span style="color:#f92672">&lt;name&gt;</span>SUCCESS<span style="color:#f92672">&lt;/name&gt;</span>
+        <span style="color:#f92672">&lt;ordinal&gt;&lt;/ordinal&gt;</span>
+        <span style="color:#f92672">&lt;color&gt;</span>BLUE<span style="color:#f92672">&lt;/color&gt;</span>
+        <span style="color:#f92672">&lt;completeBuild&gt;</span>true<span style="color:#f92672">&lt;/completeBuild&gt;</span>
+      <span style="color:#f92672">&lt;/threshold&gt;</span>
+    <span style="color:#f92672">&lt;/hudson.tasks.BuildTrigger&gt;</span>
+  <span style="color:#f92672">&lt;/publishers&gt;</span>
+  <span style="color:#f92672">&lt;buildWrappers/&gt;</span>
+<span style="color:#f92672">&lt;/project&gt;</span>
+</code></pre></div><p>As you can see, it&rsquo;s pretty basic. It isn&rsquo;t much. It&rsquo;s supposed to be a trigger job for downstream projects. You could have this one at anything. Maybe scheduled, or have some kind of gathering here of some results, and so on and so forth. The end part of the configuration is the interesting bit.</p>
+<p>Aggregation is setup, but it won&rsquo;t work, because despite there being an upstream/downstream relationship, there also needs to be an artifact connection which uses <strong>fingerprinting</strong>. Fingerprinting for Jenkins is needed in oder to make the physical connection between the jobs via hashes. This is what you will get if that is not setup:</p>
 <p>But if there is no artifact between them, what do you do? You create one.</p>
 <h1 id="the-artifact-which-binds-us">The Artifact which Binds Us</h1>
-<p>Adding a simple <strong>timestamp file</strong> is enough to make a connection. So let’s do that. This is how it will look like =&gt;</p>
+<p>Adding a simple <strong>timestamp file</strong> is enough to make a connection. So let&rsquo;s do that. This is how it will look like =&gt;</p>
 <p>The important bits about this picture are the small echo which simply creates a file which will contain some time stamp data, and after that the archive artifact, which also fingerprints that file, marking it with a hash which identifies this job as using that particular artifact.</p>
 <p>Now, the next step is to create the connection. For that, you need the artifact copy plugin =&gt; <!-- raw HTML omitted -->Copy Artifact Plugin<!-- raw HTML omitted -->.</p>
 <p>With this, we create the childs configuration like this:</p>
-<!-- raw HTML omitted -->
-<p>Again, the improtant bit is this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml">
+<span style="color:#75715e">&lt;?xml version=&#39;1.0&#39; encoding=&#39;UTF-8&#39;?&gt;</span>
+<span style="color:#f92672">&lt;project&gt;</span>
+  <span style="color:#f92672">&lt;actions/&gt;</span>
+  <span style="color:#f92672">&lt;description&gt;&lt;/description&gt;</span>
+  <span style="color:#f92672">&lt;keepDependencies&gt;</span>false<span style="color:#f92672">&lt;/keepDependencies&gt;</span>
+  <span style="color:#f92672">&lt;properties/&gt;</span>
+  <span style="color:#f92672">&lt;scm</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;hudson.plugins.git.GitSCM&#34;</span> <span style="color:#a6e22e">plugin=</span><span style="color:#e6db74">&#34;git@2.4.0&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;configVersion&gt;</span>2<span style="color:#f92672">&lt;/configVersion&gt;</span>
+    <span style="color:#f92672">&lt;userRemoteConfigs&gt;</span>
+      <span style="color:#f92672">&lt;hudson.plugins.git.UserRemoteConfig&gt;</span>
+        <span style="color:#f92672">&lt;url&gt;</span>https://github.com/Skarlso/DataMung.git<span style="color:#f92672">&lt;/url&gt;</span>
+      <span style="color:#f92672">&lt;/hudson.plugins.git.UserRemoteConfig&gt;</span>
+    <span style="color:#f92672">&lt;/userRemoteConfigs&gt;</span>
+    <span style="color:#f92672">&lt;branches&gt;</span>
+      <span style="color:#f92672">&lt;hudson.plugins.git.BranchSpec&gt;</span>
+        <span style="color:#f92672">&lt;name&gt;</span>*/master<span style="color:#f92672">&lt;/name&gt;</span>
+      <span style="color:#f92672">&lt;/hudson.plugins.git.BranchSpec&gt;</span>
+    <span style="color:#f92672">&lt;/branches&gt;</span>
+    <span style="color:#f92672">&lt;doGenerateSubmoduleConfigurations&gt;</span>false<span style="color:#f92672">&lt;/doGenerateSubmoduleConfigurations&gt;</span>
+    <span style="color:#f92672">&lt;submoduleCfg</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;list&#34;</span><span style="color:#f92672">/&gt;</span>
+    <span style="color:#f92672">&lt;extensions/&gt;</span>
+  <span style="color:#f92672">&lt;/scm&gt;</span>
+  <span style="color:#f92672">&lt;canRoam&gt;</span>true<span style="color:#f92672">&lt;/canRoam&gt;</span>
+  <span style="color:#f92672">&lt;disabled&gt;</span>false<span style="color:#f92672">&lt;/disabled&gt;</span>
+  <span style="color:#f92672">&lt;blockBuildWhenDownstreamBuilding&gt;</span>false<span style="color:#f92672">&lt;/blockBuildWhenDownstreamBuilding&gt;</span>
+  <span style="color:#f92672">&lt;blockBuildWhenUpstreamBuilding&gt;</span>false<span style="color:#f92672">&lt;/blockBuildWhenUpstreamBuilding&gt;</span>
+  <span style="color:#f92672">&lt;triggers/&gt;</span>
+  <span style="color:#f92672">&lt;concurrentBuild&gt;</span>false<span style="color:#f92672">&lt;/concurrentBuild&gt;</span>
+  <span style="color:#f92672">&lt;builders&gt;</span>
+    <span style="color:#f92672">&lt;hudson.plugins.gradle.Gradle</span> <span style="color:#a6e22e">plugin=</span><span style="color:#e6db74">&#34;gradle@1.24&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#f92672">&lt;description&gt;&lt;/description&gt;</span>
+      <span style="color:#f92672">&lt;switches&gt;&lt;/switches&gt;</span>
+      <span style="color:#f92672">&lt;tasks&gt;</span>assemble check<span style="color:#f92672">&lt;/tasks&gt;</span>
+      <span style="color:#f92672">&lt;rootBuildScriptDir&gt;&lt;/rootBuildScriptDir&gt;</span>
+      <span style="color:#f92672">&lt;buildFile&gt;</span>build.gradle<span style="color:#f92672">&lt;/buildFile&gt;</span>
+      <span style="color:#f92672">&lt;gradleName&gt;</span>(Default)<span style="color:#f92672">&lt;/gradleName&gt;</span>
+      <span style="color:#f92672">&lt;useWrapper&gt;</span>true<span style="color:#f92672">&lt;/useWrapper&gt;</span>
+      <span style="color:#f92672">&lt;makeExecutable&gt;</span>false<span style="color:#f92672">&lt;/makeExecutable&gt;</span>
+      <span style="color:#f92672">&lt;fromRootBuildScriptDir&gt;</span>true<span style="color:#f92672">&lt;/fromRootBuildScriptDir&gt;</span>
+      <span style="color:#f92672">&lt;useWorkspaceAsHome&gt;</span>false<span style="color:#f92672">&lt;/useWorkspaceAsHome&gt;</span>
+    <span style="color:#f92672">&lt;/hudson.plugins.gradle.Gradle&gt;</span>
+    <span style="color:#f92672">&lt;hudson.plugins.copyartifact.CopyArtifact</span> <span style="color:#a6e22e">plugin=</span><span style="color:#e6db74">&#34;copyartifact@1.36&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#f92672">&lt;project&gt;</span>ParentJob<span style="color:#f92672">&lt;/project&gt;</span>
+      <span style="color:#f92672">&lt;filter&gt;</span>timestamp.data<span style="color:#f92672">&lt;/filter&gt;</span>
+      <span style="color:#f92672">&lt;target&gt;&lt;/target&gt;</span>
+      <span style="color:#f92672">&lt;excludes&gt;&lt;/excludes&gt;</span>
+      <span style="color:#f92672">&lt;selector</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;hudson.plugins.copyartifact.TriggeredBuildSelector&#34;</span><span style="color:#f92672">&gt;</span>
+        <span style="color:#f92672">&lt;upstreamFilterStrategy&gt;</span>UseGlobalSetting<span style="color:#f92672">&lt;/upstreamFilterStrategy&gt;</span>
+      <span style="color:#f92672">&lt;/selector&gt;</span>
+      <span style="color:#f92672">&lt;doNotFingerprintArtifacts&gt;</span>false<span style="color:#f92672">&lt;/doNotFingerprintArtifacts&gt;</span>
+    <span style="color:#f92672">&lt;/hudson.plugins.copyartifact.CopyArtifact&gt;</span>
+  <span style="color:#f92672">&lt;/builders&gt;</span>
+  <span style="color:#f92672">&lt;publishers&gt;</span>
+    <span style="color:#f92672">&lt;hudson.tasks.junit.JUnitResultArchiver</span> <span style="color:#a6e22e">plugin=</span><span style="color:#e6db74">&#34;junit@1.9&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#f92672">&lt;testResults&gt;</span>build/test-results/*.xml<span style="color:#f92672">&lt;/testResults&gt;</span>
+      <span style="color:#f92672">&lt;keepLongStdio&gt;</span>false<span style="color:#f92672">&lt;/keepLongStdio&gt;</span>
+      <span style="color:#f92672">&lt;healthScaleFactor&gt;</span>1.0<span style="color:#f92672">&lt;/healthScaleFactor&gt;</span>
+    <span style="color:#f92672">&lt;/hudson.tasks.junit.JUnitResultArchiver&gt;</span>
+  <span style="color:#f92672">&lt;/publishers&gt;</span>
+  <span style="color:#f92672">&lt;buildWrappers&gt;</span>
+    <span style="color:#f92672">&lt;hudson.plugins.ws__cleanup.PreBuildCleanup</span> <span style="color:#a6e22e">plugin=</span><span style="color:#e6db74">&#34;ws-cleanup@0.28&#34;</span><span style="color:#f92672">&gt;</span>
+      <span style="color:#f92672">&lt;deleteDirs&gt;</span>false<span style="color:#f92672">&lt;/deleteDirs&gt;</span>
+      <span style="color:#f92672">&lt;cleanupParameter&gt;&lt;/cleanupParameter&gt;</span>
+      <span style="color:#f92672">&lt;externalDelete&gt;&lt;/externalDelete&gt;</span>
+    <span style="color:#f92672">&lt;/hudson.plugins.ws__cleanup.PreBuildCleanup&gt;</span>
+  <span style="color:#f92672">&lt;/buildWrappers&gt;</span>
+<span style="color:#f92672">&lt;/project&gt;</span>
+</code></pre></div><p>Again, the improtant bit is this:</p>
 <p>After the copy is setup, we launch our parent job and if everything is correct, you should see something like this:</p>
 <h1 id="wrapping-it-up">Wrapping it Up</h1>
-<p>For final words, important bit to take away from this is that you need an <strong>artifact connection between the jobs</strong> to make this work. Whatever your downstream / upstream connection is, it doesn’t matter. Also, there can be a problem that you have everything set up, and there are artifacts which bind the jobs together but you still can’t see the results, then your best option is to specify the jobs BY NAME in the aggregate test plug-in like this:</p>
+<p>For final words, important bit to take away from this is that you need an <strong>artifact connection between the jobs</strong> to make this work. Whatever your downstream / upstream connection is, it doesn&rsquo;t matter. Also, there can be a problem that you have everything set up, and there are artifacts which bind the jobs together but you still can&rsquo;t see the results, then your best option is to specify the jobs BY NAME in the aggregate test plug-in like this:</p>
 <p>I know this is a pain if there are multiple jobs, but at least, jenkins is providing you with Autoexpande once you start typing.</p>
 <p>Of course this also works with multiple downstream jobs if they copy the artifact to themselves.</p>
 <p>Any questions, please feel free to comment and I will answer to the best of my knowledge.</p>
@@ -149,6 +246,7 @@ Gergely.</p>
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

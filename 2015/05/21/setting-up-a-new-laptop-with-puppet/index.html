@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>Setting up a new Laptop with Puppet – Ramblings of a cloud engineer</title>
-<meta name="description" content="Hello folks. So, some of you know puppet, some of you don’t. Puppet is a configuration management system. It’s quite awesome. I like working with it. One of the benefits …">
+<meta name="description" content="Hello folks. So, some of you know puppet, some of you don&amp;amp;rsquo;t. Puppet is a configuration management system. It&amp;amp;rsquo;s quite awesome. I like working with it. One of …">
 <meta name="created" content="2015-05-21T00:00:00+0000">
 <meta name="modified" content="2015-05-21T00:00:00+0000">
 <meta name="author" content="hannibal">
@@ -34,7 +34,7 @@
     "datePublished": "2015-05-21T00:00:00Z",
     "dateModified": "2015-05-21T00:00:00Z",
     "url" : "https://skarlso.github.io/2015/05/21/setting-up-a-new-laptop-with-puppet/",
-    "description": "Hello folks. So, some of you know puppet, some of you don’t. Puppet is a configuration management system. It’s quite awesome. I like working with it. One of the benefits …",
+    "description": "Hello folks. So, some of you know puppet, some of you don\u0026amp;rsquo;t. Puppet is a configuration management system. It\u0026amp;rsquo;s quite awesome. I like working with it. One of …",
     "keywords": ["puppet"],
     "image" : "https://skarlso.github.io/apple-touch-icon.png",
     "author": {
@@ -115,10 +115,68 @@ Tags:
 </header>
 <div class="content">
 <p>Hello folks.</p>
-<p>So, some of you know <!-- raw HTML omitted -->puppet<!-- raw HTML omitted -->, some of you don’t. Puppet is a configuration management system. It’s quite awesome. I like working with it. One of the benefits of puppet is, that I never, ever, EVER have to setup a new laptop from scratch, EVER again.</p>
-<p>I’m writing a puppet manifest file which sets up my new laptop to my liking. I will improve it as I go along. Here is version 1.0.</p>
-<!-- raw HTML omitted -->
-<p>I’ll improve upon it as I go, and you can check it out later from my git repo. I removed the parts which required extra libraries for now, as I want it to run without the need of getting extra stuff installed. I might automate that part as well later on.</p>
+<p>So, some of you know <!-- raw HTML omitted -->puppet<!-- raw HTML omitted -->, some of you don&rsquo;t. Puppet is a configuration management system. It&rsquo;s quite awesome. I like working with it. One of the benefits of puppet is, that I never, ever, EVER have to setup a new laptop from scratch, EVER again.</p>
+<p>I&rsquo;m writing a puppet manifest file which sets up my new laptop to my liking. I will improve it as I go along. Here is version 1.0.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby">
+<span style="color:#75715e"># include apt</span>
+
+<span style="color:#66d9ef">class</span> base<span style="color:#f92672">::</span>basics {
+        $packages <span style="color:#f92672">=</span> <span style="color:#f92672">[</span><span style="color:#e6db74">&#39;git&#39;</span>, <span style="color:#e6db74">&#39;subversion&#39;</span>, <span style="color:#e6db74">&#39;mc&#39;</span>, <span style="color:#e6db74">&#39;vim&#39;</span>, <span style="color:#e6db74">&#39;maven&#39;</span>, <span style="color:#e6db74">&#39;gradle&#39;</span><span style="color:#f92672">]</span>
+
+        exec { <span style="color:#e6db74">&#34;update&#34;</span>:
+                command <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;/usr/bin/apt-get update&#34;</span>,
+        }
+
+        package { $packages:
+                <span style="color:#66d9ef">ensure</span> <span style="color:#f92672">=&gt;</span> installed,
+                require <span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">Exec</span><span style="color:#f92672">[</span><span style="color:#e6db74">&#34;update&#34;</span><span style="color:#f92672">]</span>,
+        }
+
+}
+
+<span style="color:#66d9ef">class</span> base<span style="color:#f92672">::</span>skype {
+        exec { <span style="color:#e6db74">&#34;add-arc&#34;</span>:
+                command <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;/usr/bin/dpkg --add-architecture i386&#34;</span>,
+        }
+
+        exec { <span style="color:#e6db74">&#34;add-repo-skype&#34;</span>:
+                command <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;/usr/bin/add-apt-repository </span><span style="color:#ae81ff">\&#34;</span><span style="color:#e6db74">deb http://archive.canonical.com/ \$(lsb_release -sc) partner</span><span style="color:#ae81ff">\&#34;</span><span style="color:#e6db74">&#34;</span>,
+                require <span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">Exec</span><span style="color:#f92672">[</span><span style="color:#e6db74">&#39;add-arc&#39;</span><span style="color:#f92672">]</span>,
+        }
+
+        exec { <span style="color:#e6db74">&#34;update-and-install&#34;</span>:
+                command <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;/usr/bin/apt-get update &amp;&amp; /usr/bin/apt-get install skype&#34;</span>,
+                require <span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">Exec</span><span style="color:#f92672">[</span><span style="color:#e6db74">&#39;add-repo-skype&#39;</span><span style="color:#f92672">]</span>,
+        }
+}
+
+<span style="color:#66d9ef">class</span> base<span style="color:#f92672">::</span>java8 {
+        <span style="color:#75715e"># Automatically does an update afterwards</span>
+        <span style="color:#75715e"># apt::ppa { &#39;ppa:webupd8team/java&#39;: }</span>
+        exec { <span style="color:#e6db74">&#34;add-repo-java&#34;</span>:
+                command <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;/usr/bin/add-apt-repository -y </span><span style="color:#ae81ff">\&#34;</span><span style="color:#e6db74">ppa:webupd8team/java</span><span style="color:#ae81ff">\&#34;</span><span style="color:#e6db74"> &amp;&amp; /usr/bin/apt-get update&#34;</span>
+        }
+
+        exec { <span style="color:#e6db74">&#34;set-accept&#34;</span>:
+                command <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;/bin/echo /usr/bin/debconf shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections &amp;&amp; /bin/echo /usr/bin/debconf shared/accepted-oracle-license-v1-1 seen true | sudo /usr/bin/debconf-set-selections&#34;</span>,
+                require <span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">Exec</span><span style="color:#f92672">[</span><span style="color:#e6db74">&#39;add-repo-java&#39;</span><span style="color:#f92672">]</span>,
+        }
+
+        exec { <span style="color:#e6db74">&#34;install&#34;</span>:
+                command <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;/usr/bin/apt-get install -y oracle-java8-installer&#34;</span>,
+                require <span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">Exec</span><span style="color:#f92672">[</span><span style="color:#e6db74">&#39;set-accept&#39;</span><span style="color:#f92672">]</span>,
+        }
+
+        exec { <span style="color:#e6db74">&#34;setup_home&#34;</span>:
+                command <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;/bin/echo </span><span style="color:#ae81ff">\&#34;</span><span style="color:#e6db74">export JDK18_HOME=/usr/lib/jvm/java-8-oracle/</span><span style="color:#ae81ff">\&#34;</span><span style="color:#e6db74"> &gt;&gt; /etc/environment&#34;</span>,
+                require <span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">Exec</span><span style="color:#f92672">[</span><span style="color:#e6db74">&#39;install&#39;</span><span style="color:#f92672">]</span>,
+        }
+}
+
+<span style="color:#66d9ef">include</span> base<span style="color:#f92672">::</span>basics
+<span style="color:#66d9ef">include</span> base<span style="color:#f92672">::</span>skype
+<span style="color:#66d9ef">include</span> base<span style="color:#f92672">::</span>java8
+</code></pre></div><p>I&rsquo;ll improve upon it as I go, and you can check it out later from my git repo. I removed the parts which required extra libraries for now, as I want it to run without the need of getting extra stuff installed. I might automate that part as well later on.</p>
 <p>EDIT: <!-- raw HTML omitted --><a href="https://github.com/Skarlso/puppet/blob/master/manifests/base_setup.pp">https://github.com/Skarlso/puppet/blob/master/manifests/base_setup.pp</a><!-- raw HTML omitted --></p>
 <p>Have fun.</p>
 <p>Gergely.</p>
@@ -133,6 +191,7 @@ Tags:
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

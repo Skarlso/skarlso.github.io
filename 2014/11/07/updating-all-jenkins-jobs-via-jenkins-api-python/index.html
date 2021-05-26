@@ -116,12 +116,71 @@ Tags:
 <div class="content">
 <p>Hello everybody.</p>
 <p>I would like to share with you a small script I wrote to update all, or a single, Jenkins job from a Python script remotely.</p>
-<p>This will enable you to update a Jenkins job from anywhere using an admin credential based on a config.xml template that you have. With this, if you want to apply a config change to all or just a single job in Jenkins, you don’t have to go and do it for all the rest. You just call this script and it will cycle through all the jobs you have and update them if the begin with “yourpipelinedelimiter” or if they aren’t in a restricted list of jobs. The delimiter helps to identify pipelines which are dev pipelines. If you have multiple pipelines which are helpers or builders and you don’t usually apply the same config to them, than the delimiter can help identify the dev pipelines you actually want to update.</p>
+<p>This will enable you to update a Jenkins job from anywhere using an admin credential based on a config.xml template that you have. With this, if you want to apply a config change to all or just a single job in Jenkins, you don&rsquo;t have to go and do it for all the rest. You just call this script and it will cycle through all the jobs you have and update them if the begin with &ldquo;yourpipelinedelimiter&rdquo; or if they aren&rsquo;t in a restricted list of jobs. The delimiter helps to identify pipelines which are dev pipelines. If you have multiple pipelines which are helpers or builders and you don&rsquo;t usually apply the same config to them, than the delimiter can help identify the dev pipelines you actually want to update.</p>
 <p>Enjoy, hope it helps someone.</p>
 <p>And now, without any further ado:</p>
-<!-- raw HTML omitted -->
-<p>Thanks for reading.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#e6db74">&#39;&#39;&#39;
+</span><span style="color:#e6db74">	Created to update multiple pipelines in jenkins with a given configuration and job list.
+</span><span style="color:#e6db74">	Usage:
+</span><span style="color:#e6db74">	Example 1:
+</span><span style="color:#e6db74">	Updating a single pipeline&#39;s job with a given config.xml.
+</span><span style="color:#e6db74">	python update-jenkins-jobs.py job-name config.xml pipeline-name
+</span><span style="color:#e6db74">	Example 2:
+</span><span style="color:#e6db74">	Updating every pipeline in jenkins dynamically. !!!WARNING!!! This updates every job EXCEPT of the ones specified in restricted_jobs.
+</span><span style="color:#e6db74">	python update-jenkins-jobs.py job-name config.xml
+</span><span style="color:#e6db74">&#39;&#39;&#39;</span>
+<span style="color:#f92672">from</span> xml.dom <span style="color:#f92672">import</span> minidom
+<span style="color:#f92672">import</span> requests
+<span style="color:#f92672">import</span> sys
+
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">update_pipeline</span>(pipeline):
+	<span style="color:#e6db74">&#39;&#39;&#39;
+</span><span style="color:#e6db74">	Takes in a list of pipelines to update.
+</span><span style="color:#e6db74">	&#39;&#39;&#39;</span>
+	config_file <span style="color:#f92672">=</span> open(config_to_use, <span style="color:#e6db74">&#39;rb&#39;</span>)
+	headers <span style="color:#f92672">=</span> {<span style="color:#e6db74">&#39;content-type&#39;</span>: <span style="color:#e6db74">&#39;application/xml&#39;</span>}
+	<span style="color:#66d9ef">print</span>(<span style="color:#e6db74">&#34;Updating pipelines: &#34;</span>, pipeline)
+
+	<span style="color:#66d9ef">for</span> dev_job <span style="color:#f92672">in</span> pipeline:
+		url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;http://jenkins:9999/job/</span><span style="color:#e6db74">%s</span><span style="color:#e6db74">/job/</span><span style="color:#e6db74">%s</span><span style="color:#e6db74">/config.xml&#34;</span> <span style="color:#f92672">%</span> (dev_job, job_to_update)
+		r <span style="color:#f92672">=</span> requests<span style="color:#f92672">.</span>post(url, data<span style="color:#f92672">=</span>config_file, headers<span style="color:#f92672">=</span>headers, auth<span style="color:#f92672">=</span>(<span style="color:#e6db74">&#39;user&#39;</span>, <span style="color:#e6db74">&#39;password&#39;</span>))
+		<span style="color:#66d9ef">print</span>(<span style="color:#e6db74">&#34;Updating pipeline: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">; Response Code: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> (dev_job, r))
+
+
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_dev_pipelines</span>():
+	<span style="color:#e6db74">&#39;&#39;&#39;
+</span><span style="color:#e6db74">	Gets a list of pipelines which can be used by update_pipeline.
+</span><span style="color:#e6db74">	&#39;&#39;&#39;</span>
+	r <span style="color:#f92672">=</span> requests<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#39;http://jenkins:9999/api/xml&#39;</span>, auth<span style="color:#f92672">=</span>(<span style="color:#e6db74">&#39;user&#39;</span>, <span style="color:#e6db74">&#39;password&#39;</span>), stream<span style="color:#f92672">=</span>True)
+	job_list_xml <span style="color:#f92672">=</span> r<span style="color:#f92672">.</span>text
+
+	xmldoc <span style="color:#f92672">=</span> minidom<span style="color:#f92672">.</span>parseString(job_list_xml)
+	itemlist <span style="color:#f92672">=</span> xmldoc<span style="color:#f92672">.</span>getElementsByTagName(<span style="color:#e6db74">&#39;name&#39;</span>)
+
+	dev_job_list <span style="color:#f92672">=</span> []
+
+	restricted_jobs <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;yourpipelinedelimiter-dev-pipeline1&#34;</span>, <span style="color:#e6db74">&#34;yourpipelinedelimiter-dev-pipeline2&#34;</span>, <span style="color:#e6db74">&#34;yourpipelinedelimiter-dev-pipeline3&#34;</span>]
+	<span style="color:#66d9ef">for</span> s <span style="color:#f92672">in</span> itemlist:
+	    <span style="color:#66d9ef">if</span> (<span style="color:#e6db74">&#34;yourpipelinedelimiter-dev&#34;</span> <span style="color:#f92672">in</span> s<span style="color:#f92672">.</span>firstChild<span style="color:#f92672">.</span>nodeValue) :
+	    	value <span style="color:#f92672">=</span> s<span style="color:#f92672">.</span>firstChild<span style="color:#f92672">.</span>nodeValue
+	    	<span style="color:#66d9ef">if</span> (value <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> restricted_jobs):
+	    		dev_job_list<span style="color:#f92672">.</span>append(value)
+
+	<span style="color:#66d9ef">return</span> dev_job_list
+
+
+job_to_update <span style="color:#f92672">=</span> sys<span style="color:#f92672">.</span>argv[<span style="color:#ae81ff">1</span>]
+config_to_use <span style="color:#f92672">=</span> sys<span style="color:#f92672">.</span>argv[<span style="color:#ae81ff">2</span>]
+dev_pipeline <span style="color:#f92672">=</span> []
+
+<span style="color:#66d9ef">if</span> len(sys<span style="color:#f92672">.</span>argv) <span style="color:#f92672">&gt;</span>; <span style="color:#ae81ff">3</span>:
+	<span style="color:#66d9ef">print</span>(<span style="color:#e6db74">&#34;Args length:&#34;</span>, len(sys<span style="color:#f92672">.</span>argv))
+	dev_pipeline<span style="color:#f92672">.</span>append(sys<span style="color:#f92672">.</span>argv[<span style="color:#ae81ff">3</span>])
+
+update_pipeline(get_dev_pipelines() <span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> dev_pipeline <span style="color:#66d9ef">else</span> dev_pipeline)
+</code></pre></div><p>Thanks for reading.</p>
 <p>Gergely.</p>
+
 
 </div>
 </article>
@@ -132,6 +191,7 @@ Tags:
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>Django – RPG – Part 3 – Ramblings of a cloud engineer</title>
-<meta name="description" content="Hello folks. A small update to this. I created the model now, which is the database design for this app. It’s very simple, nothing fancy. Also, I’m writing the app with …">
+<meta name="description" content="Hello folks. A small update to this. I created the model now, which is the database design for this app. It&amp;amp;rsquo;s very simple, nothing fancy. Also, I&amp;amp;rsquo;m writing …">
 <meta name="created" content="2015-04-21T00:00:00+0000">
 <meta name="modified" content="2015-04-21T00:00:00+0000">
 <meta name="author" content="hannibal">
@@ -34,7 +34,7 @@
     "datePublished": "2015-04-21T00:00:00Z",
     "dateModified": "2015-04-21T00:00:00Z",
     "url" : "https://skarlso.github.io/2015/04/21/django-rpg-part-3/",
-    "description": "Hello folks. A small update to this. I created the model now, which is the database design for this app. It’s very simple, nothing fancy. Also, I’m writing the app with …",
+    "description": "Hello folks. A small update to this. I created the model now, which is the database design for this app. It\u0026amp;rsquo;s very simple, nothing fancy. Also, I\u0026amp;rsquo;m writing …",
     "keywords": ["rpg"],
     "image" : "https://skarlso.github.io/apple-touch-icon.png",
     "author": {
@@ -115,16 +115,50 @@ Tags:
 </header>
 <div class="content">
 <p>Hello folks.</p>
-<p>A small update to this. I created the model now, which is the database design for this app. It’s very simple, nothing fancy. Also, I’m writing the app with Python 3 from now on.</p>
+<p>A small update to this. I created the model now, which is the database design for this app. It&rsquo;s very simple, nothing fancy. Also, I&rsquo;m writing the app with Python 3 from now on.</p>
 <p>Here is the model now:</p>
-<!-- raw HTML omitted -->
-<p>Worth noting a few things here. The __str__ is only with Python 3. In Python 2 it would be unicode. And the OneToOne and the foreign key are automatically using Primary keys defined in the references model. The __str__ is there to return some view when you are debugging in the console instead of [&lt;Item: Item object&gt;].</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">
+<span style="color:#f92672">from</span> django.db <span style="color:#f92672">import</span> models
+<span style="color:#f92672">from</span> django.contrib.auth.models <span style="color:#f92672">import</span> User
+
+<span style="color:#75715e"># Create your models here.</span>
+
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Item</span>(models<span style="color:#f92672">.</span>Model):
+    name <span style="color:#f92672">=</span> models<span style="color:#f92672">.</span>CharField(max_length<span style="color:#f92672">=</span><span style="color:#ae81ff">100</span>, default<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Item&#34;</span>)
+    damage <span style="color:#f92672">=</span> models<span style="color:#f92672">.</span>IntegerField(default<span style="color:#f92672">=</span>)
+    defense <span style="color:#f92672">=</span> models<span style="color:#f92672">.</span>IntegerField(default<span style="color:#f92672">=</span>)
+    consumable <span style="color:#f92672">=</span> models<span style="color:#f92672">.</span>BooleanField(default<span style="color:#f92672">=</span>False)
+
+    <span style="color:#66d9ef">def</span> __str__(self):
+        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>name
+
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Inventory</span>(models<span style="color:#f92672">.</span>Model):
+    items <span style="color:#f92672">=</span> models<span style="color:#f92672">.</span>ManyToManyField(Item)
+
+    <span style="color:#66d9ef">def</span> __str__(self):
+        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>items
+
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Character</span>(models<span style="color:#f92672">.</span>Model):
+    <span style="color:#75715e"># By default Django uses the primery key of the related object.</span>
+    <span style="color:#75715e"># Hence, no need to specify User.id.</span>
+    user <span style="color:#f92672">=</span> models<span style="color:#f92672">.</span>OneToOneField(User, null<span style="color:#f92672">=</span>True)
+    name <span style="color:#f92672">=</span> models<span style="color:#f92672">.</span>CharField(max_length<span style="color:#f92672">=</span><span style="color:#ae81ff">100</span>)
+    inventory <span style="color:#f92672">=</span> models<span style="color:#f92672">.</span>ForeignKey(Inventory)
+
+    <span style="color:#66d9ef">def</span> __str__(self):
+        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>name
+</code></pre></div><p>Worth noting a few things here. The __str__ is only with Python 3. In Python 2 it would be unicode. And the OneToOne and the foreign key are automatically using Primary keys defined in the references model. The __str__ is there to return some view when you are debugging in the console instead of [&lt;Item: Item object&gt;].</p>
 <p>In order to apply this change you just have to run this commend (given you set up your app in the settings.py as an INSTALLED_APP):</p>
-<!-- raw HTML omitted -->
-<p>This creates the migration script. And this applies it:</p>
-<!-- raw HTML omitted -->
-<p>I love the fact that django creates incremental migration scripts out of the box. So if there was any problem at all, you can always roll back. Which comes very handy in certain situations.</p>
-<p>That’s it.</p>
+<pre><code>
+python manage.py makemigrations polls
+</code></pre><p>This creates the migration script. And this applies it:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">
+python manage<span style="color:#f92672">.</span>py migrate
+</code></pre></div><p>I love the fact that django creates incremental migration scripts out of the box. So if there was any problem at all, you can always roll back. Which comes very handy in certain situations.</p>
+<p>That&rsquo;s it.</p>
 <p>Thanks for reading!</p>
 <p>Gergely.</p>
 
@@ -138,6 +172,7 @@ Tags:
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

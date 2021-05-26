@@ -115,21 +115,65 @@ Tags:
 </header>
 <div class="content">
 <p>Hello.</p>
-<p>Continuing where we left off with the Django RPG project. Next up is implementing a rudimentary registration and adding the ability to create a character. Maybe even, design the database through django’s modelling.</p>
-<p>Since we are using Django’s very own authentication model, I think we are covered in terms of users. Let’s add two things for now. An Index page, where there is a link to login and a link to registration.</p>
+<p>Continuing where we left off with the Django RPG project. Next up is implementing a rudimentary registration and adding the ability to create a character. Maybe even, design the database through django&rsquo;s modelling.</p>
+<p>Since we are using Django&rsquo;s very own authentication model, I think we are covered in terms of users. Let&rsquo;s add two things for now. An Index page, where there is a link to login and a link to registration.</p>
 <p>Adding the index first. Later I would like to switch to a base template model, but for now, I created a simple index.html page. That only contains the two links to the two views. The views are a simple function call in the views.py too which the URLConfig will later point to.</p>
 <p>For now, the index function looks like this:</p>
-<!-- raw HTML omitted -->
-<p>Note, that the title here is utterly unimportant but because I want to switch to a base.html template I’ll leave it here for later usage.</p>
-<p>That concludes the index. Now, let’s create the registration. That is a little more complex, but still rather easy. We are just checking of the user already exists or not, if so, display and error, if not, create the user.</p>
-<!-- raw HTML omitted -->
-<p>Here, I’m checking to see of the username already exists with the filter. This is by using Django’s model which models the database like hibernate. It’s a simple query. And I’m doing this, because this is faster than raising an exception. Later on, I’ll be switching to a validation framework and django’s own auth view. Because, why not.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">index</span>(request):
+  <span style="color:#e6db74">&#39;&#39;&#39;
+</span><span style="color:#e6db74">  myrpg/rpg/views.py
+</span><span style="color:#e6db74">  &#39;&#39;&#39;</span>
+	title <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;My RPG&#34;</span>
+	<span style="color:#66d9ef">return</span> render_to_response(<span style="color:#e6db74">&#39;index.html&#39;</span>, {<span style="color:#e6db74">&#39;title&#39;</span>:title})
+</code></pre></div><p>Note, that the title here is utterly unimportant but because I want to switch to a base.html template I&rsquo;ll leave it here for later usage.</p>
+<p>That concludes the index. Now, let&rsquo;s create the registration. That is a little more complex, but still rather easy. We are just checking of the user already exists or not, if so, display and error, if not, create the user.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e"># myrpg/rpg/views.py</span>
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">registration</span>(request):
+	state <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Please register.&#34;</span>
+	username <span style="color:#f92672">=</span> password <span style="color:#f92672">=</span> email <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+	<span style="color:#66d9ef">if</span> request<span style="color:#f92672">.</span>POST:
+		username <span style="color:#f92672">=</span> request<span style="color:#f92672">.</span>POST<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#39;username&#39;</span>)
+		email <span style="color:#f92672">=</span> request<span style="color:#f92672">.</span>POST<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#39;email&#39;</span>)
+		password <span style="color:#f92672">=</span> request<span style="color:#f92672">.</span>POST<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#39;password&#39;</span>)
+		<span style="color:#66d9ef">if</span> User<span style="color:#f92672">.</span>objects<span style="color:#f92672">.</span>filter(username <span style="color:#f92672">=</span> username)<span style="color:#f92672">.</span>exists():
+			<span style="color:#75715e"># raise forms.ValidationError(&#34;Username %s is already in use.&#34; % username)</span>
+			state <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Username </span><span style="color:#e6db74">%s</span><span style="color:#e6db74"> is already in use. Please try another.&#34;</span> <span style="color:#f92672">%</span> username
+		<span style="color:#66d9ef">else</span>:
+			<span style="color:#66d9ef">try</span>:
+				user <span style="color:#f92672">=</span> User<span style="color:#f92672">.</span>objects<span style="color:#f92672">.</span>create_user(username <span style="color:#f92672">=</span> username, email <span style="color:#f92672">=</span> email, password <span style="color:#f92672">=</span> password)
+				state <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Thank you for registering with us </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">!&#34;</span> <span style="color:#f92672">%</span> user<span style="color:#f92672">.</span>username
+			<span style="color:#66d9ef">except</span>:
+				state <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Unexpected error occured: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> sys<span style="color:#f92672">.</span>exc_info()[]
+
+	<span style="color:#66d9ef">return</span> render_to_response(<span style="color:#e6db74">&#39;registration.html&#39;</span>, {<span style="color:#e6db74">&#39;state&#39;</span>: state}, context_instance <span style="color:#f92672">=</span> RequestContext(request))
+</code></pre></div><p>Here, I&rsquo;m checking to see of the username already exists with the filter. This is by using Django&rsquo;s model which models the database like hibernate. It&rsquo;s a simple query. And I&rsquo;m doing this, because this is faster than raising an exception. Later on, I&rsquo;ll be switching to a validation framework and django&rsquo;s own auth view. Because, why not.</p>
 <p>The URL conf looks like this:</p>
-<!-- raw HTML omitted -->
-<p>And this now, resides in a file under the RPG app and not the main one. The main one includes this one, like this:</p>
-<!-- raw HTML omitted -->
-<p>That’s it for now. As always, you can check out the code under github.</p>
-<p>Tune in next time, when I’ll attempt to create a view to create a Character for a logged in user and link it to the user. I’ll do this with django’s model framework.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e">#myrpg/rpg/urls.py</span>
+<span style="color:#f92672">from</span> django.conf.urls <span style="color:#f92672">import</span> url
+
+<span style="color:#f92672">from</span> . <span style="color:#f92672">import</span> views
+
+urlpatterns <span style="color:#f92672">=</span> [
+    url(<span style="color:#e6db74">r</span><span style="color:#e6db74">&#39;^$&#39;</span>, views<span style="color:#f92672">.</span>index, name<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;index&#39;</span>),
+    url(<span style="color:#e6db74">r</span><span style="color:#e6db74">&#39;^login/$&#39;</span>, views<span style="color:#f92672">.</span>login_user, name<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;login&#39;</span>),
+    url(<span style="color:#e6db74">r</span><span style="color:#e6db74">&#39;^registration/$&#39;</span>, views<span style="color:#f92672">.</span>registration, name<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;registration&#39;</span>),
+]
+</code></pre></div><p>And this now, resides in a file under the RPG app and not the main one. The main one includes this one, like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e">#myrpg/urls.py</span>
+<span style="color:#f92672">from</span> django.conf.urls <span style="color:#f92672">import</span> include, url
+<span style="color:#f92672">from</span> django.contrib <span style="color:#f92672">import</span> admin
+
+urlpatterns <span style="color:#f92672">=</span> [
+    <span style="color:#75715e"># Examples:</span>
+    <span style="color:#75715e"># url(r&#39;^$&#39;, &#39;myrpg.views.home&#39;, name=&#39;home&#39;),</span>
+    <span style="color:#75715e"># url(r&#39;^blog/&#39;, include(&#39;blog.urls&#39;)),</span>
+
+    url(<span style="color:#e6db74">r</span><span style="color:#e6db74">&#39;^admin/&#39;</span>, include(admin<span style="color:#f92672">.</span>site<span style="color:#f92672">.</span>urls)),
+    url(<span style="color:#e6db74">r</span><span style="color:#e6db74">&#39;^rpg/&#39;</span>, include(<span style="color:#e6db74">&#39;rpg.urls&#39;</span>)),
+]
+</code></pre></div><p>That&rsquo;s it for now. As always, you can check out the code under github.</p>
+<p>Tune in next time, when I&rsquo;ll attempt to create a view to create a Character for a logged in user and link it to the user. I&rsquo;ll do this with django&rsquo;s model framework.</p>
 <p>Thanks for reading,</p>
 <p>Gergely.</p>
 
@@ -142,6 +186,7 @@ Tags:
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

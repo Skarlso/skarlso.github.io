@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>The Packer, The Windows, and the Vagrant box – Ramblings of a cloud engineer</title>
-<meta name="description" content="Hello folks. Today, I would like to write about something close to my heart recently. I’ve been fiddling with Packer, Windows and Vagrant these days. Trying to get a …">
+<meta name="description" content="Hello folks. Today, I would like to write about something close to my heart recently. I&amp;amp;rsquo;ve been fiddling with Packer, Windows and Vagrant these days. Trying to get …">
 <meta name="created" content="2015-06-27T00:00:00+0000">
 <meta name="modified" content="2015-06-27T00:00:00+0000">
 <meta name="author" content="hannibal">
@@ -34,7 +34,7 @@
     "datePublished": "2015-06-27T00:00:00Z",
     "dateModified": "2015-06-27T00:00:00Z",
     "url" : "https://skarlso.github.io/2015/06/27/the-packer-the-windows-and-the-vagrant-box/",
-    "description": "Hello folks. Today, I would like to write about something close to my heart recently. I’ve been fiddling with Packer, Windows and Vagrant these days. Trying to get a …",
+    "description": "Hello folks. Today, I would like to write about something close to my heart recently. I\u0026amp;rsquo;ve been fiddling with Packer, Windows and Vagrant these days. Trying to get …",
     "keywords": ["Packer","vagrant","Windows"],
     "image" : "https://skarlso.github.io/apple-touch-icon.png",
     "author": {
@@ -117,53 +117,192 @@ Tags:
 </header>
 <div class="content">
 <p>Hello folks.</p>
-<p>Today, I would like to write about something close to my heart recently. I’ve been fiddling with Packer, Windows and Vagrant these days. Trying to get a Windows box up in running is a pain in the arse though, so I thought I share my pain with you nice folks out there. Let’s begin.</p>
+<p>Today, I would like to write about something close to my heart recently. I&rsquo;ve been fiddling with Packer, Windows and Vagrant these days. Trying to get a Windows box up in running is a pain in the arse though, so I thought I share my pain with you nice folks out there. Let&rsquo;s begin.</p>
 <h1 id="setup">Setup</h1>
-<p>First things first. You need <!-- raw HTML omitted -->Packer<!-- raw HTML omitted -->, and <!-- raw HTML omitted -->Vagrant<!-- raw HTML omitted --> obviously. I’ll leave the install up to you. Next, you should clone this git repo =&gt; <!-- raw HTML omitted -->Packer Windows Plugin<!-- raw HTML omitted -->. This plugin contains all the files necessary to get, install, and provision Windows boxes. Luckily, some very nice and clever folks, figured out a lot of things about how to install stuff on Windows. And given that people at Microsoft realised that sys admins would like to install stuff remotely, there are a bunch of forums and places where you can search for how to install software without user interaction. And this is the keyword you should look for =&gt; <strong>unattended Windows install</strong>.</p>
+<p>First things first. You need <!-- raw HTML omitted -->Packer<!-- raw HTML omitted -->, and <!-- raw HTML omitted -->Vagrant<!-- raw HTML omitted --> obviously. I&rsquo;ll leave the install up to you. Next, you should clone this git repo =&gt; <!-- raw HTML omitted -->Packer Windows Plugin<!-- raw HTML omitted -->. This plugin contains all the files necessary to get, install, and provision Windows boxes. Luckily, some very nice and clever folks, figured out a lot of things about how to install stuff on Windows. And given that people at Microsoft realised that sys admins would like to install stuff remotely, there are a bunch of forums and places where you can search for how to install software without user interaction. And this is the keyword you should look for =&gt; <strong>unattended Windows install</strong>.</p>
 <p>This will lead you further into the bowls of Windows technology and silent / quiet installs all over the place.</p>
 <h1 id="packer-and-answer-files">Packer and Answer Files</h1>
-<p>When it comes to installing software on Windows, you have quite a few obstacles to overtake. One of the biggest obstacle you are facing, are restarts. Windows has a special place in hell for that. Every time you install something important which requires system libraries or other kind of configuration which “will only take effect after you restart Windows” you have to do a restart. Now, a little background on how Packer interacts with Windows. At the moment, it uses OpenSSH to talk to the box which has to be the last which comes up. If it looses connection to openssh because, I don’t know, it restarted itself, you loose communication to the box, and the setup process stops in mid tracks.</p>
-<p>If you read about that in an earlier attempt to overtake this, you saw that you could use time-outs. You could kill ssh process which presumably makes packer do an attempt to start a new connection. If you are like me, you experienced that Packer does indeed NOT re-try. Because the previous task couldn’t finish, the restart killed the ssh service which could tell Packer that the previous task, an install for example, has finished. Hence, Packer will stay there and wait for that task to complete; which will never happen at this point.</p>
-<p>What can we do? Enter the world of <!-- raw HTML omitted -->Answer Files<!-- raw HTML omitted -->. Basically, it’s an xml file which sets up Windows. When Packer is running this file, the last service which should be installed, must be openSSH. And after that, in the provisioning phase, you should only install software which does not require restarts.</p>
-<p>Let’s look at an example.</p>
+<p>When it comes to installing software on Windows, you have quite a few obstacles to overtake. One of the biggest obstacle you are facing, are restarts. Windows has a special place in hell for that. Every time you install something important which requires system libraries or other kind of configuration which &ldquo;will only take effect after you restart Windows&rdquo; you have to do a restart. Now, a little background on how Packer interacts with Windows. At the moment, it uses OpenSSH to talk to the box which has to be the last which comes up. If it looses connection to openssh because, I don&rsquo;t know, it restarted itself, you loose communication to the box, and the setup process stops in mid tracks.</p>
+<p>If you read about that in an earlier attempt to overtake this, you saw that you could use time-outs. You could kill ssh process which presumably makes packer do an attempt to start a new connection. If you are like me, you experienced that Packer does indeed NOT re-try. Because the previous task couldn&rsquo;t finish, the restart killed the ssh service which could tell Packer that the previous task, an install for example, has finished. Hence, Packer will stay there and wait for that task to complete; which will never happen at this point.</p>
+<p>What can we do? Enter the world of <!-- raw HTML omitted -->Answer Files<!-- raw HTML omitted -->. Basically, it&rsquo;s an xml file which sets up Windows. When Packer is running this file, the last service which should be installed, must be openSSH. And after that, in the provisioning phase, you should only install software which does not require restarts.</p>
+<p>Let&rsquo;s look at an example.</p>
 <h1 id="example-1-windows-updates">Example #1: Windows Updates</h1>
-<p>This is another layer of purgatory for Windows. It’s updates. The updates take massive amount of times, if you are doing them from scratch, and also require several restart before it’s actually done. You **could **speed up the process a little bit, if you have a private network share where all of the Windows updates are sitting. At least that way you don’t have to download them every time you are creating a box. But you can’t avert the install process itself.</p>
-<p>Let’s look at a setup for packer. Packer works with JSON files for it’s configuration. An example for a Windows 7 box would look something like this:</p>
-<!-- raw HTML omitted -->
-<p>If it feels daunting, don’t worry. You’ll get used to it fairly quickly. Let’s go over section by section on what this does.</p>
+<p>This is another layer of purgatory for Windows. It&rsquo;s updates. The updates take massive amount of times, if you are doing them from scratch, and also require several restart before it&rsquo;s actually done. You **could **speed up the process a little bit, if you have a private network share where all of the Windows updates are sitting. At least that way you don&rsquo;t have to download them every time you are creating a box. But you can&rsquo;t avert the install process itself.</p>
+<p>Let&rsquo;s look at a setup for packer. Packer works with JSON files for it&rsquo;s configuration. An example for a Windows 7 box would look something like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">
+{
+  <span style="color:#f92672">&#34;builders&#34;</span>: [
+    {
+      <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;vmware-iso&#34;</span>,
+      <span style="color:#f92672">&#34;iso_url&#34;</span>: <span style="color:#e6db74">&#34;http://care.dlservice.microsoft.com/dl/download/evalx/win7/x64/EN/7600.16385.090713-1255_x64fre_enterprise_en-us_EVAL_Eval_Enterprise-GRMCENXEVAL_EN_DVD.iso&#34;</span>,
+      <span style="color:#f92672">&#34;iso_checksum_type&#34;</span>: <span style="color:#e6db74">&#34;md5&#34;</span>,
+      <span style="color:#f92672">&#34;iso_checksum&#34;</span>: <span style="color:#e6db74">&#34;1d0d239a252cb53e466d39e752b17c28&#34;</span>,
+      <span style="color:#f92672">&#34;headless&#34;</span>: <span style="color:#66d9ef">true</span>,
+      <span style="color:#f92672">&#34;boot_wait&#34;</span>: <span style="color:#e6db74">&#34;2m&#34;</span>,
+      <span style="color:#f92672">&#34;ssh_username&#34;</span>: <span style="color:#e6db74">&#34;vagrant&#34;</span>,
+      <span style="color:#f92672">&#34;ssh_password&#34;</span>: <span style="color:#e6db74">&#34;vagrant&#34;</span>,
+      <span style="color:#f92672">&#34;ssh_wait_timeout&#34;</span>: <span style="color:#e6db74">&#34;8h&#34;</span>,
+      <span style="color:#f92672">&#34;shutdown_command&#34;</span>: <span style="color:#e6db74">&#34;shutdown /s /t 10 /f /d p:4:1 /c \&#34;Packer Shutdown\&#34;&#34;</span>,
+      <span style="color:#f92672">&#34;guest_os_type&#34;</span>: <span style="color:#e6db74">&#34;windows7-64&#34;</span>,
+      <span style="color:#f92672">&#34;tools_upload_flavor&#34;</span>: <span style="color:#e6db74">&#34;windows&#34;</span>,
+      <span style="color:#f92672">&#34;disk_size&#34;</span>: <span style="color:#ae81ff">61440</span>,
+      <span style="color:#f92672">&#34;vnc_port_min&#34;</span>: <span style="color:#ae81ff">5900</span>,
+      <span style="color:#f92672">&#34;vnc_port_max&#34;</span>: <span style="color:#ae81ff">5980</span>,
+      <span style="color:#f92672">&#34;floppy_files&#34;</span>: [
+        <span style="color:#e6db74">&#34;./answer_files/7/Autounattend.xml&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/dis-updates.ps1&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/microsoft-updates.bat&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/win-updates.ps1&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/openssh.ps1&#34;</span>
+      ],
+      <span style="color:#f92672">&#34;vmx_data&#34;</span>: {
+        <span style="color:#f92672">&#34;RemoteDisplay.vnc.enabled&#34;</span>: <span style="color:#e6db74">&#34;false&#34;</span>,
+        <span style="color:#f92672">&#34;RemoteDisplay.vnc.port&#34;</span>: <span style="color:#e6db74">&#34;5900&#34;</span>,
+        <span style="color:#f92672">&#34;memsize&#34;</span>: <span style="color:#e6db74">&#34;2048&#34;</span>,
+        <span style="color:#f92672">&#34;numvcpus&#34;</span>: <span style="color:#e6db74">&#34;2&#34;</span>,
+        <span style="color:#f92672">&#34;scsi0.virtualDev&#34;</span>: <span style="color:#e6db74">&#34;lsisas1068&#34;</span>
+      }
+    },
+    {
+      <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;virtualbox-iso&#34;</span>,
+      <span style="color:#f92672">&#34;iso_url&#34;</span>: <span style="color:#e6db74">&#34;http://care.dlservice.microsoft.com/dl/download/evalx/win7/x64/EN/7600.16385.090713-1255_x64fre_enterprise_en-us_EVAL_Eval_Enterprise-GRMCENXEVAL_EN_DVD.iso&#34;</span>,
+      <span style="color:#f92672">&#34;iso_checksum_type&#34;</span>: <span style="color:#e6db74">&#34;md5&#34;</span>,
+      <span style="color:#f92672">&#34;iso_checksum&#34;</span>: <span style="color:#e6db74">&#34;1d0d239a252cb53e466d39e752b17c28&#34;</span>,
+      <span style="color:#f92672">&#34;headless&#34;</span>: <span style="color:#66d9ef">true</span>,
+      <span style="color:#f92672">&#34;boot_wait&#34;</span>: <span style="color:#e6db74">&#34;2m&#34;</span>,
+      <span style="color:#f92672">&#34;ssh_username&#34;</span>: <span style="color:#e6db74">&#34;vagrant&#34;</span>,
+      <span style="color:#f92672">&#34;ssh_password&#34;</span>: <span style="color:#e6db74">&#34;vagrant&#34;</span>,
+      <span style="color:#f92672">&#34;ssh_wait_timeout&#34;</span>: <span style="color:#e6db74">&#34;8h&#34;</span>,
+      <span style="color:#f92672">&#34;shutdown_command&#34;</span>: <span style="color:#e6db74">&#34;shutdown /s /t 10 /f /d p:4:1 /c \&#34;Packer Shutdown\&#34;&#34;</span>,
+      <span style="color:#f92672">&#34;guest_os_type&#34;</span>: <span style="color:#e6db74">&#34;Windows7_64&#34;</span>,
+      <span style="color:#f92672">&#34;disk_size&#34;</span>: <span style="color:#ae81ff">61440</span>,
+      <span style="color:#f92672">&#34;floppy_files&#34;</span>: [
+        <span style="color:#e6db74">&#34;./answer_files/7/Autounattend.xml&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/dis-updates.ps1&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/microsoft-updates.bat&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/win-updates.ps1&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/openssh.ps1&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/oracle-cert.cer&#34;</span>
+      ],
+      <span style="color:#f92672">&#34;vboxmanage&#34;</span>: [
+        [
+          <span style="color:#e6db74">&#34;modifyvm&#34;</span>,
+          <span style="color:#e6db74">&#34;{{.Name}}&#34;</span>,
+          <span style="color:#e6db74">&#34;--memory&#34;</span>,
+          <span style="color:#e6db74">&#34;2048&#34;</span>
+        ],
+        [
+          <span style="color:#e6db74">&#34;modifyvm&#34;</span>,
+          <span style="color:#e6db74">&#34;{{.Name}}&#34;</span>,
+          <span style="color:#e6db74">&#34;--cpus&#34;</span>,
+          <span style="color:#e6db74">&#34;2&#34;</span>
+        ]
+      ]
+    }
+  ],
+  <span style="color:#f92672">&#34;provisioners&#34;</span>: [
+    {
+      <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;shell&#34;</span>,
+      <span style="color:#f92672">&#34;remote_path&#34;</span>: <span style="color:#e6db74">&#34;/tmp/script.bat&#34;</span>,
+      <span style="color:#f92672">&#34;execute_command&#34;</span>: <span style="color:#e6db74">&#34;{{.Vars}} cmd /c C:/Windows/Temp/script.bat&#34;</span>,
+      <span style="color:#f92672">&#34;scripts&#34;</span>: [
+        <span style="color:#e6db74">&#34;./scripts/vm-guest-tools.bat&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/chef.bat&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/vagrant-ssh.bat&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/disable-auto-logon.bat&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/enable-rdp.bat&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/compile-dotnet-assemblies.bat&#34;</span>,
+        <span style="color:#e6db74">&#34;./scripts/compact.bat&#34;</span>
+      ]
+    }
+  ],
+  <span style="color:#f92672">&#34;post-processors&#34;</span>: [
+    {
+      <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;vagrant&#34;</span>,
+      <span style="color:#f92672">&#34;keep_input_artifact&#34;</span>: <span style="color:#66d9ef">false</span>,
+      <span style="color:#f92672">&#34;output&#34;</span>: <span style="color:#e6db74">&#34;windows_7_{{.Provider}}.box&#34;</span>,
+      <span style="color:#f92672">&#34;vagrantfile_template&#34;</span>: <span style="color:#e6db74">&#34;vagrantfile-windows_7.template&#34;</span>
+    }
+  ]
+}
+</code></pre></div><p>If it feels daunting, don&rsquo;t worry. You&rsquo;ll get used to it fairly quickly. Let&rsquo;s go over section by section on what this does.</p>
 <h4 id="builders">Builders</h4>
-<p>Packer uses builders for, well, building stuff. These two builders are virtualbox and vmware. I’m only interested in virtualbox. This builder downloads win7 and sets up some virtual box details like, disk size, vagrant user, memory, and so and so forth. The interesting part is the floppy part. Here, we can add in some files for setup. We will use this part later on.</p>
+<p>Packer uses builders for, well, building stuff. These two builders are virtualbox and vmware. I&rsquo;m only interested in virtualbox. This builder downloads win7 and sets up some virtual box details like, disk size, vagrant user, memory, and so and so forth. The interesting part is the floppy part. Here, we can add in some files for setup. We will use this part later on.</p>
 <h4 id="provisioners">Provisioners</h4>
-<p>Now here is an interesting tid-bit. There are a bunch of provisioners available as plugin for packer. Installing them is fairly easy. Packer needs binary plugins. Just copy them into ~/.packer.d/plugins or directly into the packer home directly. I’d advice against that. Have them in your own packer.d, that’s much cleaner. For binary plugin releases in the Windows side, look here =&gt; <!-- raw HTML omitted --><a href="https://github.com/packer-community/packer-windows-plugins/releases">https://github.com/packer-community/packer-windows-plugins/releases</a><!-- raw HTML omitted -->. If you would like to build them yourself from source, download the source and use go gcc to build it. You will have to <strong>go get</strong> a few packages though. Also you will have to have <strong>$GOPATH</strong> (pointing to your own workspace) and <strong>$GOROOT</strong> (pointing to your working go) setup. But this is not a Go guide. After that just do **go build main.go **and you have your plugin.</p>
+<p>Now here is an interesting tid-bit. There are a bunch of provisioners available as plugin for packer. Installing them is fairly easy. Packer needs binary plugins. Just copy them into ~/.packer.d/plugins or directly into the packer home directly. I&rsquo;d advice against that. Have them in your own packer.d, that&rsquo;s much cleaner. For binary plugin releases in the Windows side, look here =&gt; <!-- raw HTML omitted --><a href="https://github.com/packer-community/packer-windows-plugins/releases">https://github.com/packer-community/packer-windows-plugins/releases</a><!-- raw HTML omitted -->. If you would like to build them yourself from source, download the source and use go gcc to build it. You will have to <strong>go get</strong> a few packages though. Also you will have to have <strong>$GOPATH</strong> (pointing to your own workspace) and <strong>$GOROOT</strong> (pointing to your working go) setup. But this is not a Go guide. After that just do **go build main.go **and you have your plugin.</p>
 <p>Provisioners are like vagrant provision they will execute post setup stuff on your box. Like installing utils, 7zip, choco, nuget, and so and so forth. There are a few interesting Windows provisioners, like restart-windows, powershell, and Windows shell. Which is like shell, but without the need of pre-setup if you are trying to use it on Windows. The basic shell on Windows is a little clanky and can hang from time-to-time so I recommend using PowerShell or WindowsShell provisioner if you are dealing with Windows post-setup Setup.</p>
 <h4 id="post-processor">Post-Processor</h4>
 <p>This will create the Vagrant box after everything is done.</p>
 <h4 id="running-the-update">Running the Update</h4>
 <p>For use, two things are interesting from here at this moment. These guys =&gt;</p>
-<!-- raw HTML omitted -->
-<p>These two contain most of the logic which is part of the update process. You should see it in your checked out source. There is some very interesting logic in there which describes how the update happens. Basically it’s a loop which re-checks if there are updates available or if a re-start is needed. Packer handles re-starts well at this point in the install because it simply waits for SSH to come only. The rest is handled by Windows.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#e6db74">&#34;./scripts/microsoft-updates.bat&#34;</span><span style="color:#960050;background-color:#1e0010">,</span>
+<span style="color:#e6db74">&#34;./scripts/win-updates.ps1&#34;</span><span style="color:#960050;background-color:#1e0010">,</span>
+</code></pre></div><p>These two contain most of the logic which is part of the update process. You should see it in your checked out source. There is some very interesting logic in there which describes how the update happens. Basically it&rsquo;s a loop which re-checks if there are updates available or if a re-start is needed. Packer handles re-starts well at this point in the install because it simply waits for SSH to come only. The rest is handled by Windows.</p>
 <p>These scripts are called in the Answer File which the Windows Setup uses for configuration purposes. Take a look at this section:</p>
-<!-- raw HTML omitted -->
-<p>This is were the floppy part comes on handy. This part uses the scripts bound by floppy and which will be available from a:.</p>
-<p>This will install all the updates available. It will take a while. A very very long while… But let’s go a step further.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml">
+                <span style="color:#f92672">&lt;SynchronousCommand</span> <span style="color:#a6e22e">wcm:action=</span><span style="color:#e6db74">&#34;add&#34;</span><span style="color:#f92672">&gt;</span>
+                    <span style="color:#f92672">&lt;CommandLine&gt;</span>cmd.exe /c a:\microsoft-updates.bat<span style="color:#f92672">&lt;/CommandLine&gt;</span>
+                    <span style="color:#f92672">&lt;Order&gt;</span>98<span style="color:#f92672">&lt;/Order&gt;</span>
+                    <span style="color:#f92672">&lt;Description&gt;</span>Enable Microsoft Updates<span style="color:#f92672">&lt;/Description&gt;</span>
+                <span style="color:#f92672">&lt;/SynchronousCommand&gt;</span>
+                <span style="color:#f92672">&lt;SynchronousCommand</span> <span style="color:#a6e22e">wcm:action=</span><span style="color:#e6db74">&#34;add&#34;</span><span style="color:#f92672">&gt;</span>
+                    <span style="color:#f92672">&lt;CommandLine&gt;</span>cmd.exe /c C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\win-updates.ps1 -MaxUpdatesPerCycle 30<span style="color:#f92672">&lt;/CommandLine&gt;</span>
+                    <span style="color:#f92672">&lt;Description&gt;</span>Install Windows Updates<span style="color:#f92672">&lt;/Description&gt;</span>
+                    <span style="color:#f92672">&lt;Order&gt;</span>100<span style="color:#f92672">&lt;/Order&gt;</span>
+                    <span style="color:#f92672">&lt;RequiresUserInput&gt;</span>true<span style="color:#f92672">&lt;/RequiresUserInput&gt;</span>
+                <span style="color:#f92672">&lt;/SynchronousCommand&gt;</span>
+</code></pre></div><p>This is were the floppy part comes on handy. This part uses the scripts bound by floppy and which will be available from a:.</p>
+<p>This will install all the updates available. It will take a while. A very very long while. But let&rsquo;s go a step further.</p>
 <h1 id="example-2-installing-dotnet-45">Example #2: Installing DotNet 4.5</h1>
-<p>Let’s assume you want to create a box with visual studio 2013, office, and have choco on it, and a couple of more things for which you need lots of restarts. You could try installing with /norestart switch, which also works; however if you definitely need it to restart I suggest installing stuff with the Answer File. For this, let’s create a PowerShell script which downloads and installs dotnet 451 which is needed for visual studio ultimate 2013.</p>
-<!-- raw HTML omitted -->
-<p>So this downloads it right from the source. As mentioned earlier, you could have this on a nice shared drive so downloading from the internet is not necessary. The installer is in fact a bit friendly. It has a switch called /q /norestart. The /q is called silent install and the /norestart speaks for itself. If you leave it out, you can use /forcerestart or you could have the following two lines after this finishes: <em>LogWrite “Resarting Computer.” Restart-Computer -Force</em>. This will force a restart. You need the -Force because otherwise it won’t let it restart while there are active sessions logged on the computer.</p>
-<p>Now, let’s add this to the answer file:</p>
-<!-- raw HTML omitted -->
-<p>See, how easy this is? And now we make use of the floppy part of the windows-7.json by adding this line: <strong>“./scripts/install-dotnet-451.ps1”</strong>. Don’t forget to append the “,” at the end of the previous line. This is an array.</p>
+<p>Let&rsquo;s assume you want to create a box with visual studio 2013, office, and have choco on it, and a couple of more things for which you need lots of restarts. You could try installing with /norestart switch, which also works; however if you definitely need it to restart I suggest installing stuff with the Answer File. For this, let&rsquo;s create a PowerShell script which downloads and installs dotnet 451 which is needed for visual studio ultimate 2013.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-powershell" data-lang="powershell">
+$Logfile = <span style="color:#e6db74">&#34;C:\Windows\Temp\dotnet-install.log&#34;</span>
+<span style="color:#66d9ef">function</span> LogWrite {
+   <span style="color:#66d9ef">Param</span> (<span style="color:#66d9ef">[string]</span>$logstring)
+   $now = Get-Date -format s
+   Add-Content $Logfile -value <span style="color:#e6db74">&#34;$now $logstring&#34;</span>
+   Write-Host $logstring
+}
+
+LogWrite <span style="color:#e6db74">&#34;Downlading dotNetFx40_Full_x86_x64.&#34;</span>
+<span style="color:#66d9ef">try</span> {
+    (New-Object System.Net.WebClient).DownloadFile(<span style="color:#e6db74">&#39;http://download.microsoft.com/download/1/6/7/167F0D79-9317-48AE-AEDB-17120579F8E2/NDP451-KB2858728-x86-x64-AllOS-ENU.exe&#39;</span>, <span style="color:#e6db74">&#39;C:\Windows\Temp\dotnet.exe&#39;</span>)
+} <span style="color:#66d9ef">catch</span> {
+    LogWrite $_.Exception | Format-List -force
+    LogWrite <span style="color:#e6db74">&#34;Failed to download file.&#34;</span>
+}
+
+LogWrite <span style="color:#e6db74">&#34;Starting installation process...&#34;</span>
+<span style="color:#66d9ef">try</span> {
+    Start-Process -FilePath <span style="color:#e6db74">&#34;C:\Windows\Temp\dotnet.exe&#34;</span> -ArgumentList <span style="color:#e6db74">&#34;/I /q /norestart&#34;</span> -Wait -PassThru
+} <span style="color:#66d9ef">catch</span> {
+    LogWrite $_.Exception | Format-List -force
+    LogWrite <span style="color:#e6db74">&#34;Exception during install process.&#34;</span>
+}
+</code></pre></div><p>So this downloads it right from the source. As mentioned earlier, you could have this on a nice shared drive so downloading from the internet is not necessary. The installer is in fact a bit friendly. It has a switch called /q /norestart. The /q is called silent install and the /norestart speaks for itself. If you leave it out, you can use /forcerestart or you could have the following two lines after this finishes: <em>LogWrite &ldquo;Resarting Computer.&rdquo; Restart-Computer -Force</em>. This will force a restart. You need the -Force because otherwise it won&rsquo;t let it restart while there are active sessions logged on the computer.</p>
+<p>Now, let&rsquo;s add this to the answer file:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml">
+                <span style="color:#f92672">&lt;SynchronousCommand</span> <span style="color:#a6e22e">wcm:action=</span><span style="color:#e6db74">&#34;add&#34;</span><span style="color:#f92672">&gt;</span>
+                    <span style="color:#f92672">&lt;CommandLine&gt;</span>cmd.exe /c C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\install-dotnet-451.ps1 -AutoStart<span style="color:#f92672">&lt;/CommandLine&gt;</span>
+                    <span style="color:#f92672">&lt;Order&gt;</span>98<span style="color:#f92672">&lt;/Order&gt;</span>
+                    <span style="color:#f92672">&lt;Description&gt;</span>Install DotNet 4.5.1.<span style="color:#f92672">&lt;/Description&gt;</span>
+                <span style="color:#f92672">&lt;/SynchronousCommand&gt;</span>
+</code></pre></div><p>See, how easy this is? And now we make use of the floppy part of the windows-7.json by adding this line: <strong>&quot;./scripts/install-dotnet-451.ps1&quot;</strong>. Don&rsquo;t forget to append the &ldquo;,&rdquo; at the end of the previous line. This is an array.</p>
 <p>We are ready to go. Just run <strong>packer build -only=virtualbox-iso windows-7.json</strong> and you should be done!</p>
 <h1 id="example-3-installing-visual-studio-ultimate">Example #3: Installing Visual Studio Ultimate</h1>
 <p>Installing visual studio is almost trivial as well. With the addition that visual studio requires an admin.xml for silent install which has a bunch of settings. When you have the admin.xml just bind it into the floppy drive as well and call the visual studio install powershell script like this:</p>
-<!-- raw HTML omitted -->
-<p>Again, this will take a while………….</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-powershell" data-lang="powershell">    Start-Process -FilePath <span style="color:#e6db74">&#34;C:\Windows\Temp\visualstudioultimate.exe&#34;</span> -ArgumentList <span style="color:#e6db74">&#34;/Quiet /NoRestart /admin a:\admin.xml&#34;</span> -Wait -PassThru
+</code></pre></div><p>Again, this will take a while&hellip;..</p>
 <h1 id="post-setup-provisioning">Post Setup Provisioning</h1>
 <p>When all this is done, you can still add some provisioning steps to add some utils with PowerShell or WindowsShell provisioner. I would advice against using simple shell. Bare in mind one other thing. If you have a batch file, and you are calling another batch file in that batch file, like choco install 7zip, it will happen that the install process will hang on installing 7zip. Because in Windows land the called script will not return the exec handler to the caller unless specifically asking for it with <strong>call</strong>. Which means your bat file will look something like this:</p>
-<!-- raw HTML omitted -->
-<p>or</p>
-<!-- raw HTML omitted -->
-<p>And so on, and so forth.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">
+call choco install 7zip
+call choco install notepadplusplus
+</code></pre></div><p>or</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">
+cmd /c choco install 7zip
+cmd /c choco install notepadplusplus
+</code></pre></div><p>And so on, and so forth.</p>
 <h1 id="wrap-up">Wrap-Up</h1>
 <p>So, what have we learned? We have learned that installing software which requires re-start is better left to Windows itself with an answer file. Batch files will not return the handler. SSH <strong>MUST</strong> be the last thing you start up in the answer file. Use PowerShell provisioner or WindowsShell provisioner on Windows.</p>
 <p>Hope this helped.</p>
@@ -180,6 +319,7 @@ Tags:
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

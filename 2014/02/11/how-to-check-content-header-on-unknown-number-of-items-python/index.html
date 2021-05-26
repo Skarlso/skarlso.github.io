@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>How to check content header on unknown number of items – Python – Ramblings of a cloud engineer</title>
-<meta name="description" content="Hello guys. I’d like to share a little something with you. It’s what I cooked up in Python to check an unknown number of content items in a web application. Basically the …">
+<meta name="description" content="Hello guys. I&amp;amp;rsquo;d like to share a little something with you. It&amp;amp;rsquo;s what I cooked up in Python to check an unknown number of content items in a web application. …">
 <meta name="created" content="2014-02-11T00:00:00+0000">
 <meta name="modified" content="2014-02-11T00:00:00+0000">
 <meta name="author" content="hannibal">
@@ -34,7 +34,7 @@
     "datePublished": "2014-02-11T00:00:00Z",
     "dateModified": "2014-02-11T00:00:00Z",
     "url" : "https://skarlso.github.io/2014/02/11/how-to-check-content-header-on-unknown-number-of-items-python/",
-    "description": "Hello guys. I’d like to share a little something with you. It’s what I cooked up in Python to check an unknown number of content items in a web application. Basically the …",
+    "description": "Hello guys. I\u0026amp;rsquo;d like to share a little something with you. It\u0026amp;rsquo;s what I cooked up in Python to check an unknown number of content items in a web application. …",
     "image" : "https://skarlso.github.io/apple-touch-icon.png",
     "author": {
       "@type": "Person",
@@ -108,14 +108,84 @@ if (!doNotTrack) {
 </header>
 <div class="content">
 <p>Hello guys.</p>
-<p>I’d like to share a little something with you. It’s what I cooked up in Python to check an unknown number of content items in a web application.</p>
+<p>I&rsquo;d like to share a little something with you. It&rsquo;s what I cooked up in Python to check an unknown number of content items in a web application.</p>
 <p>Basically the script runs from a script folder under Grails. It goes through all the configured folders where there is static content like images, javascript, css and so on and so forth.</p>
-<p>And then with curl it calls these items up in using their respective paths’. This works best on localhost if you have your local environment configured to access these elements because in some places direct access is restricted.</p>
+<p>And then with curl it calls these items up in using their respective paths'. This works best on localhost if you have your local environment configured to access these elements because in some places direct access is restricted.</p>
 <p>This script only check static content. Dynamically generated content would have to be hard coded to check.</p>
-<p>It only generated a file currently with ERROR on a not match an success on match and not found if it encounters an item which it doesn’t know about.</p>
-<p>So without further ado… The Script:</p>
-<!-- raw HTML omitted -->
-<p>Hope you like it. Feel free to improve however you want.</p>
+<p>It only generated a file currently with ERROR on a not match an success on match and not found if it encounters an item which it doesn&rsquo;t know about.</p>
+<p>So without further ado. The Script:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e">#!/usr/bin/python</span>
+
+<span style="color:#f92672">import</span> pycurl<span style="color:#f92672">,</span> sys<span style="color:#f92672">,</span> os<span style="color:#f92672">,</span> urllib
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Storage</span>:
+    <span style="color:#66d9ef">def</span> __init__(self):
+        self<span style="color:#f92672">.</span>contents <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">store</span>(self, buf):
+	<span style="color:#66d9ef">if</span> <span style="color:#e6db74">&#39;Content-Type&#39;</span> <span style="color:#f92672">in</span> buf:
+            self<span style="color:#f92672">.</span>contents <span style="color:#f92672">=</span> buf
+
+    <span style="color:#66d9ef">def</span> __str__(self):
+        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>contents
+
+<span style="color:#75715e">#print retrieved_headers</span>
+
+filesInDir <span style="color:#f92672">=</span> []
+headers <span style="color:#f92672">=</span> []
+headerRestrictions <span style="color:#f92672">=</span> {<span style="color:#e6db74">&#39;.css&#39;</span>: <span style="color:#e6db74">&#39;Content-Type: text/css&#39;</span>, <span style="color:#e6db74">&#39;.jpg&#39;</span>: <span style="color:#e6db74">&#39;Content-Type: image/jpeg&#39;</span>, <span style="color:#e6db74">&#39;.ico&#39;</span>: <span style="color:#e6db74">&#39;image/vnd.microsoft.icon&#39;</span>, <span style="color:#e6db74">&#39;.html&#39;</span>: <span style="color:#e6db74">&#39;Content-Type: text/html&#39;</span>, <span style="color:#e6db74">&#39;.js&#39;</span>: <span style="color:#e6db74">&#39;Content-Type: application/javascript&#39;</span>, <span style="color:#e6db74">&#39;.gif&#39;</span>: <span style="color:#e6db74">&#39;Content-Type: image/gif&#39;</span>, <span style="color:#e6db74">&#39;.png&#39;</span>: <span style="color:#e6db74">&#39;Content-Type: image/png&#39;</span>, <span style="color:#e6db74">&#39;.swf&#39;</span>: <span style="color:#e6db74">&#39;Content-Type: application/x-shockwave-flash&#39;</span>, <span style="color:#e6db74">&#39;.json&#39;</span>: <span style="color:#e6db74">&#39;Content-Type: application/json&#39;</span>, <span style="color:#e6db74">&#39;.htc&#39;</span>: <span style="color:#e6db74">&#39;Content-Type: text/x-component&#39;</span>, <span style="color:#e6db74">&#39;.xml&#39;</span>: <span style="color:#e6db74">&#39;Content-Type: application/xml&#39;</span>}
+
+<span style="color:#66d9ef">for</span> dirname, dirnames, filenames <span style="color:#f92672">in</span> os<span style="color:#f92672">.</span>walk(<span style="color:#e6db74">&#39;../web-app&#39;</span>):
+    <span style="color:#75715e"># editing the &#39;dirnames&#39; list will stop os.walk() from recursing into there.</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#e6db74">&#39;.git&#39;</span> <span style="color:#f92672">in</span> dirnames:
+        <span style="color:#75715e"># don&#39;t go into any .git directories.</span>
+        dirnames<span style="color:#f92672">.</span>remove(<span style="color:#e6db74">&#39;.git&#39;</span>)
+
+    <span style="color:#66d9ef">if</span> <span style="color:#e6db74">&#39;WEB-INF&#39;</span> <span style="color:#f92672">in</span> dirnames:
+        <span style="color:#75715e"># don&#39;t go into any WEB-INF directories.</span>
+        dirnames<span style="color:#f92672">.</span>remove(<span style="color:#e6db74">&#39;WEB-INF&#39;</span>)
+
+    <span style="color:#66d9ef">if</span> <span style="color:#e6db74">&#39;test&#39;</span> <span style="color:#f92672">in</span> dirnames:
+        <span style="color:#75715e"># don&#39;t go into any test directories.</span>
+        dirnames<span style="color:#f92672">.</span>remove(<span style="color:#e6db74">&#39;test&#39;</span>)
+
+    <span style="color:#66d9ef">if</span> <span style="color:#e6db74">&#39;META-INF&#39;</span> <span style="color:#f92672">in</span> dirnames:
+        <span style="color:#75715e"># don&#39;t go into any META-INF directories.</span>
+        dirnames<span style="color:#f92672">.</span>remove(<span style="color:#e6db74">&#39;META-INF&#39;</span>)
+
+    <span style="color:#66d9ef">for</span> filename <span style="color:#f92672">in</span> filenames:
+	trimmedDir <span style="color:#f92672">=</span> dirname<span style="color:#f92672">.</span>replace(<span style="color:#e6db74">&#34;web-app/&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>)
+	trimmedDir <span style="color:#f92672">=</span> trimmedDir<span style="color:#f92672">.</span>replace(<span style="color:#e6db74">&#34;../&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>)
+	filesInDir<span style="color:#f92672">.</span>append(os<span style="color:#f92672">.</span>path<span style="color:#f92672">.</span>join(trimmedDir, filename))
+    <span style="color:#75715e">#    print os.path.join(dirname, filename)</span>
+
+f <span style="color:#f92672">=</span> open(<span style="color:#e6db74">&#34;headersandfiles.txt&#34;</span>, <span style="color:#e6db74">&#34;w&#34;</span>)
+
+<span style="color:#66d9ef">for</span> fileName <span style="color:#f92672">in</span> filesInDir:
+    retrieved_body <span style="color:#f92672">=</span> Storage()
+    retrieved_headers <span style="color:#f92672">=</span> Storage()
+    c <span style="color:#f92672">=</span> pycurl<span style="color:#f92672">.</span>Curl()
+    fileName <span style="color:#f92672">=</span> fileName<span style="color:#f92672">.</span>replace(<span style="color:#e6db74">&#34; &#34;</span>, <span style="color:#e6db74">&#34;%20&#34;</span>)
+    url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;http://localhost:8080/</span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#39;</span> <span style="color:#f92672">%</span> fileName
+    c<span style="color:#f92672">.</span>setopt(c<span style="color:#f92672">.</span>URL, url)
+    c<span style="color:#f92672">.</span>setopt(c<span style="color:#f92672">.</span>WRITEFUNCTION, retrieved_body<span style="color:#f92672">.</span>store)
+    c<span style="color:#f92672">.</span>setopt(c<span style="color:#f92672">.</span>HEADERFUNCTION, retrieved_headers<span style="color:#f92672">.</span>store)
+    c<span style="color:#f92672">.</span>perform()
+    c<span style="color:#f92672">.</span>close()
+    fileLine <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>
+    fileNameBase, fileExtension <span style="color:#f92672">=</span> os<span style="color:#f92672">.</span>path<span style="color:#f92672">.</span>splitext(fileName)
+
+    <span style="color:#66d9ef">if</span> headerRestrictions<span style="color:#f92672">.</span>has_key(fileExtension):
+<span style="color:#75715e">#	print &#34;Header:%s, Content:%s&#34; % (headerRestrictions[fileExtension], retrieved_headers.__str__())</span>
+        fileLine <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;CORRECT: Content: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">; Header: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> (fileName, retrieved_headers) <span style="color:#66d9ef">if</span> headerRestrictions[fileExtension] <span style="color:#f92672">==</span> retrieved_headers<span style="color:#f92672">.</span>__str__()<span style="color:#f92672">.</span>strip() <span style="color:#66d9ef">else</span> <span style="color:#e6db74">&#34;ERROR: Content: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">; Header: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">; URL: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> (fileName, retrieved_headers, <span style="color:#e6db74">&#34;http://localhost:8080/</span><span style="color:#e6db74">%s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> fileName)
+    <span style="color:#66d9ef">else</span>:
+	fileLine <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;NOT FOUND: Content: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">; Header: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> (fileName, retrieved_headers)
+
+    f<span style="color:#f92672">.</span>write(fileLine)
+    headers<span style="color:#f92672">.</span>append(retrieved_headers<span style="color:#f92672">.</span>__str__())
+
+f<span style="color:#f92672">.</span>close()
+</code></pre></div><p>Hope you like it. Feel free to improve however you want.</p>
 <p>Thanks for reading,</p>
 <p>Gergely.</p>
 
@@ -129,6 +199,7 @@ if (!doNotTrack) {
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

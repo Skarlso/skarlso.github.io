@@ -109,8 +109,82 @@ if (!doNotTrack) {
 <div class="content">
 <p>Quickly wrote up the Data Munger code kata in Go.</p>
 <p>Next time, I want better abstractions. And a way to select columns based on their header data. For now, this is not bad.</p>
-<!-- raw HTML omitted -->
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;bufio&#34;</span>
+	<span style="color:#e6db74">&#34;fmt&#34;</span>
+	<span style="color:#e6db74">&#34;log&#34;</span>
+	<span style="color:#e6db74">&#34;math&#34;</span>
+	<span style="color:#e6db74">&#34;os&#34;</span>
+	<span style="color:#e6db74">&#34;regexp&#34;</span>
+	<span style="color:#e6db74">&#34;strconv&#34;</span>
+	<span style="color:#e6db74">&#34;strings&#34;</span>
+)
+
+<span style="color:#75715e">//Data which is Data
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Data</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">columnName</span> <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">compareOne</span> <span style="color:#66d9ef">float64</span>
+	<span style="color:#a6e22e">compareTwo</span> <span style="color:#66d9ef">float64</span>
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	<span style="color:#75715e">// datas := []Data{WeatherData{}, FootballData{}}
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Minimum weather data:&#34;</span>, <span style="color:#a6e22e">GetDataMinimumDiff</span>(<span style="color:#e6db74">&#34;weather.dat&#34;</span>, , <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>))
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Minimum football data:&#34;</span>, <span style="color:#a6e22e">GetDataMinimumDiff</span>(<span style="color:#e6db74">&#34;football.dat&#34;</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">6</span>, <span style="color:#ae81ff">7</span>))
+}
+
+<span style="color:#75715e">//GetDataMinimumDiff gathers data from file to fill up Columns.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">GetDataMinimumDiff</span>(<span style="color:#a6e22e">filename</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">nameColumn</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">compareColOne</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">compareColTwo</span> <span style="color:#66d9ef">int</span>) <span style="color:#a6e22e">Data</span> {
+	<span style="color:#a6e22e">data</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Data</span>{}
+	<span style="color:#a6e22e">minimum</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">math</span>.<span style="color:#a6e22e">MaxFloat64</span>
+	<span style="color:#a6e22e">readLines</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ReadFile</span>(<span style="color:#a6e22e">filename</span>)
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">value</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">readLines</span> {
+		<span style="color:#a6e22e">valueArrays</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strings</span>.<span style="color:#a6e22e">Split</span>(<span style="color:#a6e22e">value</span>, <span style="color:#e6db74">&#34;,&#34;</span>)
+		<span style="color:#a6e22e">name</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">valueArrays</span>[<span style="color:#a6e22e">nameColumn</span>]
+		<span style="color:#a6e22e">trimmedFirst</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">ParseFloat</span>(<span style="color:#a6e22e">valueArrays</span>[<span style="color:#a6e22e">compareColOne</span>], <span style="color:#ae81ff">64</span>)
+		<span style="color:#a6e22e">trimmedSecond</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">ParseFloat</span>(<span style="color:#a6e22e">valueArrays</span>[<span style="color:#a6e22e">compareColTwo</span>], <span style="color:#ae81ff">64</span>)
+		<span style="color:#a6e22e">diff</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">trimmedFirst</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">trimmedSecond</span>
+		<span style="color:#a6e22e">diff</span> = <span style="color:#a6e22e">math</span>.<span style="color:#a6e22e">Abs</span>(<span style="color:#a6e22e">diff</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">diff</span> <span style="color:#f92672">&lt;=</span> <span style="color:#a6e22e">minimum</span> {
+			<span style="color:#a6e22e">minimum</span> = <span style="color:#a6e22e">diff</span>
+			<span style="color:#a6e22e">data</span>.<span style="color:#a6e22e">columnName</span> = <span style="color:#a6e22e">name</span>
+			<span style="color:#a6e22e">data</span>.<span style="color:#a6e22e">compareOne</span> = <span style="color:#a6e22e">trimmedFirst</span>
+			<span style="color:#a6e22e">data</span>.<span style="color:#a6e22e">compareTwo</span> = <span style="color:#a6e22e">trimmedSecond</span>
+		}
+	}
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">data</span>
+}
+
+<span style="color:#75715e">//ReadFile reads lines from a file and gives back a string array which contains the lines.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">ReadFile</span>(<span style="color:#a6e22e">fileName</span> <span style="color:#66d9ef">string</span>) (<span style="color:#a6e22e">fileLines</span> []<span style="color:#66d9ef">string</span>) {
+	<span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#a6e22e">fileName</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+	}
+	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">file</span>.<span style="color:#a6e22e">Close</span>()
+
+	<span style="color:#a6e22e">scanner</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">NewScanner</span>(<span style="color:#a6e22e">file</span>)
+	<span style="color:#75715e">//Skipping the first line which is the header.
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">scanner</span>.<span style="color:#a6e22e">Scan</span>()
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">scanner</span>.<span style="color:#a6e22e">Scan</span>() {
+		<span style="color:#a6e22e">line</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">scanner</span>.<span style="color:#a6e22e">Text</span>()
+		<span style="color:#a6e22e">re</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">regexp</span>.<span style="color:#a6e22e">MustCompile</span>(<span style="color:#e6db74">&#34;\\w+&#34;</span>)
+		<span style="color:#a6e22e">lines</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">re</span>.<span style="color:#a6e22e">FindAllString</span>(<span style="color:#a6e22e">line</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)
+		<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">lines</span>) &gt;  {
+			<span style="color:#a6e22e">fileLines</span> = append(<span style="color:#a6e22e">fileLines</span>, <span style="color:#a6e22e">strings</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">lines</span>, <span style="color:#e6db74">&#34;,&#34;</span>))
+		}
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">scanner</span>.<span style="color:#a6e22e">Err</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+	}
+
+	<span style="color:#66d9ef">return</span>
+}
+</code></pre></div>
 
 </div>
 </article>
@@ -121,6 +195,7 @@ if (!doNotTrack) {
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

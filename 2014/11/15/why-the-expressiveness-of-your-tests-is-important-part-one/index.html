@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>Why the expressiveness of your Tests is important – Part One – Ramblings of a cloud engineer</title>
-<meta name="description" content="Hello Everybody. This time I’d like to write about the expressiveness of a Test. I think that it’s very important to write understandable and expressive tests. In older …">
+<meta name="description" content="Hello Everybody. This time I&amp;amp;rsquo;d like to write about the expressiveness of a Test. I think that it&amp;amp;rsquo;s very important to write understandable and expressive …">
 <meta name="created" content="2014-11-15T00:00:00+0000">
 <meta name="modified" content="2014-11-15T00:00:00+0000">
 <meta name="author" content="hannibal">
@@ -34,7 +34,7 @@
     "datePublished": "2014-11-15T00:00:00Z",
     "dateModified": "2014-11-15T00:00:00Z",
     "url" : "https://skarlso.github.io/2014/11/15/why-the-expressiveness-of-your-tests-is-important-part-one/",
-    "description": "Hello Everybody. This time I’d like to write about the expressiveness of a Test. I think that it’s very important to write understandable and expressive tests. In older …",
+    "description": "Hello Everybody. This time I\u0026amp;rsquo;d like to write about the expressiveness of a Test. I think that it\u0026amp;rsquo;s very important to write understandable and expressive …",
     "image" : "https://skarlso.github.io/apple-touch-icon.png",
     "author": {
       "@type": "Person",
@@ -108,29 +108,93 @@ if (!doNotTrack) {
 </header>
 <div class="content">
 <p>Hello Everybody.</p>
-<p>This time I’d like to write about the expressiveness of a Test. I think that it’s very important to write understandable and expressive tests. In older times I was studying novel writing. There is a rule which a novel needs to follow. It goes something like this: “A novel needs to lead its reader and make him understand in the simplest way what’s going on, with whom and why?”. In other words, it’s not a puzzle. It should be obvious what the test is trying to do and it should not require the reader to try and solve it in order to understand it.</p>
-<p>I’m planning this as a series since there are multiple problems with a test I can talk about here.</p>
+<p>This time I&rsquo;d like to write about the expressiveness of a Test. I think that it&rsquo;s very important to write understandable and expressive tests. In older times I was studying novel writing. There is a rule which a novel needs to follow. It goes something like this: &ldquo;A novel needs to lead its reader and make him understand in the simplest way what&rsquo;s going on, with whom and why?&rdquo;. In other words, it&rsquo;s not a puzzle. It should be obvious what the test is trying to do and it should not require the reader to try and solve it in order to understand it.</p>
+<p>I&rsquo;m planning this as a series since there are multiple problems with a test I can talk about here.</p>
 <p><strong>Geb Tests</strong></p>
 <p>Example:</p>
-<!-- raw HTML omitted -->
-<p>Now, read this test. It doesn’t really make any sense at the first read, right? You need to actually think what is going on there. Of course if you read it slow enough you’ll get what it’s trying to do. But you don’t know what fillform does. Apparently it also submits the form because after fillform you are suddenly at MyAccountPage.</p>
-<p>There are several things wrong with this one, let’s start with the pageobject.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-groovy" data-lang="groovy">    <span style="color:#66d9ef">def</span> <span style="color:#e6db74">&#34;login to the home page&#34;</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        given: <span style="color:#e6db74">&#34;I am at homepages&#34;</span>
+            go <span style="color:#e6db74">&#34;http://localhost:8080/home&#34;</span>
+            at HomePage
+
+        when: <span style="color:#e6db74">&#34;I entir my credential&#34;</span>
+            filloutLoginForm<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;username&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;password&#34;</span><span style="color:#f92672">)</span>
+            at MyAccountPage
+
+        then: <span style="color:#e6db74">&#34;I can accass my wallet&#34;</span>
+            openWallet<span style="color:#f92672">()</span>
+            waitFor <span style="color:#f92672">{</span> contains<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Balance&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>Now, read this test. It doesn&rsquo;t really make any sense at the first read, right? You need to actually think what is going on there. Of course if you read it slow enough you&rsquo;ll get what it&rsquo;s trying to do. But you don&rsquo;t know what fillform does. Apparently it also submits the form because after fillform you are suddenly at MyAccountPage.</p>
+<p>There are several things wrong with this one, let&rsquo;s start with the pageobject.</p>
 <p><strong>PageObjects</strong></p>
 <p>At and toAt return page objects. We can use that to actually make the calling explicit and make it more readable and identify where a function comes from.</p>
-<!-- raw HTML omitted -->
-<p>This reads much better now. You know where the function is coming from and your IDE will not go nuts from things it can’t find. And you have autocompletion so there is no fear that you simply mistype something.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-groovy" data-lang="groovy">    <span style="color:#66d9ef">def</span> <span style="color:#e6db74">&#34;login to the home page&#34;</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        given: <span style="color:#e6db74">&#34;I am at homepages&#34;</span>
+            go <span style="color:#e6db74">&#34;http://localhost:8080/home&#34;</span>
+            HomePage homePage <span style="color:#f92672">=</span> at HomePage
+
+        when: <span style="color:#e6db74">&#34;I entir my credential&#34;</span>
+            homePage<span style="color:#f92672">.</span><span style="color:#a6e22e">filloutLoginForm</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;username&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;password&#34;</span><span style="color:#f92672">)</span>
+            MyAccountPage myAccountPage <span style="color:#f92672">=</span> at MyAccountPage
+
+        then: <span style="color:#e6db74">&#34;I can accass my wallet&#34;</span>
+            myAccountPage<span style="color:#f92672">.</span><span style="color:#a6e22e">openWallet</span><span style="color:#f92672">()</span>
+            waitFor <span style="color:#f92672">{</span> contains<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Balance&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>This reads much better now. You know where the function is coming from and your IDE will not go nuts from things it can&rsquo;t find. And you have autocompletion so there is no fear that you simply mistype something.</p>
 <p><strong>Side effects</strong></p>
-<p>Next step, let’s remove some of the side effects.</p>
-<!-- raw HTML omitted -->
-<p>Now this is again much better. There are no steps left out. And you can test now the FillForm and the submit independently. Like, submitting the form without filling it out! Or filling it out and not submiting it. Reads better, is explicit, more easy to understand.</p>
+<p>Next step, let&rsquo;s remove some of the side effects.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-groovy" data-lang="groovy">    <span style="color:#66d9ef">def</span> <span style="color:#e6db74">&#34;login to the home page&#34;</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        given: <span style="color:#e6db74">&#34;I am at homepages&#34;</span>
+            go <span style="color:#e6db74">&#34;http://localhost:8080/home&#34;</span>
+            HomePage homePage <span style="color:#f92672">=</span> at HomePage
+
+        when: <span style="color:#e6db74">&#34;I entir my credential&#34;</span>
+            homePage<span style="color:#f92672">.</span><span style="color:#a6e22e">filloutLoginForm</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;username&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;password&#34;</span><span style="color:#f92672">)</span>
+            homePage<span style="color:#f92672">.</span><span style="color:#a6e22e">submitLoginForm</span><span style="color:#f92672">()</span>
+            MyAccountPage myAccountPage <span style="color:#f92672">=</span> at MyAccountPage
+
+        then: <span style="color:#e6db74">&#34;I can accass my wallet&#34;</span>
+            myAccountPage<span style="color:#f92672">.</span><span style="color:#a6e22e">openWallet</span><span style="color:#f92672">()</span>
+            waitFor <span style="color:#f92672">{</span> myAccountPage<span style="color:#f92672">.</span><span style="color:#a6e22e">accountIsDisplayed</span><span style="color:#f92672">()</span> <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>Now this is again much better. There are no steps left out. And you can test now the FillForm and the submit independently. Like, submitting the form without filling it out! Or filling it out and not submiting it. Reads better, is explicit, more easy to understand.</p>
 <p>And the last one for today:</p>
 <p><strong>Grammar</strong></p>
-<p>I wonder if you noticed it… The grammar is a little bit off in the tests. A small mistake here and there. You might think that, who cares? That’s a very bad thought. I think the correct grammar reflects caring. It reflects that we thought about this test and that we thought about the quality of it. Because it means that after you wrote it, you actually re-read the test to make sure it’s understandable and readable.</p>
+<p>I wonder if you noticed it. The grammar is a little bit off in the tests. A small mistake here and there. You might think that, who cares? That&rsquo;s a very bad thought. I think the correct grammar reflects caring. It reflects that we thought about this test and that we thought about the quality of it. Because it means that after you wrote it, you actually re-read the test to make sure it&rsquo;s understandable and readable.</p>
 <p>So let us correct that:</p>
-<!-- raw HTML omitted -->
-<p>I also took the liberty of re-phrasing some of the text so that it shows what the test is about and what the user really would like to achieve here. Now try reading that last one. Does it make more sense? Did you understand it at first go? Did it read like a good story?</p>
-<p>There is a coding practice which goes something like this: “Good code is code which doesn’t surprise you as you read it.” Which means the exact thing happens which you thought of would happen. I think that applies to tests as well. The steps of the test shouldn’t come to you as a surprise. Especially if you know what the application is supposed to do.</p>
-<p>So that’s all for today folks. Thank you for reading! If you have a nasty test which you would like me to dissect and make it better and human readable, please share it in the comment section and I will do my best to come up with a good solution for it.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-groovy" data-lang="groovy">    <span style="color:#66d9ef">def</span> <span style="color:#e6db74">&#34;login to the home page&#34;</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        given: <span style="color:#e6db74">&#34;I am at homepages&#34;</span>
+            go <span style="color:#e6db74">&#34;http://localhost:8080/home&#34;</span>
+            HomePage homePage <span style="color:#f92672">=</span> at HomePage
+
+        when: <span style="color:#e6db74">&#34;I entir my credential&#34;</span>
+            homePage<span style="color:#f92672">.</span><span style="color:#a6e22e">filloutLoginForm</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;username&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;password&#34;</span><span style="color:#f92672">)</span>
+            homePage<span style="color:#f92672">.</span><span style="color:#a6e22e">submitLoginForm</span><span style="color:#f92672">()</span>
+            MyAccountPage myAccountPage <span style="color:#f92672">=</span> at MyAccountPage
+
+        then: <span style="color:#e6db74">&#34;I can accass my wallet&#34;</span>
+            myAccountPage<span style="color:#f92672">.</span><span style="color:#a6e22e">openWallet</span><span style="color:#f92672">()</span>
+            waitFor <span style="color:#f92672">{</span> myAccountPage<span style="color:#f92672">.</span><span style="color:#a6e22e">accountIsDisplayed</span><span style="color:#f92672">()</span> <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+    <span style="color:#66d9ef">def</span> <span style="color:#e6db74">&#34;As a player I can log in to check my account.&#34;</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        given: <span style="color:#e6db74">&#34;I am at the homepage&#34;</span>
+            go <span style="color:#e6db74">&#34;http://localhost:8080/home&#34;</span>
+            HomePage homePage <span style="color:#f92672">=</span> at HomePage
+
+        when: <span style="color:#e6db74">&#34;I enter my log in credentials.&#34;</span>
+            homePage<span style="color:#f92672">.</span><span style="color:#a6e22e">filloutLoginForm</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;username&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;password&#34;</span><span style="color:#f92672">)</span>
+            homePage<span style="color:#f92672">.</span><span style="color:#a6e22e">submitLoginForm</span><span style="color:#f92672">()</span>
+            MyAccountPage myAccountPage <span style="color:#f92672">=</span> at MyAccountPage
+
+        then: <span style="color:#e6db74">&#34;I&#39;m directed to my account page.&#34;</span>
+            myAccountPage<span style="color:#f92672">.</span><span style="color:#a6e22e">openWallet</span><span style="color:#f92672">()</span>
+            waitFor <span style="color:#f92672">{</span> myAccountPage<span style="color:#f92672">.</span><span style="color:#a6e22e">accountIsDisplayed</span><span style="color:#f92672">()</span> <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>I also took the liberty of re-phrasing some of the text so that it shows what the test is about and what the user really would like to achieve here. Now try reading that last one. Does it make more sense? Did you understand it at first go? Did it read like a good story?</p>
+<p>There is a coding practice which goes something like this: &ldquo;Good code is code which doesn&rsquo;t surprise you as you read it.&rdquo; Which means the exact thing happens which you thought of would happen. I think that applies to tests as well. The steps of the test shouldn&rsquo;t come to you as a surprise. Especially if you know what the application is supposed to do.</p>
+<p>So that&rsquo;s all for today folks. Thank you for reading! If you have a nasty test which you would like me to dissect and make it better and human readable, please share it in the comment section and I will do my best to come up with a good solution for it.</p>
 <p>And as always,</p>
 <p>Have a nice day!</p>
 <p>Gergely.</p>
@@ -144,6 +208,7 @@ if (!doNotTrack) {
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

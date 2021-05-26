@@ -116,15 +116,43 @@ Tags:
 <div class="content">
 <p>Hey folks.</p>
 <p>I find out something new about cucumber-jvm every day.</p>
-<p>If you want something that is executed after all of the tests have finished you must use the Java shutdownHook. It’s simple really you add in a block of code that can run right before the JVM quits. I know I know… It sounds awful but I found out that this is the actual way of doing this with java / cucumber.</p>
-<p>Anyways…</p>
+<p>If you want something that is executed after all of the tests have finished you must use the Java shutdownHook. It&rsquo;s simple really you add in a block of code that can run right before the JVM quits. I know I know. It sounds awful but I found out that this is the actual way of doing this with java / cucumber.</p>
+<p>Anyways.</p>
 <p>Here is something to do when all of your test quit-&gt;</p>
-<!-- raw HTML omitted -->
-<p>So there you go. You would need to call this in a @BeforeClass to have it attached. This is a small hook attached after each test has run which would submit a report built up from a file. Why not use a listener or a custom report generator or whatever? Because maybe you have the report done in a remote place where you need to place a csv file which will be available to everybody to look at. And you want the report to be sent and generated dynamically. Or you have some clean up to do after your suit is done.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">attachShutDownHook</span><span style="color:#f92672">(){</span>
+        Runtime<span style="color:#f92672">.</span><span style="color:#a6e22e">getRuntime</span><span style="color:#f92672">().</span><span style="color:#a6e22e">addShutdownHook</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Thread<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+            <span style="color:#a6e22e">@Override</span>
+            <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+                Properties properties <span style="color:#f92672">=</span> System<span style="color:#f92672">.</span><span style="color:#a6e22e">getProperties</span><span style="color:#f92672">();</span>
+                String filename <span style="color:#f92672">=</span> properties<span style="color:#f92672">.</span><span style="color:#a6e22e">getProperty</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;filename&#34;</span><span style="color:#f92672">);</span>
+                String path <span style="color:#f92672">=</span> properties<span style="color:#f92672">.</span><span style="color:#a6e22e">getProperty</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;path&#34;</span><span style="color:#f92672">);</span>
+                List<span style="color:#f92672">&lt;</span>Story<span style="color:#f92672">&gt;</span> stories <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ArrayList<span style="color:#f92672">&lt;&gt;();</span>
+
+                Path file <span style="color:#f92672">=</span> Paths<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>path <span style="color:#f92672">+</span> filename<span style="color:#f92672">);</span>
+                <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+                    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>Files<span style="color:#f92672">.</span><span style="color:#a6e22e">exists</span><span style="color:#f92672">(</span>file<span style="color:#f92672">))</span> <span style="color:#f92672">{</span>
+                        List<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> lines <span style="color:#f92672">=</span> Files<span style="color:#f92672">.</span><span style="color:#a6e22e">readAllLines</span><span style="color:#f92672">(</span>file<span style="color:#f92672">,</span> Charset<span style="color:#f92672">.</span><span style="color:#a6e22e">defaultCharset</span><span style="color:#f92672">());</span>
+                        <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span>String line <span style="color:#f92672">:</span> lines<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                            <span style="color:#75715e">//add file lines to a report here
+</span><span style="color:#75715e"></span>                        <span style="color:#f92672">}</span>
+                    <span style="color:#f92672">}</span>
+                <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>IOException e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                    logger<span style="color:#f92672">.</span><span style="color:#a6e22e">error</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Exception occurred: &#34;</span> <span style="color:#f92672">+</span> e<span style="color:#f92672">.</span><span style="color:#a6e22e">getLocalizedMessage</span><span style="color:#f92672">());</span>
+                <span style="color:#f92672">}</span>
+                    <span style="color:#75715e">//send report to a remote location here
+</span><span style="color:#75715e"></span>                    <span style="color:#75715e">//since this is a shutdown hook this should take only a few seconds.
+</span><span style="color:#75715e"></span>            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">});</span>
+        logger<span style="color:#f92672">.</span><span style="color:#a6e22e">infor</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Shut Down Hook Attached.&#34;</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+</code></pre></div><p>So there you go. You would need to call this in a @BeforeClass to have it attached. This is a small hook attached after each test has run which would submit a report built up from a file. Why not use a listener or a custom report generator or whatever? Because maybe you have the report done in a remote place where you need to place a csv file which will be available to everybody to look at. And you want the report to be sent and generated dynamically. Or you have some clean up to do after your suit is done.</p>
 <p>In ruby the @AfterAll is actually equivalent to this which in ruby land would be at_exit.</p>
 <p>For example:</p>
-<!-- raw HTML omitted -->
-<p>So there it is. Hope this helped.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ruby" data-lang="ruby">  at_exit <span style="color:#66d9ef">do</span>
+    <span style="color:#75715e"># Global teardown</span>
+    <span style="color:#66d9ef">TempFileManager</span><span style="color:#f92672">.</span>clean_up
+  <span style="color:#66d9ef">end</span>
+</code></pre></div><p>So there it is. Hope this helped.</p>
 <p>Cheers,</p>
 <p>And as always,</p>
 <p>Have a nice day!</p>
@@ -140,6 +168,7 @@ Tags:
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

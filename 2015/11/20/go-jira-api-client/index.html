@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>Go JIRA API client – Ramblings of a cloud engineer</title>
-<meta name="description" content="Hi folks. So, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial. It’s …">
+<meta name="description" content="Hi folks. So, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial. …">
 <meta name="created" content="2015-11-20T00:00:00+0000">
 <meta name="modified" content="2015-11-20T00:00:00+0000">
 <meta name="author" content="hannibal">
@@ -34,7 +34,7 @@
     "datePublished": "2015-11-20T00:00:00Z",
     "dateModified": "2015-11-20T00:00:00Z",
     "url" : "https://skarlso.github.io/2015/11/20/go-jira-api-client/",
-    "description": "Hi folks. So, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial. It’s …",
+    "description": "Hi folks. So, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial. …",
     "image" : "https://skarlso.github.io/apple-touch-icon.png",
     "author": {
       "@type": "Person",
@@ -109,10 +109,174 @@ if (!doNotTrack) {
 <div class="content">
 <p>Hi folks.</p>
 <p>So, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial.</p>
-<p>It’s still in it’s infancy and I have a couple of more features I want to implement, but, here is the code…</p>
-<!-- raw HTML omitted -->
-<p>It can also be found under my github page: <!-- raw HTML omitted -->GoJira Github<!-- raw HTML omitted -->.</p>
-<p>Feel free to open up issues if you would like to use it and need some features which you would find interesting. Currently the username and password for the API are stored in a local config file in your home folder. Later on, I’ll add the ability to have a token rather than a username:password combination.</p>
+<p>It&rsquo;s still in it&rsquo;s infancy and I have a couple of more features I want to implement, but, here is the code.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;bytes&#34;</span>
+	<span style="color:#e6db74">&#34;encoding/json&#34;</span>
+	<span style="color:#e6db74">&#34;flag&#34;</span>
+	<span style="color:#e6db74">&#34;fmt&#34;</span>
+	<span style="color:#e6db74">&#34;io/ioutil&#34;</span>
+	<span style="color:#e6db74">&#34;log&#34;</span>
+	<span style="color:#e6db74">&#34;net/http&#34;</span>
+	<span style="color:#e6db74">&#34;os&#34;</span>
+
+	<span style="color:#e6db74">&#34;github.com/BurntSushi/toml&#34;</span>
+)
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">configFile</span> = <span style="color:#e6db74">&#34;~/.jira_config.toml&#34;</span>
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">parameter</span> <span style="color:#66d9ef">string</span>
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">flags</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Comment</span>     <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">Description</span> <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">IssueKey</span>    <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">Priority</span>    <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">Resolution</span>  <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">Title</span>       <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">Project</span>     <span style="color:#66d9ef">string</span>
+}
+
+<span style="color:#75715e">//Issue is a representation of a Jira Issue
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Issue</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Fields</span> <span style="color:#66d9ef">struct</span> {
+		<span style="color:#a6e22e">Project</span> <span style="color:#66d9ef">struct</span> {
+			<span style="color:#a6e22e">Key</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;key&#34;`</span>
+		} <span style="color:#e6db74">`json:&#34;project&#34;`</span>
+		<span style="color:#a6e22e">Summary</span>     <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;summary&#34;`</span>
+		<span style="color:#a6e22e">Description</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;description&#34;`</span>
+		<span style="color:#a6e22e">Issuetype</span>   <span style="color:#66d9ef">struct</span> {
+			<span style="color:#a6e22e">Name</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;name&#34;`</span>
+		} <span style="color:#e6db74">`json:&#34;issuetype&#34;`</span>
+		<span style="color:#a6e22e">Priority</span> <span style="color:#66d9ef">struct</span> {
+			<span style="color:#a6e22e">ID</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;id&#34;`</span>
+		} <span style="color:#e6db74">`json:&#34;priority&#34;`</span>
+	} <span style="color:#e6db74">`json:&#34;fields&#34;`</span>
+}
+
+<span style="color:#75715e">//Transition defines a transition json object. Used for starting, stoppinp
+</span><span style="color:#75715e">//generally for state stranfer
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Transition</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Fields</span> <span style="color:#66d9ef">struct</span> {
+		<span style="color:#a6e22e">Resolution</span> <span style="color:#66d9ef">struct</span> {
+			<span style="color:#a6e22e">Name</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;name&#34;`</span>
+		} <span style="color:#e6db74">`json:&#34;resolution&#34;`</span>
+	} <span style="color:#e6db74">`json:&#34;fields&#34;`</span>
+	<span style="color:#a6e22e">Transition</span> <span style="color:#66d9ef">struct</span> {
+		<span style="color:#a6e22e">ID</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;id&#34;`</span>
+	} <span style="color:#e6db74">`json:&#34;transition&#34;`</span>
+}
+
+<span style="color:#75715e">//Credentials a representation of a JIRA config which helds API permissions
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Credentials</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Username</span> <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">Password</span> <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">URL</span>      <span style="color:#66d9ef">string</span>
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">init</span>() {
+	<span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">StringVar</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Comment</span>, <span style="color:#e6db74">&#34;m&#34;</span>, <span style="color:#e6db74">&#34;Default Comment&#34;</span>, <span style="color:#e6db74">&#34;A Comment when changing the status of an Issue.&#34;</span>)
+	<span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">StringVar</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Description</span>, <span style="color:#e6db74">&#34;d&#34;</span>, <span style="color:#e6db74">&#34;Default Description&#34;</span>, <span style="color:#e6db74">&#34;Provide a description for a newly created Issue.&#34;</span>)
+	<span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">StringVar</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Priority</span>, <span style="color:#e6db74">&#34;p&#34;</span>, <span style="color:#e6db74">&#34;2&#34;</span>, <span style="color:#e6db74">&#34;The priority of an Issue which will be set.&#34;</span>)
+	<span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">StringVar</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">IssueKey</span>, <span style="color:#e6db74">&#34;k&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;Issue key of an issue.&#34;</span>)
+	<span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">StringVar</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Resolution</span>, <span style="color:#e6db74">&#34;r&#34;</span>, <span style="color:#e6db74">&#34;Done&#34;</span>, <span style="color:#e6db74">&#34;Resolution when an issue is closed. Ex.: Done, Fixed, Won&#39;t fix.&#34;</span>)
+	<span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">StringVar</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Title</span>, <span style="color:#e6db74">&#34;t&#34;</span>, <span style="color:#e6db74">&#34;Default Title&#34;</span>, <span style="color:#e6db74">&#34;Title of an Issue.&#34;</span>)
+	<span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">StringVar</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Project</span>, <span style="color:#e6db74">&#34;o&#34;</span>, <span style="color:#e6db74">&#34;IT&#34;</span>, <span style="color:#e6db74">&#34;Define a Project to create a ticket in.&#34;</span>)
+	<span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">Parse</span>()
+}
+
+<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">cred</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Credentials</span>) <span style="color:#a6e22e">initConfig</span>() {
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stat</span>(<span style="color:#a6e22e">configFile</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;Error using config file: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">toml</span>.<span style="color:#a6e22e">DecodeFile</span>(<span style="color:#a6e22e">configFile</span>, <span style="color:#a6e22e">cred</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;Error during decoding toml config: &#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">Args</span>()) &lt; <span style="color:#ae81ff">1</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;Please provide an action to take. Usage information:&#34;</span>)
+	}
+	<span style="color:#a6e22e">parameter</span> = <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">Arg</span>()
+	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">parameter</span> {
+	<span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;close&#34;</span>:
+		<span style="color:#a6e22e">closeIssue</span>(<span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">IssueKey</span>)
+	<span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;start&#34;</span>:
+		<span style="color:#a6e22e">startIssue</span>(<span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">IssueKey</span>)
+	<span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;create&#34;</span>:
+		<span style="color:#a6e22e">createIssue</span>()
+	}
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">closeIssue</span>(<span style="color:#a6e22e">issueKey</span> <span style="color:#66d9ef">string</span>) {
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">issueKey</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;&#34;</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;Please provide an issueID with -k&#34;</span>)
+	}
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Closing issue number: &#34;</span>, <span style="color:#a6e22e">issueKey</span>)
+
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">trans</span> <span style="color:#a6e22e">Transition</span>
+
+	<span style="color:#75715e">//TODO: Add the ability to define a comment for the close reason
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">trans</span>.<span style="color:#a6e22e">Fields</span>.<span style="color:#a6e22e">Resolution</span>.<span style="color:#a6e22e">Name</span> = <span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Resolution</span>
+	<span style="color:#a6e22e">trans</span>.<span style="color:#a6e22e">Transition</span>.<span style="color:#a6e22e">ID</span> = <span style="color:#e6db74">&#34;2&#34;</span>
+	<span style="color:#a6e22e">marhsalledTrans</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">json</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">trans</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;Error occured when marshaling transition: &#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Marshalled:&#34;</span>, <span style="color:#a6e22e">trans</span>)
+	<span style="color:#a6e22e">sendRequest</span>(<span style="color:#a6e22e">marhsalledTrans</span>, <span style="color:#e6db74">&#34;POST&#34;</span>, <span style="color:#a6e22e">issueKey</span><span style="color:#f92672">+</span><span style="color:#e6db74">&#34;/transitions?expand=transitions.fields&#34;</span>)
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">startIssue</span>(<span style="color:#a6e22e">issueID</span> <span style="color:#66d9ef">string</span>) {
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">issueID</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;&#34;</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;Please provide an issueID with -i&#34;</span>)
+	}
+
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Starting issue number:&#34;</span>, <span style="color:#a6e22e">issueID</span>)
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">createIssue</span>() {
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Creating new issue.&#34;</span>)
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">issue</span> <span style="color:#a6e22e">Issue</span>
+	<span style="color:#a6e22e">issue</span>.<span style="color:#a6e22e">Fields</span>.<span style="color:#a6e22e">Description</span> = <span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Description</span>
+	<span style="color:#a6e22e">issue</span>.<span style="color:#a6e22e">Fields</span>.<span style="color:#a6e22e">Priority</span>.<span style="color:#a6e22e">ID</span> = <span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Priority</span>
+	<span style="color:#a6e22e">issue</span>.<span style="color:#a6e22e">Fields</span>.<span style="color:#a6e22e">Summary</span> = <span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Title</span>
+	<span style="color:#a6e22e">issue</span>.<span style="color:#a6e22e">Fields</span>.<span style="color:#a6e22e">Project</span>.<span style="color:#a6e22e">Key</span> = <span style="color:#a6e22e">flags</span>.<span style="color:#a6e22e">Project</span>
+	<span style="color:#a6e22e">issue</span>.<span style="color:#a6e22e">Fields</span>.<span style="color:#a6e22e">Issuetype</span>.<span style="color:#a6e22e">Name</span> = <span style="color:#e6db74">&#34;Task&#34;</span>
+	<span style="color:#a6e22e">marshalledIssue</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">json</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">issue</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;Error occured when Marshaling Issue:&#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+	<span style="color:#a6e22e">sendRequest</span>(<span style="color:#a6e22e">marshalledIssue</span>, <span style="color:#e6db74">&#34;POST&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>)
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">sendRequest</span>(<span style="color:#a6e22e">jsonStr</span> []<span style="color:#66d9ef">byte</span>, <span style="color:#a6e22e">method</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">url</span> <span style="color:#66d9ef">string</span>) {
+	<span style="color:#a6e22e">cred</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Credentials</span>{}
+	<span style="color:#a6e22e">cred</span>.<span style="color:#a6e22e">initConfig</span>()
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Json:&#34;</span>, string(<span style="color:#a6e22e">jsonStr</span>))
+	<span style="color:#a6e22e">req</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">NewRequest</span>(<span style="color:#a6e22e">method</span>, <span style="color:#a6e22e">cred</span>.<span style="color:#a6e22e">URL</span><span style="color:#f92672">+</span><span style="color:#a6e22e">url</span>, <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">NewBuffer</span>(<span style="color:#a6e22e">jsonStr</span>))
+	<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Header</span>.<span style="color:#a6e22e">Set</span>(<span style="color:#e6db74">&#34;Content-Type&#34;</span>, <span style="color:#e6db74">&#34;application/json&#34;</span>)
+	<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">SetBasicAuth</span>(<span style="color:#a6e22e">cred</span>.<span style="color:#a6e22e">Username</span>, <span style="color:#a6e22e">cred</span>.<span style="color:#a6e22e">Password</span>)
+
+	<span style="color:#a6e22e">client</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Client</span>{}
+	<span style="color:#a6e22e">resp</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Do</span>(<span style="color:#a6e22e">req</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		panic(<span style="color:#a6e22e">err</span>)
+	}
+	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">Body</span>.<span style="color:#a6e22e">Close</span>()
+
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;response Status:&#34;</span>, <span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">Status</span>)
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;response Headers:&#34;</span>, <span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">Header</span>)
+	<span style="color:#a6e22e">body</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ioutil</span>.<span style="color:#a6e22e">ReadAll</span>(<span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">Body</span>)
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;response Body:&#34;</span>, string(<span style="color:#a6e22e">body</span>))
+
+}
+</code></pre></div><p>It can also be found under my github page: <!-- raw HTML omitted -->GoJira Github<!-- raw HTML omitted -->.</p>
+<p>Feel free to open up issues if you would like to use it and need some features which you would find interesting. Currently the username and password for the API are stored in a local config file in your home folder. Later on, I&rsquo;ll add the ability to have a token rather than a username:password combination.</p>
 <p>Thanks for reading!</p>
 <p>Gergely.</p>
 
@@ -126,6 +290,7 @@ if (!doNotTrack) {
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>

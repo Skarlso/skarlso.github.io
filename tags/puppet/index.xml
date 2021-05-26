@@ -15,10 +15,68 @@
       <pubDate>Thu, 21 May 2015 00:00:00 +0000</pubDate>
       <guid>https://skarlso.github.io/2015/05/21/setting-up-a-new-laptop-with-puppet/</guid>
       <description>&lt;p&gt;Hello folks.&lt;/p&gt;
-&lt;p&gt;So, some of you know &lt;!-- raw HTML omitted --&gt;puppet&lt;!-- raw HTML omitted --&gt;, some of you don’t. Puppet is a configuration management system. It’s quite awesome. I like working with it. One of the benefits of puppet is, that I never, ever, EVER have to setup a new laptop from scratch, EVER again.&lt;/p&gt;
-&lt;p&gt;I’m writing a puppet manifest file which sets up my new laptop to my liking. I will improve it as I go along. Here is version 1.0.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;I’ll improve upon it as I go, and you can check it out later from my git repo. I removed the parts which required extra libraries for now, as I want it to run without the need of getting extra stuff installed. I might automate that part as well later on.&lt;/p&gt;
+&lt;p&gt;So, some of you know &lt;!-- raw HTML omitted --&gt;puppet&lt;!-- raw HTML omitted --&gt;, some of you don&amp;rsquo;t. Puppet is a configuration management system. It&amp;rsquo;s quite awesome. I like working with it. One of the benefits of puppet is, that I never, ever, EVER have to setup a new laptop from scratch, EVER again.&lt;/p&gt;
+&lt;p&gt;I&amp;rsquo;m writing a puppet manifest file which sets up my new laptop to my liking. I will improve it as I go along. Here is version 1.0.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# include apt&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;basics {
+        $packages &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;git&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;subversion&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;mc&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;vim&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;maven&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;gradle&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;update&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/apt-get update&amp;#34;&lt;/span&gt;,
+        }
+
+        package { $packages:
+                &lt;span style=&#34;color:#66d9ef&#34;&gt;ensure&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; installed,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;update&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;skype {
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;add-arc&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/dpkg --add-architecture i386&amp;#34;&lt;/span&gt;,
+        }
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;add-repo-skype&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/add-apt-repository &lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;deb http://archive.canonical.com/ \$(lsb_release -sc) partner&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;add-arc&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;update-and-install&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/apt-get update &amp;amp;&amp;amp; /usr/bin/apt-get install skype&amp;#34;&lt;/span&gt;,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;add-repo-skype&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;java8 {
+        &lt;span style=&#34;color:#75715e&#34;&gt;# Automatically does an update afterwards&lt;/span&gt;
+        &lt;span style=&#34;color:#75715e&#34;&gt;# apt::ppa { &amp;#39;ppa:webupd8team/java&amp;#39;: }&lt;/span&gt;
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;add-repo-java&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/add-apt-repository -y &lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;ppa:webupd8team/java&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; &amp;amp;&amp;amp; /usr/bin/apt-get update&amp;#34;&lt;/span&gt;
+        }
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;set-accept&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/bin/echo /usr/bin/debconf shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections &amp;amp;&amp;amp; /bin/echo /usr/bin/debconf shared/accepted-oracle-license-v1-1 seen true | sudo /usr/bin/debconf-set-selections&amp;#34;&lt;/span&gt;,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;add-repo-java&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;install&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/usr/bin/apt-get install -y oracle-java8-installer&amp;#34;&lt;/span&gt;,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;set-accept&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+
+        exec { &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;setup_home&amp;#34;&lt;/span&gt;:
+                command &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/bin/echo &lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;export JDK18_HOME=/usr/lib/jvm/java-8-oracle/&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; &amp;gt;&amp;gt; /etc/environment&amp;#34;&lt;/span&gt;,
+                require &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;Exec&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;install&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;,
+        }
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;include&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;basics
+&lt;span style=&#34;color:#66d9ef&#34;&gt;include&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;skype
+&lt;span style=&#34;color:#66d9ef&#34;&gt;include&lt;/span&gt; base&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;java8
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;I&amp;rsquo;ll improve upon it as I go, and you can check it out later from my git repo. I removed the parts which required extra libraries for now, as I want it to run without the need of getting extra stuff installed. I might automate that part as well later on.&lt;/p&gt;
 &lt;p&gt;EDIT: &lt;!-- raw HTML omitted --&gt;&lt;a href=&#34;https://github.com/Skarlso/puppet/blob/master/manifests/base_setup.pp&#34;&gt;https://github.com/Skarlso/puppet/blob/master/manifests/base_setup.pp&lt;/a&gt;&lt;!-- raw HTML omitted --&gt;&lt;/p&gt;
 &lt;p&gt;Have fun.&lt;/p&gt;
 &lt;p&gt;Gergely.&lt;/p&gt;

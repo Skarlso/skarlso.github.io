@@ -109,12 +109,29 @@ if (!doNotTrack) {
 <div class="content">
 <p>Here we are again. I will attempt to further this little journey of mine into the land of Android and Python.</p>
 <p>This is the second part of the advanture you can read the first one a little bit back.</p>
-<!-- raw HTML omitted -->
-<p> </p>
+<h1 id="the-script">The Script</h1>
 <p>We left off at a point where I successfully configured my environment and compiled my first hello world APK. At that point it took a little bit fiddling to get it to work on my phone.</p>
-<p>Now, I have progressed a little bit into spoj’s page parsing. The code so far is as follows:</p>
-<!-- raw HTML omitted -->
-<p>This is pretty straight forward so far. It gets the problems page, loads in all of the links and prints it out.</p>
+<p>Now, I have progressed a little bit into spoj&rsquo;s page parsing. The code so far is as follows:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">
+__author__ <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;hannibal&#39;</span>
+
+<span style="color:#f92672">import</span> requests
+<span style="color:#f92672">from</span> random <span style="color:#f92672">import</span> randint
+<span style="color:#f92672">import</span> lxml.html <span style="color:#f92672">as</span> lh
+
+random_page_number <span style="color:#f92672">=</span> randint(, <span style="color:#ae81ff">63</span>) <span style="color:#75715e"># 63 being the maximum page number at spoj</span>
+r <span style="color:#f92672">=</span> requests<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#34;http://www.spoj.com/problems/classical/sort=0,start=</span><span style="color:#e6db74">%d</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> (random_page_number <span style="color:#f92672">*</span> <span style="color:#ae81ff">50</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">50</span>))
+<span style="color:#75715e"># Problem Div XPath =&gt; //[@class=&#34;problems&#34;]</span>
+
+spoj_page <span style="color:#f92672">=</span> lh<span style="color:#f92672">.</span>document_fromstring(r<span style="color:#f92672">.</span>text)
+links_to_problems <span style="color:#f92672">=</span> spoj_page[]<span style="color:#f92672">.</span>xpath(<span style="color:#e6db74">&#34;//tr[@class=&#39;problemrow&#39;]/td[2]/a&#34;</span>)
+
+current_link <span style="color:#f92672">=</span> links_to_problems[randint(, len(links_to_problems))]
+<span style="color:#66d9ef">print</span>(current_link<span style="color:#f92672">.</span>attrib[<span style="color:#e6db74">&#39;href&#39;</span>])
+r <span style="color:#f92672">=</span> requests<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#34;http://www.spoj.com/</span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> current_link<span style="color:#f92672">.</span>attrib[<span style="color:#e6db74">&#39;href&#39;</span>])
+
+<span style="color:#66d9ef">print</span>(r<span style="color:#f92672">.</span>text<span style="color:#f92672">.</span>encode(<span style="color:#e6db74">&#34;utf-8&#34;</span>))
+</code></pre></div><p>This is pretty straight forward so far. It gets the problems page, loads in all of the links and prints it out.</p>
 <p>My goal is an application which looks something like this:</p>
 <p>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>___</p>
 <p>|   _<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>  |</p>
@@ -131,28 +148,102 @@ if (!doNotTrack) {
 <p>|                                                                                 |</p>
 <p>|                         Button:Next Problem                          |</p>
 <p>|_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>_<strong>_</strong>________ |</p>
-<p>It’s very basic. When it loads up, it will gather and display a new problem. You have two options, either get a new one, or save / finish this item, saying you never want to see it again.</p>
-<p>Let’s put the first part into an android app. Just gather data, and get it disaplyed.</p>
+<p>It&rsquo;s very basic. When it loads up, it will gather and display a new problem. You have two options, either get a new one, or save / finish this item, saying you never want to see it again.</p>
+<p>Let&rsquo;s put the first part into an android app. Just gather data, and get it disaplyed.</p>
 <p>*Queue a days worth of hacking and frustrated cussing.*</p>
-<p>So, turns out it’s not as easy as I would have liked it to be. I ran into some pretty nasty problems. Some of them I’ll write down below for the record, and an attempted solution as well.</p>
-<!-- raw HTML omitted -->
-<p><strong>#1:</strong> <strong>Problem:</strong> Libraries. I’m using lxml and requests. Requests is a pure python library, but lxml is partially C. Which apparently is not very well supported yet.</p>
+<p>So, turns out it&rsquo;s not as easy as I would have liked it to be. I ran into some pretty nasty problems. Some of them I&rsquo;ll write down below for the record, and an attempted solution as well.</p>
+<h1 id="problems">Problems</h1>
+<p><strong>#1:</strong> <strong>Problem:</strong> Libraries. I&rsquo;m using lxml and requests. Requests is a pure python library, but lxml is partially C. Which apparently is not very well supported yet.</p>
 <p><strong>Solution (Partial):</strong> I could optain request by two ways, but the most simple one, was basically just building my distribution with the optional requests module like this:</p>
-<!-- raw HTML omitted -->
-<p>Attempting to do the same with LXML resulted in a compile issue which I tracked down to something like: “sorry, but we don’t support OSX”. But it’s okay. There are other ways to parse an html page, I just really like the xpath filter. So I soldiered on with trying to get something to work at least.</p>
-<p><strong>#3: Problem:</strong> <em>Bogus compile time exception.</em> There were some exceptions on the way when I was trying to compile with buildozer. <strong>Solution:</strong> It’s interesting because previously my solution to another compile time issue was to use a specific version of Cython. But this time the solution was to actually remove that version and install the latest one. Which is 0.22 as of the time of this writing. So:</p>
-<!-- raw HTML omitted -->
-<p><strong>#2: Problem:</strong> Connection. So now, I’m down to the bare bone. At this point, I just want to see a page source in a label. My code looks like this:</p>
-<!-- raw HTML omitted -->
-<p>However, running this results in a connection error in adb logcat:</p>
-<!-- raw HTML omitted -->
-<p><strong>Solution:</strong> I tried simply putting out a random number at some point, which actullay worked, so I know it’s the connection. I’m guessing I need permission to access the network. Which would be this:</p>
-<!-- raw HTML omitted -->
-<p>And yes! Building and installing it with this additional permission got me so far as I can display the web page’s content in a label.</p>
-<!-- raw HTML omitted -->
-<p>There is a saying that you should end on a high note, so that is what I’m going to do here right now. Join me next time, when I’ll try to replace lxml with something else…</p>
+<pre><code>
+./distribute.sh -m &quot;openssl pil requests kivy&quot;
+</code></pre><p>Attempting to do the same with LXML resulted in a compile issue which I tracked down to something like: &ldquo;sorry, but we don&rsquo;t support OSX&rdquo;. But it&rsquo;s okay. There are other ways to parse an html page, I just really like the xpath filter. So I soldiered on with trying to get something to work at least.</p>
+<p><strong>#3: Problem:</strong> <em>Bogus compile time exception.</em> There were some exceptions on the way when I was trying to compile with buildozer. <strong>Solution:</strong> It&rsquo;s interesting because previously my solution to another compile time issue was to use a specific version of Cython. But this time the solution was to actually remove that version and install the latest one. Which is 0.22 as of the time of this writing. So:</p>
+<pre><code>
+sudo pip update cython
+</code></pre><p><strong>#2: Problem:</strong> Connection. So now, I&rsquo;m down to the bare bone. At this point, I just want to see a page source in a label. My code looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">
+<span style="color:#f92672">import</span> kivy
+kivy<span style="color:#f92672">.</span>require(<span style="color:#e6db74">&#39;1.8.0&#39;</span>)
+<span style="color:#f92672">from</span> kivy.lang <span style="color:#f92672">import</span> Builder
+<span style="color:#f92672">from</span> kivy.uix.gridlayout <span style="color:#f92672">import</span> GridLayout
+<span style="color:#f92672">from</span> kivy.properties <span style="color:#f92672">import</span> NumericProperty
+<span style="color:#f92672">from</span> kivy.app <span style="color:#f92672">import</span> App
+
+<span style="color:#f92672">import</span> requests
+<span style="color:#f92672">from</span> random <span style="color:#f92672">import</span> randint
+<span style="color:#75715e"># import lxml.html as lh</span>
+
+<span style="color:#75715e"># import sys</span>
+<span style="color:#75715e"># sys.path.append(&#39;/sdcard/com.googlecode.pythonforandroid/extras/python/site-packages&#39;)</span>
+
+
+Builder<span style="color:#f92672">.</span>load_string(<span style="color:#e6db74">&#39;&#39;&#39;
+</span><span style="color:#e6db74">:
+</span><span style="color:#e6db74">    cols: 1
+</span><span style="color:#e6db74">    Label:
+</span><span style="color:#e6db74">        text: root.get_problem()
+</span><span style="color:#e6db74">    Button:
+</span><span style="color:#e6db74">        text: &#39;Click me! </span><span style="color:#e6db74">%d</span><span style="color:#e6db74">&#39; </span><span style="color:#e6db74">% r</span><span style="color:#e6db74">oot.counter
+</span><span style="color:#e6db74">        on_release: root.my_callback()
+</span><span style="color:#e6db74">&#39;&#39;&#39;</span>)
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SpojAppScreen</span>(GridLayout):
+    counter <span style="color:#f92672">=</span> NumericProperty()
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">my_callback</span>(self):
+        <span style="color:#66d9ef">print</span> <span style="color:#e6db74">&#39;The button has been pushed&#39;</span>
+        self<span style="color:#f92672">.</span>counter <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_problem</span>(self):
+        random_page_number <span style="color:#f92672">=</span> randint(, <span style="color:#ae81ff">63</span>) <span style="color:#75715e"># 63 being the maximum page number at spoj</span>
+        r <span style="color:#f92672">=</span> requests<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#34;http://www.spoj.com/problems/classical/sort=0,start=</span><span style="color:#e6db74">%d</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> (random_page_number <span style="color:#f92672">*</span> <span style="color:#ae81ff">50</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">50</span>))
+
+        <span style="color:#75715e"># Problem Div XPath =&gt; //[@class=&#34;problems&#34;]</span>
+
+        <span style="color:#75715e"># spoj_page = lh.document_fromstring(r.text)</span>
+        <span style="color:#75715e"># links_to_problems = spoj_page[0].xpath(&#34;//tr[@class=&#39;problemrow&#39;]/td[2]/a&#34;)</span>
+
+        <span style="color:#75715e"># current_link = links_to_problems[randint(0, len(links_to_problems))]</span>
+        <span style="color:#75715e"># print(current_link.attrib[&#39;href&#39;])</span>
+        <span style="color:#75715e"># r = requests.get(&#34;http://www.spoj.com/%s&#34; % current_link.attrib[&#39;href&#39;])</span>
+        <span style="color:#75715e"># print(r.text.encode(&#34;utf-8&#34;))</span>
+        <span style="color:#66d9ef">return</span> r<span style="color:#f92672">.</span>text<span style="color:#f92672">.</span>encode(<span style="color:#e6db74">&#34;utf-8&#34;</span>)
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SpojApp</span>(App):
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">build</span>(self):
+        <span style="color:#66d9ef">return</span> SpojAppScreen()
+
+<span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;__main__&#39;</span>:
+    SpojApp()<span style="color:#f92672">.</span>run()
+</code></pre></div><p>However, running this results in a connection error in adb logcat:</p>
+<pre><code>
+I/python  (27610):  kivy.lang.BuilderException: Parser: File &quot;&quot;, line 5:
+I/python  (27610):  ...
+I/python  (27610):        3:    cols: 1
+I/python  (27610):        4:    Label:
+I/python  (27610):  &amp;gt;&amp;gt;    5:        text: root.get_problem()
+I/python  (27610):        6:    Button:
+I/python  (27610):        7:        text: 'Click me! %d' % root.counter
+I/python  (27610):  ...
+I/python  (27610):  BuilderException: Parser: File &quot;&quot;, line 5:
+I/python  (27610):  ...
+I/python  (27610):        3:    cols: 1
+I/python  (27610):        4:    Label:
+I/python  (27610):  &amp;gt;&amp;gt;    5:        text: root.get_problem()
+I/python  (27610):        6:    Button:
+I/python  (27610):        7:        text: 'Click me! %d' % root.counter
+I/python  (27610):  ...
+I/python  (27610):  ConnectionError: ('Connection aborted.', gaierror(4, 'non-recoverable failure in name resolution.'))
+</code></pre><p><strong>Solution:</strong> I tried simply putting out a random number at some point, which actullay worked, so I know it&rsquo;s the connection. I&rsquo;m guessing I need permission to access the network. Which would be this:</p>
+<pre><code>
+uses-permission android:name=&quot;android.permission.INTERNET&quot;
+</code></pre><p>And yes! Building and installing it with this additional permission got me so far as I can display the web page&rsquo;s content in a label.</p>
+<pre><code>
+./build.py --package org.spoj --permission INTERNET --name &quot;Spoj&quot; --version 1.0 --dir /Users/hannibal/PythonProjects/spoj/ debug
+</code></pre><p>There is a saying that you should end on a high note, so that is what I&rsquo;m going to do here right now. Join me next time, when I&rsquo;ll try to replace lxml with something else.</p>
 <p>Thanks for reading!</p>
 <p>Gergely.</p>
+
 
 </div>
 </article>
@@ -163,6 +254,7 @@ if (!doNotTrack) {
 <section>
 <h4 class="menu"><a href="/blog/" class="active" aria-current="page">Blog</a></h4>
 <ul class="menu">
+<li><a href="/2021/05/25/blog-refactor/">Blog refactor</a></li>
 <li><a href="/2021/04/21/readers-digest/">Reader&#39;s Digest 2021-04</a></li>
 <li><a href="/2021/03/23/readers-digest/">Reader&#39;s Digest 2021-03</a></li>
 <li><a href="/2021/02/01/readers-digest/">Reader&#39;s Digest 2021-01</a></li>
