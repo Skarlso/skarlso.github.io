@@ -15,6 +15,201 @@
       <guid>https://skarlso.github.io/2015/06/06/docker-ruby-lotus-go-cd/</guid>
       <description>&lt;p&gt;Hello folks.&lt;/p&gt;
 &lt;p&gt;Today, I would like to write about something interesting and close to me at the moment. I&amp;rsquo;m going to setup Go.cd with Docker, and I&amp;rsquo;m going to get a Ruby Lotus app running. Let&amp;rsquo;s get started.&lt;/p&gt;</description>
+      <content type="html"><![CDATA[<p>Hello folks.</p>
+<p>Today, I would like to write about something interesting and close to me at the moment. I&rsquo;m going to setup Go.cd with Docker, and I&rsquo;m going to get a Ruby Lotus app running. Let&rsquo;s get started.</p>
+<h1 id="fluff">Fluff</h1>
+<p>Now, obviously, you don&rsquo;t really need Go.Cd or Docker to setup a Java Gradle application, since it&rsquo;s dead easy. But I&rsquo;m going to do it just for the heck of it.</p>
+<h1 id="setup">Setup</h1>
+<p>Okay, lets start with Vagrant. Docker&rsquo;s strength is coming from Linux&rsquo;s process isolation capabilities it&rsquo;s not yet properly working on OSX or Windows. You have a couple of options if you&rsquo;d like to try never the less, like boot2docker, or a Tiny Linux kernel, but at that point, I think it&rsquo;s easier to use a VM.</p>
+<h4 id="vagrant">Vagrant</h4>
+<p>So, let&rsquo;s start with my small Vagrantfile.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-ruby" data-lang="ruby">
+<span class="c1"># -*- mode: ruby -*-</span>
+<span class="c1"># vi: set ft=ruby :</span>
+
+<span class="c1"># All Vagrant configuration is done below. The &#34;2&#34; in Vagrant.configure</span>
+<span class="c1"># configures the configuration version (we support older styles for</span>
+<span class="c1"># backwards compatibility). Please don&#39;t change it unless you know what</span>
+<span class="c1"># you&#39;re doing.</span>
+<span class="no">Vagrant</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
+  <span class="c1"># The most common configuration options are documented and commented below.</span>
+  <span class="c1"># For a complete reference, please see the online documentation at</span>
+  <span class="c1"># https://docs.vagrantup.com.</span>
+
+  <span class="c1"># Every Vagrant development environment requires a box. You can search for</span>
+  <span class="c1"># boxes at https://atlas.hashicorp.com/search.</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box</span> <span class="o">=</span> <span class="s2">&#34;trusty&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box_url</span> <span class="o">=</span> <span class="s2">&#34;https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="s2">&#34;forwarded_port&#34;</span><span class="p">,</span> <span class="ss">guest</span><span class="p">:</span> <span class="mi">2300</span><span class="p">,</span> <span class="ss">host</span><span class="p">:</span> <span class="mi">2300</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="s2">&#34;forwarded_port&#34;</span><span class="p">,</span> <span class="ss">guest</span><span class="p">:</span> <span class="mi">8153</span><span class="p">,</span> <span class="ss">host</span><span class="p">:</span> <span class="mi">8153</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span> <span class="ss">path</span><span class="p">:</span> <span class="s2">&#34;setup.sh&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provider</span> <span class="s2">&#34;virtualbox&#34;</span> <span class="k">do</span> <span class="o">|</span><span class="n">v</span><span class="o">|</span>
+    <span class="n">v</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="mi">8192</span>
+    <span class="n">v</span><span class="o">.</span><span class="n">cpus</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Very simple. I&rsquo;m setting up a trusty64(because docker requires 3.10 &lt;= x) box and then doing a simple shell provision. Also, I gave it a bit juice, since go-server requires a raw power. Here is the shell script:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">
+!#/bin/bash
+sudo apt-get update
+sudo apt-get install -y software-properties-common python-software-properties
+sudo apt-get update
+sudo apt-get install -y vim
+sudo add-apt-repository -y <span class="s2">&#34;ppa:webupd8team/java&#34;</span>
+sudo apt-get update
+<span class="nb">echo</span> debconf shared/accepted-oracle-license-v1-1 <span class="k">select</span> <span class="nb">true</span> <span class="p">|</span> sudo debconf-set-selections <span class="p">&amp;</span>amp<span class="p">;&amp;</span>amp<span class="p">;</span> <span class="nb">echo</span> debconf shared/accepted-oracle-license-v1-1 seen <span class="nb">true</span> <span class="p">|</span> sudo debconf-set-selections
+sudo apt-get install -y oracle-java8-installer
+sudo apt-get update
+wget -qO- https://get.docker.com/ <span class="p">|</span> sh
+route add -net 172.17.0.0 netmask 255.255.255.0 gw 172.17.42.1
+</code></pre></td></tr></table>
+</div>
+</div><p>The debconf at the end accepts java8&rsquo;s terms and conditions. And the last line installs docker in my box. This runs for a little while.</p>
+<p>The routing on the end routes every traffic from 172.17.*.* to my vagrant box, which in turn I&rsquo;ll be able to use from my mac local, like 127.0.0.1:8153/go/home.</p>
+<p>After a vagrant up, my box is ready to be used.</p>
+<h4 id="docker">Docker</h4>
+<p>When that&rsquo;s finished, we can move on to the next part, which is writing a little Dockerfile for our image. Go.cd will require java and a couple of other things, so let&rsquo;s automate the installation of that so we don&rsquo;t have to do it by hand.</p>
+<p>Here is a Dockerfile I came up with:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="err">
+</span><span class="err"></span><span class="k">FROM</span><span class="s"> ubuntu</span><span class="err">
+</span><span class="err"></span><span class="k">MAINTAINER</span><span class="s"> Skarlso</span><span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="c">############ SETUP #############</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apt-get update<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apt-get install -y software-properties-common python-software-properties<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> add-apt-repository -y <span class="s2">&#34;ppa:webupd8team/java&#34;</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> <span class="nb">echo</span> debconf shared/accepted-oracle-license-v1-1 <span class="k">select</span> <span class="nb">true</span> <span class="p">|</span> sudo debconf-set-selections <span class="p">&amp;</span>amp<span class="p">;&amp;</span>amp<span class="p">;</span> <span class="nb">echo</span> debconf shared/accepted-oracle-license-v1-1 seen <span class="nb">true</span> <span class="p">|</span> sudo debconf-set-selections<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apt-get update<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apt-get install -y oracle-java8-installer<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apt-get install -y vim<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apt-get install -y unzip<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> apt-get install -y git<span class="err">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>So, our docker images have to be setup with Java as well for go.cd which I&rsquo;m taking care of here, and a little bit extra, to add vim, and unzip, which is required for dpkg later.</p>
+<p>At this point run: <strong>docker build -t ubuntu:go .</strong> -&gt; This will use the dockerfile and create the ubuntu:go image. Note the **. **at the end.</p>
+<h4 id="gocd">Go.cd</h4>
+<p>Now, I&rsquo;m creating two containers. One, go-server, will be the go server, and the other, go-agent, will be the go agent.</p>
+<p>First, go-server:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">
+docker run -i -t --name go-server --hostname=go-server -p 8153:8153 ubuntu:go /bin/bash
+wget http://download.go.cd/gocd-deb/go-server-15.1.0-1863.deb
+dpkg -i go-server-15.1.0-1863.deb
+</code></pre></td></tr></table>
+</div>
+</div><p>Pretty straight forward, no? We forward 8153 to vagrant (which forwards it to my mac), so after we start go-server service we should be able to visit: http://127.0.0.1:8153/go/home.</p>
+<p>Lo', and behold, go server. Let&rsquo;s add an agent too.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">docker run -i -t --name go-agent --hostname=go-agent ubuntu:go /bin/bash
+wget http://download.go.cd/gocd-deb/go-agent-15.1.0-1863.deb
+dpkg -i go-agent-15.1.0-1863.deb
+vim /etc/default/go-agent
+GO_SERVER=172.17.0.1
+service go-agent start
+</code></pre></td></tr></table>
+</div>
+</div><p>No need to forward anything here. And as you can see, my agent was added successfully.</p>
+<p>All nice, and dandy. The agent is there, and I enabled it, so it&rsquo;s ready to work. Let&rsquo;s give it something to do, shall we?</p>
+<h1 id="the-app">The App</h1>
+<p>I&rsquo;m going to use my gradle project which is on github. This one =&gt; https://github.com/Skarlso/DataMung.git.</p>
+<p>Very basic setup. Just check it out and then build &amp; run tests. Easy, right?</p>
+<p>First step in this process, define the pipeline. I&rsquo;m going to keep it simple. Name the pipeline DataMunger. Group is Linux. Now, in go.cd you have to define something called, an <strong>environment</strong>. Environment can be anything you want, I&rsquo;m going to go with Linux. You have to assign <strong>agents</strong> to this environment who fulfil it and the pipeline which will use that environment. More on that you can read in the go.cd documentation. This is how you would handle a pipeline which uses linux, and a windows environment at the same time.</p>
+<p>In step one you have to define something called the <strong>Material</strong>. That will be the source on which the agent will work. This can be multiple, in different folders within the confines of the pipeline, or singular.</p>
+<p>I defined my git project and tested the connection OK. Next up is the first **Stage **and the initial **Job **to perform. This, for me, will be a compile or an assemble, and later on a test run.</p>
+<p>Now, Go is awesome in parallelising jobs. If my project would be large enough, I could have multiple jobs here. But for now, I&rsquo;ll use stages because they run subsequently. So, first stage, compile. Next stage, testing and archiving the results.</p>
+<p>I added the next stage and defined the artefact. Go supports test-reports. If you define the path to a test artefact than go will parse it and create a nice report out of it.</p>
+<p>Now, let&rsquo;s run it. It will probably fail on something. 😉</p>
+<p>Well, I&rsquo;ll be. It worked on the first run.</p>
+<p>And here are the test results.</p>
+<h1 id="wrap-up">Wrap-up</h1>
+<p>Well, that&rsquo;s it folks. Gradle project, with vagrant, docker, and go.cd. I hope you all enjoyed reading about it as much as I did doing it.</p>
+<p>Any questions, please feel free to ask it in the comment section below.</p>
+<p>Cheers,
+Have a nice weekend,
+Gergely.</p>]]></content>
     </item>
     
   </channel>

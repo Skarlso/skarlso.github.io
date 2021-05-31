@@ -17,6 +17,248 @@
 Ever used Job DSL plugin for Jenkins? What is that you say? Well, it&amp;rsquo;s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.
 Today, however, I&amp;rsquo;m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.
 Today, I would like to write about a part of it which is even more interesting.</description>
+      <content type="html"><![CDATA[<p>Hi Folks.</p>
+<p>Ever used <a href="https://wiki.jenkins-ci.org/display/JENKINS/Job+DSL+Plugin" target="_blank">Job DSL plugin</a> for Jenkins? What is that you say? Well, it&rsquo;s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.</p>
+<p>Today, however, I&rsquo;m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.</p>
+<p>Today, I would like to write about a part of it which is even more interesting. And that is, extracting re-occurring parts in your job configurations.</p>
+<p>If you have jobs, which have a common part that is repeated everywhere, you usually have an urge to extracted that into one place, lest it changes and you have to go an apply the change everywhere. That&rsquo;s not very efficient. But how do you do that in something which looks like a JSON descriptor?</p>
+<p>Fret not, it is just Groovy. And being just groovy, you can use Groovy to implement parts of the job description and then apply that implementation to the job in the DSL.</p>
+<p>Suppose you have an email which you send after every job for which the DSL looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-groovy" data-lang="groovy">
+<span class="n">job</span><span class="o">(</span><span class="s1">&#39;MyTestJob&#39;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">description</span> <span class="s1">&#39;&lt;strong&gt;GENERATED - do not modify&lt;/strong&gt;&#39;</span>
+    <span class="n">label</span><span class="o">(</span><span class="s1">&#39;machine_label&#39;</span><span class="o">)</span>
+    <span class="n">logRotator</span><span class="o">(</span><span class="mi">30</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span> <span class="mi">5</span><span class="o">)</span>
+    <span class="n">parameters</span> <span class="o">{</span>
+        <span class="n">stringParam</span><span class="o">(</span><span class="s1">&#39;somestringparam&#39;</span><span class="o">,</span> <span class="s1">&#39;default_valye&#39;</span><span class="o">,</span> <span class="s1">&#39;Description&#39;</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="n">wrappers</span> <span class="o">{</span>
+        <span class="n">timeout</span> <span class="o">{</span>
+            <span class="n">noActivity</span><span class="o">(</span><span class="mi">600</span><span class="o">)</span>
+            <span class="n">abortBuild</span><span class="o">()</span>
+            <span class="n">failBuild</span><span class="o">()</span>
+            <span class="n">writeDescription</span><span class="o">(</span><span class="s1">&#39;Build failed due to timeout after {0} minutes&#39;</span><span class="o">)</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="n">deliveryPipelineConfiguration</span><span class="o">(</span><span class="s2">&#34;Main&#34;</span><span class="o">,</span> <span class="s2">&#34;MyTestJob&#34;</span><span class="o">)</span>
+    <span class="n">wrappers</span> <span class="o">{</span>
+        <span class="n">preBuildCleanup</span> <span class="o">{</span>
+            <span class="n">deleteDirectories</span><span class="o">()</span>
+        <span class="o">}</span>
+        <span class="n">timestamps</span><span class="o">()</span>
+    <span class="o">}</span>
+    <span class="n">triggers</span> <span class="o">{</span>
+        <span class="n">cron</span><span class="o">(</span><span class="s1">&#39;H 12 * * 1,2&#39;</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="n">steps</span> <span class="o">{</span>
+        <span class="n">batchFile</span><span class="o">(</span><span class="n">readFileFromWorkspace</span><span class="o">(</span><span class="s1">&#39;relative/path/to/file&#39;</span><span class="o">))</span>
+    <span class="o">}</span>
+            <span class="n">publishers</span> <span class="o">{</span>
+                <span class="n">wsCleanup</span><span class="o">()</span>
+                <span class="n">extendedEmail</span><span class="o">(</span><span class="s1">&#39;email@address.com&#39;</span><span class="o">,</span> <span class="s1">&#39;$DEFAULT_SUBJECT&#39;</span><span class="o">,</span> <span class="s1">&#39;$DEFAULT_CONTENT&#39;</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="n">configure</span> <span class="o">{</span> <span class="n">node</span> <span class="o">-&gt;</span>
+                        <span class="n">node</span> <span class="s">/ presendScript &lt;&lt; readFileFromWorkspace(&#39;email_templates/</span><span class="n">emailtemplate</span><span class="o">.</span><span class="na">groovy</span><span class="s1">&#39;)
+</span><span class="s1">                        node / replyTo &lt;&lt; &#39;</span><span class="n">$DEFAULT_REPLYTO</span><span class="s1">&#39;
+</span><span class="s1">                        node / contentType &lt;&lt; &#39;</span><span class="k">default</span><span class="s1">&#39;
+</span><span class="s1">                    }
+</span><span class="s1">                    trigger(triggerName: &#39;</span><span class="n">StillUnstable</span><span class="s1">&#39;, subject: &#39;</span><span class="n">$DEFAULT_SUBJECT</span><span class="s1">&#39;, body: &#39;</span><span class="n">$DEFAULT_CONTENT</span><span class="s1">&#39;, replyTo: &#39;</span><span class="n">$DEFAULT_REPLYTO</span><span class="s1">&#39;, sendToDevelopers: true, sendToRecipientList: true)
+</span><span class="s1">                    trigger(triggerName: &#39;</span><span class="n">Fixed</span><span class="s1">&#39;, subject: &#39;</span><span class="n">$DEFAULT_SUBJECT</span><span class="s1">&#39;, body: &#39;</span><span class="n">$DEFAULT_CONTENT</span><span class="s1">&#39;, replyTo: &#39;</span><span class="n">$DEFAULT_REPLYTO</span><span class="s1">&#39;, sendToDevelopers: true, sendToRecipientList: true)
+</span><span class="s1">                    trigger(triggerName: &#39;</span><span class="n">Failure</span><span class="s1">&#39;, subject: &#39;</span><span class="n">$DEFAULT_SUBJECT</span><span class="s1">&#39;, body: &#39;</span><span class="n">$DEFAULT_CONTENT</span><span class="s1">&#39;, replyTo: &#39;</span><span class="n">$DEFAULT_REPLYTO</span><span class="err">&#39;</span><span class="o">,</span> <span class="nl">sendToDevelopers:</span> <span class="kc">true</span><span class="o">,</span> <span class="nl">sendToRecipientList:</span> <span class="kc">true</span><span class="o">)</span>
+                <span class="o">}</span>
+
+            <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Now, that big chunk of email setting is copied into a bunch of files, which is pretty ugly. And once you try to change it, you&rsquo;ll have to change it everywhere. Also, the interesting bits here are those readFileFromWorkspace parts. Those allow us to export even larger chunks of the script into external files. Now, because the slave might be located somewhere else, you should not use new File(&lsquo;file&rsquo;).text in your job DSL. readFileFromWorkspace in the background does that, but applies correct way to the PATH it looks on for the file specified.</p>
+<p>Let&rsquo;s put this into a groovy script, shall we? Create a utilities folder where the DSL is and create a groovy file in it like this one:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-groovy" data-lang="groovy">
+<span class="kn">package</span> <span class="n">utilities</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">JobCommonTemplate</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">addEmailTemplate</span><span class="o">(</span><span class="kt">def</span> <span class="n">job</span><span class="o">,</span> <span class="kt">def</span> <span class="n">dslFactory</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">String</span> <span class="n">emailScript</span> <span class="o">=</span> <span class="n">dslFactory</span><span class="o">.</span><span class="na">readFileFromWorkspace</span><span class="o">(</span><span class="s2">&#34;email_template/EmailTemplate.groovy&#34;</span><span class="o">)</span>
+        <span class="n">job</span><span class="o">.</span><span class="na">with</span> <span class="o">{</span>
+            <span class="n">publishers</span> <span class="o">{</span>
+                <span class="n">wsCleanup</span><span class="o">()</span>
+                <span class="n">extendedEmail</span><span class="o">(</span><span class="s1">&#39;email@address.com&#39;</span><span class="o">,</span> <span class="s1">&#39;$DEFAULT_SUBJECT&#39;</span><span class="o">,</span> <span class="s1">&#39;$DEFAULT_CONTENT&#39;</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="n">configure</span> <span class="o">{</span> <span class="n">node</span> <span class="o">-&gt;</span>
+                        <span class="n">node</span> <span class="s">/ presendScript &lt;&lt; emailScript
+</span><span class="s">                        node /</span> <span class="n">replyTo</span> <span class="o">&lt;&lt;</span> <span class="s1">&#39;$DEFAULT_REPLYTO&#39;</span>
+                        <span class="n">node</span> <span class="o">/</span> <span class="n">contentType</span> <span class="o">&lt;&lt;</span> <span class="s1">&#39;default&#39;</span>
+                    <span class="o">}</span>
+                    <span class="n">trigger</span><span class="o">(</span><span class="nl">triggerName:</span> <span class="s1">&#39;StillUnstable&#39;</span><span class="o">,</span> <span class="nl">subject:</span> <span class="s1">&#39;$DEFAULT_SUBJECT&#39;</span><span class="o">,</span> <span class="nl">body:</span> <span class="s1">&#39;$DEFAULT_CONTENT&#39;</span><span class="o">,</span> <span class="nl">replyTo:</span> <span class="s1">&#39;$DEFAULT_REPLYTO&#39;</span><span class="o">,</span> <span class="nl">sendToDevelopers:</span> <span class="kc">true</span><span class="o">,</span> <span class="nl">sendToRecipientList:</span> <span class="kc">true</span><span class="o">)</span>
+                    <span class="n">trigger</span><span class="o">(</span><span class="nl">triggerName:</span> <span class="s1">&#39;Fixed&#39;</span><span class="o">,</span> <span class="nl">subject:</span> <span class="s1">&#39;$DEFAULT_SUBJECT&#39;</span><span class="o">,</span> <span class="nl">body:</span> <span class="s1">&#39;$DEFAULT_CONTENT&#39;</span><span class="o">,</span> <span class="nl">replyTo:</span> <span class="s1">&#39;$DEFAULT_REPLYTO&#39;</span><span class="o">,</span> <span class="nl">sendToDevelopers:</span> <span class="kc">true</span><span class="o">,</span> <span class="nl">sendToRecipientList:</span> <span class="kc">true</span><span class="o">)</span>
+                    <span class="n">trigger</span><span class="o">(</span><span class="nl">triggerName:</span> <span class="s1">&#39;Failure&#39;</span><span class="o">,</span> <span class="nl">subject:</span> <span class="s1">&#39;$DEFAULT_SUBJECT&#39;</span><span class="o">,</span> <span class="nl">body:</span> <span class="s1">&#39;$DEFAULT_CONTENT&#39;</span><span class="o">,</span> <span class="nl">replyTo:</span> <span class="s1">&#39;$DEFAULT_REPLYTO&#39;</span><span class="o">,</span> <span class="nl">sendToDevelopers:</span> <span class="kc">true</span><span class="o">,</span> <span class="nl">sendToRecipientList:</span> <span class="kc">true</span><span class="o">)</span>
+                <span class="o">}</span>
+
+            <span class="o">}</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>The function addEmailTemplate gets two parameters. A job, which is an implementation of a Job, and a dslFactory which is a DslFactory. That factory is an interface which defines our readFileFromWorkspace. Where do we get the implementation from then? That will be from the Job. Let&rsquo;s alter our job to apply this Groovy script.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-groovy" data-lang="groovy">
+<span class="kn">import</span> <span class="nn">utilities.JobCommonTemplate</span>
+
+<span class="kt">def</span> <span class="n">myJob</span> <span class="o">=</span> <span class="n">job</span><span class="o">(</span><span class="s1">&#39;MyTestJob&#39;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">description</span> <span class="s1">&#39;&lt;strong&gt;GENERATED - do not modify&lt;/strong&gt;&#39;</span>
+    <span class="n">label</span><span class="o">(</span><span class="s1">&#39;machine_label&#39;</span><span class="o">)</span>
+    <span class="n">logRotator</span><span class="o">(</span><span class="mi">30</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span> <span class="mi">5</span><span class="o">)</span>
+    <span class="n">parameters</span> <span class="o">{</span>
+        <span class="n">stringParam</span><span class="o">(</span><span class="s1">&#39;somestringparam&#39;</span><span class="o">,</span> <span class="s1">&#39;default_valye&#39;</span><span class="o">,</span> <span class="s1">&#39;Description&#39;</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="n">wrappers</span> <span class="o">{</span>
+        <span class="n">timeout</span> <span class="o">{</span>
+            <span class="n">noActivity</span><span class="o">(</span><span class="mi">600</span><span class="o">)</span>
+            <span class="n">abortBuild</span><span class="o">()</span>
+            <span class="n">failBuild</span><span class="o">()</span>
+            <span class="n">writeDescription</span><span class="o">(</span><span class="s1">&#39;Build failed due to timeout after {0} minutes&#39;</span><span class="o">)</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="n">deliveryPipelineConfiguration</span><span class="o">(</span><span class="s2">&#34;Main&#34;</span><span class="o">,</span> <span class="s2">&#34;MyTestJob&#34;</span><span class="o">)</span>
+    <span class="n">wrappers</span> <span class="o">{</span>
+        <span class="n">preBuildCleanup</span> <span class="o">{</span>
+            <span class="n">deleteDirectories</span><span class="o">()</span>
+        <span class="o">}</span>
+        <span class="n">timestamps</span><span class="o">()</span>
+    <span class="o">}</span>
+    <span class="n">triggers</span> <span class="o">{</span>
+        <span class="n">cron</span><span class="o">(</span><span class="s1">&#39;H 12 * * 1,2&#39;</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="n">steps</span> <span class="o">{</span>
+        <span class="n">batchFile</span><span class="o">(</span><span class="n">readFileFromWorkspace</span><span class="o">(</span><span class="s1">&#39;relative/path/to/file&#39;</span><span class="o">))</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="n">JobCommonTemplate</span><span class="o">.</span><span class="na">addEmailTemplate</span><span class="o">(</span><span class="n">myJob</span><span class="o">,</span> <span class="k">this</span><span class="o">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Notice three things here.</p>
+<p>#1 =&gt; <strong>import</strong>. We import the script from utilities folder which we created and placed the script into it.</p>
+<p>#2 =&gt; <strong>def myJob</strong>. We create a variable which will contain our job&rsquo;s description.</p>
+<p>#3 =&gt; <strong>this</strong>. &lsquo;this&rsquo; will be the DslFactory. That&rsquo;s where we get our readFileFromWorkspace implementation.</p>
+<p>And that&rsquo;s it. We have extracted a part of our job which is re-occurring and we found our implementation for our readFileFromWorkspace. DslFactory has most of the things which you need in a job description, would you want to expand on this and extract other bits and pieces.</p>
+<p>Have fun, and happy coding!</p>
+<p>As always,</p>
+<p>Thanks for reading!</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -28,6 +270,239 @@ Today, I would like to write about a part of it which is even more interesting.<
       <description>Hello folks.
 Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.
 So I&amp;rsquo;m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work.</description>
+      <content type="html"><![CDATA[<p>Hello folks.</p>
+<p>Today, I would like to talk about something I came in contact with, and was hard to find a proper answer / solution for it.</p>
+<p>So I&rsquo;m writing this down to document my findings. Like the title says, this is about aggregating test result with Jenkins, using the plug-in provided. If you, like me, have a pipeline structure which do not work on the same artifact, but do have a upstream-downstream relationship, you will have a hard time configuring and making Aggregation work. So here is how, I fixed the issue.</p>
+<h1 id="connection">Connection</h1>
+<p>In order for the aggregation to work, there needs to be an <strong>artifact connection</strong> between the upstream and downstream projects. And that is the key. But if you don&rsquo;t have that, well, let&rsquo;s create one. I have a parent job configured like this one. =&gt;</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-xml" data-lang="xml">
+<span class="cp">&lt;?xml version=&#39;1.0&#39; encoding=&#39;UTF-8&#39;?&gt;</span>
+<span class="nt">&lt;project&gt;</span>
+  <span class="nt">&lt;actions/&gt;</span>
+  <span class="nt">&lt;description&gt;&lt;/description&gt;</span>
+  <span class="nt">&lt;keepDependencies&gt;</span>false<span class="nt">&lt;/keepDependencies&gt;</span>
+  <span class="nt">&lt;properties/&gt;</span>
+  <span class="nt">&lt;scm</span> <span class="na">class=</span><span class="s">&#34;hudson.scm.NullSCM&#34;</span><span class="nt">/&gt;</span>
+  <span class="nt">&lt;canRoam&gt;</span>true<span class="nt">&lt;/canRoam&gt;</span>
+  <span class="nt">&lt;disabled&gt;</span>false<span class="nt">&lt;/disabled&gt;</span>
+  <span class="nt">&lt;blockBuildWhenDownstreamBuilding&gt;</span>false<span class="nt">&lt;/blockBuildWhenDownstreamBuilding&gt;</span>
+  <span class="nt">&lt;blockBuildWhenUpstreamBuilding&gt;</span>false<span class="nt">&lt;/blockBuildWhenUpstreamBuilding&gt;</span>
+  <span class="nt">&lt;triggers/&gt;</span>
+  <span class="nt">&lt;concurrentBuild&gt;</span>false<span class="nt">&lt;/concurrentBuild&gt;</span>
+  <span class="nt">&lt;builders/&gt;</span>
+  <span class="nt">&lt;publishers&gt;</span>
+    <span class="nt">&lt;hudson.tasks.test.AggregatedTestResultPublisher</span> <span class="na">plugin=</span><span class="s">&#34;junit@1.9&#34;</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;includeFailedBuilds&gt;</span>false<span class="nt">&lt;/includeFailedBuilds&gt;</span>
+    <span class="nt">&lt;/hudson.tasks.test.AggregatedTestResultPublisher&gt;</span>
+    <span class="nt">&lt;hudson.tasks.BuildTrigger&gt;</span>
+      <span class="nt">&lt;childProjects&gt;</span>ChildJob<span class="nt">&lt;/childProjects&gt;</span>
+      <span class="nt">&lt;threshold&gt;</span>
+        <span class="nt">&lt;name&gt;</span>SUCCESS<span class="nt">&lt;/name&gt;</span>
+        <span class="nt">&lt;ordinal&gt;&lt;/ordinal&gt;</span>
+        <span class="nt">&lt;color&gt;</span>BLUE<span class="nt">&lt;/color&gt;</span>
+        <span class="nt">&lt;completeBuild&gt;</span>true<span class="nt">&lt;/completeBuild&gt;</span>
+      <span class="nt">&lt;/threshold&gt;</span>
+    <span class="nt">&lt;/hudson.tasks.BuildTrigger&gt;</span>
+  <span class="nt">&lt;/publishers&gt;</span>
+  <span class="nt">&lt;buildWrappers/&gt;</span>
+<span class="nt">&lt;/project&gt;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>As you can see, it&rsquo;s pretty basic. It isn&rsquo;t much. It&rsquo;s supposed to be a trigger job for downstream projects. You could have this one at anything. Maybe scheduled, or have some kind of gathering here of some results, and so on and so forth. The end part of the configuration is the interesting bit.</p>
+<p>Aggregation is setup, but it won&rsquo;t work, because despite there being an upstream/downstream relationship, there also needs to be an artifact connection which uses <strong>fingerprinting</strong>. Fingerprinting for Jenkins is needed in oder to make the physical connection between the jobs via hashes. This is what you will get if that is not setup:</p>
+<p>But if there is no artifact between them, what do you do? You create one.</p>
+<h1 id="the-artifact-which-binds-us">The Artifact which Binds Us</h1>
+<p>Adding a simple <strong>timestamp file</strong> is enough to make a connection. So let&rsquo;s do that. This is how it will look like =&gt;</p>
+<p>The important bits about this picture are the small echo which simply creates a file which will contain some time stamp data, and after that the archive artifact, which also fingerprints that file, marking it with a hash which identifies this job as using that particular artifact.</p>
+<p>Now, the next step is to create the connection. For that, you need the artifact copy plugin =&gt; <a href="https://wiki.jenkins-ci.org/display/JENKINS/Copy+Artifact+Plugin" target="_blank">Copy Artifact Plugin</a>.</p>
+<p>With this, we create the childs configuration like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-xml" data-lang="xml">
+<span class="cp">&lt;?xml version=&#39;1.0&#39; encoding=&#39;UTF-8&#39;?&gt;</span>
+<span class="nt">&lt;project&gt;</span>
+  <span class="nt">&lt;actions/&gt;</span>
+  <span class="nt">&lt;description&gt;&lt;/description&gt;</span>
+  <span class="nt">&lt;keepDependencies&gt;</span>false<span class="nt">&lt;/keepDependencies&gt;</span>
+  <span class="nt">&lt;properties/&gt;</span>
+  <span class="nt">&lt;scm</span> <span class="na">class=</span><span class="s">&#34;hudson.plugins.git.GitSCM&#34;</span> <span class="na">plugin=</span><span class="s">&#34;git@2.4.0&#34;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;configVersion&gt;</span>2<span class="nt">&lt;/configVersion&gt;</span>
+    <span class="nt">&lt;userRemoteConfigs&gt;</span>
+      <span class="nt">&lt;hudson.plugins.git.UserRemoteConfig&gt;</span>
+        <span class="nt">&lt;url&gt;</span>https://github.com/Skarlso/DataMung.git<span class="nt">&lt;/url&gt;</span>
+      <span class="nt">&lt;/hudson.plugins.git.UserRemoteConfig&gt;</span>
+    <span class="nt">&lt;/userRemoteConfigs&gt;</span>
+    <span class="nt">&lt;branches&gt;</span>
+      <span class="nt">&lt;hudson.plugins.git.BranchSpec&gt;</span>
+        <span class="nt">&lt;name&gt;</span>*/master<span class="nt">&lt;/name&gt;</span>
+      <span class="nt">&lt;/hudson.plugins.git.BranchSpec&gt;</span>
+    <span class="nt">&lt;/branches&gt;</span>
+    <span class="nt">&lt;doGenerateSubmoduleConfigurations&gt;</span>false<span class="nt">&lt;/doGenerateSubmoduleConfigurations&gt;</span>
+    <span class="nt">&lt;submoduleCfg</span> <span class="na">class=</span><span class="s">&#34;list&#34;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;extensions/&gt;</span>
+  <span class="nt">&lt;/scm&gt;</span>
+  <span class="nt">&lt;canRoam&gt;</span>true<span class="nt">&lt;/canRoam&gt;</span>
+  <span class="nt">&lt;disabled&gt;</span>false<span class="nt">&lt;/disabled&gt;</span>
+  <span class="nt">&lt;blockBuildWhenDownstreamBuilding&gt;</span>false<span class="nt">&lt;/blockBuildWhenDownstreamBuilding&gt;</span>
+  <span class="nt">&lt;blockBuildWhenUpstreamBuilding&gt;</span>false<span class="nt">&lt;/blockBuildWhenUpstreamBuilding&gt;</span>
+  <span class="nt">&lt;triggers/&gt;</span>
+  <span class="nt">&lt;concurrentBuild&gt;</span>false<span class="nt">&lt;/concurrentBuild&gt;</span>
+  <span class="nt">&lt;builders&gt;</span>
+    <span class="nt">&lt;hudson.plugins.gradle.Gradle</span> <span class="na">plugin=</span><span class="s">&#34;gradle@1.24&#34;</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;description&gt;&lt;/description&gt;</span>
+      <span class="nt">&lt;switches&gt;&lt;/switches&gt;</span>
+      <span class="nt">&lt;tasks&gt;</span>assemble check<span class="nt">&lt;/tasks&gt;</span>
+      <span class="nt">&lt;rootBuildScriptDir&gt;&lt;/rootBuildScriptDir&gt;</span>
+      <span class="nt">&lt;buildFile&gt;</span>build.gradle<span class="nt">&lt;/buildFile&gt;</span>
+      <span class="nt">&lt;gradleName&gt;</span>(Default)<span class="nt">&lt;/gradleName&gt;</span>
+      <span class="nt">&lt;useWrapper&gt;</span>true<span class="nt">&lt;/useWrapper&gt;</span>
+      <span class="nt">&lt;makeExecutable&gt;</span>false<span class="nt">&lt;/makeExecutable&gt;</span>
+      <span class="nt">&lt;fromRootBuildScriptDir&gt;</span>true<span class="nt">&lt;/fromRootBuildScriptDir&gt;</span>
+      <span class="nt">&lt;useWorkspaceAsHome&gt;</span>false<span class="nt">&lt;/useWorkspaceAsHome&gt;</span>
+    <span class="nt">&lt;/hudson.plugins.gradle.Gradle&gt;</span>
+    <span class="nt">&lt;hudson.plugins.copyartifact.CopyArtifact</span> <span class="na">plugin=</span><span class="s">&#34;copyartifact@1.36&#34;</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;project&gt;</span>ParentJob<span class="nt">&lt;/project&gt;</span>
+      <span class="nt">&lt;filter&gt;</span>timestamp.data<span class="nt">&lt;/filter&gt;</span>
+      <span class="nt">&lt;target&gt;&lt;/target&gt;</span>
+      <span class="nt">&lt;excludes&gt;&lt;/excludes&gt;</span>
+      <span class="nt">&lt;selector</span> <span class="na">class=</span><span class="s">&#34;hudson.plugins.copyartifact.TriggeredBuildSelector&#34;</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;upstreamFilterStrategy&gt;</span>UseGlobalSetting<span class="nt">&lt;/upstreamFilterStrategy&gt;</span>
+      <span class="nt">&lt;/selector&gt;</span>
+      <span class="nt">&lt;doNotFingerprintArtifacts&gt;</span>false<span class="nt">&lt;/doNotFingerprintArtifacts&gt;</span>
+    <span class="nt">&lt;/hudson.plugins.copyartifact.CopyArtifact&gt;</span>
+  <span class="nt">&lt;/builders&gt;</span>
+  <span class="nt">&lt;publishers&gt;</span>
+    <span class="nt">&lt;hudson.tasks.junit.JUnitResultArchiver</span> <span class="na">plugin=</span><span class="s">&#34;junit@1.9&#34;</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;testResults&gt;</span>build/test-results/*.xml<span class="nt">&lt;/testResults&gt;</span>
+      <span class="nt">&lt;keepLongStdio&gt;</span>false<span class="nt">&lt;/keepLongStdio&gt;</span>
+      <span class="nt">&lt;healthScaleFactor&gt;</span>1.0<span class="nt">&lt;/healthScaleFactor&gt;</span>
+    <span class="nt">&lt;/hudson.tasks.junit.JUnitResultArchiver&gt;</span>
+  <span class="nt">&lt;/publishers&gt;</span>
+  <span class="nt">&lt;buildWrappers&gt;</span>
+    <span class="nt">&lt;hudson.plugins.ws__cleanup.PreBuildCleanup</span> <span class="na">plugin=</span><span class="s">&#34;ws-cleanup@0.28&#34;</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;deleteDirs&gt;</span>false<span class="nt">&lt;/deleteDirs&gt;</span>
+      <span class="nt">&lt;cleanupParameter&gt;&lt;/cleanupParameter&gt;</span>
+      <span class="nt">&lt;externalDelete&gt;&lt;/externalDelete&gt;</span>
+    <span class="nt">&lt;/hudson.plugins.ws__cleanup.PreBuildCleanup&gt;</span>
+  <span class="nt">&lt;/buildWrappers&gt;</span>
+<span class="nt">&lt;/project&gt;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Again, the improtant bit is this:</p>
+<p>After the copy is setup, we launch our parent job and if everything is correct, you should see something like this:</p>
+<h1 id="wrapping-it-up">Wrapping it Up</h1>
+<p>For final words, important bit to take away from this is that you need an <strong>artifact connection between the jobs</strong> to make this work. Whatever your downstream / upstream connection is, it doesn&rsquo;t matter. Also, there can be a problem that you have everything set up, and there are artifacts which bind the jobs together but you still can&rsquo;t see the results, then your best option is to specify the jobs BY NAME in the aggregate test plug-in like this:</p>
+<p>I know this is a pain if there are multiple jobs, but at least, jenkins is providing you with Autoexpande once you start typing.</p>
+<p>Of course this also works with multiple downstream jobs if they copy the artifact to themselves.</p>
+<p>Any questions, please feel free to comment and I will answer to the best of my knowledge.</p>
+<p>Cheers,
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -37,6 +512,656 @@ So I&amp;rsquo;m writing this down to document my findings. Like the title says,
       
       <guid>https://skarlso.github.io/2015/07/16/selenium-testing-with-packer-and-vagrant/</guid>
       <description>&lt;p&gt;So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution.&lt;/p&gt;</description>
+      <content type="html"><![CDATA[<p>So, recently, the tester team talked to me, that their build takes too long, and why is that? A quick look at their configuration and build scripts showed me, that they are actually using a vagrant box, which never gets destroyed or re-started at least. To remedy this problem, I came up with the following solution.</p>
+<h1 id="same-old">Same old.</h1>
+<p>Same as in my previous post, we are going to build a Windows Machine for this purpose. The only addition to my previous settings, will be some Java install, downloading selenium and installing Chrome, and Firefox.</p>
+<h1 id="installation">Installation</h1>
+<h4 id="answer-file">Answer File</h4>
+<p>Here is the configuration and setup of Windows before the provision phase.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-xml" data-lang="xml">
+...
+               <span class="nt">&lt;SynchronousCommand</span> <span class="na">wcm:action=</span><span class="s">&#34;add&#34;</span><span class="nt">&gt;</span>
+                  <span class="nt">&lt;CommandLine&gt;</span>cmd.exe /c C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\jdk_inst.ps1 -AutoStart<span class="nt">&lt;/CommandLine&gt;</span>
+                  <span class="nt">&lt;Description&gt;</span>Install Java<span class="nt">&lt;/Description&gt;</span>
+                  <span class="nt">&lt;Order&gt;</span>103<span class="nt">&lt;/Order&gt;</span>
+                  <span class="nt">&lt;RequiresUserInput&gt;</span>true<span class="nt">&lt;/RequiresUserInput&gt;</span>
+               <span class="nt">&lt;/SynchronousCommand&gt;</span>
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>This is the part were I&rsquo;m installing Java. The script for the jdk_inst.ps1 is in my previous post, but I&rsquo;ll paste it here for ease of read.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-powershell" data-lang="powershell">
+<span class="k">function</span> <span class="n">LogWrite</span> <span class="p">{</span>
+   <span class="k">Param</span> <span class="p">(</span><span class="no">[string]</span><span class="nv">$logstring</span><span class="p">)</span>
+   <span class="nv">$now</span> <span class="p">=</span> <span class="nb">Get-Date</span> <span class="n">-format</span> <span class="n">s</span>
+   <span class="nb">Add-Content</span> <span class="nv">$Logfile</span> <span class="n">-value</span> <span class="s2">&#34;$now $logstring&#34;</span>
+   <span class="nb">Write-Host</span> <span class="nv">$logstring</span>
+<span class="p">}</span>
+
+<span class="nv">$Logfile</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\jdk-install.log&#34;</span>
+
+<span class="nv">$JDK_VER</span><span class="p">=</span><span class="s2">&#34;7u75&#34;</span>
+<span class="nv">$JDK_FULL_VER</span><span class="p">=</span><span class="s2">&#34;7u75-b13&#34;</span>
+<span class="nv">$JDK_PATH</span><span class="p">=</span><span class="s2">&#34;1.7.0_75&#34;</span>
+<span class="nv">$source86</span> <span class="p">=</span> <span class="s2">&#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-i586.exe&#34;</span>
+<span class="nv">$source64</span> <span class="p">=</span> <span class="s2">&#34;http://download.oracle.com/otn-pub/java/jdk/$JDK_FULL_VER/jdk-$JDK_VER-windows-x64.exe&#34;</span>
+<span class="nv">$destination86</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\$JDK_VER-x86.exe&#34;</span>
+<span class="nv">$destination64</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\$JDK_VER-x64.exe&#34;</span>
+<span class="nv">$client</span> <span class="p">=</span> <span class="nb">new-object</span> <span class="n">System</span><span class="p">.</span><span class="n">Net</span><span class="p">.</span><span class="n">WebClient</span>
+<span class="nv">$cookie</span> <span class="p">=</span> <span class="s2">&#34;oraclelicense=accept-securebackup-cookie&#34;</span>
+<span class="nv">$client</span><span class="p">.</span><span class="n">Headers</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="no">[System.Net.HttpRequestHeader]</span><span class="p">::</span><span class="n">Cookie</span><span class="p">,</span> <span class="nv">$cookie</span><span class="p">)</span>
+
+<span class="n">LogWrite</span> <span class="s2">&#34;Setting Execution Policy level to Bypass&#34;</span>
+<span class="nb">Set-ExecutionPolicy</span> <span class="n">-Scope</span> <span class="n">CurrentUser</span> <span class="n">-ExecutionPolicy</span> <span class="n">Bypass</span> <span class="n">-Force</span>
+
+<span class="n">LogWrite</span> <span class="s1">&#39;Checking if Java is already installed&#39;</span>
+<span class="k">if</span> <span class="p">((</span><span class="nb">Test-Path</span> <span class="s2">&#34;c:\Program Files (x86)\Java&#34;</span><span class="p">)</span> <span class="o">-Or</span> <span class="p">(</span><span class="nb">Test-Path</span> <span class="s2">&#34;c:\Program Files\Java&#34;</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;No need to Install Java&#39;</span>
+    <span class="n">Exit</span>
+<span class="p">}</span>
+
+<span class="n">LogWrite</span> <span class="s1">&#39;Downloading x86 to $destination86&#39;</span>
+<span class="k">try</span> <span class="p">{</span>
+  <span class="nv">$client</span><span class="p">.</span><span class="n">downloadFile</span><span class="p">(</span><span class="nv">$source86</span><span class="p">,</span> <span class="nv">$destination86</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(!(</span><span class="nb">Test-Path</span> <span class="nv">$destination86</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">LogWrite</span> <span class="s2">&#34;Downloading $destination86 failed&#34;</span>
+      <span class="n">Exit</span>
+  <span class="p">}</span>
+  <span class="n">LogWrite</span> <span class="s1">&#39;Downloading x64 to $destination64&#39;</span>
+
+  <span class="nv">$client</span><span class="p">.</span><span class="n">downloadFile</span><span class="p">(</span><span class="nv">$source64</span><span class="p">,</span> <span class="nv">$destination64</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(!(</span><span class="nb">Test-Path</span> <span class="nv">$destination64</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">LogWrite</span> <span class="s2">&#34;Downloading $destination64 failed&#34;</span>
+      <span class="n">Exit</span>
+  <span class="p">}</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[Exception]</span> <span class="p">{</span>
+  <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+<span class="p">}</span>
+
+<span class="k">try</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Installing JDK-x64&#39;</span>
+    <span class="nv">$proc1</span> <span class="p">=</span> <span class="nb">Start-Process</span> <span class="n">-FilePath</span> <span class="s2">&#34;$destination64&#34;</span> <span class="n">-ArgumentList</span> <span class="s2">&#34;/s REBOOT=ReallySuppress&#34;</span> <span class="n">-Wait</span> <span class="n">-PassThru</span>
+    <span class="nv">$proc1</span><span class="p">.</span><span class="n">waitForExit</span><span class="p">()</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Installation Done.&#39;</span>
+
+    <span class="n">LogWrite</span> <span class="s1">&#39;Installing JDK-x86&#39;</span>
+    <span class="nv">$proc2</span> <span class="p">=</span> <span class="nb">Start-Process</span> <span class="n">-FilePath</span> <span class="s2">&#34;$destination86&#34;</span> <span class="n">-ArgumentList</span> <span class="s2">&#34;/s REBOOT=ReallySuppress&#34;</span> <span class="n">-Wait</span> <span class="n">-PassThru</span>
+    <span class="nv">$proc2</span><span class="p">.</span><span class="n">waitForExit</span><span class="p">()</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Installtion Done.&#39;</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[exception]</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_ is&#39;</span> <span class="nv">$_</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.GetType().FullName is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">GetType</span><span class="p">().</span><span class="n">FullName</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception.GetType().FullName is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span><span class="p">.</span><span class="n">GetType</span><span class="p">().</span><span class="n">FullName</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception.Message is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span><span class="p">.</span><span class="n">Message</span>
+<span class="p">}</span>
+
+<span class="k">if</span> <span class="p">((</span><span class="nb">Test-Path</span> <span class="s2">&#34;c:\Program Files (x86)\Java&#34;</span><span class="p">)</span> <span class="o">-Or</span> <span class="p">(</span><span class="nb">Test-Path</span> <span class="s2">&#34;c:\Program Files\Java&#34;</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Java installed successfully.&#39;</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Java install Failed!&#39;</span>
+<span class="p">}</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Setting up Path variables.&#39;</span>
+<span class="no">[System.Environment]</span><span class="p">::</span><span class="n">SetEnvironmentVariable</span><span class="p">(</span><span class="s2">&#34;JAVA_HOME&#34;</span><span class="p">,</span> <span class="s2">&#34;c:\Program Files (x86)\Java\jdk$JDK_PATH&#34;</span><span class="p">,</span> <span class="s2">&#34;Machine&#34;</span><span class="p">)</span>
+<span class="no">[System.Environment]</span><span class="p">::</span><span class="n">SetEnvironmentVariable</span><span class="p">(</span><span class="s2">&#34;PATH&#34;</span><span class="p">,</span> <span class="nv">$Env:Path</span> <span class="p">+</span> <span class="s2">&#34;;c:\Program Files (x86)\Java\jdk$JDK_PATH\bin&#34;</span><span class="p">,</span> <span class="s2">&#34;Machine&#34;</span><span class="p">)</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Done. Goodbye.&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This installs both x86 and 64 bit version of Java.</p>
+<h1 id="provision">Provision</h1>
+<p>I decided to put these into the provision phase to get log messages written out properly. Because in the unattended file, you can&rsquo;t see any progress.</p>
+<h4 id="chrome-and-firefox">Chrome And Firefox</h4>
+<p>Installing these two proved a little bit more difficult. Chrome didn&rsquo;t really like me to download their installer without accepting something first, like Java. Luckily, after a LOT of digging, I found a chrome installer which lets you install silently. Here is the script to install the two.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-powershell" data-lang="powershell">
+<span class="k">function</span> <span class="n">LogWrite</span> <span class="p">{</span>
+    <span class="k">Param</span> <span class="p">(</span><span class="no">[string]</span><span class="nv">$logstring</span><span class="p">)</span>
+    <span class="nv">$now</span> <span class="p">=</span> <span class="nb">Get-Date</span> <span class="n">-format</span> <span class="n">s</span>
+    <span class="nb">Add-Content</span> <span class="nv">$Logfile</span> <span class="n">-value</span> <span class="s2">&#34;$now $logstring&#34;</span>
+    <span class="nb">Write-Host</span> <span class="nv">$logstring</span>
+<span class="p">}</span>
+
+<span class="k">function</span> <span class="n">CheckLocation</span> <span class="p">{</span>
+    <span class="k">Param</span> <span class="p">(</span><span class="no">[string]</span><span class="nv">$location</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(!(</span><span class="nb">Test-Path</span>  <span class="nv">$location</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">throw</span> <span class="no">[System.IO.FileNotFoundException]</span> <span class="s2">&#34;Could not download to Destination $location.&#34;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nv">$Logfile</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\chrome-firefox-install.log&#34;</span>
+
+<span class="nv">$chrome_source</span> <span class="p">=</span> <span class="s2">&#34;http://dl.google.com/chrome/install/375.126/chrome_installer.exe&#34;</span>
+<span class="nv">$chrome_destination</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\chrome_installer.exe&#34;</span>
+<span class="nv">$firefox_source</span> <span class="p">=</span> <span class="s2">&#34;https://download-installer.cdn.mozilla.net/pub/firefox/releases/39.0/win32/hu/Firefox%20Setup%2039.0.exe&#34;</span>
+<span class="nv">$firefox_destination</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\firefoxinstaller.exe&#34;</span>
+
+<span class="n">LogWrite</span> <span class="s1">&#39;Starting to download files.&#39;</span>
+<span class="k">try</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Downloading Chrome...&#39;</span>
+    <span class="p">(</span><span class="nb">New-Object</span> <span class="n">System</span><span class="p">.</span><span class="n">Net</span><span class="p">.</span><span class="n">WebClient</span><span class="p">).</span><span class="n">DownloadFile</span><span class="p">(</span><span class="nv">$chrome_source</span><span class="p">,</span> <span class="nv">$chrome_destination</span><span class="p">)</span>
+    <span class="n">CheckLocation</span> <span class="nv">$chrome_destination</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Done...&#39;</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Downloading Firefox...&#39;</span>
+    <span class="p">(</span><span class="nb">New-Object</span> <span class="n">System</span><span class="p">.</span><span class="n">Net</span><span class="p">.</span><span class="n">WebClient</span><span class="p">).</span><span class="n">DownloadFile</span><span class="p">(</span><span class="nv">$firefox_source</span><span class="p">,</span> <span class="nv">$firefox_destination</span><span class="p">)</span>
+    <span class="n">CheckLocation</span> <span class="nv">$firefox_destination</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[Exception]</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s2">&#34;Exception during download. Probable cause could be that the directory or the file didn&#39;t exist.&#34;</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+<span class="p">}</span>
+
+<span class="n">LogWrite</span> <span class="s1">&#39;Starting firefox install process.&#39;</span>
+<span class="k">try</span> <span class="p">{</span>
+    <span class="nb">Start-Process</span> <span class="n">-FilePath</span> <span class="nv">$firefox_destination</span> <span class="n">-ArgumentList</span> <span class="s2">&#34;-ms&#34;</span> <span class="n">-Wait</span> <span class="n">-PassThru</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[Exception]</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Exception during install process.&#39;</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+<span class="p">}</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Starting chrome install process.&#39;</span>
+
+<span class="k">try</span> <span class="p">{</span>
+    <span class="nb">Start-Process</span> <span class="n">-FilePath</span> <span class="nv">$chrome_destination</span> <span class="n">-ArgumentList</span> <span class="s2">&#34;/silent /install&#34;</span> <span class="n">-Wait</span> <span class="n">-PassThru</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[Exception]</span> <span class="p">{</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;Exception during install process.&#39;</span>
+    <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+<span class="p">}</span>
+
+<span class="n">LogWrite</span> <span class="s1">&#39;All done. Goodbye.&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>They both install silently. Pretty neat.</p>
+<h4 id="selenium">Selenium</h4>
+<p>This only has to be downloaded, so this is pretty simple. Vagrant will handle the startup of course when it does a vagrant up.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-powershell" data-lang="powershell">
+<span class="k">function</span> <span class="n">LogWrite</span> <span class="p">{</span>
+   <span class="k">Param</span> <span class="p">(</span><span class="no">[string]</span><span class="nv">$logstring</span><span class="p">)</span>
+   <span class="nv">$now</span> <span class="p">=</span> <span class="nb">Get-Date</span> <span class="n">-format</span> <span class="n">s</span>
+   <span class="nb">Add-Content</span> <span class="nv">$Logfile</span> <span class="n">-value</span> <span class="s2">&#34;$now $logstring&#34;</span>
+   <span class="nb">Write-Host</span> <span class="nv">$logstring</span>
+<span class="p">}</span>
+
+<span class="nv">$Logfile</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\selenium-install.log&#34;</span>
+
+<span class="nv">$source</span> <span class="p">=</span> <span class="s2">&#34;http://selenium-release.storage.googleapis.com/2.46/selenium-server-standalone-2.46.0.jar&#34;</span>
+<span class="nv">$destination</span> <span class="p">=</span> <span class="s2">&#34;C:\Windows\Temp\selenium-server.jar&#34;</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Starting to download selenium file.&#39;</span>
+<span class="k">try</span> <span class="p">{</span>
+  <span class="p">(</span><span class="nb">New-Object</span> <span class="n">System</span><span class="p">.</span><span class="n">Net</span><span class="p">.</span><span class="n">WebClient</span><span class="p">).</span><span class="n">DownloadFile</span><span class="p">(</span><span class="nv">$source</span><span class="p">,</span> <span class="nv">$destination</span><span class="p">)</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="no">[Exception]</span> <span class="p">{</span>
+  <span class="n">LogWrite</span> <span class="s2">&#34;Exception during download. Probable cause could be that the directory or the file didn&#39;t exist.&#34;</span>
+  <span class="n">LogWrite</span> <span class="s1">&#39;$_.Exception is&#39;</span> <span class="nv">$_</span><span class="p">.</span><span class="n">Exception</span>
+<span class="p">}</span>
+<span class="n">LogWrite</span> <span class="s1">&#39;Download done. Checking if file exists.&#39;</span>
+<span class="k">if</span> <span class="p">(!(</span><span class="nb">Test-Path</span> <span class="nv">$destination</span><span class="p">))</span> <span class="p">{</span>
+  <span class="n">LogWrite</span> <span class="s1">&#39;Downloading dotnet Failed!&#39;</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="n">LogWrite</span> <span class="s1">&#39;Download successful.&#39;</span>
+<span class="p">}</span>
+
+<span class="n">LogWrite</span> <span class="s1">&#39;All done. Goodbye.&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Straightforward.</p>
+<h4 id="the-packer-json-file">The Packer Json File</h4>
+<p>So putting this all together, here is the Packer JSON file for this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-json" data-lang="json">
+<span class="p">{</span>
+      <span class="nt">&#34;variables&#34;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;vm_name&#34;</span><span class="p">:</span> <span class="s2">&#34;win7x64selenium&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;output_dir&#34;</span><span class="p">:</span> <span class="s2">&#34;output_win7_x64_selenium&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;vagrant_box_output&#34;</span><span class="p">:</span> <span class="s2">&#34;box_output&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;cpu_number&#34;</span><span class="p">:</span> <span class="s2">&#34;2&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;memory_size&#34;</span><span class="p">:</span> <span class="s2">&#34;4096&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;machine_type&#34;</span><span class="p">:</span> <span class="s2">&#34;pc-1.2&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;accelerator&#34;</span><span class="p">:</span> <span class="s2">&#34;kvm&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;disk_format&#34;</span><span class="p">:</span> <span class="s2">&#34;qcow2&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;disk_interface&#34;</span><span class="p">:</span> <span class="s2">&#34;virtio&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;net_device&#34;</span><span class="p">:</span> <span class="s2">&#34;virtio-net&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;cpu_model&#34;</span><span class="p">:</span> <span class="s2">&#34;host&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;disk_cache&#34;</span><span class="p">:</span> <span class="s2">&#34;writeback&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;disk_io&#34;</span><span class="p">:</span> <span class="s2">&#34;native&#34;</span>
+   <span class="p">},</span>
+
+  <span class="nt">&#34;builders&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;virtualbox-iso&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;iso_url&#34;</span><span class="p">:</span> <span class="s2">&#34;/home/user/vms/windows7.iso&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;iso_checksum_type&#34;</span><span class="p">:</span> <span class="s2">&#34;sha1&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;iso_checksum&#34;</span><span class="p">:</span> <span class="s2">&#34;0BCFC54019EA175B1EE51F6D2B207A3D14DD2B58&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;headless&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="nt">&#34;boot_wait&#34;</span><span class="p">:</span> <span class="s2">&#34;2m&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;ssh_username&#34;</span><span class="p">:</span> <span class="s2">&#34;vagrant&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;ssh_password&#34;</span><span class="p">:</span> <span class="s2">&#34;vagrant&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;ssh_wait_timeout&#34;</span><span class="p">:</span> <span class="s2">&#34;8h&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;shutdown_command&#34;</span><span class="p">:</span> <span class="s2">&#34;shutdown /s /t 10 /f /d p:4:1 /c \&#34;Packer Shutdown\&#34;&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;guest_os_type&#34;</span><span class="p">:</span> <span class="s2">&#34;Windows7_64&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;disk_size&#34;</span><span class="p">:</span> <span class="mi">61440</span><span class="p">,</span>
+      <span class="nt">&#34;floppy_files&#34;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&#34;./answer_files/7-selenium/Autounattend.xml&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/dis-updates.ps1&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/microsoft-updates.bat&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/openssh.ps1&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/jdk_inst.ps1&#34;</span>
+      <span class="p">],</span>
+      <span class="nt">&#34;vboxmanage&#34;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">[</span>
+          <span class="s2">&#34;modifyvm&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;{{.Name}}&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;--memory&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;{{user `memory_size`}}&#34;</span>
+        <span class="p">],</span>
+        <span class="p">[</span>
+          <span class="s2">&#34;modifyvm&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;{{.Name}}&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;--cpus&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;{{user `cpu_number`}}&#34;</span>
+        <span class="p">]</span>
+      <span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="nt">&#34;provisioners&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;powershell&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;scripts&#34;</span> <span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&#34;./scripts/install-selenium-server.ps1&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/install-chrome-firefox.ps1&#34;</span>
+      <span class="p">]</span>
+    <span class="p">},{</span>
+      <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;remote_path&#34;</span><span class="p">:</span> <span class="s2">&#34;/tmp/script.bat&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;execute_command&#34;</span><span class="p">:</span> <span class="s2">&#34;{{.Vars}} cmd /c C:/Windows/Temp/script.bat&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;scripts&#34;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&#34;./scripts/vm-guest-tools.bat&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/vagrant-ssh.bat&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/rsync.bat&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;./scripts/enable-rdp.bat&#34;</span>
+      <span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+    <span class="nt">&#34;post-processors&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;vagrant&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;keep_input_artifact&#34;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+      <span class="nt">&#34;output&#34;</span><span class="p">:</span> <span class="s2">&#34;{{user `vm_name`}}_{{.Provider}}.box&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;vagrantfile_template&#34;</span><span class="p">:</span> <span class="s2">&#34;vagrantfile-template&#34;</span>
+    <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="additional-software">Additional Software</h4>
+<p>This is not done here. Obviously, in order to test your stuff, you first need to install your software on this box. Ideally, everything you need should be in the code you clone to this box, and should be contained mostly. And your application deployment should take core of that. But, if you require something like a DB, postgres, oracle, whatnot, than this is the place where you would install all that.</p>
+<h1 id="vagrant-and-using-the-packer-box">Vagrant and Using the Packer Box</h1>
+<p>Now, this has been interesting so far, but how do you actually go about using this image? That&rsquo;s the real question now, isn&rsquo;t it? Having a box, just sitting on a shared folder, doesn&rsquo;t do you too much good. So let&rsquo;s create a Jenkins job, which utilizes this box in a job which runs a bunch of tests for some application.</p>
+<h4 id="vagrantfile">Vagrantfile</h4>
+<p>Your vagrant file, could either be generated automatically, under source control ( which is preferred ) or sitting somewhere entirely elsewhere. In any case, it would look something like this.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-ruby" data-lang="ruby">
+<span class="c1"># -*- mode: ruby -*-</span>
+<span class="c1"># vi: set ft=ruby :</span>
+
+<span class="no">VAGRANTFILE_API_VERSION</span> <span class="o">=</span> <span class="s2">&#34;2&#34;</span>
+
+<span class="no">Vagrant</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="no">VAGRANTFILE_API_VERSION</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
+
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provider</span> <span class="s2">&#34;virtualbox&#34;</span>
+
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">define</span> <span class="s2">&#34;selenium-box&#34;</span> <span class="k">do</span> <span class="o">|</span><span class="n">vs2013</span><span class="o">|</span>
+    <span class="n">vs2013</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box</span> <span class="o">=</span> <span class="s2">&#34;windows7-x64-04-selenium&#34;</span>
+    <span class="n">vs2013</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box_url</span> <span class="o">=</span> <span class="s2">&#34;path/to/your/share/win7x64_selenium_virtualbox.box&#34;</span>
+  <span class="k">end</span>
+
+  <span class="n">config</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">enable</span>
+
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">guest</span> <span class="o">=</span> <span class="ss">:windows</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">communicator</span> <span class="o">=</span> <span class="s2">&#34;winrm&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">winrm</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="s2">&#34;vagrant&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">winrm</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="s2">&#34;vagrant&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">set_work_network</span> <span class="o">=</span> <span class="kp">true</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:forwarded_port</span><span class="p">,</span> <span class="ss">guest</span><span class="p">:</span> <span class="mi">3389</span><span class="p">,</span> <span class="ss">host</span><span class="p">:</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;RDESKTOP_PORT&#39;</span><span class="o">]</span><span class="p">,</span> <span class="ss">host_ip</span><span class="p">:</span> <span class="s2">&#34;0.0.0.0&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:forwarded_port</span><span class="p">,</span> <span class="ss">guest</span><span class="p">:</span> <span class="mi">5985</span><span class="p">,</span> <span class="ss">host</span><span class="p">:</span> <span class="mi">5985</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="s2">&#34;winrm&#34;</span><span class="p">,</span> <span class="ss">auto_correct</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">host_ip</span><span class="p">:</span> <span class="s2">&#34;0.0.0.0&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:forwarded_port</span><span class="p">,</span> <span class="ss">guest</span><span class="p">:</span> <span class="mi">9991</span><span class="p">,</span> <span class="ss">host</span><span class="p">:</span> <span class="mi">9991</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="s2">&#34;selenium&#34;</span><span class="p">,</span> <span class="ss">auto_correct</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">host_ip</span><span class="p">:</span> <span class="s2">&#34;0.0.0.0&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provider</span> <span class="ss">:virtualbox</span> <span class="k">do</span> <span class="o">|</span><span class="n">vbox</span><span class="o">|</span>
+    <span class="n">vbox</span><span class="o">.</span><span class="n">gui</span> <span class="o">=</span> <span class="kp">false</span>
+    <span class="n">vbox</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="mi">4096</span>
+    <span class="n">vbox</span><span class="o">.</span><span class="n">cpus</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="k">end</span>
+
+
+  <span class="n">config</span><span class="o">.</span><span class="n">winrm</span><span class="o">.</span><span class="n">max_tries</span> <span class="o">=</span> <span class="mi">10</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">synced_folder</span> <span class="s2">&#34;.&#34;</span><span class="p">,</span> <span class="s2">&#34;/vagrant&#34;</span><span class="p">,</span> <span class="ss">type</span><span class="p">:</span> <span class="s2">&#34;rsync&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span> <span class="ss">path</span><span class="p">:</span> <span class="s2">&#34;init.bat&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span> <span class="ss">path</span><span class="p">:</span> <span class="s2">&#34;utils_inst.bat&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span> <span class="ss">path</span><span class="p">:</span> <span class="s2">&#34;jenkins_reg.ps1&#34;</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s2">&#34;shell&#34;</span><span class="p">,</span> <span class="ss">path</span><span class="p">:</span> <span class="s2">&#34;start_selenium.bat&#34;</span>
+<span class="k">end</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Easy, no? Here is the script to start selenium.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">java -jar c:\Windows\Temp\selenium-server.jar -Dhttp.proxyPort=9991
+</code></pre></td></tr></table>
+</div>
+</div><p>Straight forward. We also are forwarding the port on which Selenium is running in order for the test to see it.</p>
+<h4 id="the-jenkins-job">The Jenkins Job</h4>
+<p>The job can be anything. This is actually too large to cover here. It could be a gradle job, a maven job, an ant, a nant - or whatever is running the test -, job; it&rsquo;s up to you.</p>
+<p>Just make sure that before the test runs, do a <strong>vagrant up</strong> and after the test finishes, in an ALWAYS TO BE EXECUTED HOOK -like gradle&rsquo;s finalizedBy , call a <strong>vagrant destroy</strong>. This way, your test will always run on a clean instance that has the necessary stuff on it.</p>
+<h1 id="closing-words">Closing words</h1>
+<p>So, there you have it. It&rsquo;s relatively simple. Tying this all into your infrastructure might prove difficult though depending on how rigid your deployment is. But it will always help you make your tests a bit more robust.</p>
+<p>Also, you could run the whole deployment and test phase on a vagrant box, from the start, which is tied to jenkins as a slave and gets started when the job starts and destroyed when the job ends. That way you wouldn&rsquo;t have to create a, box in a box running on a box, kind of effect.</p>
+<p>Thanks for reading,</p>
+<p>Gergely.</p>]]></content>
     </item>
     
     <item>
@@ -48,6 +1173,138 @@ So I&amp;rsquo;m writing this down to document my findings. Like the title says,
       <description>Hello everybody.
 I would like to share with you a small script I wrote to update all, or a single, Jenkins job from a Python script remotely.
 This will enable you to update a Jenkins job from anywhere using an admin credential based on a config.xml template that you have. With this, if you want to apply a config change to all or just a single job in Jenkins, you don&amp;rsquo;t have to go and do it for all the rest.</description>
+      <content type="html"><![CDATA[<p>Hello everybody.</p>
+<p>I would like to share with you a small script I wrote to update all, or a single, Jenkins job from a Python script remotely.</p>
+<p>This will enable you to update a Jenkins job from anywhere using an admin credential based on a config.xml template that you have. With this, if you want to apply a config change to all or just a single job in Jenkins, you don&rsquo;t have to go and do it for all the rest. You just call this script and it will cycle through all the jobs you have and update them if the begin with &ldquo;yourpipelinedelimiter&rdquo; or if they aren&rsquo;t in a restricted list of jobs. The delimiter helps to identify pipelines which are dev pipelines. If you have multiple pipelines which are helpers or builders and you don&rsquo;t usually apply the same config to them, than the delimiter can help identify the dev pipelines you actually want to update.</p>
+<p>Enjoy, hope it helps someone.</p>
+<p>And now, without any further ado:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="s1">&#39;&#39;&#39;
+</span><span class="s1">	Created to update multiple pipelines in jenkins with a given configuration and job list.
+</span><span class="s1">	Usage:
+</span><span class="s1">	Example 1:
+</span><span class="s1">	Updating a single pipeline&#39;s job with a given config.xml.
+</span><span class="s1">	python update-jenkins-jobs.py job-name config.xml pipeline-name
+</span><span class="s1">	Example 2:
+</span><span class="s1">	Updating every pipeline in jenkins dynamically. !!!WARNING!!! This updates every job EXCEPT of the ones specified in restricted_jobs.
+</span><span class="s1">	python update-jenkins-jobs.py job-name config.xml
+</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="kn">from</span> <span class="nn">xml.dom</span> <span class="kn">import</span> <span class="n">minidom</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="k">def</span> <span class="nf">update_pipeline</span><span class="p">(</span><span class="n">pipeline</span><span class="p">):</span>
+	<span class="s1">&#39;&#39;&#39;
+</span><span class="s1">	Takes in a list of pipelines to update.
+</span><span class="s1">	&#39;&#39;&#39;</span>
+	<span class="n">config_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_to_use</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
+	<span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;content-type&#39;</span><span class="p">:</span> <span class="s1">&#39;application/xml&#39;</span><span class="p">}</span>
+	<span class="k">print</span><span class="p">(</span><span class="s2">&#34;Updating pipelines: &#34;</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">)</span>
+
+	<span class="k">for</span> <span class="n">dev_job</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="p">:</span>
+		<span class="n">url</span> <span class="o">=</span> <span class="s2">&#34;http://jenkins:9999/job/</span><span class="si">%s</span><span class="s2">/job/</span><span class="si">%s</span><span class="s2">/config.xml&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dev_job</span><span class="p">,</span> <span class="n">job_to_update</span><span class="p">)</span>
+		<span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">config_file</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="s1">&#39;password&#39;</span><span class="p">))</span>
+		<span class="k">print</span><span class="p">(</span><span class="s2">&#34;Updating pipeline: </span><span class="si">%s</span><span class="s2">; Response Code: </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dev_job</span><span class="p">,</span> <span class="n">r</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">get_dev_pipelines</span><span class="p">():</span>
+	<span class="s1">&#39;&#39;&#39;
+</span><span class="s1">	Gets a list of pipelines which can be used by update_pipeline.
+</span><span class="s1">	&#39;&#39;&#39;</span>
+	<span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;http://jenkins:9999/api/xml&#39;</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="s1">&#39;password&#39;</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+	<span class="n">job_list_xml</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span>
+
+	<span class="n">xmldoc</span> <span class="o">=</span> <span class="n">minidom</span><span class="o">.</span><span class="n">parseString</span><span class="p">(</span><span class="n">job_list_xml</span><span class="p">)</span>
+	<span class="n">itemlist</span> <span class="o">=</span> <span class="n">xmldoc</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+
+	<span class="n">dev_job_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+	<span class="n">restricted_jobs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&#34;yourpipelinedelimiter-dev-pipeline1&#34;</span><span class="p">,</span> <span class="s2">&#34;yourpipelinedelimiter-dev-pipeline2&#34;</span><span class="p">,</span> <span class="s2">&#34;yourpipelinedelimiter-dev-pipeline3&#34;</span><span class="p">]</span>
+	<span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">itemlist</span><span class="p">:</span>
+	    <span class="k">if</span> <span class="p">(</span><span class="s2">&#34;yourpipelinedelimiter-dev&#34;</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">firstChild</span><span class="o">.</span><span class="n">nodeValue</span><span class="p">)</span> <span class="p">:</span>
+	    	<span class="n">value</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">firstChild</span><span class="o">.</span><span class="n">nodeValue</span>
+	    	<span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">restricted_jobs</span><span class="p">):</span>
+	    		<span class="n">dev_job_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+	<span class="k">return</span> <span class="n">dev_job_list</span>
+
+
+<span class="n">job_to_update</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">config_to_use</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">dev_pipeline</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span><span class="p">;</span> <span class="mi">3</span><span class="p">:</span>
+	<span class="k">print</span><span class="p">(</span><span class="s2">&#34;Args length:&#34;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">))</span>
+	<span class="n">dev_pipeline</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+
+<span class="n">update_pipeline</span><span class="p">(</span><span class="n">get_dev_pipelines</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">dev_pipeline</span> <span class="k">else</span> <span class="n">dev_pipeline</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Thanks for reading.</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
   </channel>

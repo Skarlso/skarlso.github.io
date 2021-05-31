@@ -17,6 +17,165 @@
 Today, I would like to talk a little bit about Cronohub. It&amp;rsquo;s a Python application which you can use to archive anything from anywhere to anywhere. It uses plugins to archive this versatility.
 Let me show you some of its features.
 Main Usage Cronohub is a python application which uses the power and ease of usage of Python to give the user a framework. This Framework can then be used to implement concrete functionality in the form of plugins.</description>
+      <content type="html"><![CDATA[<h1 id="intro">Intro</h1>
+<p>Good afternoon folks.</p>
+<p>Today, I would like to talk a little bit about <a href="https://github.com/cronohub/cronohub">Cronohub</a>. It&rsquo;s a Python application
+which you can use to archive anything from anywhere to anywhere. It uses plugins to archive this versatility.</p>
+<p>Let me show you some of its features.</p>
+<h1 id="main-usage">Main Usage</h1>
+<p>Cronohub is a python application which uses the power and ease of usage of Python to give the user a
+framework. This Framework can then be used to implement concrete functionality in the form of plugins.</p>
+<p>The plugins provide the essential working logic for Cronohub. Cronohub itself, is basically a Hub for these
+plugins.</p>
+<p>What can Cronohub be actually used for? Say, you have a gazillion Github repositories you would like to archive to a
+S3 bucket. Or SCP to another server. Or to ownCloud&hellip; You would use cronohub as such:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">❯ cronohub -s {github,gitlab} -t {s3,owncloud,scp}
+</code></pre></td></tr></table>
+</div>
+</div><p>It is this simple. What&rsquo;s going on here then? <code>-s</code> tells Cronohub to use a source plugin called <code>github</code> where as
+<code>-t</code> tells it to use a target plugin called <code>s3</code> or <code>owncloud</code> or an <code>scp</code> operation.</p>
+<h2 id="under-the-hood">Under the hood</h2>
+<p>What happens then is that the source plugin downloads the repositories for a given user. The plugins themselves can
+require certain configuration options to be provided. Like environment properties. To get the Help of a plugin you
+can simply ask Cronohub like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">❯ cronohub help --source-help github
+Help (github source plugin):
+    - Environment Property:
+        CRONO_GITHUB_TOKEN: a token with access to listing repositories for a given user.
+    - File that filters the list of repositories to archive. If not present, all will be archived.
+        ~/.config/cronohub/configurations/github/.repo_list
+</code></pre></td></tr></table>
+</div>
+</div><p>It will display help information for that plugin.</p>
+<p>Once the source plugin finished downloading the requested repositories to a given location it will pass on a list
+of files to the target plugin for archiving. The target plugin takes this list of files and will add a timestamp
+to the file and upload them with the requested operation.</p>
+<p>The plugins take care of parallelization or threading if this makes it faster. For example the github plugin downloads
+at most 5 archive files concurrently.</p>
+<h1 id="plugins">Plugins</h1>
+<p>What are plugins then? The plugins adhere to an ABC. An Abstract Base Class. This class defines the abilities and
+structure of a plugin. It looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+
+<span class="k">class</span> <span class="nc">CronohubSourcePlugin</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">ABCMeta</span><span class="p">):</span>
+    <span class="s2">&#34;&#34;&#34;
+</span><span class="s2">    This is the basic definition of a CronoHub plugin.
+</span><span class="s2">    &#34;&#34;&#34;</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="o">...</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="o">...</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">&#34;&#34;&#34;
+</span><span class="s2">        Returns a tuple (str, str) where there first parameter is the name of the
+</span><span class="s2">        archive and the second is the location as a full path. Exp:
+</span><span class="s2">        (&#34;my-project-12345&#34;, &#34;/home/user/projects/my-project/my-project.tar.gz&#34;)
+</span><span class="s2">        &#34;&#34;&#34;</span>
+        <span class="o">...</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Validation will be called before the plugin can be used. This method can be used to validate settings
+for a plugin, for example if a token is provided for the github plugin. Or a bucket name is defined for the
+S3 plugin etc.</p>
+<p>Help will display information just like we saw above and fetch will actually perform the downloading or
+fetching of files to later archive.</p>
+<p>Plugins are located in this repository: <a href="https://github.com/cronohub/plugins">Cronohub plugins</a>.</p>
+<p>Hopefully, at some point I&rsquo;ll finish <a href="https://cronohub.org">https://cronohub.org</a> and then there will be an online repository for these.</p>
+<p>Plugins are located at <code>~/.config/cronohub/plugins/{target,source}</code>. Each plugin must take care of its own
+dependencies via a <code>requirements.txt</code> file.</p>
+<p>Right now, there are only a few plugins available.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Source Plugins</th>
+<th style="text-align:center">Target Plugins</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">Github</td>
+<td style="text-align:center">S3</td>
+</tr>
+<tr>
+<td style="text-align:center">Gitlab</td>
+<td style="text-align:center">SCP</td>
+</tr>
+<tr>
+<td style="text-align:center">Local</td>
+<td style="text-align:center">ownCloud</td>
+</tr>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center">No-Op</td>
+</tr>
+</tbody>
+</table>
+<p>More are hopefully on the way. Local is simply gathering a list of files from a folder. And no-op is what it says. It&rsquo;s good for debugging a source plugin as it doesn&rsquo;t do anything else but displays the files it got from the source plugin.</p>
+<h1 id="installation">Installation</h1>
+<p>Installing is dead trivial. Simply run:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">pip install cronohub
+</code></pre></td></tr></table>
+</div>
+</div><p>&hellip; and that&rsquo;s it. It&rsquo;s published on pypi.org.</p>
+<h1 id="contribution">Contribution</h1>
+<p>Plugin contributions are heartily welcomed!</p>
+<p>And that&rsquo;s it.</p>
+<p>Thank you for reading,</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
   </channel>

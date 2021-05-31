@@ -17,6 +17,248 @@
 Ever used Job DSL plugin for Jenkins? What is that you say? Well, it&amp;rsquo;s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.
 Today, however, I&amp;rsquo;m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.
 Today, I would like to write about a part of it which is even more interesting.</description>
+      <content type="html"><![CDATA[<p>Hi Folks.</p>
+<p>Ever used <a href="https://wiki.jenkins-ci.org/display/JENKINS/Job+DSL+Plugin" target="_blank">Job DSL plugin</a> for Jenkins? What is that you say? Well, it&rsquo;s TEH most awesome plug-in for Jenkins to have, because you can CODE your job configuration and put it under source control.</p>
+<p>Today, however, I&rsquo;m not going to write about that because the tutorials on Jenkins JOB DSL are very extensive and very well done. Anyone can pick them up.</p>
+<p>Today, I would like to write about a part of it which is even more interesting. And that is, extracting re-occurring parts in your job configurations.</p>
+<p>If you have jobs, which have a common part that is repeated everywhere, you usually have an urge to extracted that into one place, lest it changes and you have to go an apply the change everywhere. That&rsquo;s not very efficient. But how do you do that in something which looks like a JSON descriptor?</p>
+<p>Fret not, it is just Groovy. And being just groovy, you can use Groovy to implement parts of the job description and then apply that implementation to the job in the DSL.</p>
+<p>Suppose you have an email which you send after every job for which the DSL looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-groovy" data-lang="groovy">
+<span class="n">job</span><span class="o">(</span><span class="s1">&#39;MyTestJob&#39;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">description</span> <span class="s1">&#39;&lt;strong&gt;GENERATED - do not modify&lt;/strong&gt;&#39;</span>
+    <span class="n">label</span><span class="o">(</span><span class="s1">&#39;machine_label&#39;</span><span class="o">)</span>
+    <span class="n">logRotator</span><span class="o">(</span><span class="mi">30</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span> <span class="mi">5</span><span class="o">)</span>
+    <span class="n">parameters</span> <span class="o">{</span>
+        <span class="n">stringParam</span><span class="o">(</span><span class="s1">&#39;somestringparam&#39;</span><span class="o">,</span> <span class="s1">&#39;default_valye&#39;</span><span class="o">,</span> <span class="s1">&#39;Description&#39;</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="n">wrappers</span> <span class="o">{</span>
+        <span class="n">timeout</span> <span class="o">{</span>
+            <span class="n">noActivity</span><span class="o">(</span><span class="mi">600</span><span class="o">)</span>
+            <span class="n">abortBuild</span><span class="o">()</span>
+            <span class="n">failBuild</span><span class="o">()</span>
+            <span class="n">writeDescription</span><span class="o">(</span><span class="s1">&#39;Build failed due to timeout after {0} minutes&#39;</span><span class="o">)</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="n">deliveryPipelineConfiguration</span><span class="o">(</span><span class="s2">&#34;Main&#34;</span><span class="o">,</span> <span class="s2">&#34;MyTestJob&#34;</span><span class="o">)</span>
+    <span class="n">wrappers</span> <span class="o">{</span>
+        <span class="n">preBuildCleanup</span> <span class="o">{</span>
+            <span class="n">deleteDirectories</span><span class="o">()</span>
+        <span class="o">}</span>
+        <span class="n">timestamps</span><span class="o">()</span>
+    <span class="o">}</span>
+    <span class="n">triggers</span> <span class="o">{</span>
+        <span class="n">cron</span><span class="o">(</span><span class="s1">&#39;H 12 * * 1,2&#39;</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="n">steps</span> <span class="o">{</span>
+        <span class="n">batchFile</span><span class="o">(</span><span class="n">readFileFromWorkspace</span><span class="o">(</span><span class="s1">&#39;relative/path/to/file&#39;</span><span class="o">))</span>
+    <span class="o">}</span>
+            <span class="n">publishers</span> <span class="o">{</span>
+                <span class="n">wsCleanup</span><span class="o">()</span>
+                <span class="n">extendedEmail</span><span class="o">(</span><span class="s1">&#39;email@address.com&#39;</span><span class="o">,</span> <span class="s1">&#39;$DEFAULT_SUBJECT&#39;</span><span class="o">,</span> <span class="s1">&#39;$DEFAULT_CONTENT&#39;</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="n">configure</span> <span class="o">{</span> <span class="n">node</span> <span class="o">-&gt;</span>
+                        <span class="n">node</span> <span class="s">/ presendScript &lt;&lt; readFileFromWorkspace(&#39;email_templates/</span><span class="n">emailtemplate</span><span class="o">.</span><span class="na">groovy</span><span class="s1">&#39;)
+</span><span class="s1">                        node / replyTo &lt;&lt; &#39;</span><span class="n">$DEFAULT_REPLYTO</span><span class="s1">&#39;
+</span><span class="s1">                        node / contentType &lt;&lt; &#39;</span><span class="k">default</span><span class="s1">&#39;
+</span><span class="s1">                    }
+</span><span class="s1">                    trigger(triggerName: &#39;</span><span class="n">StillUnstable</span><span class="s1">&#39;, subject: &#39;</span><span class="n">$DEFAULT_SUBJECT</span><span class="s1">&#39;, body: &#39;</span><span class="n">$DEFAULT_CONTENT</span><span class="s1">&#39;, replyTo: &#39;</span><span class="n">$DEFAULT_REPLYTO</span><span class="s1">&#39;, sendToDevelopers: true, sendToRecipientList: true)
+</span><span class="s1">                    trigger(triggerName: &#39;</span><span class="n">Fixed</span><span class="s1">&#39;, subject: &#39;</span><span class="n">$DEFAULT_SUBJECT</span><span class="s1">&#39;, body: &#39;</span><span class="n">$DEFAULT_CONTENT</span><span class="s1">&#39;, replyTo: &#39;</span><span class="n">$DEFAULT_REPLYTO</span><span class="s1">&#39;, sendToDevelopers: true, sendToRecipientList: true)
+</span><span class="s1">                    trigger(triggerName: &#39;</span><span class="n">Failure</span><span class="s1">&#39;, subject: &#39;</span><span class="n">$DEFAULT_SUBJECT</span><span class="s1">&#39;, body: &#39;</span><span class="n">$DEFAULT_CONTENT</span><span class="s1">&#39;, replyTo: &#39;</span><span class="n">$DEFAULT_REPLYTO</span><span class="err">&#39;</span><span class="o">,</span> <span class="nl">sendToDevelopers:</span> <span class="kc">true</span><span class="o">,</span> <span class="nl">sendToRecipientList:</span> <span class="kc">true</span><span class="o">)</span>
+                <span class="o">}</span>
+
+            <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Now, that big chunk of email setting is copied into a bunch of files, which is pretty ugly. And once you try to change it, you&rsquo;ll have to change it everywhere. Also, the interesting bits here are those readFileFromWorkspace parts. Those allow us to export even larger chunks of the script into external files. Now, because the slave might be located somewhere else, you should not use new File(&lsquo;file&rsquo;).text in your job DSL. readFileFromWorkspace in the background does that, but applies correct way to the PATH it looks on for the file specified.</p>
+<p>Let&rsquo;s put this into a groovy script, shall we? Create a utilities folder where the DSL is and create a groovy file in it like this one:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-groovy" data-lang="groovy">
+<span class="kn">package</span> <span class="n">utilities</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">JobCommonTemplate</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">addEmailTemplate</span><span class="o">(</span><span class="kt">def</span> <span class="n">job</span><span class="o">,</span> <span class="kt">def</span> <span class="n">dslFactory</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">String</span> <span class="n">emailScript</span> <span class="o">=</span> <span class="n">dslFactory</span><span class="o">.</span><span class="na">readFileFromWorkspace</span><span class="o">(</span><span class="s2">&#34;email_template/EmailTemplate.groovy&#34;</span><span class="o">)</span>
+        <span class="n">job</span><span class="o">.</span><span class="na">with</span> <span class="o">{</span>
+            <span class="n">publishers</span> <span class="o">{</span>
+                <span class="n">wsCleanup</span><span class="o">()</span>
+                <span class="n">extendedEmail</span><span class="o">(</span><span class="s1">&#39;email@address.com&#39;</span><span class="o">,</span> <span class="s1">&#39;$DEFAULT_SUBJECT&#39;</span><span class="o">,</span> <span class="s1">&#39;$DEFAULT_CONTENT&#39;</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="n">configure</span> <span class="o">{</span> <span class="n">node</span> <span class="o">-&gt;</span>
+                        <span class="n">node</span> <span class="s">/ presendScript &lt;&lt; emailScript
+</span><span class="s">                        node /</span> <span class="n">replyTo</span> <span class="o">&lt;&lt;</span> <span class="s1">&#39;$DEFAULT_REPLYTO&#39;</span>
+                        <span class="n">node</span> <span class="o">/</span> <span class="n">contentType</span> <span class="o">&lt;&lt;</span> <span class="s1">&#39;default&#39;</span>
+                    <span class="o">}</span>
+                    <span class="n">trigger</span><span class="o">(</span><span class="nl">triggerName:</span> <span class="s1">&#39;StillUnstable&#39;</span><span class="o">,</span> <span class="nl">subject:</span> <span class="s1">&#39;$DEFAULT_SUBJECT&#39;</span><span class="o">,</span> <span class="nl">body:</span> <span class="s1">&#39;$DEFAULT_CONTENT&#39;</span><span class="o">,</span> <span class="nl">replyTo:</span> <span class="s1">&#39;$DEFAULT_REPLYTO&#39;</span><span class="o">,</span> <span class="nl">sendToDevelopers:</span> <span class="kc">true</span><span class="o">,</span> <span class="nl">sendToRecipientList:</span> <span class="kc">true</span><span class="o">)</span>
+                    <span class="n">trigger</span><span class="o">(</span><span class="nl">triggerName:</span> <span class="s1">&#39;Fixed&#39;</span><span class="o">,</span> <span class="nl">subject:</span> <span class="s1">&#39;$DEFAULT_SUBJECT&#39;</span><span class="o">,</span> <span class="nl">body:</span> <span class="s1">&#39;$DEFAULT_CONTENT&#39;</span><span class="o">,</span> <span class="nl">replyTo:</span> <span class="s1">&#39;$DEFAULT_REPLYTO&#39;</span><span class="o">,</span> <span class="nl">sendToDevelopers:</span> <span class="kc">true</span><span class="o">,</span> <span class="nl">sendToRecipientList:</span> <span class="kc">true</span><span class="o">)</span>
+                    <span class="n">trigger</span><span class="o">(</span><span class="nl">triggerName:</span> <span class="s1">&#39;Failure&#39;</span><span class="o">,</span> <span class="nl">subject:</span> <span class="s1">&#39;$DEFAULT_SUBJECT&#39;</span><span class="o">,</span> <span class="nl">body:</span> <span class="s1">&#39;$DEFAULT_CONTENT&#39;</span><span class="o">,</span> <span class="nl">replyTo:</span> <span class="s1">&#39;$DEFAULT_REPLYTO&#39;</span><span class="o">,</span> <span class="nl">sendToDevelopers:</span> <span class="kc">true</span><span class="o">,</span> <span class="nl">sendToRecipientList:</span> <span class="kc">true</span><span class="o">)</span>
+                <span class="o">}</span>
+
+            <span class="o">}</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>The function addEmailTemplate gets two parameters. A job, which is an implementation of a Job, and a dslFactory which is a DslFactory. That factory is an interface which defines our readFileFromWorkspace. Where do we get the implementation from then? That will be from the Job. Let&rsquo;s alter our job to apply this Groovy script.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-groovy" data-lang="groovy">
+<span class="kn">import</span> <span class="nn">utilities.JobCommonTemplate</span>
+
+<span class="kt">def</span> <span class="n">myJob</span> <span class="o">=</span> <span class="n">job</span><span class="o">(</span><span class="s1">&#39;MyTestJob&#39;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">description</span> <span class="s1">&#39;&lt;strong&gt;GENERATED - do not modify&lt;/strong&gt;&#39;</span>
+    <span class="n">label</span><span class="o">(</span><span class="s1">&#39;machine_label&#39;</span><span class="o">)</span>
+    <span class="n">logRotator</span><span class="o">(</span><span class="mi">30</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span> <span class="mi">5</span><span class="o">)</span>
+    <span class="n">parameters</span> <span class="o">{</span>
+        <span class="n">stringParam</span><span class="o">(</span><span class="s1">&#39;somestringparam&#39;</span><span class="o">,</span> <span class="s1">&#39;default_valye&#39;</span><span class="o">,</span> <span class="s1">&#39;Description&#39;</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="n">wrappers</span> <span class="o">{</span>
+        <span class="n">timeout</span> <span class="o">{</span>
+            <span class="n">noActivity</span><span class="o">(</span><span class="mi">600</span><span class="o">)</span>
+            <span class="n">abortBuild</span><span class="o">()</span>
+            <span class="n">failBuild</span><span class="o">()</span>
+            <span class="n">writeDescription</span><span class="o">(</span><span class="s1">&#39;Build failed due to timeout after {0} minutes&#39;</span><span class="o">)</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="n">deliveryPipelineConfiguration</span><span class="o">(</span><span class="s2">&#34;Main&#34;</span><span class="o">,</span> <span class="s2">&#34;MyTestJob&#34;</span><span class="o">)</span>
+    <span class="n">wrappers</span> <span class="o">{</span>
+        <span class="n">preBuildCleanup</span> <span class="o">{</span>
+            <span class="n">deleteDirectories</span><span class="o">()</span>
+        <span class="o">}</span>
+        <span class="n">timestamps</span><span class="o">()</span>
+    <span class="o">}</span>
+    <span class="n">triggers</span> <span class="o">{</span>
+        <span class="n">cron</span><span class="o">(</span><span class="s1">&#39;H 12 * * 1,2&#39;</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="n">steps</span> <span class="o">{</span>
+        <span class="n">batchFile</span><span class="o">(</span><span class="n">readFileFromWorkspace</span><span class="o">(</span><span class="s1">&#39;relative/path/to/file&#39;</span><span class="o">))</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="n">JobCommonTemplate</span><span class="o">.</span><span class="na">addEmailTemplate</span><span class="o">(</span><span class="n">myJob</span><span class="o">,</span> <span class="k">this</span><span class="o">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Notice three things here.</p>
+<p>#1 =&gt; <strong>import</strong>. We import the script from utilities folder which we created and placed the script into it.</p>
+<p>#2 =&gt; <strong>def myJob</strong>. We create a variable which will contain our job&rsquo;s description.</p>
+<p>#3 =&gt; <strong>this</strong>. &lsquo;this&rsquo; will be the DslFactory. That&rsquo;s where we get our readFileFromWorkspace implementation.</p>
+<p>And that&rsquo;s it. We have extracted a part of our job which is re-occurring and we found our implementation for our readFileFromWorkspace. DslFactory has most of the things which you need in a job description, would you want to expand on this and extract other bits and pieces.</p>
+<p>Have fun, and happy coding!</p>
+<p>As always,</p>
+<p>Thanks for reading!</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -31,6 +273,26 @@ Today, I would like to write about a part of it which is even more interesting.<
 &lt;p&gt;&lt;a href=&#34;http://www.ukbumpkeys.com/collections/lock-picking&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.ukbumpkeys.com/collections/lock-picking&#34;&gt;http://www.ukbumpkeys.com/collections/lock-picking&lt;/a&gt;&lt;/a&gt; - Tools ( UK )&lt;/p&gt;
 &lt;p&gt;&lt;a href=&#34;http://www.reddit.com/r/lockpicking/&#34; target=&#34;_blank&#34;&gt;&lt;a href=&#34;http://www.reddit.com/r/lockpicking/&#34;&gt;http://www.reddit.com/r/lockpicking/&lt;/a&gt;&lt;/a&gt; - Reddit&lt;/p&gt;
 &lt;p&gt;For my post, click on.&lt;/p&gt;</description>
+      <content type="html"><![CDATA[<p> </p>
+<p>Not a great many people know that I&rsquo;m actually into Lock Picking as a hobby. This will not be a tutorial on how to do it, or I won&rsquo;t really talk about how I do it; I would like to write about something completely different. So if you came here for that, here are a few very good resources:</p>
+<p><a href="http://www.lockpicking101.com/%20" target="_blank"><a href="http://www.lockpicking101.com/">http://www.lockpicking101.com/</a> </a>- Tutorials</p>
+<p><a href="http://www.ukbumpkeys.com/collections/lock-picking" target="_blank"><a href="http://www.ukbumpkeys.com/collections/lock-picking">http://www.ukbumpkeys.com/collections/lock-picking</a></a> - Tools ( UK )</p>
+<p><a href="http://www.reddit.com/r/lockpicking/" target="_blank"><a href="http://www.reddit.com/r/lockpicking/">http://www.reddit.com/r/lockpicking/</a></a> - Reddit</p>
+<p>For my post, click on.</p>
+<p>So, why is lock picking like testing? I saw a great many posts which where trying to compare software testing to some activity. I even knew somebody who compared it to dancing. Because.? I don&rsquo;t know, maybe he was trying out a talk material maybe? And he said - &ldquo;I was in this club and watched a couple dance, and I was thinking, wow, this is like software testing.&rdquo; - I couldn&rsquo;t really react to that. But hey, kudos for out of the box thinking I guess.</p>
+<p>But let&rsquo;s see some of the similarities in picking and testing:</p>
+<h4 id="thinking">Thinking</h4>
+<p>It requires logical, critical thinking. It&rsquo;s a puzzle that you have to solve. A puzzle which you basically solve by testing out solutions and see if they work. You can achieve this by trial and error, something testers face on a daily basis. After awhile you acquire something called finesse. Which will help you identify breaking points more easily. Since you have experience with a certain lock type, you already have a wast knowledge to rely on when you are trying to solve a new lock with the same build. You did your research you know its weaknesses hence you immediately have an attack vector on your hand.</p>
+<h4 id="tools">Tools</h4>
+<p>Lock picking has a wast number of tools. Each tool is design for a specific purpose. You can reuse tools but they are rarely a fit for other locks. Unless it&rsquo;s a similar one. There are delicate tools and then there are brute force tools, which are very hard to use at first but after you get used to it and know how to handle it, it becomes massively helpful. You can build your own tools or use tools that are built for you by tool experts.</p>
+<h4 id="solving-process">Solving Process</h4>
+<p>When can you test an application to its fullest extend and capabilities? How can you achieve the most and best testing ever possible? You have to know how the application works. You have to know its components, its abilities, its capabilities and **limits. **For Lock Picking to be the best at what you do and to be able to move to a completely new lock and try to pick it, you have to know its flaws. You have to know when, and how it was built. You have to know what makes it tick, how it works, what it uses, how the inside mechanics look like in order to try to exploit them.</p>
+<p>After you acquire this knowledge you will be able to build, or purchase a tool which will help you in solving the puzzle. But you were only able to do that because after you researched its manufacturing procedure you know that the last pin is hard to get to and that it has an anti drilling shield, so drilling is out of the question, and that it has a safety spring which locks the lock permanently upon tampering. If you would not be in the possession of this information you could have made a fatal error and could have made the client lost money ( since at that point they pretty much need to break down the door, unless the key is found again ( assuming the picking took place because the key was lost ) ).</p>
+<h4 id="last-words">Last Words</h4>
+<p>There you have it folks. That&rsquo;s why Lock Picking is like software testing. Knowing structure, inside workings and the proper tools will help to achieve your goal. Just like in testing when you know your field, you know what to use, when, and how. <strong>Knowledge</strong> makes you the Best.</p>
+<p>Good luck,</p>
+<p>Happy Picking,</p>
+<p>Gergely.</p>]]></content>
     </item>
     
     <item>
@@ -44,6 +306,260 @@ This time I would like to write about something that interests me. I wanted to 
 My choice is: Meteor. Looks interesting enough and it was recommended by a friend of mine. So, let&amp;rsquo;s dive in.
 Installation As always, one starts with installation. The page tells us to follow this simple step:
 1  curl https://install.meteor.com/ | sh   Easy enough, when you are on Linux.</description>
+      <content type="html"><![CDATA[<p>Hi,</p>
+<p>This time I would like to write about something that interests me. I wanted to try out a pure JavaScript web framework.</p>
+<p>My choice is: <a href="https://www.meteor.com/" target="_blank">Meteor</a>. Looks interesting enough and it was recommended by a friend of mine. So, let&rsquo;s dive in.</p>
+<h4 id="installation"><strong>Installation</strong></h4>
+<p>As always, one starts with installation. The page tells us to follow this simple step:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">curl https://install.meteor.com/ | sh
+</code></pre></td></tr></table>
+</div>
+</div><p>Easy enough, when you are on Linux. Turns out, that there is no official release yet for Windows. I&rsquo;m in luck then. After running the command though, I saw this popping up into my face:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">curl: (60) Peer certificate cannot be authenticated with known CA certificates
+More details here: http://curl.haxx.se/docs/sslcerts.html
+</code></pre></td></tr></table>
+</div>
+</div><p>There is always something. in that case a more accurate command to use would be the following:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">curl -k https://install.meteor.com/ | sh
+</code></pre></td></tr></table>
+</div>
+</div><p>This will force an insecure download. You might not face this issue, but just in case you do, use this command instead.</p>
+<p>Branching off here. For those of you whom the curl didn&rsquo;t work because you are sitting behind a proxy you can specify a -proxy  protocol//username:password@proxy:port after your curl. Of course if that doesn&rsquo;t work then the script won&rsquo;t work either.</p>
+<p>So open the script in one of your favourite editors, for me it&rsquo;s Sublime text, and find this line: &ldquo;<em>Downloading Meteor distribution</em>&rdquo;. Lo, and behold; it uses curl. This is the only one in the script, so just edit it by adding in your -proxy setting as before and you should be right on track.</p>
+<p>If that still gives you problems, try this:</p>
+<p>Assuming that your browser is set up correctly with the proxy and just command line commands aren&rsquo;t working, you can go to this URL defined by the variable TARBALL_URL:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">TARBALL_URL=&#34;https://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/${RELEASE}/meteor-bootstrap-${PLATFORM}.tar.gz&#34;
+</code></pre></td></tr></table>
+</div>
+</div><p>Note that there are two variables in there. For me these are:</p>
+<p>RELEASE: 1.0.3.1</p>
+<p>PLATFORM: os.linux.x86_64</p>
+<p>The full URL is:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">https://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/1.0.3.1/meteor-bootstrap-os.linux.x86_64.tar.gz
+</code></pre></td></tr></table>
+</div>
+</div><p>Download the latest tarball and delete the CURL AND TAR command on the following line. After that, you just have to extract the tarball and move the directory to ~/.meteor.</p>
+<p>Now you can run your sh again and you should be on the road, for sure this time.</p>
+<p>Just to make sure, these are the line which you need to comment out:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">
+<span class="c1"># If you already have a tropohouse/warehouse, we do a clean install here:</span>
+<span class="k">if</span> <span class="o">[</span> -e <span class="s2">&#34;</span><span class="nv">$HOME</span><span class="s2">/.meteor&#34;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+<span class="nb">echo</span> <span class="s2">&#34;Removing your existing Meteor installation.&#34;</span>
+rm -rf <span class="s2">&#34;</span><span class="nv">$HOME</span><span class="s2">/.meteor&#34;</span>
+<span class="k">fi</span>
+
+<span class="nv">TARBALL_URL</span><span class="o">=</span><span class="s2">&#34;https://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/</span><span class="si">${</span><span class="nv">RELEASE</span><span class="si">}</span><span class="s2">/meteor-bootstrap-</span><span class="si">${</span><span class="nv">PLATFORM</span><span class="si">}</span><span class="s2">.tar.gz&#34;</span>
+
+<span class="nv">INSTALL_TMPDIR</span><span class="o">=</span><span class="s2">&#34;</span><span class="nv">$HOME</span><span class="s2">/.meteor-install-tmp&#34;</span>
+rm -rf <span class="s2">&#34;</span><span class="nv">$INSTALL_TMPDIR</span><span class="s2">&#34;</span>
+mkdir <span class="s2">&#34;</span><span class="nv">$INSTALL_TMPDIR</span><span class="s2">&#34;</span>
+<span class="nb">echo</span> <span class="s2">&#34;Downloading Meteor distribution&#34;</span>
+curl --proxy https://ggbrau:Daleks37@10.120.28.130:80--progress-bar --fail <span class="s2">&#34;</span><span class="nv">$TARBALL_URL</span><span class="s2">&#34;</span> <span class="p">|</span> tar -xzf - -C <span class="s2">&#34;</span><span class="nv">$INSTALL_TMPDIR</span><span class="s2">&#34;</span> -o
+<span class="c1"># bomb out if it didn&#39;t work, eg no net</span>
+<span class="nb">test</span> -x <span class="s2">&#34;</span><span class="si">${</span><span class="nv">INSTALL_TMPDIR</span><span class="si">}</span><span class="s2">/.meteor/meteor&#34;</span>
+mv <span class="s2">&#34;</span><span class="si">${</span><span class="nv">INSTALL_TMPDIR</span><span class="si">}</span><span class="s2">/.meteor&#34;</span> <span class="s2">&#34;</span><span class="nv">$HOME</span><span class="s2">&#34;</span>
+rm -rf <span class="s2">&#34;</span><span class="si">${</span><span class="nv">INSTALL_TMPDIR</span><span class="si">}</span><span class="s2">&#34;</span>
+<span class="c1"># just double-checking :)</span>
+<span class="nb">test</span> -x <span class="s2">&#34;</span><span class="nv">$HOME</span><span class="s2">/.meteor/meteor&#34;</span>
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="getting-started">Getting started</h4>
+<p>After a nice installation process we can continue to the getting started phase.</p>
+<p>So, the documentation tells us that we have to simply execute a command.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">meteor create simple-todos
+</code></pre></td></tr></table>
+</div>
+</div><p>At this point we should get a directory structure which is written in the manual. And, behold, that&rsquo;s exactly what happened. As usually, creating a skeleton is easy. Lets run the app. For that, the command is:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">meteor
+</code></pre></td></tr></table>
+</div>
+</div><p>I can do that, I think.</p>
+<p>And sure enough, I&rsquo;ve got this little message, which I actually expected to see:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">Can&#39;t listen on port 3000. Perhaps another Meteor is running?
+</code></pre></td></tr></table>
+</div>
+</div><p>In this world, where there are tons of applications running on your dev environment at any given time, it&rsquo;s possible to have something already running on the port 3000. Luckily this is something that&rsquo;s anticipated by now, and we are presented with an option to add in a proxy setting of our choice with -port <port>.</p>
+<p>After I did that, I&rsquo;ve got a nice confirm message that meteor is up and running. A quick check on the presented URL provided me with the confidence that my app is indeed reachable.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">App running at: http://localhost:9999/
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="after-getting-started">After Getting Started.</h4>
+<p>Now that we know that it&rsquo;s up and running we can continue with the tutorial. Up comes next a simple Todo list application with Templates. It&rsquo;s telling us to replace the code in the default starter app. At this point I&rsquo;m wondering if it can hotswap. It should, since javascript and HTML is dynamic so there should be no problems there, right?</p>
+<p>And sure enough, the moment I replaced the code and checked on my server status, I could see this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">Client modified -- refreshing
+Meteor server restarted
+</code></pre></td></tr></table>
+</div>
+</div><p>With a brief flash of &ldquo;Rebuilding.&rdquo;. So it does sort of work. It did, however, restart the server it just did it without your manual intervention. Which is nice, but on a larger scale application it might prove to be a tad bit annoying. For example, I add another item to the list, and suddenly, the server is restarted.</p>
+<p>Since, I am a tester, let&rsquo;s see how it handles some problems.</p>
+<p>I modified the JavaScript so that it has a syntax error.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-javascript" data-lang="javascript">
+<span class="c1">// simple-todos.js
+</span><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="nx">Meteor</span><span class="p">.</span><span class="nx">isClient</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// This code only runs on the client
+</span><span class="c1"></span>  <span class="nx">Template</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">helpers</span><span class="p">({</span>
+    <span class="nx">tasks</span><span class="o">:</span> <span class="p">[</span>
+      <span class="p">{</span> <span class="nx">text</span><span class="o">:</span> <span class="s2">&#34;This is task 1&#34;</span> <span class="p">},</span>
+      <span class="p">{</span> <span class="nx">text</span><span class="o">:</span> <span class="s2">&#34;This is task 2&#34;</span> <span class="p">},</span>
+      <span class="p">{</span> <span class="nx">text</span><span class="o">:</span> <span class="s2">&#34;This is task 3&#34;</span> <span class="p">}</span>
+      <span class="p">{</span> <span class="nx">text</span><span class="o">:</span> <span class="s2">&#34;This is task 4&#34;</span> <span class="p">}</span>
+    <span class="p">]</span>
+  <span class="p">});</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Note the missing &ldquo;,&rdquo;. And, nicely enough I&rsquo;m getting an error message telling me that I messed something up:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">Errors prevented startup:
+
+While building the application:
+my_cool_app.js:10:7: Unexpected token {
+
+Your application has errors. Waiting for file change.
+</code></pre></td></tr></table>
+</div>
+</div><p>It even tells you where the error is and it&rsquo;s waiting for you to fix it. After I&rsquo;ve corrected my error it compiled fine and the application is up and running. Deleting the files did little difference as did corrupting the HTML pages or the CSS file. Nothing to see here, moving on.</p>
+<h4 id="android-device">Android Device</h4>
+<p>I&rsquo;m sure everybody can read a manual and continue with collections, forms, events and such. What I&rsquo;m more interested in is that Meteor promises it can run on Android devices. Now that perked my curiosity. With the rise of mobile devices, the desktop platform is slowly pushed back into a dark corner where even a <a href="http://mistborn.wikia.com/wiki/Tineye" target="_blank">Tineye </a>would have problems seeing it.</p>
+<p>Hence, I want to see how easy it really is.</p>
+<p>Meteor gives you a set of commands to install the android sdk and droid support for your application, which is nice. You just need to run this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">
+meteor install-sdk android
+meteor add-platform android # Perform this step in the app&#39;s folder and agree to terms and conditions.
+</code></pre></td></tr></table>
+</div>
+</div><p>Now, if you are like me, someone who has experience with the android SDK and its emulator, you&rsquo;ll know that running that thing requires more time and processing power than simulating the chances of Leonardo DiCaprio winning an Oscar. I&rsquo;ll use a real device instead. For that, it appears I only have to run a simple command again.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">meteor run android-device
+</code></pre></td></tr></table>
+</div>
+</div><p>And sure enough the app appeared on my device.</p>
+<p>This is actually quite awesome. I only plugged in my device, enabled developer options and USB debugging and that&rsquo;s it. I&rsquo;m quite impressed so far with Meteor and the Power of JavaScript. The app is on my phone and the static JavaScript parts are still working even though I shut the server down.</p>
+<p>So my next burning question is. Will it Blend? I mean, Perform?</p>
+<h4 id="benchmarking">Benchmarking</h4>
+<p>So, now that I know that using, installing and getting started is pretty simple, what I also would like to know is how well it performs.</p>
+<p>I have a quad core i7 16GB RAM Samsung SSD running Linux. Let&rsquo;s see 100 threads 10 second interval 10 times loop for a start. Look at how gorgeous this is.</p>
+<p>40ms on average. Now let&rsquo;s crank it up and I&rsquo;m performing the test on a separate machine but still on the same network. 1000 threads.</p>
+<p>This time I&rsquo;ve got a bit more churn and my pc started to fan like there is no tomorrow. But the server stayed stable. Latency did not waver for a bit. Next, 10.000 for as long as my machine can handle it.. Better save my work. Hah, my JMeter died. But it clocked at an average of 1000ms response time and the server stayed absolutely stable with no package lost, or errors.</p>
+<h4 id="conclusion">Conclusion</h4>
+<p>I can say with a full heart that I&rsquo;m impressed by Meteor and I very much like it. It&rsquo;s easy to use, even more easy to install and definitely can handle itself given that it&rsquo;s rather lightweight. The hot swapping / server re-starting can&rsquo;t be avoided, but that&rsquo;s only a minor inconvenience and we got used to that already.</p>
+<p>I recommend Meteor and I&rsquo;ll be playing around with it a bit more for sure.</p>
+<p>Thanks for reading!
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -58,6 +574,27 @@ I used the notion of dragons since it&amp;rsquo;s seven. And a dragon is usually
 So without further ado.
 Click for larger image.
 I have a hand drawn as well but I&amp;rsquo;m guessing that one wouldn&amp;rsquo;t be of much use since it follows my own imagination.</description>
+      <content type="html"><![CDATA[<p>Hi Folks!</p>
+<p>I just wanted to share with you my mind map on the seven principles of Context Driven Testing.</p>
+<p>I used the notion of dragons since it&rsquo;s seven. And a dragon is usually seven headed in my mind.</p>
+<p>So without further ado.</p>
+<p>Click for larger image.</p>
+<p>I have a hand drawn as well but I&rsquo;m guessing that one wouldn&rsquo;t be of much use since it follows my own imagination.</p>
+<p>Here are the seven principles in points which correspond to the leafs.</p>
+<ol>
+<li>Value -&gt; Practice -&gt; Depends -&gt; Context =&gt; The value of any practice depends on its context.</li>
+<li>People -&gt; Working -&gt; Together -&gt; Important =&gt; People, working together, are the most important part of any project’s context. ( The mob, trying to kill the dragon by working together. )</li>
+<li>Problem -&gt; Project -&gt; Solution =&gt; The product is a solution. If the problem isn’t solved, the product doesn’t work. ( The sword. It&rsquo;s a sword but if it doesn&rsquo;t kill the Dragon it&rsquo;s useless. )</li>
+<li>Good Testing -&gt; Intellectual Challenge =&gt; Good software testing is a challenging intellectual process. ( Well it&rsquo;s a dragon with glasses. That&rsquo;s something you rarely see. )</li>
+<li>Good Practice | Bad Practice -&gt; In Context -&gt; No Best Practices =&gt; There are good practices in context, but there are no best practices. ( This one was a little bit tricky. But basically you want to solve the dungeon and not plow through it )</li>
+<li>Uncertainty =&gt; <span style="font-size: 14px; line-height: 1.8em;">Projects unfold over time in ways that are often not predictable. ( For me this one word was enough. )</span></li>
+<li>Exercised By All In Time -&gt; Judgement | Skill | Cooperatively =&gt; Only through judgment and skill, exercised cooperatively throughout the entire project, are we able to do the right things at the right times to effectively test our products. ( It&rsquo;s a flexing dragon. Easy, right? )</li>
+</ol>
+<p>So this map helped me to remember everything. The descriptions, applications that are further described I remembered by using this mind map as a <a href="http://en.wikipedia.org/wiki/Method_of_loci" target="_blank">loci</a>.</p>
+<p>I hope somebody found this useful.</p>
+<p>Thanks for reading!</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -74,6 +611,63 @@ Keyword: jira
 URL: https://atlas.projectname.com/jira/browse/PROJECT-%s
 So just type: jira|space|9999
 Will immediately bring you to your ticket.</description>
+      <content type="html"><![CDATA[<p>Hello Everybody.</p>
+<p>Today I would like to write a few words about Chrome&rsquo;s Search Engines.</p>
+<p>You&rsquo;re probably already using it for a couple of things, like Google, or Amazon searches or YouTube or anything like that. But are you using it to access environments and testing tools faster, with queries?</p>
+<p>For example, here is a quick Jira Search made easy:</p>
+<p>Keyword: jira</p>
+<p>URL: <a href="https://atlas.projectname.com/jira/browse/PROJECT-%25s">https://atlas.projectname.com/jira/browse/PROJECT-%s</a></p>
+<p>So just type: jira|space|9999</p>
+<p>Will immediately bring you to your ticket.</p>
+<p>&ldquo;Bah, why would I want that?&rdquo; - you ask.</p>
+<p>Well, it&rsquo;s easy, and quick access, but wait. There is more. How about you want to access a test environment that changes only a number?</p>
+<p>Keyword: testenv</p>
+<p>URL: <a href="https://qa%25s.projectname.com/testenv">https://qa%s.projectname.com/testenv</a></p>
+<p>Just type: testenv|space|14</p>
+<p>&ldquo;Humbug!&rdquo; - you might say. &ldquo;What if I have a different URL for an admin site and my main web site AND the number, hmmm? Also I have that stuff bookmarked anyways.&rdquo; - you might add in.</p>
+<p>Well, don&rsquo;t fret. By default, Chrome, does not provide this. I know FF does, but I don&rsquo;t like FF. That&rsquo;s that. So I have to make due with what I have. And indeed there is a solution for using multiple search parameters. It&rsquo;s is a JavaScript you can add in into the URL part and Chrome will interpret that. You can find that JavaScript in a few posts but you will find that THAT script is actually Wrong. Here is the <strong>fixed</strong> Script, courtesy of yours truly:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="kd">var</span> <span class="nx">s</span><span class="o">=</span><span class="s1">&#39;%s&#39;</span><span class="p">;</span>
+<span class="nx">url</span><span class="o">=</span><span class="s1">&#39;https://%s.test%s.projectname.com/&#39;</span><span class="p">;</span>
+<span class="nx">query</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+<span class="nx">urlchunks</span><span class="o">=</span><span class="nx">url</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="s1">&#39;%s&#39;</span><span class="p">);</span>
+<span class="nx">schunks</span><span class="o">=</span><span class="nx">s</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">);</span>
+<span class="k">for</span><span class="p">(</span><span class="nx">i</span><span class="o">=</span><span class="p">;</span> <span class="nx">i</span><span class="o">&amp;</span><span class="nx">lt</span><span class="p">;</span><span class="nx">urlchunks</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">query</span><span class="o">+=</span><span class="nx">urlchunks</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+	<span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">schunks</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;undefined&#39;</span><span class="p">)</span> <span class="p">{</span>
+		<span class="nx">query</span><span class="o">+=</span><span class="nx">schunks</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+<span class="nx">location</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="nx">query</span><span class="p">);</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>So no you will have an entry like this:</p>
+<p>Keyword: testenv</p>
+<p>URL: paste in the upper script</p>
+<p>And try. testenv|space|admin;14 =&gt; which should result in: <a href="https://admin.test14.projectname.com/">https://admin.test14.projectname.com/</a></p>
+<p>The location.replace at the end will bring you to the web page. It&rsquo;s interesting to note the s will be replaced by admin;14 which is a nice magic by JavaScript.</p>
+<p><strong>NOTE</strong>: This only works on a page like google.co.uk. For chrome pages, like the new tab, omnibox has this ability disabled unfortunately.</p>
+<p>&ldquo;Well then it&rsquo;s completely useless, isn&rsquo;t it?&rdquo; - you might say. Well, it&rsquo;s usage is limited in power, that&rsquo;s true. But it&rsquo;s still useful as I&rsquo;m sure you have a couple of pages open anyways which you don&rsquo;t mind using up.? And you have to remember less keywords only a few powerful ones.</p>
+<p>Credit for telling about Chrome Search Engines power in the first place goes to. *drumrolls* =&gt; <a href="http://www.testfeed.co.uk/" target="_blank"><a href="http://www.testfeed.co.uk/">http://www.testfeed.co.uk/</a></a></p>
+<p>Anyhow.</p>
+<p>As always, thanks for reading.</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -86,6 +680,26 @@ Will immediately bring you to your ticket.</description>
 So let&amp;rsquo;s clarify this. They rarely or ever work if you are a beginner blogger. If you have a reputation it will probably work or people will use it as a reference. But I&amp;rsquo;m skipping ahead.
 Beginnings
 When you are a beginner blog writer you want to get out as much content as possible. Write mostly relevant things and interesting information because you need to establish a name for yourself.</description>
+      <content type="html"><![CDATA[<p>Hello.</p>
+<p>So let&rsquo;s clarify this. They rarely or ever work if you are a beginner blogger. If you have a reputation it will probably work or people will use it as a reference. But I&rsquo;m skipping ahead.</p>
+<p><strong>Beginnings</strong></p>
+<p>When you are a beginner blog writer you want to get out as much content as possible. Write mostly relevant things and interesting information because you need to establish a name for yourself. To get that starting you want to be as interesting as possible and make people leave with the intent to come back for more.</p>
+<p>After you&rsquo;ve established a name for yourself you can do larger, more coherent updates with more information in between the line because people know you and know what you write is worth reading. Also you have to bear in mind that longer posts are rarely read to the fullest. They are skimmed and then if it is good it will be used as reference material or a post to point to. Also people rarely have a lot of time on their hand to read a long post, several smaller chunks can be digested more easily!</p>
+<p><strong>Updating frequency</strong></p>
+<p>In the age of modern information overload it is hard to be relevant and interesting and keep people to come back to you. Apart from what you are writing about, which is up to you, you have to schedule your updates to a certain frequency. You don&rsquo;t want people to wait for to long but you don&rsquo;t want to get them flooded either. Since people do read a lot of blogs they will choose carefully what to read and what to discard. And you might just end up on the discarded list if you already had a post at that moment.</p>
+<p>I&rsquo;m suggesting that you write you post what you would like to write at that moment and then use a scheduler to post it in certain frequencies. Maybe once or twice weekly is good enough. You need to experiment it out.</p>
+<p><strong>Write, write, write</strong></p>
+<p>The way to success is pawed with writing. You want to be visible and you want to keep people engaged with you. That means that you have to come up with content.</p>
+<p>With a technical blog that&rsquo;s a little bit difficult from time to time since so many people already might have solved your problem of which you are trying to write about. That&rsquo;s okay. It doesn&rsquo;t have to be a technical blog where you write about new ideas every day. It doesn&rsquo;t have to be a troubleshoot blog about how to solve a particular problem.</p>
+<p>It doesn&rsquo;t have to be about showing some people how to write this and that in a completely new environment.</p>
+<p><strong>So about what then?</strong></p>
+<p>Guess what? It&rsquo;s up to you!!! If you wrote a script you like and are fond if, post it. If you created an interesting configuration, post it. If you wrote a line of code you find interesting, post it. You&rsquo;ve read a blog post about something and have an opinion about it, post it. Is it scientific, some discovery, some idea, some random thought, post it! You wrote a particularly ugly script you never ever want to see, POST IT!!</p>
+<p>Your blog doesn&rsquo;t need to be a portfolio of how awesome you are. You are allowed to be human. You are allowed to post some very boring or trivial stuff you came across but YOU find it interesting! You don&rsquo;t need to be new every day in every post.</p>
+<p>So my suggestion is, write, write, write. As often as you like, schedule it and post it in a timely manner. Be responsive if people write you a comment always answer. Nobody likes an anonymous somebody who writes then disappears. People like bloggers who engage them and give a damn about their opinion as well.</p>
+<p>Always be yourself. The blog is for you too so retain what ever you want to retain and read back later maybe to learn from it. And of course writing it down makes you remember it better.</p>
+<p>Thanks for reading!</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -98,6 +712,165 @@ When you are a beginner blog writer you want to get out as much content as possi
 I&amp;rsquo;d like to share a little something with you. It&amp;rsquo;s what I cooked up in Python to check an unknown number of content items in a web application.
 Basically the script runs from a script folder under Grails. It goes through all the configured folders where there is static content like images, javascript, css and so on and so forth.
 And then with curl it calls these items up in using their respective paths&#39;.</description>
+      <content type="html"><![CDATA[<p>Hello guys.</p>
+<p>I&rsquo;d like to share a little something with you. It&rsquo;s what I cooked up in Python to check an unknown number of content items in a web application.</p>
+<p>Basically the script runs from a script folder under Grails. It goes through all the configured folders where there is static content like images, javascript, css and so on and so forth.</p>
+<p>And then with curl it calls these items up in using their respective paths'. This works best on localhost if you have your local environment configured to access these elements because in some places direct access is restricted.</p>
+<p>This script only check static content. Dynamically generated content would have to be hard coded to check.</p>
+<p>It only generated a file currently with ERROR on a not match an success on match and not found if it encounters an item which it doesn&rsquo;t know about.</p>
+<p>So without further ado. The Script:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="ch">#!/usr/bin/python</span>
+
+<span class="kn">import</span> <span class="nn">pycurl</span><span class="o">,</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">urllib</span>
+
+<span class="k">class</span> <span class="nc">Storage</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contents</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">buf</span><span class="p">):</span>
+	<span class="k">if</span> <span class="s1">&#39;Content-Type&#39;</span> <span class="ow">in</span> <span class="n">buf</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">contents</span> <span class="o">=</span> <span class="n">buf</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">contents</span>
+
+<span class="c1">#print retrieved_headers</span>
+
+<span class="n">filesInDir</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">headers</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">headerRestrictions</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;.css&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: text/css&#39;</span><span class="p">,</span> <span class="s1">&#39;.jpg&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: image/jpeg&#39;</span><span class="p">,</span> <span class="s1">&#39;.ico&#39;</span><span class="p">:</span> <span class="s1">&#39;image/vnd.microsoft.icon&#39;</span><span class="p">,</span> <span class="s1">&#39;.html&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: text/html&#39;</span><span class="p">,</span> <span class="s1">&#39;.js&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: application/javascript&#39;</span><span class="p">,</span> <span class="s1">&#39;.gif&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: image/gif&#39;</span><span class="p">,</span> <span class="s1">&#39;.png&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: image/png&#39;</span><span class="p">,</span> <span class="s1">&#39;.swf&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: application/x-shockwave-flash&#39;</span><span class="p">,</span> <span class="s1">&#39;.json&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: application/json&#39;</span><span class="p">,</span> <span class="s1">&#39;.htc&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: text/x-component&#39;</span><span class="p">,</span> <span class="s1">&#39;.xml&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: application/xml&#39;</span><span class="p">}</span>
+
+<span class="k">for</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">dirnames</span><span class="p">,</span> <span class="n">filenames</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="s1">&#39;../web-app&#39;</span><span class="p">):</span>
+    <span class="c1"># editing the &#39;dirnames&#39; list will stop os.walk() from recursing into there.</span>
+    <span class="k">if</span> <span class="s1">&#39;.git&#39;</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
+        <span class="c1"># don&#39;t go into any .git directories.</span>
+        <span class="n">dirnames</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;.git&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;WEB-INF&#39;</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
+        <span class="c1"># don&#39;t go into any WEB-INF directories.</span>
+        <span class="n">dirnames</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;WEB-INF&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;test&#39;</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
+        <span class="c1"># don&#39;t go into any test directories.</span>
+        <span class="n">dirnames</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;META-INF&#39;</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
+        <span class="c1"># don&#39;t go into any META-INF directories.</span>
+        <span class="n">dirnames</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;META-INF&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
+	<span class="n">trimmedDir</span> <span class="o">=</span> <span class="n">dirname</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&#34;web-app/&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">)</span>
+	<span class="n">trimmedDir</span> <span class="o">=</span> <span class="n">trimmedDir</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&#34;../&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">)</span>
+	<span class="n">filesInDir</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">trimmedDir</span><span class="p">,</span> <span class="n">filename</span><span class="p">))</span>
+    <span class="c1">#    print os.path.join(dirname, filename)</span>
+
+<span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&#34;headersandfiles.txt&#34;</span><span class="p">,</span> <span class="s2">&#34;w&#34;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">fileName</span> <span class="ow">in</span> <span class="n">filesInDir</span><span class="p">:</span>
+    <span class="n">retrieved_body</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+    <span class="n">retrieved_headers</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">pycurl</span><span class="o">.</span><span class="n">Curl</span><span class="p">()</span>
+    <span class="n">fileName</span> <span class="o">=</span> <span class="n">fileName</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&#34; &#34;</span><span class="p">,</span> <span class="s2">&#34;%20&#34;</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://localhost:8080/</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">fileName</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setopt</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">URL</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setopt</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">WRITEFUNCTION</span><span class="p">,</span> <span class="n">retrieved_body</span><span class="o">.</span><span class="n">store</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setopt</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">HEADERFUNCTION</span><span class="p">,</span> <span class="n">retrieved_headers</span><span class="o">.</span><span class="n">store</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">perform</span><span class="p">()</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">fileLine</span> <span class="o">=</span> <span class="s2">&#34;&#34;</span>
+    <span class="n">fileNameBase</span><span class="p">,</span> <span class="n">fileExtension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">headerRestrictions</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">fileExtension</span><span class="p">):</span>
+<span class="c1">#	print &#34;Header:%s, Content:%s&#34; % (headerRestrictions[fileExtension], retrieved_headers.__str__())</span>
+        <span class="n">fileLine</span> <span class="o">=</span> <span class="s2">&#34;CORRECT: Content: </span><span class="si">%s</span><span class="s2">; Header: </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">retrieved_headers</span><span class="p">)</span> <span class="k">if</span> <span class="n">headerRestrictions</span><span class="p">[</span><span class="n">fileExtension</span><span class="p">]</span> <span class="o">==</span> <span class="n">retrieved_headers</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&#34;ERROR: Content: </span><span class="si">%s</span><span class="s2">; Header: </span><span class="si">%s</span><span class="s2">; URL: </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">retrieved_headers</span><span class="p">,</span> <span class="s2">&#34;http://localhost:8080/</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="n">fileName</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+	<span class="n">fileLine</span> <span class="o">=</span> <span class="s2">&#34;NOT FOUND: Content: </span><span class="si">%s</span><span class="s2">; Header: </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">retrieved_headers</span><span class="p">)</span>
+
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fileLine</span><span class="p">)</span>
+    <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">retrieved_headers</span><span class="o">.</span><span class="fm">__str__</span><span class="p">())</span>
+
+<span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Hope you like it. Feel free to improve however you want.</p>
+<p>Thanks for reading,</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -111,6 +884,46 @@ Today I would like to write about something very interesting to you folks.
 It&amp;rsquo;s a common remember / recall technique called the Method of loci. Otherwise known as the Memory Palace. A very popular usage can be seen in the episodes of Sherlock Holmes from BBC. He uses it often.
 What is the Method of loci?
 As the Wikipedia page write so properly.&amp;ldquo;In basic terms, it is a method of memory enhancement which uses visualization to organize and recall information.</description>
+      <content type="html"><![CDATA[<p>Hello.</p>
+<p>Today I would like to write about something very interesting to you folks.</p>
+<p>It&rsquo;s a common remember / recall technique called the Method of loci. Otherwise known as the Memory Palace. A very popular usage can be seen in the episodes of Sherlock Holmes from BBC. He uses it often.</p>
+<p><strong>What is the Method of loci?</strong></p>
+<p>As the Wikipedia page write so properly.&ldquo;In basic terms, it is a method of memory enhancement which uses visualization to organize and recall information.&rdquo;</p>
+<p>This says all.</p>
+<p>So.</p>
+<p><strong>How does it work?</strong></p>
+<p>I don&rsquo;t want to go too much into details with this one since everybody can use Google I&rsquo;m assuming but just for my sanities sake I will repeat a very basic idea. You brain works with associations. It can remember something when it&rsquo;s linked to something you already know much much better. Also it can remember very easily places you&rsquo;ve been to or people you&rsquo;ve met. ( most of the time. ).</p>
+<p>Very popular Roman Leaders where known to use this while they were giving speeches for hours out of memory. While they were speaking, mentally they were walking along a very well known and often used path where they linked key elements of their speeches to landmarks along the way.</p>
+<p><strong>Enough. Show me concretes.</strong></p>
+<p>So how do I make use of it you ask? I give you an example. In my flat there are two stairs. I use those stairs to initialize my Palace. I go up the two stairs to get myself into my Memory. Once I&rsquo;m in my Palace, which is my flat, I have a lot of holder items like drawer, desk, wall, painting, couch and many many more.</p>
+<p>So for example to recall all of the 23 design patterns in order I use a mnemonic and my palace.</p>
+<p>I have three drawers. I go up up. there is my drawer before me. I open the first and out comes the following sight.</p>
+<p>Memento and Mediator are playing a game of Chess ( strategy ). There is a Visitor standing by who is Observing ( Observer ) the game. State is constantly recording the state of the game while Template is providing support and Iterator is counting rounds. Command is constantly yelling orders that they should hurry up because he has better things to do while wielding a huge broad sword ( Interpreter -&gt; for me this pattern was used in MUD games which were early RPGs ). The whole gang is held together by a Chain which is responsible for not letting things go out of hand.</p>
+<p>I know this sounds very complicated. And the order? Where is that? That&rsquo;s the mnemonic: CCIIMMOSSTV. Easy, right?</p>
+<p>So why this huge story around a few patterns? Because it&rsquo;s not just these. Then along comes ABCDFFP which is Adapter, Bridge, Composite, Decorator, Facade, Flyweight and Proxy and the rest BFFPS which is Builder, Factory, Abstract Factory, Prototype and Singleton.</p>
+<p>I have stories around those as well. This makes it easy to remember them.</p>
+<p>For small amount of things it would be an overkill yes. But for many things it makes it EASY!</p>
+<p>You already remembered my Chess play story. 😉</p>
+<p><strong>But how do you remember a complex story?</strong></p>
+<p>Recall. You don&rsquo;t just put stuff in there and then move on. I have a routine. Every day when I go to bed before I fall asleep I walk around in my Palace. I look at things, recall them strengthen the memory a bit here and there. And after an Item has been retained in my long term memory strong enough, I can recall it fewer and fewer times. So I don&rsquo;t have to walk in the whole palace every time. Only parts.</p>
+<p><strong>FAQ</strong></p>
+<p>**Q:**But isn&rsquo;t this too slow to recall something?</p>
+<p>**A:**This is only a tool to retain information more easily. Of course if you want to recall something at a moments notice, you won&rsquo;t have the time to go into your palace and search around. But after a while it will strengthen and will be more and more easier to recall information faster and faster. And you rarely get into a position where you need to recall something in a second.</p>
+<p>**Q:**This seems like a major overhead to learn something.</p>
+<p>**A:**For small amount of information I suggest using a mnemonic or flash cards rather then a palace.</p>
+<p>**Q:**What if I run out of space?</p>
+<p>**A:**You can create as many locations as you like. Use your current home and homes in your past which you knew very well. You could create a lane with houses after each other. Or create a fictional palace like Hogwarts based on some real places to retain them better. And draw a sketch of of it to be able to visualize it better.</p>
+<p>**Q:**What if I forget where I put things?</p>
+<p>**A:**Recall recall recall is the name of the game. In order to stabilize the vision of your palace you need to practice walking around in it. Remembering each and every small room. With practice it will get better and better and every information will be stored much easier.</p>
+<p>**Q:**How do you put thing into it? Can I just put in a number and I will remember it forever?</p>
+<p>**A:**Short answer: no. Long answer: You don&rsquo;t just imagine a place and then put a whole bunch of words into a pocket somewhere and expect it to be recalled better. You need to combine the Loci with mnemonics and imagination and sounds and smells stories images. The more powerful the image in a place the better the recall. As you saw with the design patterns I didn&rsquo;t just put a bunch of names into a box and then remembered it. I created a story around them and a mnemonic. The combination is the key.</p>
+<p>**Q:**Are you physically walking your house or in your mind?</p>
+<p>**A:**In my mind. Once I learned something and created my story and found the appropriate image or smell or sound I&rsquo;d like to use I close my eyes and go into my palace in my mind. Then I start to place things where I think they will be in a good place. This can be any number of things. It&rsquo;s up to you.</p>
+<p>So that&rsquo;s all folks. Hope you enjoyed it. Please feel free to try it out and experiment I assure you you won&rsquo;t be disappointed.</p>
+<p>As always,</p>
+<p>Thanks for reading.</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -123,6 +936,20 @@ As the Wikipedia page write so properly.&amp;ldquo;In basic terms, it is a metho
 So Vim is a very powerful editing tool and has lots and lots of potential in regarding plug-ins.
 It has years and years of gathered knowledge and extensions and can virtually do anything you want. But that&amp;rsquo;s not even it&amp;rsquo;s final form.
 The real power of Vim lies in navigation and manipulation. The ability to navigate and edit without the use of arrow keys or mouse chops of a large portion of your time which you didn&amp;rsquo;t even realize you are wasting until you try it without it.</description>
+      <content type="html"><![CDATA[<p>Hello,</p>
+<p>So Vim is a very powerful editing tool and has lots and lots of potential in regarding plug-ins.</p>
+<p>It has years and years of gathered knowledge and extensions and can virtually do anything you want. But that&rsquo;s not even it&rsquo;s final form.</p>
+<p>The real power of Vim lies in navigation and manipulation. The ability to navigate and edit without the use of arrow keys or mouse chops of a large portion of your time which you didn&rsquo;t even realize you are wasting until you try it without it.</p>
+<p>The one thing people are seem to miss regarding this editor is that you are not supposed to stay in <strong>Edit</strong> mode all the time. You are supposed to be in <strong>Control</strong> mode most of times and enter in to <strong>Edit</strong> for sort bursts. And one more thing is that commands are supposed to be used together. For example deleting a word is very easy and can be achieved in multiple ways. The easiest is combining Delete + Go to the end of a word like this: &ldquo;de&rdquo;. So once you are in Control mode you navigate to a word and press d + e. d =&gt; Delete a word until new cursor and e =&gt; go to the end of the word. Hence &ldquo;de&rdquo; will delete a whole word. Awesome.</p>
+<p>Handling text is easy as goblin pie and there lots and lots of tutorials and blogs on the web which tell you in detail how to do that so I&rsquo;m not going to go do that. It does take some time to get used to it because you are wired to handle the mouse and use the arrow keys. But once you start using h j k l and x X and w and $ ^ you realize you don&rsquo;t need the mouse or the arrow keys to get around.</p>
+<p>And it&rsquo;s much faster since your hand is already there. And suddenly you are using <a href="https://chrome.google.com/webstore/detail/vimium/dbepggeogbaibhgnhhndojpepiihcmeb?hl=en" title="Vimium" target="_blank">Vimium</a> the Vim extension for Chrome and you find yourself saying. &ldquo;Where were you all my life?&rdquo;.</p>
+<p>Vim has a mirriad of plugins ready to be used most popular being <a href="https://github.com/scrooloose/nerdtree" title="Nerdtree" target="_blank">NerdTree</a>, <a href="https://github.com/gmarik/Vundle.vim" title="Vundle" target="_blank">Vundle</a> and <a href="https://github.com/scrooloose/syntastic" title="Syntastic" target="_blank">Syntastic</a> for compile errors. And it has a large community to back it up and people who will eagerly help you on your way and pass on tips to understand the logic behind it and the phylosophy.</p>
+<p>So all in all it&rsquo;s a powerful editing tool and a neat friend along the way and completely free of any charge or license. It can be used for <strong>anything</strong> you want including macros and key phrase replacements where you type two characters which will be replaced with something that you use commonly like public static void main.</p>
+<p>I hope this got you a watery mouth towards trying. The only thing I can say is to not give up after 20 minutes you will get a feel for it and you will fall in love with it immediately.</p>
+<p>As always,</p>
+<p>Thanks for reading!</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -135,6 +962,33 @@ The real power of Vim lies in navigation and manipulation. The ability to naviga
 I&amp;rsquo;d like to share today something with all of you. I&amp;rsquo;ve been thinking about how technology affected my life in the long run. And how I perceive the world today around me. So let&amp;rsquo;s go around this topic for a little bit shall we?
 The Past
 So as somebody who lived for a while without technology coming near family for a decade or so I have a little bit of past in me without smart phones, gadgets, tv or computers for that matter.</description>
+      <content type="html"><![CDATA[<p>Hi folks.</p>
+<p>I&rsquo;d like to share today something with all of you. I&rsquo;ve been thinking about how technology affected my life in the long run. And how I perceive the world today around me. So let&rsquo;s go around this topic for a little bit shall we?</p>
+<p><strong>The Past</strong></p>
+<p>So as somebody who lived for a while without technology coming near family for a decade or so I have a little bit of past in me without smart phones, gadgets, tv or computers for that matter. Much times needed to pass as my family slowly got the money to gather to buy us our new part of the family the ZX Spectrum.</p>
+<p>What a wonderful piece of technology that was back then. But before that our two main technological equipments were a bakelite disc player and the TV. Both of which we couldn&rsquo;t get enough. I sat before the tv for a long time and listened to music and stories from the bakelite discs dozens of times until the disc wore down. I learned English and German from the TV.</p>
+<p><strong>Present</strong></p>
+<p>So time goes by I grew older I&rsquo;ve got a better PC technological advances are made and so on and so forth. 20 years have past. 20 years. ONLY 20 years. And we are at the age of digital communication, nanotechnology, a mapped DNA and a found Boson Particle. I&rsquo;d say we achieved quite a lot. But I also say that we should never forget where we came from. Why you ask? Because knowing your past let&rsquo;s predict your future better and makes you appreciate your present even more.</p>
+<p>So what do I want to say with this philosophical mumbo jumbo?</p>
+<p><strong>The Future</strong></p>
+<p>I want to say that in order to enjoy your present you have to think of your future while considering your past.</p>
+<p>In my past I enjoyed being alone a little bit. It gave me time to think to brainstorm to be with my thoughts while I was playing or just reading a book or just watching a candle flicker in the dark. It was satisfying. It was relaxing. Or when I was faced with a problem I couldn&rsquo;t solve it was good to step back. Or I was just looking out of my head on the toilet.</p>
+<p>Now, for me technology ruined that. I&rsquo;m taking my phone virtually everywhere with me. I read emails, web pages, news and shit on the toilet, while eating, why brushing my teeth before sleeping after sleeping while sleeping?! I abandoned my brain. I no longer have moments to myself. No longer reflect. No longer take the time to think.</p>
+<p><strong>Solution</strong></p>
+<p>Simple set of rules. No phone on the toilet, while eating, while brushing teeth, while standing in the line, waiting or on meetings. Kindle / Book is allowed. Tablet isn&rsquo;t.</p>
+<p>For me this works. For me in order to appreciate technology more I have to use it less. Works for you? Don&rsquo;t know. You should try it out. Think back. What has technology changed for you? I&rsquo;m sure there are plenty of very good gains and things. I&rsquo;m not saying you should give that up. I&rsquo;m saying think of what you might have lost?! Maybe you don&rsquo;t even recognize you lost something. Maybe you are fine like that.</p>
+<p>But do you feel anxious sometimes? Do you feel bored? Do you feel like something is missing? Do you reply to an email with a second? Do you check your facebook/twitter/whatever while a friend is TALKING TO YOU? Then maybe it&rsquo;s time for you to step back. And relax. And take it slow. and low.</p>
+<p><strong>Inspiration</strong></p>
+<p>So I took this inspiration from a couple of sources and I thank them for opening my eyes a little that I went to far from course.</p>
+<p>Link 1: I forgot my phone for a day (I&rsquo;m sure you know this one already)</p>
+<p><a href="http://www.youtube.com/watch?v=OINa46HeWg8" target="_blank"><a href="http://www.youtube.com/watch?v=OINa46HeWg8">http://www.youtube.com/watch?v=OINa46HeWg8</a></a></p>
+<p>Link 2: The real zombies:</p>
+<p><img src="https://dl.dropboxusercontent.com/u/7604030/zombies3.jpeg" alt=""></p>
+<p><img src="https://dl.dropboxusercontent.com/u/7604030/mobile-phone-zombies.jpg" alt=""></p>
+<p>So think a little.</p>
+<p>As always.Have a nice day.</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
   </channel>

@@ -16,6 +16,294 @@
       <description>&lt;p&gt;Hi folks.&lt;/p&gt;
 &lt;p&gt;Got an update for the backup script. This time, you&amp;rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.&lt;/p&gt;
 &lt;p&gt;Here is the script again, now modified and a bit cleaned up. I hope it&amp;rsquo;s helpful.&lt;/p&gt;</description>
+      <content type="html"><![CDATA[<p>Hi folks.</p>
+<p>Got an update for the backup script. This time, you&rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.</p>
+<p>Here is the script again, now modified and a bit cleaned up. I hope it&rsquo;s helpful.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/bash
+</span><span class="cp"></span>
+<span class="k">if</span> <span class="o">[[</span> -t <span class="m">1</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nv">colors</span><span class="o">=</span><span class="k">$(</span>tput colors<span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$colors</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nv">RED</span><span class="o">=</span><span class="s1">&#39;\033[0;31m&#39;</span>
+        <span class="nv">LIGHT_GREEN</span><span class="o">=</span><span class="s1">&#39;\033[1;32m&#39;</span>
+        <span class="nv">NC</span><span class="o">=</span><span class="s1">&#39;\033[0m&#39;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_BUCKET</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">printf</span> <span class="s2">&#34;Please set the env variable %bMINECRAFT_BUCKET%b to the s3 archive bucket name.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">printf</span> <span class="s2">&#34;Please set the env variable %bMINECRAFT_ARCHIVE_LIMIT%b to limit the number of archives to keep.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_WORLD</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">printf</span> <span class="s2">&#34;Please set the env variable %bMINECRAFT_WORLD%b to specify what world to back-up.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="nv">backup_world</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_WORLD</span><span class="si">}</span>
+<span class="nv">backup_bucket</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_BUCKET</span><span class="si">}</span>
+<span class="nv">backup_limit</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">}</span>
+<span class="nv">archive_name</span><span class="o">=</span><span class="s2">&#34;</span><span class="si">${</span><span class="nv">backup_world</span><span class="si">}</span><span class="s2">-</span><span class="k">$(</span>date +<span class="s2">&#34;%H-%M-%S-%m-%d-%Y&#34;</span><span class="k">)</span><span class="s2">.zip&#34;</span>
+
+<span class="k">function</span> create_archive <span class="o">{</span>
+    <span class="nb">printf</span> <span class="s2">&#34;Creating archive of %b</span><span class="si">${</span><span class="nv">backup_world</span><span class="si">}</span><span class="s2">%b\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    zip -r <span class="nv">$archive_name</span> <span class="nv">$backup_world</span>
+<span class="o">}</span>
+
+<span class="k">function</span> amazon_bak <span class="o">{</span>
+
+    create_archive
+
+    <span class="nb">printf</span> <span class="s2">&#34;Checking if bucket has more than %b</span><span class="si">${</span><span class="nv">backup_limit</span><span class="si">}</span><span class="s2">%b files already.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="nv">content</span><span class="o">=(</span> <span class="k">$(</span>aws s3 ls s3://<span class="nv">$backup_bucket</span> <span class="p">|</span> awk <span class="s1">&#39;{print $4}&#39;</span><span class="k">)</span> <span class="o">)</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="si">${#</span><span class="nv">content</span><span class="p">[@]</span><span class="si">}</span> -eq <span class="nv">$backup_limit</span> <span class="o">||</span> <span class="si">${#</span><span class="nv">content</span><span class="p">[@]</span><span class="si">}</span> -gt <span class="nv">$backup_limit</span>  <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">echo</span> <span class="s2">&#34;There are too many archives. Deleting oldest one.&#34;</span>
+        <span class="c1"># We can assume here that the list is in cronological order</span>
+    	<span class="nb">printf</span> <span class="s2">&#34;%bs3://</span><span class="si">${</span><span class="nv">backup_bucket</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">content</span><span class="p">[0]</span><span class="si">}</span><span class="s2">\n%b&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+        aws s3 rm s3://<span class="nv">$backup_bucket</span>/<span class="si">${</span><span class="nv">content</span><span class="p">[0]</span><span class="si">}</span>
+    <span class="k">fi</span>
+
+    <span class="nb">printf</span> <span class="s2">&#34;Uploading %b</span><span class="si">${</span><span class="nv">archive_name</span><span class="si">}</span><span class="s2">%b to s3 archive bucket.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="nv">state</span><span class="o">=</span><span class="k">$(</span>aws s3 cp <span class="nv">$archive_name</span> s3://<span class="nv">$backup_bucket</span><span class="k">)</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$state</span><span class="s2">&#34;</span> <span class="o">=</span>~ <span class="s2">&#34;upload:&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">printf</span> <span class="s2">&#34;File upload %bsuccessful%b.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">LIGHT_GREEN</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="k">else</span>
+        <span class="nb">printf</span> <span class="s2">&#34;%bError%b occured while uploading archive. Please investigate.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">function</span> custom <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> -e custom.sh <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">source</span> ./custom.sh
+    <span class="k">else</span>
+        <span class="nb">echo</span> <span class="s2">&#34;custom.sh script not found. Please implement the apropriate functions.&#34;</span>
+        <span class="nb">exit</span> <span class="m">1</span>
+    <span class="k">fi</span>
+
+    <span class="nb">echo</span> <span class="s2">&#34;Checking for the number of files. Limit is: </span><span class="nv">$backup_limit</span><span class="s2">.&#34;</span>
+    <span class="nv">files</span><span class="o">=(</span> <span class="k">$(</span>list<span class="k">)</span> <span class="o">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="si">${#</span><span class="nv">files</span><span class="p">[@]</span><span class="si">}</span> -eq <span class="nv">$backup_limit</span> <span class="o">||</span> <span class="si">${#</span><span class="nv">files</span><span class="p">[@]</span><span class="si">}</span> -gt <span class="nv">$backup_limit</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">echo</span> <span class="s2">&#34;Deleting extra file.&#34;</span>
+        delete <span class="si">${</span><span class="nv">files</span><span class="p">[0]</span><span class="si">}</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> !<span class="o">=</span> <span class="m">0</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+            <span class="nb">printf</span> <span class="s2">&#34;%bFailed%b to delete file. Please investigate failure.&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+            <span class="nb">exit</span> <span class="nv">$?</span>
+        <span class="k">fi</span>
+    <span class="k">fi</span>
+
+    <span class="nb">echo</span> <span class="s2">&#34;Zipping world.&#34;</span>
+    create_archive
+
+    <span class="nb">echo</span> <span class="s2">&#34;Uploading world.&#34;</span>
+    upload <span class="nv">$archive_name</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> !<span class="o">=</span> <span class="m">0</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">printf</span> <span class="s2">&#34;%bFailed%b to upload archive. Please investigate the error.&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+        <span class="nb">exit</span> <span class="nv">$?</span>
+    <span class="k">fi</span>
+
+    <span class="nb">printf</span> <span class="s2">&#34;Upload %bsuccessful%b&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">LIGHT_GREEN</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+<span class="o">}</span>
+
+<span class="k">function</span> <span class="nb">help</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Usage:&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;./backup_world [METHOD]&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Exp.: ./backup_world aws|./backup_world custom|./backup_world dropbox&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Each method has it&#39;s own environment properties that it requires.&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Global: MINECRAFT_WORLD|MINECRAFT_BUCKET|MINECRAFT_ARCHIVE_LIMIT&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Custom: Have a file, called &#39;custom.sh&#39; which is sourced.&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Implement these three functions: upload | list | delete.&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;upload -&gt; should return exit code 0 on success, should return exit code 1 on failure.&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;list -&gt; should return a list of cronologically ordered items.&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;delete -&gt; should return exit code 0 on success, should return exit code 1 on failure.&#34;</span>
+<span class="o">}</span>
+
+<span class="k">case</span> <span class="nv">$1</span> in
+    aws <span class="o">)</span>
+        amazon_bak
+        <span class="p">;;</span>
+    custom <span class="o">)</span>
+        custom
+        <span class="p">;;</span>
+    * <span class="o">)</span>
+        <span class="nb">help</span>
+        <span class="p">;;</span>
+<span class="k">esac</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And here is the sample implementation for the custom upload functionality.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/bash
+</span><span class="cp"></span>
+<span class="k">function</span> upload <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&#34;uploading&#34;</span>
+    <span class="nb">local</span> <span class="nv">result</span><span class="o">=</span><span class="m">0</span>
+    <span class="k">return</span> <span class="nv">$result</span>
+<span class="o">}</span>
+
+<span class="k">function</span> delete <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&#34;deleting </span><span class="nv">$1</span><span class="s2">&#34;</span>
+    <span class="nb">local</span> <span class="nv">result</span><span class="o">=</span><span class="m">0</span>
+    <span class="k">return</span> <span class="nv">$result</span>
+<span class="o">}</span>
+
+<span class="k">function</span> list <span class="o">{</span>
+    <span class="nb">local</span> <span class="nv">arr</span><span class="o">=(</span><span class="s2">&#34;file1&#34;</span> <span class="s2">&#34;file2&#34;</span> <span class="s2">&#34;file3&#34;</span><span class="o">)</span>
+    <span class="nb">echo</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">arr</span><span class="p">[@]</span><span class="si">}</span><span class="s2">&#34;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Thanks for reading!</p>
+<p>Gergely.</p>]]></content>
     </item>
     
     <item>
@@ -28,6 +316,116 @@
 Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&amp;rsquo;m backing up the world once in a while.
 For that, I&amp;rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.
 The script is really straightforward. I&amp;rsquo;m doing manual versioning, although S3 does provide one out of the box.</description>
+      <content type="html"><![CDATA[<p>Hi Folks.</p>
+<p>Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&rsquo;m backing up the world once in a while.</p>
+<p>For that, I&rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.</p>
+<p>The script is really straightforward. I&rsquo;m doing manual versioning, although S3 does provide one out of the box. However, amazon&rsquo;s S3 versioning doesn&rsquo;t allow limiting the number of versions being kept. And since I&rsquo;m doing that anyways, might as well take care of the rest.</p>
+<p>Without further ado, here is the script:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/bash
+</span><span class="cp"></span>
+<span class="k">if</span> <span class="o">[[</span> -t <span class="m">1</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nv">colors</span><span class="o">=</span><span class="k">$(</span>tput colors<span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$colors</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nv">RED</span><span class="o">=</span><span class="s1">&#39;\033[0;31m&#39;</span>
+        <span class="nv">LIGHT_GREEN</span><span class="o">=</span><span class="s1">&#39;\033[1;32m&#39;</span>
+        <span class="nv">NC</span><span class="o">=</span><span class="s1">&#39;\033[0m&#39;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_BUCKET</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+	<span class="nb">printf</span> <span class="s2">&#34;Please set the env variable </span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">MINECRAFT_BUCKET</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> to the s3 archive bucket name.\n&#34;</span>
+	<span class="nb">exit</span> <span class="m">0</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+	<span class="nb">printf</span> <span class="s2">&#34;Please set the env variable </span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> to limit the number of archives to keep.\n&#34;</span>
+	<span class="nb">exit</span> <span class="m">0</span>
+<span class="k">fi</span>
+
+<span class="nv">backup_bucket</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_BUCKET</span><span class="si">}</span>
+<span class="nv">backup_limit</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">}</span>
+<span class="nv">world</span><span class="o">=</span><span class="nv">$1</span>
+<span class="nb">printf</span> <span class="s2">&#34;Creating archive of </span><span class="si">${</span><span class="nv">RED</span><span class="si">}${</span><span class="nv">world</span><span class="si">}${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">\n&#34;</span>
+<span class="nv">archive_name</span><span class="o">=</span><span class="s2">&#34;</span><span class="si">${</span><span class="nv">world</span><span class="si">}</span><span class="s2">-</span><span class="k">$(</span>date +<span class="s2">&#34;%H-%M-%S-%m-%d-%Y&#34;</span><span class="k">)</span><span class="s2">.zip&#34;</span>
+zip -r <span class="nv">$archive_name</span> <span class="nv">$world</span>
+
+<span class="nb">printf</span> <span class="s2">&#34;Checking if bucket has more than </span><span class="si">${</span><span class="nv">RED</span><span class="si">}${</span><span class="nv">backup_limit</span><span class="si">}${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> files already.\n&#34;</span>
+<span class="nv">content</span><span class="o">=(</span> <span class="k">$(</span>aws s3 ls s3://<span class="nv">$backup_bucket</span> <span class="p">|</span> awk <span class="s1">&#39;{print $4}&#39;</span><span class="k">)</span> <span class="o">)</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="si">${#</span><span class="nv">content</span><span class="p">[@]</span><span class="si">}</span> -eq <span class="nv">$backup_limit</span> <span class="o">||</span> <span class="si">${#</span><span class="nv">content</span><span class="p">[@]</span><span class="si">}</span> -gt <span class="nv">$backup_limit</span>  <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;There are too many archives. Deleting oldest one.&#34;</span>
+    <span class="c1"># We can assume here that the list is in cronological order</span>
+	<span class="nb">printf</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">s3://</span><span class="si">${</span><span class="nv">backup_bucket</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">content</span><span class="p">[0]</span><span class="si">}</span><span class="s2">\n&#34;</span>
+    aws s3 rm s3://<span class="nv">$backup_bucket</span>/<span class="si">${</span><span class="nv">content</span><span class="p">[0]</span><span class="si">}</span>
+<span class="k">fi</span>
+
+<span class="nb">printf</span> <span class="s2">&#34;Uploading </span><span class="si">${</span><span class="nv">RED</span><span class="si">}${</span><span class="nv">archive_name</span><span class="si">}${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> to s3 archive bucket.\n&#34;</span>
+<span class="nv">state</span><span class="o">=</span><span class="k">$(</span>aws s3 cp <span class="nv">$archive_name</span> s3://<span class="nv">$backup_bucket</span><span class="k">)</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$state</span><span class="s2">&#34;</span> <span class="o">=</span>~ <span class="s2">&#34;upload:&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">printf</span> <span class="s2">&#34;File upload </span><span class="si">${</span><span class="nv">LIGHT_GREEN</span><span class="si">}</span><span class="s2">successful</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">.\n&#34;</span>
+<span class="k">else</span>
+    <span class="nb">printf</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">Error</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> occured while uploading archive. Please investigate.\n&#34;</span>
+<span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>It uses environment properties to define where to upload the given world and how many versions to keep.</p>
+<p>I&rsquo;m calling this from a cron job, and it&rsquo;s sitting next to where the Minecraft world is.</p>
+<p>That&rsquo;s it folks.</p>
+<p>I&rsquo;ll start expanding on this idea and implement various services, like your own server address, or dropbox, or what have you.</p>
+<p>Happy backing up.</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -41,6 +439,96 @@ Intro Today, I wanted to write about how to create a secure server in a containe
 Docker On OSX While on a mac, you have a couple of options to run docker.
 Docker-Machine Docker-Machine
 Docker machine is very simple. It just creates a Linux vm in the background on the given driver, for us it will be VirtualBox.</description>
+      <content type="html"><![CDATA[<p>Hi Folks.</p>
+<h1 id="intro">Intro</h1>
+<p>Today, I wanted to write about how to create a secure server in a container. Ideally, you don&rsquo;t want to run your server on your own machine. Running it in a container gives you a much needed control and an extra layer of security.</p>
+<h1 id="docker-on-osx">Docker On OSX</h1>
+<p>While on a mac, you have a couple of options to run docker.</p>
+<h2 id="docker-machine">Docker-Machine</h2>
+<p><a href="https://docs.docker.com/machine/">Docker-Machine</a></p>
+<p>Docker machine is very simple. It just creates a Linux vm in the background on the given driver, for us it will be <a href="https://www.virtualbox.org/">VirtualBox</a>. Network, Memory and port-forwarding can all be managed through the VM directly. Then running and starting it is trivial through <code>docker-machine start</code>.</p>
+<h2 id="boot2docker">Boot2Docker</h2>
+<p><a href="http://boot2docker.io/">Boot2Docker</a></p>
+<p>Runs a tiny linux in which you can use Docker freely. This adds the benefit of not having to mess around with VirtualBox.</p>
+<h2 id="dlite">DLite</h2>
+<p><a href="https://github.com/nlf/dlite">DLite</a></p>
+<p>DLite is the newest addition in the Game. Since docker uses /var/run/docker.sock file to communicate with the daemon, and this file is not there on OSX, DLite takes care of that. After DLite is running, you just simply use Docker. That&rsquo;s it. No VM, no fuss, just use Docker.</p>
+<p>I recommend to use DLite, however, it&rsquo;s not an official tool, so for the sake of this guide, I&rsquo;ll be writing up a docker-machine oriented solution.</p>
+<h1 id="docker-container---a-vanilla-server">Docker container - A Vanilla Server</h1>
+<p>First, you&rsquo;ll need a Dockerfile. <a href="https://github.com/Skarlso/devops/blob/master/minecraft/Dockerfile">Dockerfile</a>. The steps on how to setup this file are written down in the README file, located here: <a href="https://github.com/Skarlso/devops/tree/master/minecraft">Container Setup</a>. The <code>pwd</code> command will use your current directory as a shared volume to copy stuff into the container from your host operating system.</p>
+<p>This will download the Minecraft server version 1.9 (or whichever you define) and install java and vim. It uses /data as a shared folder. Data will also be the working directory which means we will run the server from there. This server will be a vanilla server, meaning, no modding. If you have a single player world which you would like to use, simply copy that to /data and rename it to <em>world</em>.</p>
+<p>The tricky part is to make this available on the internet. Because the container is in a VM we need to do a chain forwarding. Forward from the container to the vm, and from the vm to your host machine. If you are using a dns service like dyna or no-ip, you probably have a software which refreshes an IP for you to link to. And you&rsquo;ll also have port forwarding setup on your router. I won&rsquo;t be going into detail on that part. That&rsquo;s a whole different post.</p>
+<p>Forwarding from virtualbox can be done through the UI or through command line. The UI is like this: <em>Settings =&gt; Network =&gt; Adapter 1 =&gt; Advanced =&gt; PortForwarding</em>. Here, setup something like this:
+Name: Minecraft; Protocol: TCP; Host IP: 192.168.0.X(x=your local machine); Host Port: 25565; Guest IP: Leave Blank; Guest Port: 25565.</p>
+<p><img src="/img/network.png" alt="Network">
+Where the number is missing, you&rsquo;ll have to define your own local IP which you are using for your domain address.</p>
+<p>This should forward any ports coming from your VM to your local IP. In the container we have an expose and as the README states it&rsquo;s started using -p 25565:25565 which will make sure that from the container, 25565 is exposed to the VM. And from the VM 25565 is exposed to your local. Chain forwarding.</p>
+<p>After that, once you start your server, it should all click together and you should have a running vanilla Minecraft server available under http://yourdomain:25565. You won&rsquo;t be able to check this by default on your own network. Check if the port is open with a different service like: <a href="http://www.yougetsignal.com/tools/open-ports/">Check If Port is Open</a>.</p>
+<h1 id="docker-container---modding">Docker container - Modding</h1>
+<p>If you are not looking for anything, just a simple server, the above will be enough. You can still do /tp 1 1 1 to teleport, or can still use bans and op commands, and distribute items. However, if you would like to use mods, and as far as kids are concerned, they will want it, you&rsquo;ll have to be a bit more clever.</p>
+<p>I dug far and deep and found that you have two options. Either go with a Forge server, or a Bukkit server. What does that mean? The vanilla server of Minecraft does not support modding. Modding, is modifying the implementation of Minecraft. It injects code and runs a pre-server in front of the original Minecraft server in order to append functionality. But fret not, this is all taken care of for you by either solutions.</p>
+<p>In order to jump into our container with the CMD omitted, we&rsquo;ll have to run the following command instead of the one in the README.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">docker run -it -v <span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>:/data -p 25565:25565 --name mc_server minecraft:v1.9 bash
+</code></pre></td></tr></table>
+</div>
+</div><p>This will give you an interactive prompt in which now we can operate.</p>
+<h2 id="forge">Forge</h2>
+<p>Download the latest forge version from here =&gt; <a href="http://files.minecraftforge.net/">Minecraft Forge</a>. They are usually up-to-date. I&rsquo;m using 1.9 so I downloaded the appropriate installer version. After I obtained it, it was a matter of running this piece of command line code from my container:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">java -jar forge-1.9-12.16.0.1813-1.9-installer.jar --extract --installServer
+</code></pre></td></tr></table>
+</div>
+</div><p>This will unpack a bunch of things you don&rsquo;t have to worry about in your current directory, which is /data. Now run the universal.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">java -jar forge-1.9-12.16.0.1813-1.9-universal.jar
+</code></pre></td></tr></table>
+</div>
+</div><p>Everything under the <strong>mods</strong> folder will be loaded as a mod. Forge is very restrictive and can only use Forge based mods. It will usually warn you if you have a none forge mod in your mods folder. You can find these on Forge&rsquo;s forum here: <a href="http://www.minecraftforge.net/forum/index.php/board,30.0.html">Forge Forum</a>. Simply download a jar and put it into /data/mods.</p>
+<h2 id="bukkit">Bukkit</h2>
+<p>I found Bukkit to be the winner for me. Most of the mods the kid wanted worked with Bukkit and did not work with Forge. Others will swear on Forge, but it&rsquo;s really up to you. Using Bukkit is similarly easy. Again, you&rsquo;ll have to find and get the wrapper for your Minecraft version, which can be located here: <a href="http://getspigot.org/">GetSpigot</a>. You can use Spigot as well, though I have no experience with that.</p>
+<p>Once, you got the wrapper, which is called <code>craftbukkit-1.9.jar</code> for me, you run it the same way you would run Forge or Minecraft.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">java -jar craftbukkit-1.9.jar
+</code></pre></td></tr></table>
+</div>
+</div><p>This will load mods from the <strong>plugins</strong> folder. Plugins can be found here: <a href="http://mods.curse.com/bukkit-plugins/minecraft/new">Latest Bukkit Plugins</a>.</p>
+<p>In the container, you can use wget or curl to get the mods, or simply use the shared volume which is setup for you.</p>
+<h1 id="last-words">Last Words</h1>
+<p>All in all this sounds complicated, but it&rsquo;s actually not, once you&rsquo;ll get the hang out of it. You never kill the container once it&rsquo;s setup, you just do <code>docker stop mc_server</code> and then <code>docker-machine stop</code> if you want to stop the VM as well. To start it up simply do these steps:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">docker_machine start
+<span class="nb">eval</span> <span class="k">$(</span>docker-machine env<span class="k">)</span>
+docker start mc_server
+</code></pre></td></tr></table>
+</div>
+</div><p>We named the container mc_server on a previous step. If you named it something different, use that name.</p>
+<p>That&rsquo;s it. Hope this was clear. Any feedback is appreciated. If you think you have an easier way, or if I wrote something incorrectly, feel free to tell me in the comment sections below.</p>
+<p>Thanks for reading.</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
   </channel>

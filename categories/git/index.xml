@@ -17,6 +17,115 @@
 Today&amp;rsquo;s is a quick tip for keeping your forks updated.
 If you are like me, and have at least a 100 forks in your repository because: * You would like to contribute at some point * Save it for yourself because you are afraid that it disappears * Would like to make modifications for your own benefit * Whatever the reason
 &amp;hellip;then you probably have a lot of trouble keeping them updated and making sure you always see the latest change.</description>
+      <content type="html"><![CDATA[<p>Hi folks.</p>
+<p>Today&rsquo;s is a quick tip for keeping your forks updated.</p>
+<p>If you are like me, and have at least a 100 forks in your repository because:
+* You would like to contribute at some point
+* Save it for yourself because you are afraid that it disappears
+* Would like to make modifications for your own benefit
+* Whatever the reason</p>
+<p>&hellip;then you probably have a lot of trouble keeping them updated and making sure you always see the latest change.</p>
+<p>Upstream can change a lot especially if it&rsquo;s a busy repository.</p>
+<p>Fret not. Help is here. This little ruby script will solve your troubles:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-ruby" data-lang="ruby">
+<span class="c1">#!/usr/bin/env ruby</span>
+
+<span class="nb">require</span> <span class="s1">&#39;octokit&#39;</span>
+<span class="nb">require</span> <span class="s1">&#39;logger&#39;</span>
+
+<span class="vi">@logger</span> <span class="o">=</span> <span class="no">Logger</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&#34;output.log&#34;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">update_fork</span><span class="p">(</span><span class="n">repo</span><span class="p">)</span>
+  <span class="n">repo_name</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">name</span>
+  <span class="c1"># clone the repository -- octokit doesn&#39;t provide this feature as it&#39;s a github api library</span>
+  <span class="vi">@logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&#34;cloning into </span><span class="si">#{</span><span class="n">repo</span><span class="o">.</span><span class="n">ssh_url</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+  <span class="nb">system</span><span class="p">(</span><span class="s2">&#34;git clone </span><span class="si">#{</span><span class="n">repo</span><span class="o">.</span><span class="n">ssh_url</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">repo_name</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+  <span class="c1"># setup upstream for updating</span>
+  <span class="vi">@logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&#34;setup upstream to </span><span class="si">#{</span><span class="n">repo</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ssh_url</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+  <span class="nb">system</span><span class="p">(</span><span class="s2">&#34;cd </span><span class="si">#{</span><span class="n">repo_name</span><span class="si">}</span><span class="s2"> &amp;&amp; git remote add upstream </span><span class="si">#{</span><span class="n">repo</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ssh_url</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+  <span class="c1"># do the update</span>
+  <span class="vi">@logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&#34;doing the update with push&#34;</span><span class="p">)</span>
+  <span class="nb">system</span><span class="p">(</span><span class="s2">&#34;cd </span><span class="si">#{</span><span class="n">repo_name</span><span class="si">}</span><span class="s2"> &amp;&amp; git fetch upstream &amp;&amp; git rebase upstream/master &amp;&amp; git push origin&#34;</span><span class="p">)</span>
+<span class="k">ensure</span>
+  <span class="c1"># ensure that the folder is cleaned up</span>
+  <span class="vi">@logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&#34;cleanup: removing the repository folder&#34;</span><span class="p">)</span>
+  <span class="nb">system</span><span class="p">(</span><span class="s2">&#34;rm -fr </span><span class="si">#{</span><span class="n">repo_name</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="no">Octokit</span><span class="o">::</span><span class="no">Client</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="ss">:access_token</span> <span class="o">=&gt;</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;GIT_TOKEN&#39;</span><span class="o">]</span><span class="p">,</span> <span class="ss">per_page</span><span class="p">:</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">repos</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">repos</span><span class="p">({},</span> <span class="ss">query</span><span class="p">:</span> <span class="p">{</span><span class="ss">type</span><span class="p">:</span> <span class="s1">&#39;owner&#39;</span><span class="p">,</span> <span class="ss">sort</span><span class="p">:</span> <span class="s1">&#39;asc&#39;</span><span class="p">})</span>
+
+<span class="c1"># Go through all the pages and add them to the list of repositories.</span>
+<span class="n">repos</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">last_response</span><span class="o">.</span><span class="n">rels</span><span class="o">[</span><span class="ss">:next</span><span class="o">].</span><span class="n">get</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+<span class="n">repos</span> <span class="o">=</span> <span class="n">repos</span><span class="o">.</span><span class="n">select</span><span class="p">{</span> <span class="o">|</span><span class="n">r</span><span class="o">|</span> <span class="n">r</span><span class="o">.</span><span class="n">fork</span> <span class="p">}</span>
+
+<span class="vi">@logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&#34;going to update &#39;</span><span class="si">#{</span><span class="n">repos</span><span class="o">.</span><span class="n">length</span><span class="si">}</span><span class="s2">&#39; repositories&#34;</span><span class="p">)</span>
+
+<span class="n">repos</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">repo</span><span class="o">|</span>
+  <span class="c1"># get the repositories information</span>
+  <span class="vi">@logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&#34;updating </span><span class="si">#{</span><span class="n">repo</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+  <span class="n">r</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">repository</span><span class="p">(</span><span class="n">repo</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+  <span class="n">update_fork</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+<span class="k">end</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This script is also available as a Gist located <a href="https://gist.github.com/Skarlso/fd5bd5971a78a5fa9760b31683de690e">here</a>.</p>
+<p>Put this into a cron job, or a Jenkins job on a schedule and you should be good to go.</p>
+<p>Note two things:
+First: <code>ENV['GIT_TOKEN']</code> this should be set to a token which you can acquire by navigating to
+<a href="https://github.com/settings/tokens">tokens</a>. Add a token which has <code>repo</code> access.</p>
+<p>Second: Obviously this script will push to your local repository. So wherever you run this, make sure git is set-up and can push
+to your repository via SSH. This script is using <code>ssh_url</code> for the repositories. It won&rsquo;t ask for a username or a password.</p>
+<p>That&rsquo;s it. Enjoy and keep updating.</p>
+<p>Thanks for reading</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -29,6 +138,55 @@ If you are like me, and have at least a 100 forks in your repository because: * 
 This is but a simple git hook to run a test in order to ensure you can push. It also ignores the vendor folder if you happen to have on in your directory.
 Edit the file under .git/hooks/pre-push.sample and add this at the end before the exit 0.
 1 2 3 4 5 6  go test $(go list ./... |grep -v vendor) RESULT=$? if [ $RESULT -ne 0 ]; then echo &amp;#34;Failed test run.</description>
+      <content type="html"><![CDATA[<p>Hi folks.</p>
+<p>This is but a simple git hook to run a test in order to ensure you can push. It also ignores the vendor folder if you happen to have on in your directory.</p>
+<p>Edit the file under <code>.git/hooks/pre-push.sample</code> and add this at the end before the <code>exit 0</code>.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">go <span class="nb">test</span> <span class="k">$(</span>go list ./... <span class="p">|</span>grep -v vendor<span class="k">)</span>
+<span class="nv">RESULT</span><span class="o">=</span><span class="nv">$?</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$RESULT</span> -ne <span class="m">0</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Failed test run. Disallowing push.&#34;</span>
+    <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>After this, rename the file to <code>pre-push</code> removing the .sample from it.</p>
+<p>If you now, mess something up, you should see something like this before your push:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># github.com/Skarlso/goprogressquest</span>
+./create.go:40: undefined: sha1 in sha1.Sum
+./create.go:41: undefined: fmt in fmt.Sprintf
+./create.go:115: undefined: json in json.Unmarshal
+./create.go:130: undefined: json in json.Unmarshal
+FAIL	github.com/Skarlso/goprogressquest <span class="o">[</span>build failed<span class="o">]</span>
+Failed <span class="nb">test</span> run. Disallowing push.
+error: failed to push some refs to <span class="s1">&#39;git@github.com:Skarlso/goprogressquest.git&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>That is all.</p>
+<p>Cheers,
+Gergely.</p>
+]]></content>
     </item>
     
   </channel>

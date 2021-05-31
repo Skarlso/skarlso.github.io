@@ -17,6 +17,197 @@
 In the past couple of months I&amp;rsquo;ve been slowly updating Furnace.
 There are three major changes that happened. Let&amp;rsquo;s take a look at them, shall we?
 Google Cloud Platform Furnace now supports Google Cloud Platform (GCP). It provides the same API to handle GCP resource as with AWS. Namely, create, delete, status, update. I opted to leave out push because Google mostly works with git based repositories, meaning a push is literary just a push, than Google handles distributing the new code by itself.</description>
+      <content type="html"><![CDATA[<h1 id="intro">Intro</h1>
+<p>Hi folks.</p>
+<p>In the past couple of months I&rsquo;ve been slowly updating <a href="https://github.com/Skarlso/go-furnace">Furnace</a>.</p>
+<p>There are three major changes that happened. Let&rsquo;s take a look at them, shall we?</p>
+<h2 id="google-cloud-platform">Google Cloud Platform</h2>
+<p>Furnace now supports <a href="https://cloud.google.com">Google Cloud Platform (GCP)</a>. It provides the same API to handle GCP resource as with AWS. Namely, <code>create</code>, <code>delete</code>, <code>status</code>, <code>update</code>. I opted to leave out <code>push</code> because Google mostly works with git based repositories, meaning a push is literary just a push, than Google handles distributing the new code by itself.</p>
+<p>All the rest of the commands should work the same way as AWS.</p>
+<h3 id="deployment-manager">Deployment Manager</h3>
+<p>GCP has a similar service to AWS CloudFormations called <a href="https://cloud.google.com/deployment-manager/docs/">Deployment Manager</a>. The documentation is fairly detailed with a Bookshelf example app to deploy. Code and Templates can be found in their Git repositroy here: <a href="https://github.com/GoogleCloudPlatform/deploymentmanager-samples">Deployment Manager Git Repository</a>.</p>
+<h3 id="setting-up-gcp">Setting up GCP</h3>
+<p>As the README of Furnace outlines&hellip;</p>
+<blockquote>
+<p>Please carefully read and follow the instruction outlined in this document: <a href="https://cloud.google.com/sdk/#Quick_Start">Google Cloud Getting Started</a>. It will describe how to download and install the SDK and initialize cloud to a Project ID.</p>
+</blockquote>
+<blockquote>
+<p>Take special attention to these documents:</p>
+</blockquote>
+<blockquote>
+<p><a href="https://cloud.google.com/sdk/docs/initializing">Initializing GCloud Tools</a>
+<a href="https://cloud.google.com/sdk/docs/authorizing">Authorizing Tools</a></p>
+</blockquote>
+<blockquote>
+<p>Furnace uses a Google Key-File to authenticate with your Google Cloud Account and Project.
+In the future, Furnace assumes these things are properly set up and in working order.</p>
+</blockquote>
+<p>To initialize the client, it uses the following code:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">  <span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
+  <span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">google</span><span class="p">.</span><span class="nf">DefaultClient</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">dm</span><span class="p">.</span><span class="nx">NdevCloudmanScope</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>The DefaultClient in turn, does the following:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// FindDefaultCredentials searches for &#34;Application Default Credentials&#34;.
+</span><span class="c1">//
+</span><span class="c1">// It looks for credentials in the following places,
+</span><span class="c1">// preferring the first location found:
+</span><span class="c1">//
+</span><span class="c1">//   1. A JSON file whose path is specified by the
+</span><span class="c1">//      GOOGLE_APPLICATION_CREDENTIALS environment variable.
+</span><span class="c1">//   2. A JSON file in a location known to the gcloud command-line tool.
+</span><span class="c1">//      On Windows, this is %APPDATA%/gcloud/application_default_credentials.json.
+</span><span class="c1">//      On other systems, $HOME/.config/gcloud/application_default_credentials.json.
+</span><span class="c1">//   3. On Google App Engine it uses the appengine.AccessToken function.
+</span><span class="c1">//   4. On Google Compute Engine and Google App Engine Managed VMs, it fetches
+</span><span class="c1">//      credentials from the metadata server.
+</span><span class="c1">//      (In this final case any provided scopes are ignored.)
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">FindDefaultCredentials</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">scope</span> <span class="o">...</span><span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">DefaultCredentials</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Take note on the order. This is how Google will authenticate your requests.</p>
+<h3 id="running-gcp">Running GCP</h3>
+<p>Running gcp is largely similar to AWS. First, you create the necessary templates to your infrastructure. This is done via the Deployment Manager and it&rsquo;s templating engine. The GCP templates are Python <a href="http://jinja.pocoo.org/">JINJA</a> files. Examples are provided in the <code>template</code> directory. It&rsquo;s a bit more complicated than the CloudFormation templates in that it uses outside templates plus schema files to configure dynamic details.</p>
+<p>It&rsquo;s all explained in these documents: <a href="https://cloud.google.com/deployment-manager/docs/step-by-step-guide/create-a-template">Creating a Template Step-by-step</a> and <a href="https://cloud.google.com/deployment-manager/docs/configuration/templates/create-basic-template">Creating a Basic Template</a>.</p>
+<p>It&rsquo;s not trivial however. And using the API can also be confusing. The Google Code is just a generated Go code file using gRPC. But studying it may provide valuable insigth into how the API is structured. I&rsquo;m also providing some basic samples that I gathered together and the readme does a bit more explaining on how to use them.</p>
+<h3 id="your-first-stack">Your First Stack</h3>
+<p>Once you have everything set-up you&rsquo;ll need a configuration file for Furnace. The usage is outlined more here <a href="#YAML-Configuration">YAML Configuration</a>. The configuration file for GCP looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">main</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">project_name</span><span class="p">:</span><span class="w"> </span><span class="l">testplatform-1234</span><span class="w">
+</span><span class="w">  </span><span class="nt">spinner</span><span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w"></span><span class="nt">gcp</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">template_name</span><span class="p">:</span><span class="w"> </span><span class="l">google_template.yaml</span><span class="w">
+</span><span class="w">  </span><span class="nt">stack_name</span><span class="p">:</span><span class="w"> </span><span class="l">test-stack</span><span class="w">
+</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>Where <code>project_name</code> is the name you generate for your first billable Google Cloud Platform project. Template lives next to this yaml file and stack name must be DNS complient.</p>
+<p>Once you have a project and a template setup, it&rsquo;s as simple as calling <code>./furnace-gcp create</code> or <code>./furnace-gcp create mycustomstack</code>.</p>
+<h3 id="deleting">Deleting</h3>
+<p>Deleting happens with <code>./furnace-gcp delete</code> or <code>./furnace-gcp delete mycustomstack</code>. Luckily, as with AWS, this means that every resource created with the DeploymentManager will be deleted leaving no need for search and cleanup.</p>
+<h3 id="project-name-vs-project-id">Project Name vs. Project ID</h3>
+<p>Unlike with AWS Google requires your stack name and project id to be DNS complient. This is most likely because all API calls and such contain that information.</p>
+<h2 id="separate-binaries">Separate Binaries</h2>
+<p>In order to mitigate some of Furnace&rsquo;s size, I&rsquo;m providing separate binaries for each service it supports.</p>
+<p>The AWS binaries can be found in <code>aws</code> folder, and respectively, the Google Cloud Platform is located in <code>gcp</code>. Both are build-able by running <code>make</code>.</p>
+<p>If you would like to run both with a single command, a top level make file is provided for your convinience. Just run <code>make</code> from the root. That will build all binaries. Later on, Digital Oceans will join the ranks.</p>
+<h2 id="yaml-configuration">YAML Configuration</h2>
+<p>Last but not least, Furnace now employs YAML files for configuration. However, it isn&rsquo;t JUST using YAML files. It also employs a smart configuration pattern which works as follows.</p>
+<p>Since Furnace is a distributed binary file which could be running from any given location at any time. Because of that, at first I opted for a global configuration directory.</p>
+<p>Now, however, furnace uses a furnace configuration file named with the following pattern: <code>.stackalias.furnace</code>. Where stackname, or stack is the name of a custom stack you would like to create for a project. The content of this file is a single entry, which is the location, relative to this file, of the YAML configuration files for the given stack. For example:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">stacks/mydatabasestack.yaml
+</code></pre></td></tr></table>
+</div>
+</div><p>This means, that in the directory called <code>stacks</code> there will a yaml configuration file for your database stack. The AWS config file looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-YAML" data-lang="YAML"><span class="nt">main</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">stackname</span><span class="p">:</span><span class="w"> </span><span class="l">FurnaceStack</span><span class="w">
+</span><span class="w">  </span><span class="nt">spinner</span><span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w"></span><span class="nt">aws</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">code_deploy_role</span><span class="p">:</span><span class="w"> </span><span class="l">CodeDeployServiceRole</span><span class="w">
+</span><span class="w">  </span><span class="nt">region</span><span class="p">:</span><span class="w"> </span><span class="l">us-east-1</span><span class="w">
+</span><span class="w">  </span><span class="nt">enable_plugin_system</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span><span class="w">  </span><span class="nt">template_name</span><span class="p">:</span><span class="w"> </span><span class="l">cloud_formation.template</span><span class="w">
+</span><span class="w">  </span><span class="nt">app_name</span><span class="p">:</span><span class="w"> </span><span class="l">furnace_app</span><span class="w">
+</span><span class="w">  </span><span class="nt">code_deploy</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="c"># Only needed in case S3 is used for code deployment</span><span class="w">
+</span><span class="w">    </span><span class="nt">code_deploy_s3_bucket</span><span class="p">:</span><span class="w"> </span><span class="l">furnace_code_bucket</span><span class="w">
+</span><span class="w">    </span><span class="c"># The name of the zip file in case it&#39;s on a bucket</span><span class="w">
+</span><span class="w">    </span><span class="nt">code_deploy_s3_key</span><span class="p">:</span><span class="w"> </span><span class="l">furnace_deploy_app</span><span class="w">
+</span><span class="w">    </span><span class="c"># In case a Git Repository is used for the application, define these two settings</span><span class="w">
+</span><span class="w">    </span><span class="nt">git_account</span><span class="p">:</span><span class="w"> </span><span class="l">Skarlso/furnace-codedeploy-app</span><span class="w">
+</span><span class="w">    </span><span class="nt">git_revision</span><span class="p">:</span><span class="w"> </span><span class="l">b89451234...</span><span class="w">
+</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>The important part is the <code>template_name</code>. The template has to be next to this yaml file. To use this file, you simply call any of the AWS or GCP commands with an extra, optional parameter like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">./furnace-aws create mydatabase
+</code></pre></td></tr></table>
+</div>
+</div><p>Note that mydatabase will translate to <code>.mydatabase.furnace</code>.</p>
+<p>The intelligent part is, that this file could be placed anywhere in the project folder structure; because furnace, when looking for a config file, traverses backwards from the current execution directory up until <code>/</code>. Where root is not included in the search.</p>
+<p>Consider the following directory tree:</p>
+<p>├── docs
+│   ├── <code>furnace-aws status mydatabase</code>
+├── stacks
+│   ├── mystack.template
+│   └── mystack.yaml
+└── .mydatabase.furnace</p>
+<p>You are currently in your <code>docs</code> directory and would like to ask for the status of your database. You don&rsquo;t have to move to the location of the setting file, just simply run the command from where you are. This only works if you are above the location of the file. If you would be below, furnace would say it can&rsquo;t find the file. Because it only traverses upwards.</p>
+<p><code>.mydatabase.furnace</code> here contains only a single entry <code>stacks/mystack.yaml</code>. And that&rsquo;s it. This way, you could have multiple furnace files, for example a <code>.database.furnace</code>, <code>.front-end.furnace</code> and a <code>.backend.furnace</code>. All three would work in unison, and if want needs updating, simply run <code>./furnace-aws update backend</code>. And done!</p>
+<h1 id="closing-words">Closing words</h1>
+<p>As always, contributions are welcomed in the form of issues or pull requests. Questions anything, I tend to answer as soon as I can.</p>
+<p>Always run the tests before submitting.</p>
+<p>Thank you for reading.
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -30,6 +221,123 @@ Today I would like to write about an AWS finger practice.
 Previously, I wrote about how I build and deploy my blog with Wercker. Since, I&amp;rsquo;m a cloud engineer and I dislike Oracle and it&amp;rsquo;s ever expending tenctacles into the abyss, I wanted to switch to use something else.
 My build and deploy cycle is simple.
 Commit to Blogsource Repo -&amp;gt; Wercker WebHook -&amp;gt; Builds my blog using Hugo -&amp;gt; Pushed to a Different Repository which my Github Blog.</description>
+      <content type="html"><![CDATA[<h1 id="intro">Intro</h1>
+<p>Hi All.</p>
+<p>Today I would like to write about an AWS finger practice.</p>
+<p>Previously, I wrote about how I build and deploy my blog with <a href="www.wercker.com">Wercker</a>. Since, I&rsquo;m a cloud engineer and I dislike Oracle and it&rsquo;s ever expending tenctacles into the abyss, I wanted to switch to use something else.</p>
+<p>My build and deploy cycle is simple.</p>
+<p>Commit to Blogsource Repo -&gt; Wercker WebHook -&gt; Builds my blog using Hugo -&gt; Pushed to a Different Repository which my Github Blog.</p>
+<p>That&rsquo;s all.</p>
+<p>It&rsquo;s quiet possible to reproduce this on AWS without infering costs. Unless you publish like&hellip; a couple 100 posts / week.</p>
+<p>I&rsquo;m going to use the following services: <a href="https://aws.amazon.com/cloudformation/">CloudFormation</a>, <a href="https://aws.amazon.com/lambda/details/">AWS Lambda</a>, <a href="https://aws.amazon.com/codebuild/">CodeBuild</a>, <a href="https://aws.amazon.com/s3/">S3</a>.</p>
+<p>To deploy the below describe architecture in your account in us-east-1 region simply click this button:
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=blogbuilder&amp;templateURL=https://s3.amazonaws.com/blog-builder-template-bucket/template.yaml"><img src="/img/cloudformation-launch-stack.png" alt="Launch Stack"></a></p>
+<p>BEFORE doing that though you need the following created:</p>
+<p>Have a bucket for your lambda function. The lambda function can be found here:</p>
+<p><a href="https://github.com/Skarlso/aws-lambda-code-pusher">Lambda Repository</a>.</p>
+<p>Zip up the lambda folder contents by doing this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">cd</span> lambda
+zip -r gitpusher.zip *
+aws s3 cp gitpusher.zip s3://your-lambda-bucket
+</code></pre></td></tr></table>
+</div>
+</div><p>That&rsquo;s it.</p>
+<p>To read a description of the stack, please continue.</p>
+<h1 id="tldr">TL;DR;</h1>
+<p>The architecture I&rsquo;m about to lay out is simple in its use and design. I tried not to complicate things, because I think the simpler something is, the less prone to failure it will be.</p>
+<p>In its most basic form the flow is as follows:</p>
+<p><img src="/img/blog_builder_flow.png" alt="Flow">.</p>
+<p>You push something into a repository you provide. CodeBuild has a webhook to this repository so on each commit it starts to build the blog. The build will use a so called <code>buildspec.yaml</code> file which describes how your blog should be built. Mine looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="m">0.2</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="nt">phases</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">commands</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">echo Installing required packages and Hugo</span><span class="w">
+</span><span class="w">      </span>- <span class="l">apt-get update</span><span class="w">
+</span><span class="w">      </span>- <span class="l">apt-get install -y git golang wget</span><span class="w">
+</span><span class="w">      </span>- <span class="l">wget -q https://github.com/gohugoio/hugo/releases/download/v0.31/hugo_0.31_Linux-64bit.deb -O /tmp/hugo.dep</span><span class="w">
+</span><span class="w">      </span>- <span class="l">dpkg -i /tmp/hugo.dep</span><span class="w">
+</span><span class="w">  </span><span class="nt">pre_build</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">commands</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">echo Downloading source code</span><span class="w">
+</span><span class="w">      </span>- <span class="l">git clone https://github.com/Skarlso/blogsource.git /opt/app</span><span class="w">
+</span><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">commands</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">echo Build started on `date`</span><span class="w">
+</span><span class="w">      </span>- <span class="l">cd /opt/app &amp;&amp; hugo --theme purehugo</span><span class="w">
+</span><span class="w">  </span><span class="nt">post_build</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">commands</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">echo Build completed on `date`</span><span class="w">
+</span><span class="w"></span><span class="nt">artifacts</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">files</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span>- <span class="l">/opt/app/public/**/*</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>When it&rsquo;s finished, CodeBuild will upload everything in the public folder as a zip to a bucket. The bucket has a lambda attached which triggers on putObject event with the extension <code>.zip</code>. It downloads the archive, extracts it and pushes it to another repository, which is the repository for the blog.</p>
+<p>And done! That&rsquo;s it. For an architecture overview, please read on.</p>
+<h1 id="architecture">Architecture</h1>
+<p>Now, we are going to use CloudFormation stack to deploy these resources. Because we aren&rsquo;t animals to create them by hand, yes?</p>
+<p>An overview of my current architecture is best shown by this image:</p>
+<p><img src="/img/blog_builder_cf_template.png" alt="AWS Stack">.</p>
+<p>Let&rsquo;s go over these components one - by - one.</p>
+<h2 id="lambda-role">Lambda Role</h2>
+<p>This is the <a href="http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html">Role</a> which allows the Lambda to access things in your account. It needs the following service access: s3, logs, lambda; and the following permissions: logs:Create*, logs:PutLogEvents, s3:GetObject, s3:ListBucket.</p>
+<h2 id="code-build-role">Code Build Role</h2>
+<p>This is the role which allows CodeBuild to have access to services it needs. These services are the following: s3, logs, ssm, codebuild. CodeBuild also needs the following actions allowed: logs:Create*, logs:PutLogEvents, s3:GetObject, s3:PutObject, ssm:GetParameters.</p>
+<h2 id="build-bucket">Build Bucket</h2>
+<p>This is the bucket in which CodeBuild will push the generated build artifact.</p>
+<h2 id="blog-pusher-function">Blog Pusher Function</h2>
+<p>This is the heart of this project. It contains the logic to download the zipped artifact, extract it, create a hollow repository from the extracted archive and push the changes to the repository. And just the changes.</p>
+<p>This is achieve by a short Python 3.6 script which can be found in the linked repository.</p>
+<h2 id="parameters">Parameters</h2>
+<p>The stack requires you to provide a couple of parameters which are described in the template. Like, bucket name, github repository, git token and such. Please refer to the template for a full description of each.</p>
+<h2 id="charges">Charges</h2>
+<p>I recently push a couple of builds to test this configuration and I inferred 0.2 USD in charges. But that was like 10-15 builds a day.</p>
+<h1 id="deploying">Deploying</h1>
+<p>In order to deploy this you can use <a href="https://github.com/Skarlso/go-furnace">Furnace</a> to easily manage the template and it&rsquo;s parameters. Once you copy the template to the target directory, simply run <code>furnace aws create</code> and provide the necessary parameters.</p>
+<h1 id="conclusion">Conclusion</h1>
+<p>And that is all. A nice little stack which does the same as Wercker without costs but the leisure of simply pushing up some change to a repository of your choosing.</p>
+<p>I hope you enjoyed this little write up as much as I enjoyed creating it.</p>
+<p>As always,
+Thanks for reading!
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -44,6 +352,295 @@ In this part we are going to talk about Unit Testing Furnace and how to work som
 Mock Stub Fake Dummy Canned  Unit testing in Go usually follows the Dependency Injection model of dealing with Mocks and Stubs.
 ## DI
 Dependency Inject in short is one object supplying the dependencies of another object.</description>
+      <content type="html"><![CDATA[<h1 id="intro">Intro</h1>
+<p>Hi folks.</p>
+<p>Previously on this blog: <a href="https://skarlso.github.io/2017/03/16/building-furnace-part-1/">Part 1</a>. <a href="https://skarlso.github.io/2017/03/19/building-furnace-part-2/">Part 2</a>. <a href="https://skarlso.github.io/2017/03/22/building-furnace-part-3/">Part 3</a>.</p>
+<p>In this part we are going to talk about Unit Testing Furnace and how to work some magic with AWS and Go.</p>
+<h1 id="mock-stub-fake-dummy-canned-insert-name-here">Mock Stub Fake Dummy Canned <Insert Name Here></h1>
+<p>Unit testing in Go usually follows the Dependency Injection model of dealing with Mocks and Stubs.</p>
+<p>## DI</p>
+<p>Dependency Inject in short is one object supplying the dependencies of another object. In a longer description, it&rsquo;s ideal to be used
+for removing the lock on a third party library, like the AWS client. Imaging having code which solely depends on the AWS client. How
+would you unit test that code without having to ACTUALLY connect to AWS? You couldn&rsquo;t. Every time you try to test the code it would run
+the live code and it would try and connect to AWS and perform the operations it&rsquo;s design to do. The Ruby library with it&rsquo;s metaprogramming
+allows you to set the client globally to stub responses, but, alas, this is not the world of Ruby.</p>
+<p>Here is where DI comes to the rescue. If you have control over the AWS client on a very high level, and would pass it around as a function
+parameter, or create that client in an <code>init()</code> function and have it globally defined; you would be able to implement your own client, and
+have your code use that with stubbed responses which your tests need. For example, you would like a CreateApplication call to fail, or you
+would like a DescribeStack which returns an aws.Error(&ldquo;StackAlreadyExists&rdquo;).</p>
+<p>For this, however, you need the API of the AWS client. Which is provided by AWS.</p>
+<h2 id="aws-client-api">AWS Client API</h2>
+<p>In order for DI to work, the injected object needs to be of a certain type for us to inject our own. Luckily, AWS provides an Interface for
+all of it&rsquo;s clients. Meaning, we can implement our own version for all of the clients, like S3, CloudFormation, CodeDeploy etc.</p>
+<p>For each client you want to mock out, an <em>*iface</em> package should be present like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">  <span class="s">&#34;github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface&#34;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>In this package you find and use the interface like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">fakeCloudFormationClient</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">cloudformationiface</span><span class="p">.</span><span class="nx">CloudFormationAPI</span>
+	<span class="nx">err</span> <span class="kt">error</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And with this, we have our own CloudFormation client. The real code uses the real clients as function parameters, like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Execute defines what this command does.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Create</span><span class="p">)</span> <span class="nf">Execute</span><span class="p">(</span><span class="nx">opts</span> <span class="o">*</span><span class="nx">commander</span><span class="p">.</span><span class="nx">CommandHelper</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Creating cloud formation session.&#34;</span><span class="p">)</span>
+	<span class="nx">sess</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="nx">config</span><span class="p">.</span><span class="nx">REGION</span><span class="p">)})</span>
+	<span class="nx">cfClient</span> <span class="o">:=</span> <span class="nx">cloudformation</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">sess</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nx">CFClient</span><span class="p">{</span><span class="nx">cfClient</span><span class="p">}</span>
+	<span class="nf">createExecute</span><span class="p">(</span><span class="nx">opts</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">client</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>We can&rsquo;t test Execute itself, as it&rsquo;s using the real client here (or you could have a global from some library, thus allowing you to tests
+even <code>Execute</code> here) but there is very little logic in this function for this very reason. All the logic is in small functions for which
+the main starting point and our testing opportunity is, <code>createExecute</code>.</p>
+<h2 id="stubbing-calls">Stubbing Calls</h2>
+<p>Now, that we have our own client, and with the power of Go&rsquo;s interface embedding as seen above with CloudFormationAPI, we have to only stub
+the functions which we are actually using, instead of every function of the given interface. This looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">cfClient</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">CFClient</span><span class="p">)</span>
+	<span class="nx">cfClient</span><span class="p">.</span><span class="nx">Client</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">fakeCloudFormationClient</span><span class="p">{</span><span class="nx">err</span><span class="p">:</span> <span class="kc">nil</span><span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Where cfClient is a struct like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// CFClient abstraction for cloudFormation client.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">CFClient</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Client</span> <span class="nx">cloudformationiface</span><span class="p">.</span><span class="nx">CloudFormationAPI</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And a stubbed call can than be written as follows:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">fc</span> <span class="o">*</span><span class="nx">fakeCreateCFClient</span><span class="p">)</span> <span class="nf">WaitUntilStackCreateComplete</span><span class="p">(</span><span class="nx">input</span> <span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">DescribeStacksInput</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This can range from a very trivial example, like the one above, to intricate ones as well, like this gem:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">fc</span> <span class="o">*</span><span class="nx">fakePushCFClient</span><span class="p">)</span> <span class="nf">ListStackResources</span><span class="p">(</span><span class="nx">input</span> <span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesInput</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesOutput</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="s">&#34;NoASG&#34;</span> <span class="o">==</span> <span class="o">*</span><span class="nx">input</span><span class="p">.</span><span class="nx">StackName</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="o">&amp;</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesOutput</span><span class="p">{</span>
+			<span class="nx">StackResourceSummaries</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">StackResourceSummary</span><span class="p">{</span>
+				<span class="p">{</span>
+					<span class="nx">ResourceType</span><span class="p">:</span>       <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;NoASG&#34;</span><span class="p">),</span>
+					<span class="nx">PhysicalResourceId</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;arn::whatever&#34;</span><span class="p">),</span>
+				<span class="p">},</span>
+			<span class="p">},</span>
+		<span class="p">},</span> <span class="nx">fc</span><span class="p">.</span><span class="nx">err</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesOutput</span><span class="p">{</span>
+		<span class="nx">StackResourceSummaries</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">StackResourceSummary</span><span class="p">{</span>
+			<span class="p">{</span>
+				<span class="nx">ResourceType</span><span class="p">:</span>       <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;AWS::AutoScaling::AutoScalingGroup&#34;</span><span class="p">),</span>
+				<span class="nx">PhysicalResourceId</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;arn::whatever&#34;</span><span class="p">),</span>
+			<span class="p">},</span>
+		<span class="p">},</span>
+	<span class="p">},</span> <span class="nx">fc</span><span class="p">.</span><span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This ListStackResources stub lets us test two scenarios based on the stackname. If the test stackname is &lsquo;NoASG&rsquo; it will return a result
+which equals to a result containing no AutoScaling Group. Otherwise, it will return the correct ResourceType for an ASG.</p>
+<p>It is a common practice to line up several scenario based stubbed responses in order to test the robustness of your code.</p>
+<p>Unfortunately, this also means that your tests will be a bit cluttered with stubs and mock structs and whatnots. For that, I&rsquo;m partially
+using a package available struct file in which I&rsquo;m defining most of the mock structs at least. And from there on, the tests will only contain
+specific stubs for that particular file. This can be further fine grained by having defaults and than only override in case you need something
+else.</p>
+<h1 id="testing-fatals">Testing fatals</h1>
+<p>Now, the other point which is not really AWS related, but still comes to mind when dealing with Furnace, is testing error scenarios.</p>
+<p>Because Furnace is a CLI application it uses Fatals to signal if something is wrong and it doesn&rsquo;t want to continue or recover because, frankly
+it can&rsquo;t. If AWS throws an error, that&rsquo;s it. You can retry, but in 90% of the cases, it&rsquo;s usually something that you messed up.</p>
+<p>So, how do we test for a fatal or an <code>os.Exit</code>? There are a number of points on that if you do a quick search. You may end up on this talk:
+<a href="https://talks.golang.org/2014/testing.slide#23">GoTalk 2014 Testing Slide #23</a>. Which does an interesting thing. It calls the test binary in a
+separate process and tests the exit code.</p>
+<p>Others, and me as well, will say that you have to have your own logger implemented and use a different logger / os.Exit in your test environment.</p>
+<p>Others others will tell you to not to have tests around os.Exit and fatal things, rather return an error and only the main should pop a world
+ending event. I leave it up to you which you want to use. Either is fine.</p>
+<p>In Furnace, I&rsquo;m using a global logger in my error handling util like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// HandleFatal handler fatal errors in Furnace.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">HandleFatal</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nf">LogFatalf</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And <code>LogFatalf</code> is an exported variable <code>var LogFatalf = log.Fatalf</code>. Than in a test, I just override this variable with a local anonymous
+function:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">TestCreateExecuteEmptyStack</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">failed</span> <span class="o">:=</span> <span class="kc">false</span>
+	<span class="nx">utils</span><span class="p">.</span><span class="nx">LogFatalf</span> <span class="p">=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">a</span> <span class="o">...</span><span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+		<span class="nx">failed</span> <span class="p">=</span> <span class="kc">true</span>
+	<span class="p">}</span>
+	<span class="nx">config</span><span class="p">.</span><span class="nx">WAITFREQUENCY</span> <span class="p">=</span> <span class="mi">0</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">CFClient</span><span class="p">)</span>
+	<span class="nx">stackname</span> <span class="o">:=</span> <span class="s">&#34;EmptyStack&#34;</span>
+	<span class="nx">client</span><span class="p">.</span><span class="nx">Client</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">fakeCreateCFClient</span><span class="p">{</span><span class="nx">err</span><span class="p">:</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">stackname</span><span class="p">:</span> <span class="nx">stackname</span><span class="p">}</span>
+	<span class="nx">opts</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">commander</span><span class="p">.</span><span class="nx">CommandHelper</span><span class="p">{}</span>
+	<span class="nf">createExecute</span><span class="p">(</span><span class="nx">opts</span><span class="p">,</span> <span class="nx">client</span><span class="p">)</span>
+	<span class="k">if</span> <span class="p">!</span><span class="nx">failed</span> <span class="p">{</span>
+		<span class="nx">t</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;expected outcome to fail during create&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>It can get even more granular by testing for the error message to make sure that it actually fails at the point we think we are
+testing:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">TestCreateStackReturnsWithError</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">failed</span> <span class="o">:=</span> <span class="kc">false</span>
+	<span class="nx">expectedMessage</span> <span class="o">:=</span> <span class="s">&#34;failed to create stack&#34;</span>
+	<span class="kd">var</span> <span class="nx">message</span> <span class="kt">string</span>
+	<span class="nx">utils</span><span class="p">.</span><span class="nx">LogFatalf</span> <span class="p">=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">a</span> <span class="o">...</span><span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+		<span class="nx">failed</span> <span class="p">=</span> <span class="kc">true</span>
+		<span class="k">if</span> <span class="nx">err</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">a</span><span class="p">[</span><span class="mi">0</span><span class="p">].(</span><span class="kt">error</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+			<span class="nx">message</span> <span class="p">=</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">()</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="nx">config</span><span class="p">.</span><span class="nx">WAITFREQUENCY</span> <span class="p">=</span> <span class="mi">0</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">CFClient</span><span class="p">)</span>
+	<span class="nx">stackname</span> <span class="o">:=</span> <span class="s">&#34;NotEmptyStack&#34;</span>
+	<span class="nx">client</span><span class="p">.</span><span class="nx">Client</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">fakeCreateCFClient</span><span class="p">{</span><span class="nx">err</span><span class="p">:</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">expectedMessage</span><span class="p">),</span> <span class="nx">stackname</span><span class="p">:</span> <span class="nx">stackname</span><span class="p">}</span>
+	<span class="nx">config</span> <span class="o">:=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;{}&#34;</span><span class="p">)</span>
+	<span class="nf">create</span><span class="p">(</span><span class="nx">stackname</span><span class="p">,</span> <span class="nx">config</span><span class="p">,</span> <span class="nx">client</span><span class="p">)</span>
+	<span class="k">if</span> <span class="p">!</span><span class="nx">failed</span> <span class="p">{</span>
+		<span class="nx">t</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;expected outcome to fail&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="nx">message</span> <span class="o">!=</span> <span class="nx">expectedMessage</span> <span class="p">{</span>
+		<span class="nx">t</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;message did not equal expected message of &#39;%s&#39;, was:%s&#34;</span><span class="p">,</span> <span class="nx">expectedMessage</span><span class="p">,</span> <span class="nx">message</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h1 id="conclusion">Conclusion</h1>
+<p>This is it. That&rsquo;s all it took to write Furnace. I hope you enjoyed reading it as much as I enjoyed writing all these thoughts down.</p>
+<p>I hope somebody might learn from my journey and also improve upon it.</p>
+<p>Any comments are much appreciated and welcomed. Also, PRs and Issues can be submitted on the GitHub page of <a href="https://github.com/Skarlso/go-furnace">Furnace</a>.</p>
+<p>Thank you for reading!
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -56,6 +653,118 @@ Dependency Inject in short is one object supplying the dependencies of another o
 Previously on this blog: Part 1. Part 2. Part 4.
 In this part, I&amp;rsquo;m going to talk about the experimental plugin system of Furnace.
 Go Experimental Plugins Since Go 1.8 was released, an exciting and new feature was introduced called a Plug-in system. This system works with dynamic libraries built with a special switch to go build. These libraries, .so or .dylib (later), are than loaded and once that succeeds, specific functions can be called from them (symbol resolution).</description>
+      <content type="html"><![CDATA[<h1 id="intro">Intro</h1>
+<p>Hi folks.</p>
+<p>Previously on this blog: <a href="http://skarlso.github.io/2017/03/16/building-furnace-part-1/">Part 1</a>. <a href="https://skarlso.github.io/2017/03/19/building-furnace-part-2/">Part 2</a>. <a href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/">Part 4</a>.</p>
+<p>In this part, I&rsquo;m going to talk about the experimental plugin system of Furnace.</p>
+<h1 id="go-experimental-plugins">Go Experimental Plugins</h1>
+<p>Since Go 1.8 was released, an exciting and new feature was introduced called a Plug-in system. This system works with dynamic
+libraries built with a special switch to <code>go build</code>. These libraries, <code>.so</code> or <code>.dylib</code> (later), are than loaded and once that
+succeeds, specific functions can be called from them (symbol resolution).</p>
+<p>We will see how this works. For package information, visit the plugin packages Go doc page
+<a href="https://tip.golang.org/pkg/plugin/">here</a>.</p>
+<h1 id="furnace-plugins">Furnace Plugins</h1>
+<p>So, what does furnace use plugins for? Furnace uses plugins to execute arbitery code in, currently, four given locations / events.</p>
+<p>These are: <code>pre_create, post_create, pre_delete, post_delete</code>. These events are called, as their name suggests, before and after
+the creation and deletion of the CloudFormation stack. It allows the user to execute some code without having to rebuild the whole
+project. It does that by defining a single entry point for the custom code called <code>RunPlugin</code>. Any number of functions can be
+implemented, but the plugin MUST provide this single, exported function. Otherwise it will fail and ignore that plugin.</p>
+<h2 id="using-plugins">Using Plugins</h2>
+<p>It&rsquo;s really easy to implement, and use these plugins. I&rsquo;m not going into the detail of how to load them, because that is done by
+Furnace, but only how to write and use them.</p>
+<p>To use a plugin, create a go file called: <code>0001_mailer.go</code>. The <code>0001</code> before it will define WHEN it&rsquo;s executed.
+Having multiple plugins is completely okay. Execution of order however, depends on the names of the files.</p>
+<p>Now, in 0001_mailer.post_create we would have something like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;log&#34;</span>
+
+<span class="c1">// RunPlugin runs the plugin.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">RunPlugin</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;My Awesome Pre Create Plugin.&#34;</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Next step is the build this file to be a plugin library. Note: Right now, this only works on Linux!</p>
+<p>To build this file run the following:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">go build -buildmode=plugin -o 0001_mailer.pre_create 0001_mailer.go
+</code></pre></td></tr></table>
+</div>
+</div><p>The important part here is the extension of the file specified with <code>-o</code>. It&rsquo;s important because that&rsquo;s how Furnace identifies
+what plugins it has to run.</p>
+<p>Finally, copy this file to <code>~/.config/go-furnace/plugins</code> and you are all set.</p>
+<h2 id="slack-notification-plugin">Slack notification Plugin</h2>
+<p>To demonstrate how a plugin could be used is if you need some kind of notification once a Stack is completed. For example, you
+might want to send a message to a Slack room. To do this, your plugin would look something like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;os&#34;</span>
+
+	<span class="s">&#34;github.com/nlopes/slack&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">RunPlugin</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">stackname</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;FURNACE_STACKNAME&#34;</span><span class="p">)</span>
+	<span class="nx">api</span> <span class="o">:=</span> <span class="nx">slack</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;YOUR_TOKEN_HERE&#34;</span><span class="p">)</span>
+	<span class="nx">params</span> <span class="o">:=</span> <span class="nx">slack</span><span class="p">.</span><span class="nx">PostMessageParameters</span><span class="p">{}</span>
+	<span class="nx">channelID</span><span class="p">,</span> <span class="nx">timestamp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">api</span><span class="p">.</span><span class="nf">PostMessage</span><span class="p">(</span><span class="s">&#34;#general&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;Stack with name &#39;%s&#39; is Done.&#34;</span><span class="p">,</span> <span class="nx">stackname</span><span class="p">),</span> <span class="nx">params</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%s\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="k">return</span>
+	<span class="p">}</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Message successfully sent to channel %s at %s&#34;</span><span class="p">,</span> <span class="nx">channelID</span><span class="p">,</span> <span class="nx">timestamp</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Currently, Furnace has no ability to share information of the stack with an outside plugin. Thus &lsquo;Done&rsquo; could be anything from
+Rollback to Failed to CreateComplete.</p>
+<h1 id="closing-words">Closing Words</h1>
+<p>That&rsquo;s it for plugins. Thanks very much for reading!
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -68,6 +777,329 @@ Go Experimental Plugins Since Go 1.8 was released, an exciting and new feature w
 Previously on this blog: Part 1, Part 3, Part 4
 In this part, I&amp;rsquo;m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.
 AWS SDK Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn&amp;rsquo;t make it less complex and less cryptic at times. I&amp;rsquo;m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time.</description>
+      <content type="html"><![CDATA[<h1 id="intro">Intro</h1>
+<p>Hi folks.</p>
+<p>Previously on this blog: <a href="https://skarlso.github.io/2017/03/16/building-furnace-part-1/">Part 1</a>, <a href="https://skarlso.github.io/2017/03/22/building-furnace-part-3/">Part 3</a>, <a href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/">Part 4</a></p>
+<p>In this part, I&rsquo;m going to talk about the AWS Go SDK and begin do dissect the intricacies of Furnace.</p>
+<h1 id="aws-sdk">AWS SDK</h1>
+<p>Fortunately, the Go SDK for AWS is quiet verbose and littered with examples of all sorts. But that doesn&rsquo;t make it less complex
+and less cryptic at times. I&rsquo;m here to lift some of the early confusions, in hopes that I can help someone to avoid wasting time.</p>
+<h2 id="getting-started-and-developers-guide">Getting Started and Developers Guide</h2>
+<p>As always, and common from AWS, the documentation is top notch. There is a 141 pages long developer&rsquo;s guide on the SDK containing
+a getting started section and an API reference. Go check it out. I&rsquo;ll wait. <a href="http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/aws-sdk-go-dg.pdf">AWS Go SDK DG PDF</a>. I will only talk about some gotchas and things I encountered, not the basics of the SDK.</p>
+<h2 id="awsstring-and-other-types">aws.String and other types</h2>
+<p>Something which is immediately visible once we take a look at the API is that everything is a pointer. Now, there are a
+tremendous amount of discussions about this, but I&rsquo;m with Amazon. There are various reasons for it, but to list the most prominent
+ones:
+- Type completion and compile time type safety.
+- Values for AWS API calls have valid zero values, in addition to being optional, i.e. not being provided at all.
+- Other option, like, empty interfaces with maps, or using zero values, or struct wrappers around every type, made life much
+harder rather than easier or not possible at all.
+- The AWS API is volatile. You never know when something gets to be optional, or required. Pointers made that decision easy.</p>
+<p>There are good number of other discussions around this topic, for example: <a href="https://github.com/aws/aws-sdk-go/issues/363">AWS Go GitHub #363</a>.</p>
+<p>In order to use primitives, AWS has helper functions like <code>aws.String</code>. Because &amp;&ldquo;asdf&rdquo; is not allowed, you would have to create a
+variable and use its address in situations where a string pointer is needed, for example, name of the stack. These primitive helpers will
+make in-lining possible. We&rsquo;ll see later that they are used to a great extent. Pointers, however, make life a bit difficult when
+constructing Input structs and make for poor aesthetics.</p>
+<p>This is something I&rsquo;m returning in a test for stubbing a client call:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">		<span class="k">return</span> <span class="o">&amp;</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">ListStackResourcesOutput</span><span class="p">{</span>
+			<span class="nx">StackResourceSummaries</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">cloudformation</span><span class="p">.</span><span class="nx">StackResourceSummary</span><span class="p">{</span>
+				<span class="p">{</span>
+					<span class="nx">ResourceType</span><span class="p">:</span>       <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;NoASG&#34;</span><span class="p">),</span>
+					<span class="nx">PhysicalResourceId</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;arn::whatever&#34;</span><span class="p">),</span>
+				<span class="p">},</span>
+			<span class="p">},</span>
+		<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This doesn&rsquo;t look so appealing, but one gets used to it quickly.</p>
+<h2 id="error-handling">Error handling</h2>
+<p>Errors also have their own types. An AWS error looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="nx">awsErr</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">err</span><span class="p">.(</span><span class="nx">awserr</span><span class="p">.</span><span class="nx">Error</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>First, we check if error is nil, than we type check if the error is an AWS error or something different. In the wild, this will
+look something like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">awsErr</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">err</span><span class="p">.(</span><span class="nx">awserr</span><span class="p">.</span><span class="nx">Error</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="nx">awsErr</span><span class="p">.</span><span class="nf">Code</span><span class="p">()</span> <span class="o">!=</span> <span class="nx">codedeploy</span><span class="p">.</span><span class="nx">ErrCodeDeploymentGroupAlreadyExistsException</span> <span class="p">{</span>
+				<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">awsErr</span><span class="p">.</span><span class="nf">Code</span><span class="p">())</span>
+				<span class="k">return</span> <span class="nx">err</span>
+			<span class="p">}</span>
+			<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;DeploymentGroup already exists. Nothing to do.&#34;</span><span class="p">)</span>
+			<span class="k">return</span> <span class="kc">nil</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="nx">err</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>If it&rsquo;s an AWS error, we can check further for the error code that it returns in order to identify what to handle, or what to throw
+on to the caller to a potential fatal. Here, I&rsquo;m ignoring the AlreadyExistsException because, if it does, we just go on to a next
+action.</p>
+<h2 id="examples">Examples</h2>
+<p>Luckily the API doc is very mature. In most of the cases, they provide an example to an API call. These examples, however, from
+time to time provide more confusion than clarity. Take CloudFormation. For me, when I first glanced upon the
+description of the API it wasn&rsquo;t immediately clear that the <code>TemplateBody</code> was supposed to be the whole template, and that
+the rest of the fields were almost all optional settings. Or provided overrides in special cases.</p>
+<p>And since the template is not an ordinary JAML or JSON file, I was looking for something that parses it into that the Struct I
+was going to use. After some time, and digging, I realized that I didn&rsquo;t need that, and that I just need to read in the template,
+define some extra parameters, and give the TemplateBody the whole of the template. The parameters defined by the CloudFormation
+template where extracted for me by <code>ValidateTemplate</code> API call which returned all of them in a convenient
+<code>[]*cloudformation.Parameter</code> slice. These things are not described in the document or visible from the examples. I mainly found
+them through playing with the API and focused experimentation.</p>
+<h2 id="waiters">Waiters</h2>
+<p>From other SDK implementations, we got used to Waiters. These handy methods wait for a service to become available or for certain
+situations to take in effect, like a Stage being <code>CREATE_COMPLETE</code>. The Go waiters, however, don&rsquo;t allow for callback to be fired,
+or for running blocks, like the ruby SDK does. For this, I wrote a handy little waiter for myself, which outputs a spinner to see
+that we are currently waiting for something and not frozen in time. This waiter looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// WaitForFunctionWithStatusOutput waits for a function to complete its action.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">WaitForFunctionWithStatusOutput</span><span class="p">(</span><span class="nx">state</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">freq</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">f</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+	<span class="nx">done</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+		<span class="nf">f</span><span class="p">()</span>
+		<span class="nx">done</span> <span class="o">&lt;-</span> <span class="kc">true</span>
+	<span class="p">}()</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">counter</span> <span class="o">:=</span> <span class="mi">0</span>
+		<span class="k">for</span> <span class="p">{</span>
+			<span class="nx">counter</span> <span class="p">=</span> <span class="p">(</span><span class="nx">counter</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">Spinners</span><span class="p">[</span><span class="nx">config</span><span class="p">.</span><span class="nx">SPINNER</span><span class="p">])</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;\r[%s] Waiting for state: %s&#34;</span><span class="p">,</span> <span class="nf">yellow</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">Spinners</span><span class="p">[</span><span class="nx">config</span><span class="p">.</span><span class="nx">SPINNER</span><span class="p">][</span><span class="nx">counter</span><span class="p">])),</span> <span class="nf">red</span><span class="p">(</span><span class="nx">state</span><span class="p">))</span>
+			<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">freq</span><span class="p">)</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+			<span class="k">select</span> <span class="p">{</span>
+			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">done</span><span class="p">:</span>
+				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">()</span>
+				<span class="k">break</span>
+			<span class="k">default</span><span class="p">:</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}()</span>
+
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And I&rsquo;m calling it with the following method:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">utils</span><span class="p">.</span><span class="nf">WaitForFunctionWithStatusOutput</span><span class="p">(</span><span class="s">&#34;DELETE_COMPLETE&#34;</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">WAITFREQUENCY</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">cfClient</span><span class="p">.</span><span class="nx">Client</span><span class="p">.</span><span class="nf">WaitUntilStackDeleteComplete</span><span class="p">(</span><span class="nx">describeStackInput</span><span class="p">)</span>
+	<span class="p">})</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This would output these lines to the console:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="o">[</span><span class="se">\]</span> Waiting <span class="k">for</span> state: DELETE_COMPLETE
+</code></pre></td></tr></table>
+</div>
+</div><p>The spinner can be configured to be one of the following types:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="nx">Spinners</span> <span class="p">=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">`←↖↑↗→↘↓↙`</span><span class="p">,</span>
+	<span class="s">`▁▃▄▅▆▇█▇▆▅▄▃`</span><span class="p">,</span>
+	<span class="s">`┤┘┴└├┌┬┐`</span><span class="p">,</span>
+	<span class="s">`◰◳◲◱`</span><span class="p">,</span>
+	<span class="s">`◴◷◶◵`</span><span class="p">,</span>
+	<span class="s">`◐◓◑◒`</span><span class="p">,</span>
+	<span class="s">`⣾⣽⣻⢿⡿⣟⣯⣷`</span><span class="p">,</span>
+	<span class="s">`|/-\`</span><span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Handy.</p>
+<p>And with that, let&rsquo;s dive into the basics of Furnace.</p>
+<h1 id="furnace">Furnace</h1>
+<h2 id="directory-structure-and-packages">Directory Structure and Packages</h2>
+<p>Furnace is divided into three main packages.</p>
+<h3 id="commands">commands</h3>
+<p>Commands package is where the gist of Furnace lies. These commands represent the commands which are used through the CLI. Each
+file has the implementation for one command. The structure is devised by this library: <a href="https://github.com/Yitsushi/go-commander">Yitsushi&rsquo;s Command Library</a>.
+As of the writing of this post, the following commands are available:</p>
+<ul>
+<li>create - Creates a stack using the CloudFormation template file under ~/.config/go-furnace</li>
+<li>delete - Deletes the created Stack. Doesn&rsquo;t do anything if the stack doesn&rsquo;t exist</li>
+<li>push - Pushes an application to a stack</li>
+<li>status - Displays information about the stack</li>
+<li>delete-application - Deletes the CodeDeploy application and deployment group created by <code>push</code></li>
+</ul>
+<p>These commands represent the heart of furnace. I would like to keep these to a minimum, but I do plan on adding more, like
+<code>update</code> and <code>rollout</code>. Further details and help messages on these commands can be obtained by running: <code>./furnace help</code> or
+<code>./furnace help create</code>.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">❯ ./furnace <span class="nb">help</span> push
+Usage: furnace push appName <span class="o">[</span>-s3<span class="o">]</span>
+
+Push a version of the application to a stack
+
+Examples:
+  furnace push
+  furnace push appName
+  furnace push appName -s3
+  furnace push -s3
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="config">config</h3>
+<p>Contains the configuration loader and some project wide defaults which are as follows:</p>
+<ul>
+<li>Events for the plugin system - <code>pre-create</code>, <code>post-create</code>, <code>pre-delete</code>, <code>post-delete</code>.</li>
+<li>CodeDeploy role name - <code>CodeDeployServiceRole</code>. This is used if none is provided to locate the CodeDeploy IAM role.</li>
+<li>Wait frequency - Is the setting which controls how long the waiter should sleep in between status updates. Default is <code>1s</code>.</li>
+<li>Spinner - Is just the number of the spinner to use.</li>
+<li>Plugin registry - Is a map of functions to run for the above events.</li>
+</ul>
+<p>Further more, config loads the CloudFormation template and checks if some necessary settings are present in the environment, exp:
+the configuration folder under <code>~/.config/go-furnace</code>.</p>
+<h3 id="utils">utils</h3>
+<p>These are some helper functions which are used throughout the project. To list them:</p>
+<ul>
+<li>error_handler - Is a simple error handler. I&rsquo;m thinking of refactoring this one to some saner version.</li>
+<li>spinner - Sets up which spinner to use in the waiter function.</li>
+<li>waiter - Contains the verbose waiter introduced above under <a href="##Waiters">Waiters</a>.</li>
+</ul>
+<h2 id="configuration-and-environment-variables">Configuration and Environment variables</h2>
+<p>Furnace is a Go application, thus it doesn&rsquo;t have the luxury of Ruby or Python where the configuration files are usually bundled
+with the app. But, it does have a standard for it. Usually, configurations reside in either of these two locations. Environment
+Properties or|and configuration files under a fixed location ( i.e. HOME/.config/app-name ). Furnace employs both.</p>
+<p>Settings like, region, stack name, enable plugin system, are under environment properties ( though this can change ), while the
+CloudFormation template lives under <code>~/.config/go-furnace/</code>. Lastly it assumes some things, like the Deployment IAM role just
+exists under the used AWS account. All these are loaded and handled by the config package described above.</p>
+<h2 id="usage">Usage</h2>
+<p>A typical scenario for Furnace would be the following:</p>
+<ul>
+<li>Setup your CloudFormation template or use the one provided. The one provided sets up a highly available and self healing setting
+using Auto-Scaling and Load-Balancing with a single application instance. Edit this template to your liking than copy it to
+<code>~/.config/go-furnace</code>.</li>
+<li>Create the configured stack with <code>./furnace create</code>.</li>
+<li>Create will ask for the parameters defined in the template. If defaults are setup, simply hitting enter will use these defaults.
+Take note, that the provided template sets up SSH access via a provided key. If that key is not present in CF, you won&rsquo;t be able
+to SSH into the created instance.</li>
+<li>Once the stack is completed, the application is ready to be pushed. To do this, run: <code>./furnace push</code>. This will locate the
+appropriate version of the app from S3 or GitHub and push that version to the instances in the Auto-Scaling group. To all of
+them.</li>
+</ul>
+<h2 id="general-practices-applied-to-the-project">General Practices Applied to the Project</h2>
+<h3 id="commands-1">Commands</h3>
+<p>For each command the main entry point is the <code>execute</code> function. These functions are usually calling out the small chunks of
+distributed methods. Logic was kept to a bare minimum ( probably could be simplified even further ) in the execute functions
+mostly for testability and the likes. We will see that in a followup post.</p>
+<h3 id="errors">Errors</h3>
+<p>Errors are handled immediately and usually through a fatal. If any error occurs than the application is halted. In followup
+versions this might become more granular. I.e. don&rsquo;t immediately stop the world, maybe try to recover, or create a Poller or
+Re-Tryer, which tries a call again for a configured amount of times.</p>
+<h3 id="output-colors">Output colors</h3>
+<p>Not that important, but still&hellip; Aesthetics. Displaying data to the console in a nice way gives it some extra flare.</p>
+<h3 id="makefile">Makefile</h3>
+<p>This project works with a Makefile for various reasons. Later on, once the project might become more complex, a Makefile makes it
+really easy to handle different ways of packaging the application. Currently, for example, it provides a <code>linux</code> target which will
+make Go build the project for Linux architecture on any other Architecture i.e. cross-compiling.</p>
+<p>It also provides an easy way to run unit tests with <code>make test</code> and installing with <code>make &amp;&amp; make install</code>.</p>
+<h1 id="closing-words">Closing Words</h1>
+<p>That is all for Part 2. Join me in Part 3 where I will talk about the experimental Plugin system that Furnace employs.</p>
+<p>Thank you for reading!
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -80,6 +1112,408 @@ AWS SDK Fortunately, the Go SDK for AWS is quiet verbose and littered with examp
 Building Furnace: Part 1 Intro Hi folks.
 This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.
 The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them.</description>
+      <content type="html"><![CDATA[<h1 id="other-posts">Other posts:</h1>
+<p><a href="https://skarlso.github.io/2017/03/19/building-furnace-part-2/">Part 2</a>, <a href="https://skarlso.github.io/2017/03/22/building-furnace-part-3/">Part 3</a>, <a href="https://skarlso.github.io/2017/04/16/building-furnace-part-4/">Part 4</a>.</p>
+<h1 id="building-furnace-part-1">Building Furnace: Part 1</h1>
+<h1 id="intro">Intro</h1>
+<p>Hi folks.</p>
+<p>This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go,
+with AWS. Including Unit testing and a experimental plugin feature.</p>
+<p>The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar
+with them. The second part will talk about the Go SDK and the project structure itself, how it can be used, improved, and how it can
+help in everyday life. The third part will talk about the experimental plugin system, and finally, we will tackle unit testing AWS
+in Go.</p>
+<p>Let&rsquo;s begin, shall we?</p>
+<h1 id="aws">AWS</h1>
+<h2 id="cloudformation">CloudFormation</h2>
+<p>If you haven&rsquo;t yet read about, or know off, AWS' CloudFormation service, you can either go ahead and read the <a href="https://aws.amazon.com/cloudformation/">Documentation</a>
+or read on for a very quick summary. If you are familiar with CF, you should skip ahead to <a href="##CodeDeploy">CodeDeploy</a> section.</p>
+<p>CF is a service which bundles together other AWS services (for example: EC2, S3, ELB, ASG, RDS) into one, easily manageable stack.
+After a stack has been created, all the resources can be handled as one, located, tagged and used via CF specific console commands.
+It&rsquo;s also possible to define any number of parameters, so a stack can actually be very versatile. A parameter can be anything, from
+SSH IP restriction to KeyPair names and list of tags to create or in what region the stack will be in.</p>
+<p>To describe how these parts fit together, one must use a CloudFormation Template file which is either in JSON or in
+YAML format. A simple example looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">    </span><span class="nt">Parameters</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">KeyName</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">Description</span><span class="p">:</span><span class="w"> </span><span class="l">The EC2 Key Pair to allow SSH access to the instance</span><span class="w">
+</span><span class="w">        </span><span class="nt">Type</span><span class="p">:</span><span class="w"> </span><span class="l">AWS::EC2::KeyPair::KeyName</span><span class="w">
+</span><span class="w">    </span><span class="nt">Resources</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">Ec2Instance</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">Type</span><span class="p">:</span><span class="w"> </span><span class="l">AWS::EC2::Instance</span><span class="w">
+</span><span class="w">        </span><span class="nt">Properties</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">SecurityGroups</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span>- <span class="nt">Ref</span><span class="p">:</span><span class="w"> </span><span class="l">InstanceSecurityGroup</span><span class="w">
+</span><span class="w">          </span>- <span class="l">MyExistingSecurityGroup</span><span class="w">
+</span><span class="w">          </span><span class="nt">KeyName</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span><span class="nt">Ref</span><span class="p">:</span><span class="w"> </span><span class="l">KeyName</span><span class="w">
+</span><span class="w">          </span><span class="nt">ImageId</span><span class="p">:</span><span class="w"> </span><span class="l">ami-7a11e213</span><span class="w">
+</span><span class="w">      </span><span class="nt">InstanceSecurityGroup</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">Type</span><span class="p">:</span><span class="w"> </span><span class="l">AWS::EC2::SecurityGroup</span><span class="w">
+</span><span class="w">        </span><span class="nt">Properties</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">GroupDescription</span><span class="p">:</span><span class="w"> </span><span class="l">Enable SSH access via port 22</span><span class="w">
+</span><span class="w">          </span><span class="nt">SecurityGroupIngress</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span>- <span class="nt">IpProtocol</span><span class="p">:</span><span class="w"> </span><span class="l">tcp</span><span class="w">
+</span><span class="w">            </span><span class="nt">FromPort</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;22&#39;</span><span class="w">
+</span><span class="w">            </span><span class="nt">ToPort</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;22&#39;</span><span class="w">
+</span><span class="w">            </span><span class="nt">CidrIp</span><span class="p">:</span><span class="w"> </span><span class="m">0.0.0.0</span><span class="l">/0</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>There are a myriad of these template samples <a href="https://aws.amazon.com/cloudformation/aws-cloudformation-templates/">here</a>.</p>
+<p>I&rsquo;m not going to explain this in too much detail. Parameters define the parameters, and resources define all the AWS services which
+we would like to configure. Here we can see, that we are creating an EC2 instance with a custom Security Group plus and already
+existing security group. ImageId is the AMI which will be used for the EC2 instance. The InstanceSecurityGroup is only defining
+some SSH access to the instance.</p>
+<p>That is pretty much it. This can become bloated relatively quickly once, VPCs, ELBs, and ASGs come into play. And CloudFormation
+templates can also contain simple logical switches, like, conditions, ref for variables, maps and other shenanigans.</p>
+<p>For example consider this part in the above example:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">      </span><span class="nt">KeyName</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">Ref</span><span class="p">:</span><span class="w"> </span><span class="l">KeyName</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>Here, we use the <code>KeyName</code> parameter as a Reference Value which will be interpolated to the real value, or the default one, as the
+template gets processed.</p>
+<h2 id="codedeploy">CodeDeploy</h2>
+<p>If you haven&rsquo;t heard about CodeDeploy yet, please browse the relevant <a href="http://docs.aws.amazon.com/codedeploy/latest/userguide/welcome.html">Documentation</a>
+or follow along for a &ldquo;quick&rdquo; description.</p>
+<p>CodeDeploy just does what the name says. It deploys code. Any kind of code, as long as the deployment process is described in a
+file called <code>appspec.yml</code>. It can be easy as coping a file to a specific location or incredibly complex with builds of various
+kinds.</p>
+<p>For a simple example look at this configuration:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">    </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="m">0.0</span><span class="w">
+</span><span class="w">    </span><span class="nt">os</span><span class="p">:</span><span class="w"> </span><span class="l">linux</span><span class="w">
+</span><span class="w">    </span><span class="nt">files</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l">/index.html</span><span class="w">
+</span><span class="w">        </span><span class="nt">destination</span><span class="p">:</span><span class="w"> </span><span class="l">/var/www/html/</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l">/healthy.html</span><span class="w">
+</span><span class="w">        </span><span class="nt">destination</span><span class="p">:</span><span class="w"> </span><span class="l">/var/www/html/</span><span class="w">
+</span><span class="w">    </span><span class="nt">hooks</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">BeforeInstall</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l">scripts/install_dependencies</span><span class="w">
+</span><span class="w">          </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="m">300</span><span class="w">
+</span><span class="w">          </span><span class="nt">runas</span><span class="p">:</span><span class="w"> </span><span class="l">root</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l">scripts/clean_up</span><span class="w">
+</span><span class="w">          </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="m">300</span><span class="w">
+</span><span class="w">          </span><span class="nt">runas</span><span class="p">:</span><span class="w"> </span><span class="l">root</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l">scripts/start_server</span><span class="w">
+</span><span class="w">          </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="m">300</span><span class="w">
+</span><span class="w">          </span><span class="nt">runas</span><span class="p">:</span><span class="w"> </span><span class="l">root</span><span class="w">
+</span><span class="w">      </span><span class="nt">ApplicationStop</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l">scripts/stop_server</span><span class="w">
+</span><span class="w">          </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="m">300</span><span class="w">
+</span><span class="w">          </span><span class="nt">runas</span><span class="p">:</span><span class="w"> </span><span class="l">root</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>CodeDeploy applications have hooks and life-cycle events which can be used to control the deployment process of an like, starting
+the WebServer; making sure files are in the right location; copying files, running configuration management software like puppet,
+ansible or chef; etc, etc.</p>
+<p>What can be done in an <code>appspec.yml</code> file is described here: <a href="http://docs.aws.amazon.com/codedeploy/latest/userguide/app-spec-ref.html">Appspec Reference Documentation</a>.</p>
+<p>Deployment happens in one of two ways:</p>
+<h3 id="github">GitHub</h3>
+<p>If the preferred way to deploy the application is from GitHub a commit hash must be used to identify which &ldquo;version&rdquo; of the
+application is to be deployed. For example:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">    <span class="nx">rev</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">RevisionLocation</span><span class="p">{</span>
+        <span class="nx">GitHubLocation</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">GitHubLocation</span><span class="p">{</span>
+            <span class="nx">CommitId</span><span class="p">:</span>   <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;kajdf94j0f9k309klksjdfkj&#34;</span><span class="p">),</span>
+            <span class="nx">Repository</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;Skarlso/furnace-codedeploy-app&#34;</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="nx">RevisionType</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;GitHub&#34;</span><span class="p">),</span>
+    <span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Commit Id is the hash of the latest release and repository is the full account/repository pointing to the application.</p>
+<h3 id="s3">S3</h3>
+<p>The second way is to use an S3 bucket. The bucket will contain an archived version of the application with a given extension. I&rsquo;m
+saying given extension, because it has to be specified like this (and can be either &lsquo;zip&rsquo;, or &lsquo;tar&rsquo; or &lsquo;tgz&rsquo;):</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">    <span class="nx">rev</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">RevisionLocation</span><span class="p">{</span>
+        <span class="nx">S3Location</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">S3Location</span><span class="p">{</span>
+            <span class="nx">Bucket</span><span class="p">:</span>     <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;my_codedeploy_bucket&#34;</span><span class="p">),</span>
+            <span class="nx">BundleType</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;zip&#34;</span><span class="p">),</span>
+            <span class="nx">Key</span><span class="p">:</span>        <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;my_awesome_app&#34;</span><span class="p">),</span>
+            <span class="nx">Version</span><span class="p">:</span>    <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;VersionId&#34;</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="nx">RevisionType</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;S3&#34;</span><span class="p">),</span>
+    <span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Here, we specify the bucket name, the extension, the name of the file and an optional version id, which can be ignored.</p>
+<h3 id="deploying">Deploying</h3>
+<p>So how does code deploy get either of the applications to our EC2 instances? It uses an agent which is running on all of the
+instances that we create. In order to do this, the agent needs to be present on our instance. For linux this can be achieved with
+the following UserData (UserData in CF is the equivalent of a bootsrap script):</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">    <span class="s2">&#34;UserData&#34;</span> : <span class="o">{</span>
+        <span class="s2">&#34;Fn::Base64&#34;</span> : <span class="o">{</span> <span class="s2">&#34;Fn::Join&#34;</span> : <span class="o">[</span> <span class="s2">&#34;\n&#34;</span>, <span class="o">[</span>
+            <span class="s2">&#34;#!/bin/bash -v&#34;</span>,
+            <span class="s2">&#34;sudo yum -y update&#34;</span>,
+            <span class="s2">&#34;sudo yum -y install ruby wget&#34;</span>,
+            <span class="s2">&#34;cd /home/ec2-user/&#34;</span>,
+            <span class="s2">&#34;wget https://aws-codedeploy-eu-central-1.s3.amazonaws.com/latest/install&#34;</span>,
+            <span class="s2">&#34;chmod +x ./install&#34;</span>,
+            <span class="s2">&#34;sudo ./install auto&#34;</span>,
+            <span class="s2">&#34;sudo service codedeploy-agent start&#34;</span>,
+        <span class="o">]</span> <span class="o">]</span> <span class="o">}</span>
+    <span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>A simple user data configuration in the CloudFormation template will make sure that every instance that we create will have the
+CodeDeploy agent running and waiting for instructions. This agent is self updating. Which can cause some trouble if AWS releases a
+broken agent. However unlikely, it can happen. Never the less, once installed, it&rsquo;s no longer a concern to be bothered with.</p>
+<p>It communications on HTTPS port 443.</p>
+<p>CodeDeploy identifies instances which need to be updated according to our preferences, by tagging the EC2 and Auto Scaling groups.
+Tagging happens in the CloudFormation template through the AutoScalingGroup settings like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-json" data-lang="json">    <span class="s2">&#34;Tags&#34;</span> <span class="err">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&#34;Key&#34;</span> <span class="p">:</span> <span class="s2">&#34;fu_stage&#34;</span><span class="p">,</span>
+            <span class="nt">&#34;Value&#34;</span> <span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;Ref&#34;</span><span class="p">:</span> <span class="s2">&#34;AWS::StackName&#34;</span> <span class="p">},</span>
+            <span class="nt">&#34;PropagateAtLaunch&#34;</span> <span class="p">:</span> <span class="kc">true</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This will give the EC2 instance a tag called <code>fu_stage</code> with value equaling to the name of the stack. Once this is done, CodeDeploy
+looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">    <span class="nx">params</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">CreateDeploymentInput</span><span class="p">{</span>
+        <span class="nx">ApplicationName</span><span class="p">:</span>               <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="nx">appName</span><span class="p">),</span>
+        <span class="nx">IgnoreApplicationStopFailures</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">Bool</span><span class="p">(</span><span class="kc">true</span><span class="p">),</span>
+        <span class="nx">DeploymentGroupName</span><span class="p">:</span>           <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="nx">appName</span> <span class="o">+</span> <span class="s">&#34;DeploymentGroup&#34;</span><span class="p">),</span>
+        <span class="nx">Revision</span><span class="p">:</span>                      <span class="nf">revisionLocation</span><span class="p">(),</span>
+        <span class="nx">TargetInstances</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">TargetInstances</span><span class="p">{</span>
+            <span class="nx">AutoScalingGroups</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="kt">string</span><span class="p">{</span>
+                <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;AutoScalingGroupPhysicalID&#34;</span><span class="p">),</span>
+            <span class="p">},</span>
+            <span class="nx">TagFilters</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">codedeploy</span><span class="p">.</span><span class="nx">EC2TagFilter</span><span class="p">{</span>
+                <span class="p">{</span>
+                    <span class="nx">Key</span><span class="p">:</span>   <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;fu_stage&#34;</span><span class="p">),</span>
+                    <span class="nx">Type</span><span class="p">:</span>  <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;KEY_AND_VALUE&#34;</span><span class="p">),</span>
+                    <span class="nx">Value</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="nx">config</span><span class="p">.</span><span class="nx">STACKNAME</span><span class="p">),</span>
+                <span class="p">},</span>
+            <span class="p">},</span>
+        <span class="p">},</span>
+        <span class="nx">UpdateOutdatedInstancesOnly</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">Bool</span><span class="p">(</span><span class="kc">false</span><span class="p">),</span>
+    <span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>CreateDeploymentInput is the entire parameter list that is needed in order to identify instances to deploy code to. We can see
+here that it looks for an AutoScalingGroup by Physical Id and the tag labeled <code>fu_stage</code>. Once found, it will use
+<code>UpdateOutdatedInstancesOnly</code> to determine if an instance needs to be updated or not. Set to false means, it always updates.</p>
+<h1 id="furnace">Furnace</h1>
+<p>Where does <a href="https://github.com/Skarlso/go-furnace">Furnace</a> fit in, in all of this? Furnace provides a very easy mechanism to create,
+delete and push code to a CloudFormation stack using CodeDeploy, and a couple of environment properties. Furnace <code>create</code> will
+create a CloudFormation stack according to the provided template, all the while asking for the parameters defined in it for
+flexibility. <code>delete</code> will remove the stack and all affiliated resources except for the created CodeDeploy application. For that,
+there is <code>delete-application</code>. <code>status</code> will display information about the stack: Outputs, Parameters, Id, Name, and status.
+Something like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">    2017/03/16 21:14:37 Stack state is:  <span class="o">{</span>
+      Capabilities: <span class="o">[</span><span class="s2">&#34;CAPABILITY_IAM&#34;</span><span class="o">]</span>,
+      CreationTime: 2017-03-16 20:09:38.036 +0000 UTC,
+      DisableRollback: false,
+      Outputs: <span class="o">[{</span>
+          Description: <span class="s2">&#34;URL of the website&#34;</span>,
+          OutputKey: <span class="s2">&#34;URL&#34;</span>,
+          OutputValue: <span class="s2">&#34;http://FurnaceSt-ElasticL-ID.eu-central-1.elb.amazonaws.com&#34;</span>
+        <span class="o">}]</span>,
+      Parameters: <span class="o">[</span>
+        <span class="o">{</span>
+          ParameterKey: <span class="s2">&#34;KeyName&#34;</span>,
+          ParameterValue: <span class="s2">&#34;UserKeyPair&#34;</span>
+        <span class="o">}</span>,
+        <span class="o">{</span>
+          ParameterKey: <span class="s2">&#34;SSHLocation&#34;</span>,
+          ParameterValue: <span class="s2">&#34;0.0.0.0/0&#34;</span>
+        <span class="o">}</span>,
+        <span class="o">{</span>
+          ParameterKey: <span class="s2">&#34;CodeDeployBucket&#34;</span>,
+          ParameterValue: <span class="s2">&#34;None&#34;</span>
+        <span class="o">}</span>,
+        <span class="o">{</span>
+          ParameterKey: <span class="s2">&#34;InstanceType&#34;</span>,
+          ParameterValue: <span class="s2">&#34;t2.nano&#34;</span>
+        <span class="o">}</span>
+      <span class="o">]</span>,
+      StackId: <span class="s2">&#34;arn:aws:cloudformation:eu-central-1:9999999999999:stack/FurnaceStack/asdfadsf-adsfa3-432d-a-fdasdf&#34;</span>,
+      StackName: <span class="s2">&#34;FurnaceStack&#34;</span>,
+      StackStatus: <span class="s2">&#34;CREATE_COMPLETE&#34;</span>
+    <span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>( This will later be improved to include created resources as well. )</p>
+<p>Once the stack is <code>CREATE_COMPLETE</code> a simple <code>push</code> will deliver our application on each instance in the stack. We will get into
+more detail about how these commands are working in Part 2 of this series.</p>
+<h1 id="final-words">Final Words</h1>
+<p>This is it for now.</p>
+<p>Join me next time when I will talk about the AWS Go SDK and its intricacies and we will start to look at the basics of Furnace.</p>
+<p>As always,
+Thanks for reading!
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -91,6 +1525,294 @@ The first part will talk about the AWS services used in brief and will contain a
       <description>&lt;p&gt;Hi folks.&lt;/p&gt;
 &lt;p&gt;Got an update for the backup script. This time, you&amp;rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.&lt;/p&gt;
 &lt;p&gt;Here is the script again, now modified and a bit cleaned up. I hope it&amp;rsquo;s helpful.&lt;/p&gt;</description>
+      <content type="html"><![CDATA[<p>Hi folks.</p>
+<p>Got an update for the backup script. This time, you&rsquo;ll have the ability to implement your own upload capabilities. I provide a mock implementation for the required functions.</p>
+<p>Here is the script again, now modified and a bit cleaned up. I hope it&rsquo;s helpful.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/bash
+</span><span class="cp"></span>
+<span class="k">if</span> <span class="o">[[</span> -t <span class="m">1</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nv">colors</span><span class="o">=</span><span class="k">$(</span>tput colors<span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$colors</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nv">RED</span><span class="o">=</span><span class="s1">&#39;\033[0;31m&#39;</span>
+        <span class="nv">LIGHT_GREEN</span><span class="o">=</span><span class="s1">&#39;\033[1;32m&#39;</span>
+        <span class="nv">NC</span><span class="o">=</span><span class="s1">&#39;\033[0m&#39;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_BUCKET</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">printf</span> <span class="s2">&#34;Please set the env variable %bMINECRAFT_BUCKET%b to the s3 archive bucket name.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">printf</span> <span class="s2">&#34;Please set the env variable %bMINECRAFT_ARCHIVE_LIMIT%b to limit the number of archives to keep.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_WORLD</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">printf</span> <span class="s2">&#34;Please set the env variable %bMINECRAFT_WORLD%b to specify what world to back-up.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="nv">backup_world</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_WORLD</span><span class="si">}</span>
+<span class="nv">backup_bucket</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_BUCKET</span><span class="si">}</span>
+<span class="nv">backup_limit</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">}</span>
+<span class="nv">archive_name</span><span class="o">=</span><span class="s2">&#34;</span><span class="si">${</span><span class="nv">backup_world</span><span class="si">}</span><span class="s2">-</span><span class="k">$(</span>date +<span class="s2">&#34;%H-%M-%S-%m-%d-%Y&#34;</span><span class="k">)</span><span class="s2">.zip&#34;</span>
+
+<span class="k">function</span> create_archive <span class="o">{</span>
+    <span class="nb">printf</span> <span class="s2">&#34;Creating archive of %b</span><span class="si">${</span><span class="nv">backup_world</span><span class="si">}</span><span class="s2">%b\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    zip -r <span class="nv">$archive_name</span> <span class="nv">$backup_world</span>
+<span class="o">}</span>
+
+<span class="k">function</span> amazon_bak <span class="o">{</span>
+
+    create_archive
+
+    <span class="nb">printf</span> <span class="s2">&#34;Checking if bucket has more than %b</span><span class="si">${</span><span class="nv">backup_limit</span><span class="si">}</span><span class="s2">%b files already.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="nv">content</span><span class="o">=(</span> <span class="k">$(</span>aws s3 ls s3://<span class="nv">$backup_bucket</span> <span class="p">|</span> awk <span class="s1">&#39;{print $4}&#39;</span><span class="k">)</span> <span class="o">)</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="si">${#</span><span class="nv">content</span><span class="p">[@]</span><span class="si">}</span> -eq <span class="nv">$backup_limit</span> <span class="o">||</span> <span class="si">${#</span><span class="nv">content</span><span class="p">[@]</span><span class="si">}</span> -gt <span class="nv">$backup_limit</span>  <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">echo</span> <span class="s2">&#34;There are too many archives. Deleting oldest one.&#34;</span>
+        <span class="c1"># We can assume here that the list is in cronological order</span>
+    	<span class="nb">printf</span> <span class="s2">&#34;%bs3://</span><span class="si">${</span><span class="nv">backup_bucket</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">content</span><span class="p">[0]</span><span class="si">}</span><span class="s2">\n%b&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+        aws s3 rm s3://<span class="nv">$backup_bucket</span>/<span class="si">${</span><span class="nv">content</span><span class="p">[0]</span><span class="si">}</span>
+    <span class="k">fi</span>
+
+    <span class="nb">printf</span> <span class="s2">&#34;Uploading %b</span><span class="si">${</span><span class="nv">archive_name</span><span class="si">}</span><span class="s2">%b to s3 archive bucket.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="nv">state</span><span class="o">=</span><span class="k">$(</span>aws s3 cp <span class="nv">$archive_name</span> s3://<span class="nv">$backup_bucket</span><span class="k">)</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$state</span><span class="s2">&#34;</span> <span class="o">=</span>~ <span class="s2">&#34;upload:&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">printf</span> <span class="s2">&#34;File upload %bsuccessful%b.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">LIGHT_GREEN</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="k">else</span>
+        <span class="nb">printf</span> <span class="s2">&#34;%bError%b occured while uploading archive. Please investigate.\n&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">function</span> custom <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> -e custom.sh <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">source</span> ./custom.sh
+    <span class="k">else</span>
+        <span class="nb">echo</span> <span class="s2">&#34;custom.sh script not found. Please implement the apropriate functions.&#34;</span>
+        <span class="nb">exit</span> <span class="m">1</span>
+    <span class="k">fi</span>
+
+    <span class="nb">echo</span> <span class="s2">&#34;Checking for the number of files. Limit is: </span><span class="nv">$backup_limit</span><span class="s2">.&#34;</span>
+    <span class="nv">files</span><span class="o">=(</span> <span class="k">$(</span>list<span class="k">)</span> <span class="o">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="si">${#</span><span class="nv">files</span><span class="p">[@]</span><span class="si">}</span> -eq <span class="nv">$backup_limit</span> <span class="o">||</span> <span class="si">${#</span><span class="nv">files</span><span class="p">[@]</span><span class="si">}</span> -gt <span class="nv">$backup_limit</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">echo</span> <span class="s2">&#34;Deleting extra file.&#34;</span>
+        delete <span class="si">${</span><span class="nv">files</span><span class="p">[0]</span><span class="si">}</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> !<span class="o">=</span> <span class="m">0</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+            <span class="nb">printf</span> <span class="s2">&#34;%bFailed%b to delete file. Please investigate failure.&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+            <span class="nb">exit</span> <span class="nv">$?</span>
+        <span class="k">fi</span>
+    <span class="k">fi</span>
+
+    <span class="nb">echo</span> <span class="s2">&#34;Zipping world.&#34;</span>
+    create_archive
+
+    <span class="nb">echo</span> <span class="s2">&#34;Uploading world.&#34;</span>
+    upload <span class="nv">$archive_name</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> !<span class="o">=</span> <span class="m">0</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">printf</span> <span class="s2">&#34;%bFailed%b to upload archive. Please investigate the error.&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+        <span class="nb">exit</span> <span class="nv">$?</span>
+    <span class="k">fi</span>
+
+    <span class="nb">printf</span> <span class="s2">&#34;Upload %bsuccessful%b&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">LIGHT_GREEN</span><span class="si">}</span><span class="s2">&#34;</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">&#34;</span>
+<span class="o">}</span>
+
+<span class="k">function</span> <span class="nb">help</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Usage:&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;./backup_world [METHOD]&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Exp.: ./backup_world aws|./backup_world custom|./backup_world dropbox&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Each method has it&#39;s own environment properties that it requires.&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Global: MINECRAFT_WORLD|MINECRAFT_BUCKET|MINECRAFT_ARCHIVE_LIMIT&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Custom: Have a file, called &#39;custom.sh&#39; which is sourced.&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;Implement these three functions: upload | list | delete.&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;upload -&gt; should return exit code 0 on success, should return exit code 1 on failure.&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;list -&gt; should return a list of cronologically ordered items.&#34;</span>
+    <span class="nb">echo</span> <span class="s2">&#34;delete -&gt; should return exit code 0 on success, should return exit code 1 on failure.&#34;</span>
+<span class="o">}</span>
+
+<span class="k">case</span> <span class="nv">$1</span> in
+    aws <span class="o">)</span>
+        amazon_bak
+        <span class="p">;;</span>
+    custom <span class="o">)</span>
+        custom
+        <span class="p">;;</span>
+    * <span class="o">)</span>
+        <span class="nb">help</span>
+        <span class="p">;;</span>
+<span class="k">esac</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And here is the sample implementation for the custom upload functionality.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/bash
+</span><span class="cp"></span>
+<span class="k">function</span> upload <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&#34;uploading&#34;</span>
+    <span class="nb">local</span> <span class="nv">result</span><span class="o">=</span><span class="m">0</span>
+    <span class="k">return</span> <span class="nv">$result</span>
+<span class="o">}</span>
+
+<span class="k">function</span> delete <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&#34;deleting </span><span class="nv">$1</span><span class="s2">&#34;</span>
+    <span class="nb">local</span> <span class="nv">result</span><span class="o">=</span><span class="m">0</span>
+    <span class="k">return</span> <span class="nv">$result</span>
+<span class="o">}</span>
+
+<span class="k">function</span> list <span class="o">{</span>
+    <span class="nb">local</span> <span class="nv">arr</span><span class="o">=(</span><span class="s2">&#34;file1&#34;</span> <span class="s2">&#34;file2&#34;</span> <span class="s2">&#34;file3&#34;</span><span class="o">)</span>
+    <span class="nb">echo</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">arr</span><span class="p">[@]</span><span class="si">}</span><span class="s2">&#34;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Thanks for reading!</p>
+<p>Gergely.</p>]]></content>
     </item>
     
     <item>
@@ -103,6 +1825,116 @@ The first part will talk about the AWS services used in brief and will contain a
 Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&amp;rsquo;m backing up the world once in a while.
 For that, I&amp;rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.
 The script is really straightforward. I&amp;rsquo;m doing manual versioning, although S3 does provide one out of the box.</description>
+      <content type="html"><![CDATA[<p>Hi Folks.</p>
+<p>Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&rsquo;m backing up the world once in a while.</p>
+<p>For that, I&rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.</p>
+<p>The script is really straightforward. I&rsquo;m doing manual versioning, although S3 does provide one out of the box. However, amazon&rsquo;s S3 versioning doesn&rsquo;t allow limiting the number of versions being kept. And since I&rsquo;m doing that anyways, might as well take care of the rest.</p>
+<p>Without further ado, here is the script:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/bash
+</span><span class="cp"></span>
+<span class="k">if</span> <span class="o">[[</span> -t <span class="m">1</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nv">colors</span><span class="o">=</span><span class="k">$(</span>tput colors<span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$colors</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nv">RED</span><span class="o">=</span><span class="s1">&#39;\033[0;31m&#39;</span>
+        <span class="nv">LIGHT_GREEN</span><span class="o">=</span><span class="s1">&#39;\033[1;32m&#39;</span>
+        <span class="nv">NC</span><span class="o">=</span><span class="s1">&#39;\033[0m&#39;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_BUCKET</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+	<span class="nb">printf</span> <span class="s2">&#34;Please set the env variable </span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">MINECRAFT_BUCKET</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> to the s3 archive bucket name.\n&#34;</span>
+	<span class="nb">exit</span> <span class="m">0</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+	<span class="nb">printf</span> <span class="s2">&#34;Please set the env variable </span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> to limit the number of archives to keep.\n&#34;</span>
+	<span class="nb">exit</span> <span class="m">0</span>
+<span class="k">fi</span>
+
+<span class="nv">backup_bucket</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_BUCKET</span><span class="si">}</span>
+<span class="nv">backup_limit</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">}</span>
+<span class="nv">world</span><span class="o">=</span><span class="nv">$1</span>
+<span class="nb">printf</span> <span class="s2">&#34;Creating archive of </span><span class="si">${</span><span class="nv">RED</span><span class="si">}${</span><span class="nv">world</span><span class="si">}${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">\n&#34;</span>
+<span class="nv">archive_name</span><span class="o">=</span><span class="s2">&#34;</span><span class="si">${</span><span class="nv">world</span><span class="si">}</span><span class="s2">-</span><span class="k">$(</span>date +<span class="s2">&#34;%H-%M-%S-%m-%d-%Y&#34;</span><span class="k">)</span><span class="s2">.zip&#34;</span>
+zip -r <span class="nv">$archive_name</span> <span class="nv">$world</span>
+
+<span class="nb">printf</span> <span class="s2">&#34;Checking if bucket has more than </span><span class="si">${</span><span class="nv">RED</span><span class="si">}${</span><span class="nv">backup_limit</span><span class="si">}${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> files already.\n&#34;</span>
+<span class="nv">content</span><span class="o">=(</span> <span class="k">$(</span>aws s3 ls s3://<span class="nv">$backup_bucket</span> <span class="p">|</span> awk <span class="s1">&#39;{print $4}&#39;</span><span class="k">)</span> <span class="o">)</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="si">${#</span><span class="nv">content</span><span class="p">[@]</span><span class="si">}</span> -eq <span class="nv">$backup_limit</span> <span class="o">||</span> <span class="si">${#</span><span class="nv">content</span><span class="p">[@]</span><span class="si">}</span> -gt <span class="nv">$backup_limit</span>  <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;There are too many archives. Deleting oldest one.&#34;</span>
+    <span class="c1"># We can assume here that the list is in cronological order</span>
+	<span class="nb">printf</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">s3://</span><span class="si">${</span><span class="nv">backup_bucket</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">content</span><span class="p">[0]</span><span class="si">}</span><span class="s2">\n&#34;</span>
+    aws s3 rm s3://<span class="nv">$backup_bucket</span>/<span class="si">${</span><span class="nv">content</span><span class="p">[0]</span><span class="si">}</span>
+<span class="k">fi</span>
+
+<span class="nb">printf</span> <span class="s2">&#34;Uploading </span><span class="si">${</span><span class="nv">RED</span><span class="si">}${</span><span class="nv">archive_name</span><span class="si">}${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> to s3 archive bucket.\n&#34;</span>
+<span class="nv">state</span><span class="o">=</span><span class="k">$(</span>aws s3 cp <span class="nv">$archive_name</span> s3://<span class="nv">$backup_bucket</span><span class="k">)</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$state</span><span class="s2">&#34;</span> <span class="o">=</span>~ <span class="s2">&#34;upload:&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">printf</span> <span class="s2">&#34;File upload </span><span class="si">${</span><span class="nv">LIGHT_GREEN</span><span class="si">}</span><span class="s2">successful</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">.\n&#34;</span>
+<span class="k">else</span>
+    <span class="nb">printf</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">Error</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> occured while uploading archive. Please investigate.\n&#34;</span>
+<span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>It uses environment properties to define where to upload the given world and how many versions to keep.</p>
+<p>I&rsquo;m calling this from a cron job, and it&rsquo;s sitting next to where the Minecraft world is.</p>
+<p>That&rsquo;s it folks.</p>
+<p>I&rsquo;ll start expanding on this idea and implement various services, like your own server address, or dropbox, or what have you.</p>
+<p>Happy backing up.</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
   </channel>

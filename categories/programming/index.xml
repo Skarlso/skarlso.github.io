@@ -14,6 +14,9 @@
       
       <guid>https://skarlso.github.io/2016/03/04/wercker-test-2/</guid>
       <description>Basics This is a wercker Test.</description>
+      <content type="html"><![CDATA[<h2 id="basics">Basics</h2>
+<p>This is a wercker Test.</p>
+]]></content>
     </item>
     
     <item>
@@ -23,6 +26,9 @@
       
       <guid>https://skarlso.github.io/2016/02/10/wercker-test/</guid>
       <description>Basics This is a wercker Test.</description>
+      <content type="html"><![CDATA[<h2 id="basics">Basics</h2>
+<p>This is a wercker Test.</p>
+]]></content>
     </item>
     
     <item>
@@ -35,6 +41,113 @@
 This will be a quick post about how to do CORS with jQuery, Gin in Go with a very simple ajax GET and Json.
 I&amp;rsquo;m choosing JSON here because basically I don&amp;rsquo;t really like JSONP. And actually, it&amp;rsquo;s not very complicated to do CORS, it&amp;rsquo;s just hidden enough so that it doesn&amp;rsquo;t become transparent.
 First, what is CORS? It&amp;rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization in the header of a request, Javascript can&amp;rsquo;t reach outside of your domain and be potentially harmful to your visitors.</description>
+      <content type="html"><![CDATA[<h2 id="basics">Basics</h2>
+<p>Hello folks.</p>
+<p>This will be a quick post about how to do CORS with jQuery, Gin in Go with a very simple ajax GET and Json.</p>
+<p>I&rsquo;m choosing JSON here because basically I don&rsquo;t really like JSONP. And actually, it&rsquo;s not very complicated to do CORS, it&rsquo;s just hidden enough so that it doesn&rsquo;t become transparent.</p>
+<p>First, what is CORS? It&rsquo;s Cross-Platform Resource Sharing. It has been invented so that without your explicit authorization in the header of a request, Javascript can&rsquo;t reach outside of your domain and be potentially harmful to your visitors.</p>
+<p>Now, suppose you have an architecture like this.</p>
+<p><img src="/img/architecture.png" alt="Architecture"></p>
+<p>You have multiple agents sitting on multiple nodes. You have one central server, and you have multiple front-ends. Everybody can only talk to the Server but the server does talk to everyone. You would like to have a dynamic front-end and would like to display data with ajax calls. Since your front-end sits on a different server, you will have to do something about CORS. This is how I solved it&hellip;</p>
+<p>I&rsquo;m using <a href="https://github.com/gin-gonic/gin">Gin</a> for my REST service for <a href="https://github.com/Skarlso/dockmaster2">Dockmaster</a>. For this two work, you need to adjust two component.</p>
+<h2 id="server">Server</h2>
+<p>There is thing called a Preflight-Check. In essence, the preflight check is sent BEFORE the actual request to check if the next request is allowed to go out of the domain. The preflight check is sent to the same URI just with OPTIONS method. In order to tell the caller that the next one will be safe, you need three things.</p>
+<p>First, you need to set two Headers.
+#1 -&gt; Access-Control-Allow-Origin to &ldquo;*&rdquo;.
+#2 -&gt; Access-Control-Allow-Headers to &ldquo;access-control-allow-origin, access-control-allow-headers&rdquo;.</p>
+<p>These are the minimum headers you can set. If you allow Access-Control-Allow-Origin you also have to allow it in the headers section because the next request will expect it to be there. Also, note here that setting Origin to * is only recommended in development environment. Otherwise it should be set to whatever your domain is.</p>
+<p>Second, you need to respond to the OPTIONS method with a 200. In order to do that, I added a simple rule with the same end-point but with OPTIONS.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">router</span> <span class="o">:=</span> <span class="nx">gin</span><span class="p">.</span><span class="nf">Default</span><span class="p">()</span>
+    <span class="nx">v1</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">Group</span><span class="p">(</span><span class="nx">APIBASE</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nx">v1</span><span class="p">.</span><span class="nf">GET</span><span class="p">(</span><span class="s">&#34;/list&#34;</span><span class="p">,</span> <span class="nx">listContainers</span><span class="p">)</span>
+        <span class="nx">v1</span><span class="p">.</span><span class="nf">POST</span><span class="p">(</span><span class="s">&#34;/add&#34;</span><span class="p">,</span> <span class="nx">addContainers</span><span class="p">)</span>
+        <span class="nx">v1</span><span class="p">.</span><span class="nf">POST</span><span class="p">(</span><span class="s">&#34;/delete&#34;</span><span class="p">,</span> <span class="nx">deleteContainers</span><span class="p">)</span>
+        <span class="nx">v1</span><span class="p">.</span><span class="nf">GET</span><span class="p">(</span><span class="s">&#34;/inspect/:agentID/:containerID&#34;</span><span class="p">,</span> <span class="nx">inspectContainer</span><span class="p">)</span>
+        <span class="nx">v1</span><span class="p">.</span><span class="nf">OPTIONS</span><span class="p">(</span><span class="s">&#34;/inspect/:agentID/:containerID&#34;</span><span class="p">,</span> <span class="nx">preflight</span><span class="p">)</span>
+        <span class="nx">v1</span><span class="p">.</span><span class="nf">POST</span><span class="p">(</span><span class="s">&#34;/stopAll&#34;</span><span class="p">,</span> <span class="nx">stopAll</span><span class="p">)</span>
+        <span class="nx">v1</span><span class="p">.</span><span class="nf">OPTIONS</span><span class="p">(</span><span class="s">&#34;/stopAll&#34;</span><span class="p">,</span> <span class="nx">preflight</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">router</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="s">&#34;:8989&#34;</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">preflight</span><span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">gin</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">c</span><span class="p">.</span><span class="nf">Header</span><span class="p">(</span><span class="s">&#34;Access-Control-Allow-Origin&#34;</span><span class="p">,</span> <span class="s">&#34;*&#34;</span><span class="p">)</span>
+    <span class="nx">c</span><span class="p">.</span><span class="nf">Header</span><span class="p">(</span><span class="s">&#34;Access-Control-Allow-Headers&#34;</span><span class="p">,</span> <span class="s">&#34;access-control-allow-origin, access-control-allow-headers&#34;</span><span class="p">)</span>
+    <span class="nx">c</span><span class="p">.</span><span class="nf">JSON</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusOK</span><span class="p">,</span> <span class="kd">struct</span><span class="p">{}{})</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>You can see that the preflight method is there for two end-points. I added it to those end-points which will reach over the domain. The others are all local, thus they don&rsquo;t need that. This leads to a little duplication, but that is fine. I have a very fine control over what actually is allowed to go outside of the domain.</p>
+<p>So, how do we call this?</p>
+<h2 id="frontend">Frontend</h2>
+<p>In the front-end&rsquo;s web layout, I&rsquo;m doing an Ajax GET, which looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-javascript" data-lang="javascript">                <span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+                    <span class="nx">url</span><span class="o">:</span> <span class="s1">&#39;http://localhost:8989/api/1/inspect/&#39;</span><span class="o">+</span><span class="nx">data</span><span class="p">.</span><span class="nx">agentid</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="nx">data</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span>
+                    <span class="nx">type</span><span class="o">:</span> <span class="s1">&#39;GET&#39;</span><span class="p">,</span>
+                    <span class="nx">dataType</span><span class="o">:</span><span class="s2">&#34;json&#34;</span><span class="p">,</span>
+                    <span class="nx">headers</span><span class="o">:</span> <span class="p">{</span><span class="s2">&#34;Access-Control-Allow-Origin&#34;</span><span class="o">:</span> <span class="s2">&#34;*&#34;</span><span class="p">,</span> <span class="s2">&#34;Access-Control-Allow-Headers&#34;</span><span class="o">:</span> <span class="s2">&#34;access-control-allow-origin, access-control-allow-headers&#34;</span><span class="p">},</span>
+                    <span class="nx">processData</span><span class="o">:</span> <span class="kc">false</span><span class="p">,</span>
+                    <span class="nx">success</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="kd">var</span> <span class="nx">json</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="kc">null</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+                        <span class="nx">independentPopup</span><span class="p">.</span><span class="nx">html</span><span class="p">(</span><span class="s2">&#34;&lt;pre &gt;&#34;</span><span class="o">+</span><span class="nx">json</span><span class="o">+</span><span class="s2">&#34;&lt;/pre&gt;&#34;</span><span class="p">);</span>
+                        <span class="nx">$</span><span class="p">(</span><span class="nx">link</span><span class="p">).</span><span class="nx">after</span><span class="p">(</span><span class="nx">independentPopup</span><span class="p">);</span>
+                    <span class="p">}</span>
+                <span class="p">});</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>After the headers are set, the request will work nicely.</p>
+<h2 id="y-u-no-middleware">Y U No Middleware?</h2>
+<p>And now you could say that, why not just have a middleware which will always accept OPTIONS for every end-point. Because I like it better this way. Some would argue that this is too granular, but fact is, that in my opinion, this is more readable and immediatly visible. However, if you DO want to do that, you have several options to your disposal.</p>
+<p><a href="https://github.com/itsjamie/gin-cors">Cors Basic Http Middleware</a> and for Gin <a href="https://github.com/itsjamie/gin-cors">Gin CORS Middleware</a>.</p>
+<h2 id="summary">Summary</h2>
+<p>This is it. You can see the code in its entirety on Github. Have a better idea on how to do it? Please! Do not hesitate to share. I always like to learn.</p>
+<p>Thank you for reading!</p>
+<p>And as always,
+Have a nice day!</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -47,6 +160,74 @@ First, what is CORS? It&amp;rsquo;s Cross-Platform Resource Sharing. It has been
 I wanted to share with you my tale of working through the problems with Advent Of Code.
 It is a nice tale and there are a few things I learned from it, especially in Go, since I used that solve all of the problems. So, let&amp;rsquo;s get started.
 Solving the problems The most important lesson I learned while doing these exercises was, how to solve these problems. A couple of them were simple enough to not have to over think it, but most of them got very tricky.</description>
+      <content type="html"><![CDATA[<p>Hello folks.</p>
+<p>I wanted to share with you my tale of working through the problems with <a href="http://adventofcode.com">Advent Of Code</a>.</p>
+<p>It is a nice tale and there are a few things I learned from it, especially in Go, since I used that solve all of the problems. So, let&rsquo;s get started.</p>
+<h1 id="solving-the-problems">Solving the problems</h1>
+<p>The most important lesson I learned while doing these exercises was, how to solve these problems. A couple of them were simple enough to not have to over think it, but most of them got very tricky. I could have gone with a brute force attempt, but as we see later, that wasn&rsquo;t always a very good solution. And people who used that, actually just got lucky finding their solutions.</p>
+<p>The eight stages of breaking down a problem according to this book <a href="http://www.amazon.co.uk/Think-Like-Programmer-Introduction-Creative/dp/1593274246/ref=sr_1_1?s=books&amp;ie=UTF8&amp;qid=1453449575&amp;sr=1-1&amp;keywords=thinking+like+a+programmer">Thinking Like a Programmer</a> are the following:</p>
+<ul>
+<li>Have a plan</li>
+<li>Rephrase</li>
+<li>Divide</li>
+<li>Start with what you know</li>
+<li>Reduce</li>
+<li>Analogies</li>
+<li>Experiment</li>
+<li>Don&rsquo;t get frustrated</li>
+</ul>
+<h2 id="have-a-plan-and-understanding-your-goal">Have a plan and understanding your goal</h2>
+<p>This is simple. Always have a plan of what you would like to do, and how to start. This will help you massively along the way to not to loose sight of what your goal is actually. For example, look at <a href="http://adventofcode.com/day/24">Day 24</a>. At first, it looks like a permutational puzzle, but if you understand the solution we are looking for, you realize that there is an easier way of finding it. Since you only want the packages which consists of the fewest item counts, you would only care about the largest numbers because those will be the fewest which still give you the desired package weight. Suddenly the problem gets easier because you don&rsquo;t have to worry about the other groups any longer.</p>
+<h2 id="rephrase">Rephrase</h2>
+<p>Rephrasing the problem with your own words can help in understanding it better. Or even better, try explaining it to somebody else. If you cannot rephrase it, you didn&rsquo;t understand it in the first place.</p>
+<h2 id="divide">Divide</h2>
+<p>If the problem seems daunting because it&rsquo;s massive, just divide it into smaller chunks. This is something that we usually do with large problems, but it&rsquo;s more subtle than that. If you face a problem which seems complex, just factor out parts of it until you got a problem which you do understand. Even if you have to butcher the original puzzle problem. It doesn&rsquo;t matter. Adding complexity later is easier than adding complexity in its infancy.</p>
+<h2 id="start-with-what-you-know--finding-analogies">Start with what you know &amp;&amp; Finding analogies</h2>
+<p>This one speaks for itself. If you know parts of the problem, because you know analogy for it, or you faced something similar before, or exactly that, start with that.</p>
+<h2 id="reduce">Reduce</h2>
+<p>If the problem seems too complex, remove complexity. Start with a smaller set. Preferably something testable (I&rsquo;ll come back to that later). Remove constraints, or add them as desired. A constraint makes it harder to solve the puzzle? Remove it, and try solving it without. After that, the solution will give you insight into the problem and you can add that constraint back in.</p>
+<p>Consider <a href="http://adventofcode.com/day/11">Day 11</a>. I had fun with this one. In order to easy it up a little, I first, removed the constraint of doing the increment with letters. I did it with numbers. I also removed the constraint of doing it within the confines of a limited length array. After I got that I&rsquo;ll use modulo to make the numbers wrap around, it was way more easy to apply it to characters. And after a little fidgeting this came to life:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">passwd</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">-=</span> <span class="sc">&#39;a&#39;</span>
+<span class="nx">passwd</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="p">(</span><span class="nx">passwd</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="p">((</span><span class="sc">&#39;z&#39;</span> <span class="o">-</span> <span class="sc">&#39;a&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="nx">passwd</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">+=</span> <span class="sc">&#39;a&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>The -,+ &lsquo;a&rsquo; is needed so that it&rsquo;s dealing with ascii code from 0 - &lsquo;z&rsquo;. This basically makes it so that when I reach the end of the alphabet it will wrap around and start from &lsquo;a&rsquo; again.</p>
+<h2 id="experiment">Experiment</h2>
+<p>This led to more solutions than I care to admit. Basically just start experimenting with solutions which are in your head. There is a chance, that what you come up with, will be the solution. This goes very well with the principle of <em>Make it work</em>, <em>Make it right</em>, <em>Make it fast</em>. Just have something working first, and than you can make it work properly after. It&rsquo;s always better to have <em>something</em> rather than nothing.</p>
+<p>And last but not least&hellip;</p>
+<h2 id="dont-get-frustrated">Don&rsquo;t get frustrated</h2>
+<p>This is something I cannot say strongly enough. Seriously. <strong>DO NOT GET FRUSTRATED</strong>. Most of the problems were designed to be harder. Unless you work as a programmer professionally for several years now, or this is a field of interest for you, you will spend a day hacking around on a problem and trying to find a solution which is adequate. In these times, you will get frustrated and think you are too stupid for this, this couldn&rsquo;t be more far from the truth! You might need some inspiration, you might need some time away from the screen, it helps if you draw out the problem in a piece of paper, or just think about it without seeing it for a while. Just take a break, eat something, watch a comedy and get back to it later with a fresh view.</p>
+<h1 id="technical-gotchas">Technical Gotchas</h1>
+<p>So after the general problem solving side of things, I learned many things about Go, and about the tidbits of this language.</p>
+<h2 id="byte-slices">Byte Slices</h2>
+<p>I already knew that []byte is more performant and that Go optimizes on them more, but not to this extent. As in my previous blog posts I discovered that using them can really make a huge difference. Go even has a library called <code>bytes</code> which has helper functions similar to that of <code>strings</code> to help you out in these situations. Go optimizes on map recalls as well when you cast to string from []byte and use that as a map key like this: myMap[string(data)].</p>
+<h2 id="brute-force-or-looping">Brute Force or Looping</h2>
+<p>Most of the times you could get away with looping or trying to brute force out a solution. But there were times, where you really had to huddle down and think the problem through. Because simply looping, either took too long, or didn&rsquo;t come up with a good answer. That&rsquo;s why I rather always start with: &lsquo;How could I solve this without looping?&rsquo;. This will get you into the right mindset. Or thinking: &lsquo;How could I solve this without taking each and every combination into account?&rsquo;. These questions will help you to think about the problem without loops. Or only if you REALLY must use one.</p>
+<p>Doing this will get you into the right way of thinking. I know that in advent of code there is a Leaderboard and you could get on it if you were fast. But most of the times having a fast solution is far from having the right solution.</p>
+<h2 id="structs-are-awesome">Structs are Awesome</h2>
+<p>I like using structs. They are a very lightweight way of defining objects, structures which stick together. For example in the <a href="http://adventofcode.com/day/6">Day 6</a> Light puzzle, or even <a href="http://adventofcode.com/day/3">Day 3</a> Traveling santa example, a struct which stuck x,y locations together and made it a map key, it was trivial to make my gif out of it with SVG -&gt;</p>
+<p><img src="https://raw.githubusercontent.com/Skarlso/goprojects/master/advent/day3/day1.gif" alt="Traveling Santa"></p>
+<h2 id="go-is-simple-to-read">Go is Simple to Read</h2>
+<p>[opinion] I like Go because of its simplicity. You don&rsquo;t see stuff in Go most of the times, where you need to look three times to understand what the heck is going on. I like filter, reduce, map and syntactic sugar, but they make for a very poor reading experience. Go, in that way, choose not to incorporate these paradigms and I find that refreshing. [/opinion]</p>
+<h2 id="testing">Testing</h2>
+<p>TDD is something we all should know by now and care about. When I&rsquo;m doing puzzles, or finger exercises, I tend to not write tests. But on a more complex puzzle, or a task, I always start with a test. Especially if you are given samples for a puzzle which work. That&rsquo;s a gold mine. You can tweak your algorithm using those samples until they work and then simply apply a larger sample size.</p>
+<p>Tests will also help you with breaking down a problem and identifying parts which you already know.</p>
+<p>For example <a href="http://adventofcode.com/day/13">Day 13</a>. Optimal Seating arrangements. Or the similar <a href="http://adventofcode.com/day/9">Day 9</a>. Which was calculating shortest route distance. Or the password one, Day 11 which I showed before. In these cases, tests helped me make the core of the algorithm solid. Calculating connections, or the odd regex here and there, which was making sure that the password was validated properly.</p>
+<p>Tests will also help you to be able to move on after you found your solution. When I was done with the first iteration of passwords which was still using strings, I went on to optimize it, to use []byte. The tests helped me to know that the code was still working as expected after the refactoring.</p>
+<h1 id="closing-words">Closing words</h1>
+<p>All in all it was a massive amount of fun doing these exercises and I&rsquo;m thankful to the creator for making it. And I did enjoy the story behind the exercises as well. I think this site stood out because it had a fun factor. For simple exercises there are a lot of other sites -like Project Euler, or Sphere Judge Online-, which just plainly present you a problem and that&rsquo;s it. It&rsquo;s still fun, but it can also became boring very fast. Don&rsquo;t forget the fun factor which makes you plow on and go into a blind frenzy that you cannot quit until it&rsquo;s done. That&rsquo;s the fun part.</p>
+<p>Thank you for reading!
+Have a nice day.
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -60,6 +241,562 @@ Today I would like to share with you my little tale of refactoring my solution t
 It&amp;rsquo;s a lovely tale of action, adventure, drama, and comedy.
 Let&amp;rsquo;s being with my first iteration of the problem.
 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95  package main import ( &amp;#34;bufio&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;math&amp;#34; &amp;#34;os&amp;#34; &amp;#34;strconv&amp;#34; &amp;#34;strings&amp;#34; &amp;#34;github.</description>
+      <content type="html"><![CDATA[<p>Hello Folks.</p>
+<p>Today I would like to share with you my little tale of refactoring my solution to <a href="http://adventofcode.com/day/13">Advent Of Code Day 13</a>.</p>
+<p>It&rsquo;s a lovely tale of action, adventure, drama, and comedy.</p>
+<p>Let&rsquo;s being with my first iteration of the problem.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span><span class="lnt">84
+</span><span class="lnt">85
+</span><span class="lnt">86
+</span><span class="lnt">87
+</span><span class="lnt">88
+</span><span class="lnt">89
+</span><span class="lnt">90
+</span><span class="lnt">91
+</span><span class="lnt">92
+</span><span class="lnt">93
+</span><span class="lnt">94
+</span><span class="lnt">95
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;bufio&#34;</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;math&#34;</span>
+	<span class="s">&#34;os&#34;</span>
+	<span class="s">&#34;strconv&#34;</span>
+	<span class="s">&#34;strings&#34;</span>
+
+	<span class="s">&#34;github.com/skarlso/goutils/arrayutils&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">seatingCombinations</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([][]</span><span class="kt">string</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="kd">var</span> <span class="nx">table</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
+<span class="kd">var</span> <span class="nx">keys</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">string</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="c1">//Person a person
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Person</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="c1">// neighbour *Person
+</span><span class="c1"></span>	<span class="nx">name</span> <span class="kt">string</span>
+	<span class="nx">like</span> <span class="kt">int</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">file</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="s">&#34;input.txt&#34;</span><span class="p">)</span>
+	<span class="k">defer</span> <span class="nx">file</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+	<span class="nx">scanner</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewScanner</span><span class="p">(</span><span class="nx">file</span><span class="p">)</span>
+	<span class="k">for</span> <span class="nx">scanner</span><span class="p">.</span><span class="nf">Scan</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">line</span> <span class="o">:=</span> <span class="nx">scanner</span><span class="p">.</span><span class="nf">Text</span><span class="p">()</span>
+		<span class="nx">split</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span> <span class="s">&#34; &#34;</span><span class="p">)</span>
+		<span class="nx">like</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nf">Atoi</span><span class="p">(</span><span class="nx">split</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="c1">//If lose -&gt; * -1
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">split</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#34;lose&#34;</span> <span class="p">{</span>
+			<span class="nx">like</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+		<span class="p">}</span>
+		<span class="nx">table</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">table</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="nx">strings</span><span class="p">.</span><span class="nf">Trim</span><span class="p">(</span><span class="nx">split</span><span class="p">[</span><span class="mi">10</span><span class="p">],</span> <span class="s">&#34;.&#34;</span><span class="p">):</span> <span class="nx">like</span><span class="p">})</span>
+		<span class="k">if</span> <span class="p">!</span><span class="nx">arrayutils</span><span class="p">.</span><span class="nf">ContainsString</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">{</span>
+			<span class="nx">keys</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">keys</span><span class="p">))</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Best seating efficiency:&#34;</span><span class="p">,</span> <span class="nf">calculateSeatingEfficiancy</span><span class="p">())</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">s</span> <span class="p">[]</span><span class="kt">string</span><span class="p">,</span> <span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nx">n</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">{</span>
+		<span class="nx">news</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">string</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">))</span>
+		<span class="nb">copy</span><span class="p">(</span><span class="nx">news</span><span class="p">,</span> <span class="nx">s</span><span class="p">)</span>
+		<span class="nx">seatingCombinations</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">seatingCombinations</span><span class="p">,</span> <span class="nx">news</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">n</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">=</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
+		<span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+		<span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">=</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">calculateSeatingEfficiancy</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
+	<span class="nx">bestSeating</span> <span class="o">:=</span> <span class="nx">math</span><span class="p">.</span><span class="nx">MinInt64</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">seatingCombinations</span> <span class="p">{</span>
+		<span class="nx">calculatedOrder</span> <span class="o">:=</span> <span class="mi">0</span>
+
+		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">v</span> <span class="p">{</span>
+			<span class="nx">left</span> <span class="o">:=</span> <span class="p">(</span><span class="nx">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+			<span class="c1">//This is to work around the fact that in Go
+</span><span class="c1"></span>			<span class="c1">//modulo of a negative number will not return a positive number.
+</span><span class="c1"></span>			<span class="c1">//So -1 % 4 will not return 3 but -1. In that case we add length.
+</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">left</span> <span class="p">&lt;</span> <span class="mi">0</span> <span class="p">{</span>
+				<span class="nx">left</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+			<span class="p">}</span>
+			<span class="nx">right</span> <span class="o">:=</span> <span class="p">(</span><span class="nx">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+			<span class="c1">// fmt.Printf(&#34;Left: %d; Right: %d\n&#34;, left, right)
+</span><span class="c1"></span>			<span class="nx">leftLike</span> <span class="o">:=</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">v</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">v</span><span class="p">[</span><span class="nx">left</span><span class="p">])</span>
+			<span class="nx">rightLike</span> <span class="o">:=</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">v</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">v</span><span class="p">[</span><span class="nx">right</span><span class="p">])</span>
+			<span class="c1">// fmt.Printf(&#34;Name: %s; Left:%d; Right:%d\n&#34;, v[i], leftLike, rightLike)
+</span><span class="c1"></span>			<span class="nx">calculatedOrder</span> <span class="o">+=</span> <span class="nx">leftLike</span> <span class="o">+</span> <span class="nx">rightLike</span>
+		<span class="p">}</span>
+		<span class="c1">// fmt.Printf(&#34;Order for: %v; Calc:%d\n&#34;, v, calculatedOrder)
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">calculatedOrder</span> <span class="p">&gt;</span> <span class="nx">bestSeating</span> <span class="p">{</span>
+			<span class="nx">bestSeating</span> <span class="p">=</span> <span class="nx">calculatedOrder</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+
+	<span class="k">return</span> <span class="nx">bestSeating</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">name</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">neighbour</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+	<span class="nx">neighbours</span> <span class="o">:=</span> <span class="nx">table</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">t</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">neighbours</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">v</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">[</span><span class="nx">neighbour</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="nx">v</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="mi">0</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This is quiet large. And takes a bit of explaining. So what is happening here? We are putting the names which correspond with numbers and neighbours into a map which has a map as a value. The map contains seating information for a person. For example, next to Alice, a bunch of people can sit, and they have a certain relationship to Alice, represented by a number.</p>
+<p>We could, at this point, represent it with a graph, but that would be overkill.</p>
+<p>Permutation is simple because I choose to represent a Table with a Circular Slice. This means that a slice like this =&gt; Alice, Bob, Tom; means that Alice is sitting next to Bob and Tom. So Alice&rsquo;s neighbour of -1 (left) is in fact i-1 % 3. And Bob is i + 1. For Tom, Alice is i + 1 % 3. After we got this, we just permutate the possible combinations into slices of slices and iterate over them.</p>
+<p>The benchmark for this is terrible.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">
+<span class="o">================</span>With <span class="nv">Strings</span><span class="o">================</span>
+20	 <span class="m">589571259</span> ns/op
+ok  	github.com/skarlso/goprojects/advent/day13/part1	11.873s
+</code></pre></td></tr></table>
+</div>
+</div><p>So, my first thought was, convert everything I can to []byte. But because slices cannot be map keys, because map keys need to be comparable, we are still stuck with the same ns/ops.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">//var seatingCombinations = make([][]string, 0)
+</span><span class="c1">//var keys = make([]string, 0)
+</span><span class="c1"></span><span class="kd">var</span> <span class="nx">seatingCombinations</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([][][]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="kd">var</span> <span class="nx">keys</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([][]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And I adjusted the code to work with []byte instead. What can we do to fix the map though? One obvious gain is, not to use string as a key. Because strings are immutable, working with them always means copy-ing and that&rsquo;s why they get to be very slow. So removing them from Keys and using Numbers instead will mean a huge gain for us.</p>
+<p>To do this, I created a map which maps names with numbers. I could hardcode them with iota, but that is a very bad thing to do. It would mean, that when I add a new name, I would have to go, and re-compile my code, because data changed. That&rsquo;s not what we want.</p>
+<p>So, I added this little tid-bit into the for cycle when I&rsquo;m reading in the file lines =&gt;</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="o">...</span>
+<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]];</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+    <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="p">=</span> <span class="nx">id</span>
+    <span class="nx">id</span><span class="o">++</span>
+<span class="p">}</span>
+<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">];</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+    <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">]</span> <span class="p">=</span> <span class="nx">id</span>
+    <span class="nx">id</span><span class="o">++</span>
+<span class="p">}</span>
+<span class="o">...</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Id starts as Zero. And nameMapping is a simple map[string]int. After this, we fix all the map calls, from <code>table[split[0]]</code> to <code>table[nameMapping[split[0]]]</code>. Table&rsquo;s map will now work with int, but we can still work with strings otherwise.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">table</span><span class="p">[</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]]</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">table</span><span class="p">[</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]],</span> <span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">]:</span> <span class="nx">like</span><span class="p">})</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This has now a marginally better performance as before:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">BenchmarkCalculateSeating	      50	  <span class="m">32637879</span> ns/op
+ok  	github.com/skarlso/goprojects/advent/day13/part1	1.698s
+</code></pre></td></tr></table>
+</div>
+</div><p>But, we can still do a HUGE one better. Can you notice the other bottleneck? See, how keys are still []byte? That&rsquo;s, now completely unnecessary. We can use int, since our keys are ints! <em>Permutation</em> changes, and the retrieve.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="o">...</span>
+<span class="kd">func</span> <span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">s</span> <span class="p">[]</span><span class="kt">int</span><span class="p">,</span> <span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+<span class="o">...</span>
+
+<span class="o">...</span>
+<span class="kd">func</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">name</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">neighbour</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+	<span class="nx">neighbours</span> <span class="o">:=</span> <span class="nx">table</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">t</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">neighbours</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">v</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">[</span><span class="nx">neighbour</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="nx">v</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="mi">0</span>
+<span class="p">}</span>
+<span class="o">...</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Permutation was the Other huge performance consumption. Now, our run time is&hellip;. drum rolls&hellip;</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">BenchmarkCalculateSeating	   10000	    <span class="m">166431</span> ns/op
+ok  	github.com/skarlso/goprojects/advent/day13/part1	1.695s
+</code></pre></td></tr></table>
+</div>
+</div><p>Down to 166431 ns/op!!! From 32637879 ns/op!! And notice how suddenly, go&rsquo;s benchmark jumped up in sample count. Our code is now blazing fast. It&rsquo;s 0.05% of the previous run! It&rsquo;s almost <strong>200 times faster</strong>!</p>
+<p>We could still improve it here and there. I&rsquo;m sure I&rsquo;m doing some extra stuff which is not needed or could be made easier somehow. But I&rsquo;m actually quiet happy with this solution right now.</p>
+<p>The full code:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;bufio&#34;</span>
+	<span class="s">&#34;math&#34;</span>
+	<span class="s">&#34;os&#34;</span>
+	<span class="s">&#34;strconv&#34;</span>
+	<span class="s">&#34;strings&#34;</span>
+
+	<span class="s">&#34;github.com/skarlso/goutils/arrayutils&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">seatingCombinations</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([][]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="kd">var</span> <span class="nx">table</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">][]</span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
+<span class="kd">var</span> <span class="nx">keys</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="kd">var</span> <span class="nx">nameMapping</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
+
+<span class="c1">//Person a person
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Person</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="c1">// neighbour *Person
+</span><span class="c1"></span>	<span class="nx">name</span> <span class="kt">string</span>
+	<span class="nx">like</span> <span class="kt">int</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nf">CalculatePerfectSeating</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="c1">//CalculatePerfectSeating returns the perfect seating order based on Love/Hate relations
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">CalculatePerfectSeating</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">file</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="s">&#34;input.txt&#34;</span><span class="p">)</span>
+	<span class="k">defer</span> <span class="nx">file</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+	<span class="nx">scanner</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewScanner</span><span class="p">(</span><span class="nx">file</span><span class="p">)</span>
+	<span class="nx">id</span> <span class="o">:=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="nx">scanner</span><span class="p">.</span><span class="nf">Scan</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">line</span> <span class="o">:=</span> <span class="nx">scanner</span><span class="p">.</span><span class="nf">Text</span><span class="p">()</span>
+		<span class="nx">split</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span> <span class="s">&#34; &#34;</span><span class="p">)</span>
+		<span class="nx">trimmedNeighbour</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Trim</span><span class="p">(</span><span class="nx">split</span><span class="p">[</span><span class="mi">10</span><span class="p">],</span> <span class="s">&#34;.&#34;</span><span class="p">)</span>
+		<span class="nx">like</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nf">Atoi</span><span class="p">(</span><span class="nx">split</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="c1">//If lose -&gt; * -1
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]];</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+			<span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="p">=</span> <span class="nx">id</span>
+			<span class="nx">id</span><span class="o">++</span>
+		<span class="p">}</span>
+		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">];</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+			<span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">]</span> <span class="p">=</span> <span class="nx">id</span>
+			<span class="nx">id</span><span class="o">++</span>
+		<span class="p">}</span>
+		<span class="k">if</span> <span class="nx">split</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#34;lose&#34;</span> <span class="p">{</span>
+			<span class="nx">like</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+		<span class="p">}</span>
+		<span class="nx">table</span><span class="p">[</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]]</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">table</span><span class="p">[</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]],</span> <span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="nx">nameMapping</span><span class="p">[</span><span class="nx">trimmedNeighbour</span><span class="p">]:</span> <span class="nx">like</span><span class="p">})</span>
+		<span class="k">if</span> <span class="p">!</span><span class="nx">arrayutils</span><span class="p">.</span><span class="nf">ContainsInt</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span> <span class="p">{</span>
+			<span class="nx">keys</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">nameMapping</span><span class="p">[</span><span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">keys</span><span class="p">))</span>
+	<span class="c1">// fmt.Println(&#34;Best seating efficiency:&#34;, calculateSeatingEfficiancy())
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">s</span> <span class="p">[]</span><span class="kt">int</span><span class="p">,</span> <span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nx">n</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">{</span>
+		<span class="nx">news</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">))</span>
+		<span class="nb">copy</span><span class="p">(</span><span class="nx">news</span><span class="p">,</span> <span class="nx">s</span><span class="p">)</span>
+		<span class="nx">seatingCombinations</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">seatingCombinations</span><span class="p">,</span> <span class="nx">news</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">n</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">=</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
+		<span class="nf">generatePermutation</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+		<span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">=</span> <span class="nx">s</span><span class="p">[</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">calculateSeatingEfficiancy</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
+	<span class="nx">bestSeating</span> <span class="o">:=</span> <span class="nx">math</span><span class="p">.</span><span class="nx">MinInt64</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">seatingCombinations</span> <span class="p">{</span>
+		<span class="nx">calculatedOrder</span> <span class="o">:=</span> <span class="mi">0</span>
+
+		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">v</span> <span class="p">{</span>
+			<span class="nx">left</span> <span class="o">:=</span> <span class="p">(</span><span class="nx">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+			<span class="c1">//This is to work around the fact that in Go
+</span><span class="c1"></span>			<span class="c1">//modulo of a negative number will not return a positive number.
+</span><span class="c1"></span>			<span class="c1">//So -1 % 4 will not return 3 but -1. In that case we add length.
+</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">left</span> <span class="p">&lt;</span> <span class="mi">0</span> <span class="p">{</span>
+				<span class="nx">left</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+			<span class="p">}</span>
+			<span class="nx">right</span> <span class="o">:=</span> <span class="p">(</span><span class="nx">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+			<span class="nx">calculatedOrder</span> <span class="o">+=</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">v</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">v</span><span class="p">[</span><span class="nx">left</span><span class="p">])</span> <span class="o">+</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">v</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">v</span><span class="p">[</span><span class="nx">right</span><span class="p">])</span>
+		<span class="p">}</span>
+		<span class="k">if</span> <span class="nx">calculatedOrder</span> <span class="p">&gt;</span> <span class="nx">bestSeating</span> <span class="p">{</span>
+			<span class="nx">bestSeating</span> <span class="p">=</span> <span class="nx">calculatedOrder</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+
+	<span class="k">return</span> <span class="nx">bestSeating</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">getLikeForTargetConnect</span><span class="p">(</span><span class="nx">name</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">neighbour</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+	<span class="nx">neighbours</span> <span class="o">:=</span> <span class="nx">table</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">t</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">neighbours</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">v</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">[</span><span class="nx">neighbour</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="nx">v</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="mi">0</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Also, on github =&gt; <a href="https://github.com/Skarlso/goprojects/tree/master/advent/day13">Advent Of Code Day 13</a>.</p>
+<p>Thank you very much for reading, this has been a massive fun to write and to refactor.</p>
+<p>Have something to say? Please don&rsquo;t hesitate.</p>
+<p>And as always,</p>
+<p>Have a nice day!</p>
+<p>Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -71,6 +808,340 @@ Let&amp;rsquo;s being with my first iteration of the problem.
       <description>Hi folks and a Happy new Year!
 Today, I would like to show you some interesting things you can do with channels. Consider the following simple example.
 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34  package main import &amp;#34;fmt&amp;#34; func main() { generatedPassword := make(chan int, 100) correctPassword := make(chan int) defer close(generatedPassword) defer close(correctPassword) go passwordIncrement(generatedPassword) go checkPassword(generatedPassword, correctPassword) pass := &amp;lt;-correctPassword fmt.</description>
+      <content type="html"><![CDATA[<p>Hi folks and a Happy new Year!</p>
+<p>Today, I would like to show you some interesting things you can do with channels. Consider the following simple example.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">generatedPassword</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">int</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+	<span class="nx">correctPassword</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">int</span><span class="p">)</span>
+	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">)</span>
+	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">correctPassword</span><span class="p">)</span>
+	<span class="k">go</span> <span class="nf">passwordIncrement</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">)</span>
+	<span class="k">go</span> <span class="nf">checkPassword</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">,</span> <span class="nx">correctPassword</span><span class="p">)</span>
+	<span class="nx">pass</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">correctPassword</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">pass</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">checkPassword</span><span class="p">(</span><span class="nx">input</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">output</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">p</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">input</span>
+		<span class="c1">//Introduce lengthy operation here
+</span><span class="c1"></span>		<span class="c1">// time.Sleep(time.Second)
+</span><span class="c1"></span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Checking p:&#34;</span><span class="p">,</span> <span class="nx">p</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">p</span> <span class="p">&gt;</span> <span class="mi">100000</span> <span class="p">{</span>
+			<span class="nx">output</span> <span class="o">&lt;-</span> <span class="nx">p</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">passwordIncrement</span><span class="p">(</span><span class="nx">out</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">p</span> <span class="o">:=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">p</span><span class="o">++</span>
+		<span class="nx">out</span> <span class="o">&lt;-</span> <span class="nx">p</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>The premise is as follows. It launches two go routines. One, which generates passwords, and an other which checks for validity. The two routines talk to each other through the channel <code>generatedPassword</code>. That&rsquo;s the providing connections between them. The channel <code>correctPassword</code> provides output for the <code>checkPassword</code> routine.</p>
+<p>If there is data received from <code>correctPassword</code> channel, we found our first password and there is no need to look further so we, print the password and quit. The channels will close with defer. This works. But the password is usually either a []byte or a string. With string, it still works.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">generatedPassword</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">string</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+	<span class="nx">correctPassword</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">string</span><span class="p">)</span>
+	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">)</span>
+	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">correctPassword</span><span class="p">)</span>
+	<span class="k">go</span> <span class="nf">passwordIncrement</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">)</span>
+	<span class="k">go</span> <span class="nf">checkPassword</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">,</span> <span class="nx">correctPassword</span><span class="p">)</span>
+	<span class="nx">pass</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">correctPassword</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">pass</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">checkPassword</span><span class="p">(</span><span class="nx">input</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">output</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">p</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">input</span>
+		<span class="c1">//Introduce lengthy operation here
+</span><span class="c1"></span>		<span class="c1">// time.Sleep(time.Second)
+</span><span class="c1"></span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Checking p:&#34;</span><span class="p">,</span> <span class="nx">p</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nf">performSomeCheckingOperation</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span> <span class="p">{</span>
+			<span class="nx">output</span> <span class="o">&lt;-</span> <span class="nx">p</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">generateNewPassword</span><span class="p">(</span><span class="nx">out</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">p</span> <span class="kt">string</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">p</span> <span class="p">=</span> <span class="nf">generate</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span>
+		<span class="nx">out</span> <span class="o">&lt;-</span> <span class="nx">p</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>The generating happens based on the previously generated password. For example, we increment, or permeate. aaaa, aaab, aaac&hellip;</p>
+<p>So <code>generatedPassword</code> is a buffered channel, it gathers a 100 passwords from which checking retrieves passwords one by one and works on them in a slower process.</p>
+<p>Now, this is fine, but using []byte arrays will always be more powerful and faster. So we would like to use []byte. Like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">generatedPassword</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+	<span class="nx">correctPassword</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span>
+	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">)</span>
+	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">correctPassword</span><span class="p">)</span>
+	<span class="k">go</span> <span class="nf">passwordIncrement</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">)</span>
+	<span class="k">go</span> <span class="nf">checkPassword</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">,</span> <span class="nx">correctPassword</span><span class="p">)</span>
+	<span class="nx">pass</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">correctPassword</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">pass</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">checkPassword</span><span class="p">(</span><span class="nx">input</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">output</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">p</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">input</span>
+		<span class="c1">//Introduce lengthy operation here
+</span><span class="c1"></span>		<span class="c1">// time.Sleep(time.Second)
+</span><span class="c1"></span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Checking p:&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">p</span><span class="p">))</span>
+		<span class="k">if</span> <span class="nf">performSomeCheckingOperation</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span> <span class="p">{</span>
+			<span class="nx">output</span> <span class="o">&lt;-</span> <span class="nx">p</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">generateNewPassword</span><span class="p">(</span><span class="nx">out</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">p</span> <span class="p">[]</span><span class="kt">byte</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">p</span> <span class="p">=</span> <span class="nf">generate</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span>
+		<span class="nx">out</span> <span class="o">&lt;-</span> <span class="nx">p</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This will not work. Why? Because []byte is a slice and thus will be constantly overwritten. The checking go routine will always only check the last data and many generated passwords will be lost. This is also noted in go&rsquo;s scanner here =&gt; <a href="https://golang.org/pkg/bufio/#Scanner.Bytes">Scanner.Bytes</a></p>
+<p>We have a couple of options here.</p>
+<p>We could use <code>string</code> channels and convert to []byte after. This is still okay, because the conversion isn&rsquo;t very CPU intensive.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="o">...</span>
+<span class="nx">generatedPassword</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">string</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="nx">correctPassword</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">string</span><span class="p">)</span>
+<span class="o">...</span>
+<span class="nx">p</span> <span class="o">:=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="o">&lt;-</span><span class="nx">input</span><span class="p">)</span> <span class="c1">//This will work very nicely.
+</span><span class="c1"></span><span class="o">...</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Options two would be If you have a fixed password to handle, fix data, for example MD5 hash, you can use a byte array. Like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">const</span> <span class="nx">PASSWD</span><span class="p">=</span><span class="mi">13</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">generatedPassword</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="p">[</span><span class="nx">PASSWD</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+	<span class="nx">correctPassword</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="p">[</span><span class="nx">PASSWD</span><span class="p">]</span><span class="kt">byte</span><span class="p">)</span>
+	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">)</span>
+	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">correctPassword</span><span class="p">)</span>
+	<span class="k">go</span> <span class="nf">passwordIncrement</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">)</span>
+	<span class="k">go</span> <span class="nf">checkPassword</span><span class="p">(</span><span class="nx">generatedPassword</span><span class="p">,</span> <span class="nx">correctPassword</span><span class="p">)</span>
+	<span class="nx">pass</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">correctPassword</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">pass</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">checkPassword</span><span class="p">(</span><span class="nx">input</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="p">[</span><span class="nx">PASSWD</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">output</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="p">[</span><span class="nx">PASSWD</span><span class="p">]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">p</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">input</span>
+		<span class="c1">//Introduce lengthy operation here
+</span><span class="c1"></span>		<span class="c1">// time.Sleep(time.Second)
+</span><span class="c1"></span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Checking p:&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">p</span><span class="p">))</span>
+		<span class="k">if</span> <span class="nf">performSomeCheckingOperation</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span> <span class="p">{</span>
+			<span class="nx">output</span> <span class="o">&lt;-</span> <span class="nx">p</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">generateNewPassword</span><span class="p">(</span><span class="nx">out</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="p">[</span><span class="nx">PASSWD</span><span class="p">]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">p</span> <span class="p">[</span><span class="nx">PASSWD</span><span class="p">]</span><span class="kt">byte</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">p</span> <span class="p">=</span> <span class="nf">generate</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span>
+		<span class="nx">out</span> <span class="o">&lt;-</span> <span class="nx">p</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This is also one solution. If you have to convert between the two, could go with <code>p := byte[:]</code>.</p>
+<p>Conclusion is, that use conversion rather than string types and be aware that using slices in channels is dangerous.</p>
+<p>Thanks for reading!
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -84,6 +1155,204 @@ This is just a quick post on the topic and a reminder for myself and everybody t
 []Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.
 Sample code:
 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43  package solutions import &amp;#34;fmt&amp;#34; const ( //INPUT input  INPUT = &amp;#34;1321131112&amp;#34; //LIMIT limit  LIMIT = 50 ) //LookAndSay translates numbers according to Look and Say algo func LookAndSay(s string, c chan string) { charCount := 1 look := &amp;#34;&amp;#34; for i := range s { if i+1 &amp;lt; len(s) { if s[i] == s[i+1] { charCount++ } else { look += fmt.</description>
+      <content type="html"><![CDATA[<p>Hello Folks.</p>
+<p>This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.</p>
+<p>[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.</p>
+<p>Sample code:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">solutions</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+    <span class="c1">//INPUT input
+</span><span class="c1"></span>    <span class="nx">INPUT</span> <span class="p">=</span> <span class="s">&#34;1321131112&#34;</span>
+    <span class="c1">//LIMIT limit
+</span><span class="c1"></span>    <span class="nx">LIMIT</span> <span class="p">=</span> <span class="mi">50</span>
+<span class="p">)</span>
+
+<span class="c1">//LookAndSay translates numbers according to Look and Say algo
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">LookAndSay</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">c</span> <span class="kd">chan</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">charCount</span> <span class="o">:=</span> <span class="mi">1</span>
+    <span class="nx">look</span> <span class="o">:=</span> <span class="s">&#34;&#34;</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">==</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="p">{</span>
+                <span class="nx">charCount</span><span class="o">++</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">look</span> <span class="o">+=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%d%s&#34;</span><span class="p">,</span> <span class="nx">charCount</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]))</span>
+                <span class="nx">charCount</span> <span class="p">=</span> <span class="mi">1</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">look</span> <span class="o">+=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%d%s&#34;</span><span class="p">,</span> <span class="nx">charCount</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]))</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="nx">c</span> <span class="o">&lt;-</span> <span class="nx">look</span>
+<span class="p">}</span>
+
+<span class="c1">//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetLengthOfLookAndSay</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">c</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">string</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">go</span> <span class="nf">LookAndSay</span><span class="p">(</span><span class="nx">INPUT</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+    <span class="nx">finalString</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">c</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;=</span> <span class="nx">LIMIT</span><span class="o">-</span><span class="mi">2</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="k">go</span> <span class="nf">LookAndSay</span><span class="p">(</span><span class="nx">finalString</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+        <span class="nx">finalString</span> <span class="p">=</span> <span class="o">&lt;-</span><span class="nx">c</span>
+        <span class="c1">// fmt.Println(finalString)
+</span><span class="c1"></span>    <span class="p">}</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Lenght of final String:&#34;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">finalString</span><span class="p">))</span>
+<span class="p">}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>This, with the limit raised to 50 run for ~1 hour. Even with the routines although they were just for show since they had to wait for each others input.</p>
+<p>Now change this to []byte and the run time was almost under 2 seconds on my machine.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">solutions</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;fmt&#34;</span>
+    <span class="s">&#34;strconv&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+    <span class="c1">//LIMIT limit
+</span><span class="c1"></span>    <span class="nx">LIMIT</span> <span class="p">=</span> <span class="mi">50</span>
+<span class="p">)</span>
+
+<span class="c1">//INPUT puzzle input
+</span><span class="c1">//This used to be a string until I was reminded that BYTE ARRAY IS ALWAYS FASTER!
+</span><span class="c1"></span><span class="kd">var</span> <span class="nx">INPUT</span> <span class="p">=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;1321131112&#34;</span><span class="p">)</span>
+
+<span class="c1">//LookAndSay translates numbers according to Look and Say algo
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">LookAndSay</span><span class="p">(</span><span class="nx">s</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="nx">look</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">charCount</span> <span class="o">:=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">==</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="p">{</span>
+                <span class="nx">charCount</span><span class="o">++</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">b</span> <span class="o">:=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">strconv</span><span class="p">.</span><span class="nf">FormatInt</span><span class="p">(</span><span class="nb">int64</span><span class="p">(</span><span class="nx">charCount</span><span class="p">),</span> <span class="mi">10</span><span class="p">))</span>
+                <span class="nx">look</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">look</span><span class="p">,</span> <span class="nx">b</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span>
+                <span class="nx">charCount</span> <span class="p">=</span> <span class="mi">1</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">b</span> <span class="o">:=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">strconv</span><span class="p">.</span><span class="nf">FormatInt</span><span class="p">(</span><span class="nb">int64</span><span class="p">(</span><span class="nx">charCount</span><span class="p">),</span> <span class="mi">10</span><span class="p">))</span>
+            <span class="nx">look</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">look</span><span class="p">,</span> <span class="nx">b</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span>
+<span class="p">}</span>
+
+<span class="c1">//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetLengthOfLookAndSay</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">finalString</span> <span class="o">:=</span> <span class="nx">INPUT</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;=</span> <span class="nx">LIMIT</span><span class="o">-</span><span class="mi">1</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="nx">finalString</span> <span class="p">=</span> <span class="nf">LookAndSay</span><span class="p">(</span><span class="nx">finalString</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Lenght of final String:&#34;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">finalString</span><span class="p">))</span>
+<span class="p">}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>This is the solution for Day 10 on <a href="http://adventofcode.com/">AdventOfCode</a> by the way.</p>
+<p>Thanks for readin'.
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -97,6 +1366,204 @@ This is just a quick post on the topic and a reminder for myself and everybody t
 []Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.
 Sample code:
 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43  package solutions import &amp;#34;fmt&amp;#34; const ( //INPUT input  INPUT = &amp;#34;1321131112&amp;#34; //LIMIT limit  LIMIT = 50 ) //LookAndSay translates numbers according to Look and Say algo func LookAndSay(s string, c chan string) { charCount := 1 look := &amp;#34;&amp;#34; for i := range s { if i+1 &amp;lt; len(s) { if s[i] == s[i+1] { charCount++ } else { look += fmt.</description>
+      <content type="html"><![CDATA[<p>Hello Folks.</p>
+<p>This is just a quick post on the topic and a reminder for myself and everybody to ALWAYS USE []BYTE INSTEAD OF STRINGS.</p>
+<p>[]Byte is marginally faster than a simple Strings. In fact, I would say using []byte should be the standard instead of strings.</p>
+<p>Sample code:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">solutions</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+    <span class="c1">//INPUT input
+</span><span class="c1"></span>    <span class="nx">INPUT</span> <span class="p">=</span> <span class="s">&#34;1321131112&#34;</span>
+    <span class="c1">//LIMIT limit
+</span><span class="c1"></span>    <span class="nx">LIMIT</span> <span class="p">=</span> <span class="mi">50</span>
+<span class="p">)</span>
+
+<span class="c1">//LookAndSay translates numbers according to Look and Say algo
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">LookAndSay</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">c</span> <span class="kd">chan</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">charCount</span> <span class="o">:=</span> <span class="mi">1</span>
+    <span class="nx">look</span> <span class="o">:=</span> <span class="s">&#34;&#34;</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">==</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="p">{</span>
+                <span class="nx">charCount</span><span class="o">++</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">look</span> <span class="o">+=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%d%s&#34;</span><span class="p">,</span> <span class="nx">charCount</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]))</span>
+                <span class="nx">charCount</span> <span class="p">=</span> <span class="mi">1</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">look</span> <span class="o">+=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%d%s&#34;</span><span class="p">,</span> <span class="nx">charCount</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]))</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="nx">c</span> <span class="o">&lt;-</span> <span class="nx">look</span>
+<span class="p">}</span>
+
+<span class="c1">//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetLengthOfLookAndSay</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">c</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">string</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">go</span> <span class="nf">LookAndSay</span><span class="p">(</span><span class="nx">INPUT</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+    <span class="nx">finalString</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">c</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;=</span> <span class="nx">LIMIT</span><span class="o">-</span><span class="mi">2</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="k">go</span> <span class="nf">LookAndSay</span><span class="p">(</span><span class="nx">finalString</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+        <span class="nx">finalString</span> <span class="p">=</span> <span class="o">&lt;-</span><span class="nx">c</span>
+        <span class="c1">// fmt.Println(finalString)
+</span><span class="c1"></span>    <span class="p">}</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Lenght of final String:&#34;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">finalString</span><span class="p">))</span>
+<span class="p">}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>This, with the limit raised to 50 run for ~1 hour. Even with the routines although they were just for show since they had to wait for each others input.</p>
+<p>Now change this to []byte and the run time was almost under 2 seconds on my machine.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">solutions</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;fmt&#34;</span>
+    <span class="s">&#34;strconv&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+    <span class="c1">//LIMIT limit
+</span><span class="c1"></span>    <span class="nx">LIMIT</span> <span class="p">=</span> <span class="mi">50</span>
+<span class="p">)</span>
+
+<span class="c1">//INPUT puzzle input
+</span><span class="c1">//This used to be a string until I was reminded that BYTE ARRAY IS ALWAYS FASTER!
+</span><span class="c1"></span><span class="kd">var</span> <span class="nx">INPUT</span> <span class="p">=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;1321131112&#34;</span><span class="p">)</span>
+
+<span class="c1">//LookAndSay translates numbers according to Look and Say algo
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">LookAndSay</span><span class="p">(</span><span class="nx">s</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="nx">look</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">charCount</span> <span class="o">:=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">==</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="p">{</span>
+                <span class="nx">charCount</span><span class="o">++</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">b</span> <span class="o">:=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">strconv</span><span class="p">.</span><span class="nf">FormatInt</span><span class="p">(</span><span class="nb">int64</span><span class="p">(</span><span class="nx">charCount</span><span class="p">),</span> <span class="mi">10</span><span class="p">))</span>
+                <span class="nx">look</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">look</span><span class="p">,</span> <span class="nx">b</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span>
+                <span class="nx">charCount</span> <span class="p">=</span> <span class="mi">1</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">b</span> <span class="o">:=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">strconv</span><span class="p">.</span><span class="nf">FormatInt</span><span class="p">(</span><span class="nb">int64</span><span class="p">(</span><span class="nx">charCount</span><span class="p">),</span> <span class="mi">10</span><span class="p">))</span>
+            <span class="nx">look</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">look</span><span class="p">,</span> <span class="nx">b</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">s</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span>
+<span class="p">}</span>
+
+<span class="c1">//GetLengthOfLookAndSay Retrieve the Length of a lookandsay done Limit times
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetLengthOfLookAndSay</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">finalString</span> <span class="o">:=</span> <span class="nx">INPUT</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;=</span> <span class="nx">LIMIT</span><span class="o">-</span><span class="mi">1</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="nx">finalString</span> <span class="p">=</span> <span class="nf">LookAndSay</span><span class="p">(</span><span class="nx">finalString</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Lenght of final String:&#34;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">finalString</span><span class="p">))</span>
+<span class="p">}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>This is the solution for Day 10 on <a href="http://adventofcode.com/">AdventOfCode</a> by the way.</p>
+<p>Thanks for readin'.
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -110,6 +1577,75 @@ I wanted to do a sort post about word frequency count. I did it many times now a
 So I wrote it up quickly and added a few benchmarks with different sized data.
 First&amp;hellip;. The code:
 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15  var freqMap = make(map[string]int, 0) func countLettersRecursive(s string) string { if len(s) == 0 { return s } freqMap[string(s[0])]++ return countLettersRecursive(s[1:]) } func countLettersLoop(s string) { for _, v := range s { freqMap[string(v)]++ } }   Very simple.</description>
+      <content type="html"><![CDATA[<p>Hello everybody!</p>
+<p>I wanted to do a sort post about word frequency count. I did it many times now and I was curious as how a recursive solution would perform as opposed to looping.</p>
+<p>So I wrote it up quickly and added a few benchmarks with different sized data.</p>
+<p>First&hellip;. The code:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="nx">freqMap</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">countLettersRecursive</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">s</span>
+    <span class="p">}</span>
+    <span class="nx">freqMap</span><span class="p">[</span><span class="nb">string</span><span class="p">(</span><span class="nx">s</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span><span class="o">++</span>
+    <span class="k">return</span> <span class="nf">countLettersRecursive</span><span class="p">(</span><span class="nx">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">countLettersLoop</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span> <span class="p">{</span>
+        <span class="nx">freqMap</span><span class="p">[</span><span class="nb">string</span><span class="p">(</span><span class="nx">v</span><span class="p">)]</span><span class="o">++</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Very simple. The first run with a small sample: &ldquo;asdfasdfasdfasdfasdf&rdquo;</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">BenchmarkLoopFrequencyCount  <span class="m">5000000</span>           <span class="m">377</span> ns/op
+BenchmarkRecursiveFrequencyCount     <span class="m">5000000</span>           <span class="m">380</span> ns/op
+</code></pre></td></tr></table>
+</div>
+</div><p>They almost equal but Recursive seems to be lagging behind. So I increased the sample size to a text which was 496 long.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-bash" data-lang="bash">PASS
+BenchmarkLoopFrequencyCount    <span class="m">30000</span>         <span class="m">53336</span> ns/op
+BenchmarkRecursiveFrequencyCount       <span class="m">20000</span>         <span class="m">61780</span> ns/op
+</code></pre></td></tr></table>
+</div>
+</div><p>And, as expected, recursing is less performant than looping. Also, I think my machine would die from a larger data size&hellip;</p>
+<p>But the recursive looks so much cooler though.</p>
+<p>Thanks for reading!
+Gergely.</p>
+]]></content>
     </item>
     
     <item>
@@ -122,6 +1658,27 @@ First&amp;hellip;. The code:
 Here is a little something I&amp;rsquo;ve put together, since I&amp;rsquo;m doing it a lot.
 Go Development Environment
 If I have a project I&amp;rsquo;d like to contribute, like GoHugo, I have to setup a development environment, because most of the times, I&amp;rsquo;m on a Mac. And on OSX things work differently. I like to work in a Linux environment since that&amp;rsquo;s what most of the projects are built on.</description>
+      <content type="html"><![CDATA[<p>Hello folks.</p>
+<p>Here is a little something I&rsquo;ve put together, since I&rsquo;m doing it a lot.</p>
+<p><a href="https://github.com/Skarlso/godevelopment">Go Development Environment</a></p>
+<p>If I have a project I&rsquo;d like to contribute, like <a href="https://gohugo.io">GoHugo</a>, I have to setup a development environment, because most of the times, I&rsquo;m on a Mac. And on OSX things work differently. I like to work in a Linux environment since that&rsquo;s what most of the projects are built on.</p>
+<p>So here you go. Just download the files, and say <strong>vagrant up</strong> which will do the magic.</p>
+<p>This sets up <a href="https://github.com/fatih/vim-go">vim-go</a> with code completion given by YouCompleteMe and some go features like, fmt on save and build error highlighting.</p>
+<p>Also sets up ctags which will give you tags and the ability to do GoTo Declaration.</p>
+<p>Installs a bunch of utilities, and configures Go. There is an option to install docker as well. But it&rsquo;s ignored at the moment.</p>
+<p>Just uncomment this line:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="c1">#config.vm.provision &#34;shell&#34;, path: &#34;install_docker.sh&#34;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Any questions or request, feel free to submit an Issue!</p>
+<p>Thanks for reading!
+Gergely.</p>
+]]></content>
     </item>
     
   </channel>
