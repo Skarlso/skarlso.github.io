@@ -1589,5 +1589,172 @@ Gergely.</p>
 Gergely.</p>]]></description>
     </item>
     
+    <item>
+      <title>How to check content header on unknown number of items – Python</title>
+      <link>https://skarlso.github.io/2014/02/11/how-to-check-content-header-on-unknown-number-of-items-python/</link>
+      <pubDate>Tue, 11 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2014/02/11/how-to-check-content-header-on-unknown-number-of-items-python/</guid>
+      <description><![CDATA[<p>Hello guys.</p>
+<p>I&rsquo;d like to share a little something with you. It&rsquo;s what I cooked up in Python to check an unknown number of content items in a web application.</p>
+<p>Basically the script runs from a script folder under Grails. It goes through all the configured folders where there is static content like images, javascript, css and so on and so forth.</p>
+<p>And then with curl it calls these items up in using their respective paths'. This works best on localhost if you have your local environment configured to access these elements because in some places direct access is restricted.</p>
+<p>This script only check static content. Dynamically generated content would have to be hard coded to check.</p>
+<p>It only generated a file currently with ERROR on a not match an success on match and not found if it encounters an item which it doesn&rsquo;t know about.</p>
+<p>So without further ado. The Script:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="ch">#!/usr/bin/python</span>
+
+<span class="kn">import</span> <span class="nn">pycurl</span><span class="o">,</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">urllib</span>
+
+<span class="k">class</span> <span class="nc">Storage</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contents</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">buf</span><span class="p">):</span>
+	<span class="k">if</span> <span class="s1">&#39;Content-Type&#39;</span> <span class="ow">in</span> <span class="n">buf</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">contents</span> <span class="o">=</span> <span class="n">buf</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">contents</span>
+
+<span class="c1">#print retrieved_headers</span>
+
+<span class="n">filesInDir</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">headers</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">headerRestrictions</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;.css&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: text/css&#39;</span><span class="p">,</span> <span class="s1">&#39;.jpg&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: image/jpeg&#39;</span><span class="p">,</span> <span class="s1">&#39;.ico&#39;</span><span class="p">:</span> <span class="s1">&#39;image/vnd.microsoft.icon&#39;</span><span class="p">,</span> <span class="s1">&#39;.html&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: text/html&#39;</span><span class="p">,</span> <span class="s1">&#39;.js&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: application/javascript&#39;</span><span class="p">,</span> <span class="s1">&#39;.gif&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: image/gif&#39;</span><span class="p">,</span> <span class="s1">&#39;.png&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: image/png&#39;</span><span class="p">,</span> <span class="s1">&#39;.swf&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: application/x-shockwave-flash&#39;</span><span class="p">,</span> <span class="s1">&#39;.json&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: application/json&#39;</span><span class="p">,</span> <span class="s1">&#39;.htc&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: text/x-component&#39;</span><span class="p">,</span> <span class="s1">&#39;.xml&#39;</span><span class="p">:</span> <span class="s1">&#39;Content-Type: application/xml&#39;</span><span class="p">}</span>
+
+<span class="k">for</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">dirnames</span><span class="p">,</span> <span class="n">filenames</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="s1">&#39;../web-app&#39;</span><span class="p">):</span>
+    <span class="c1"># editing the &#39;dirnames&#39; list will stop os.walk() from recursing into there.</span>
+    <span class="k">if</span> <span class="s1">&#39;.git&#39;</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
+        <span class="c1"># don&#39;t go into any .git directories.</span>
+        <span class="n">dirnames</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;.git&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;WEB-INF&#39;</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
+        <span class="c1"># don&#39;t go into any WEB-INF directories.</span>
+        <span class="n">dirnames</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;WEB-INF&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;test&#39;</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
+        <span class="c1"># don&#39;t go into any test directories.</span>
+        <span class="n">dirnames</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;META-INF&#39;</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
+        <span class="c1"># don&#39;t go into any META-INF directories.</span>
+        <span class="n">dirnames</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;META-INF&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
+	<span class="n">trimmedDir</span> <span class="o">=</span> <span class="n">dirname</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&#34;web-app/&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">)</span>
+	<span class="n">trimmedDir</span> <span class="o">=</span> <span class="n">trimmedDir</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&#34;../&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">)</span>
+	<span class="n">filesInDir</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">trimmedDir</span><span class="p">,</span> <span class="n">filename</span><span class="p">))</span>
+    <span class="c1">#    print os.path.join(dirname, filename)</span>
+
+<span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&#34;headersandfiles.txt&#34;</span><span class="p">,</span> <span class="s2">&#34;w&#34;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">fileName</span> <span class="ow">in</span> <span class="n">filesInDir</span><span class="p">:</span>
+    <span class="n">retrieved_body</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+    <span class="n">retrieved_headers</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">pycurl</span><span class="o">.</span><span class="n">Curl</span><span class="p">()</span>
+    <span class="n">fileName</span> <span class="o">=</span> <span class="n">fileName</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&#34; &#34;</span><span class="p">,</span> <span class="s2">&#34;%20&#34;</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://localhost:8080/</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">fileName</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setopt</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">URL</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setopt</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">WRITEFUNCTION</span><span class="p">,</span> <span class="n">retrieved_body</span><span class="o">.</span><span class="n">store</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setopt</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">HEADERFUNCTION</span><span class="p">,</span> <span class="n">retrieved_headers</span><span class="o">.</span><span class="n">store</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">perform</span><span class="p">()</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">fileLine</span> <span class="o">=</span> <span class="s2">&#34;&#34;</span>
+    <span class="n">fileNameBase</span><span class="p">,</span> <span class="n">fileExtension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">headerRestrictions</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">fileExtension</span><span class="p">):</span>
+<span class="c1">#	print &#34;Header:%s, Content:%s&#34; % (headerRestrictions[fileExtension], retrieved_headers.__str__())</span>
+        <span class="n">fileLine</span> <span class="o">=</span> <span class="s2">&#34;CORRECT: Content: </span><span class="si">%s</span><span class="s2">; Header: </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">retrieved_headers</span><span class="p">)</span> <span class="k">if</span> <span class="n">headerRestrictions</span><span class="p">[</span><span class="n">fileExtension</span><span class="p">]</span> <span class="o">==</span> <span class="n">retrieved_headers</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&#34;ERROR: Content: </span><span class="si">%s</span><span class="s2">; Header: </span><span class="si">%s</span><span class="s2">; URL: </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">retrieved_headers</span><span class="p">,</span> <span class="s2">&#34;http://localhost:8080/</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="n">fileName</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+	<span class="n">fileLine</span> <span class="o">=</span> <span class="s2">&#34;NOT FOUND: Content: </span><span class="si">%s</span><span class="s2">; Header: </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">retrieved_headers</span><span class="p">)</span>
+
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fileLine</span><span class="p">)</span>
+    <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">retrieved_headers</span><span class="o">.</span><span class="fm">__str__</span><span class="p">())</span>
+
+<span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Hope you like it. Feel free to improve however you want.</p>
+<p>Thanks for reading,</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
   </channel>
 </rss>

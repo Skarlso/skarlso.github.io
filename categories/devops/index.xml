@@ -2616,5 +2616,163 @@ Have a nice weekend,
 Gergely.</p>]]></description>
     </item>
     
+    <item>
+      <title>Setting up a new Laptop with Puppet</title>
+      <link>https://skarlso.github.io/2015/05/21/setting-up-a-new-laptop-with-puppet/</link>
+      <pubDate>Thu, 21 May 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/05/21/setting-up-a-new-laptop-with-puppet/</guid>
+      <description><![CDATA[<p>Hello folks.</p>
+<p>So, some of you know <a href="https://puppetlabs.com/" target="_blank">puppet</a>, some of you don&rsquo;t. Puppet is a configuration management system. It&rsquo;s quite awesome. I like working with it. One of the benefits of puppet is, that I never, ever, EVER have to setup a new laptop from scratch, EVER again.</p>
+<p>I&rsquo;m writing a puppet manifest file which sets up my new laptop to my liking. I will improve it as I go along. Here is version 1.0.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-ruby" data-lang="ruby">
+<span class="c1"># include apt</span>
+
+<span class="k">class</span> <span class="n">base</span><span class="o">::</span><span class="n">basics</span> <span class="p">{</span>
+        <span class="vg">$packages</span> <span class="o">=</span> <span class="o">[</span><span class="s1">&#39;git&#39;</span><span class="p">,</span> <span class="s1">&#39;subversion&#39;</span><span class="p">,</span> <span class="s1">&#39;mc&#39;</span><span class="p">,</span> <span class="s1">&#39;vim&#39;</span><span class="p">,</span> <span class="s1">&#39;maven&#39;</span><span class="p">,</span> <span class="s1">&#39;gradle&#39;</span><span class="o">]</span>
+
+        <span class="nb">exec</span> <span class="p">{</span> <span class="s2">&#34;update&#34;</span><span class="p">:</span>
+                <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&#34;/usr/bin/apt-get update&#34;</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">package</span> <span class="p">{</span> <span class="vg">$packages</span><span class="p">:</span>
+                <span class="k">ensure</span> <span class="o">=&gt;</span> <span class="n">installed</span><span class="p">,</span>
+                <span class="nb">require</span> <span class="o">=&gt;</span> <span class="no">Exec</span><span class="o">[</span><span class="s2">&#34;update&#34;</span><span class="o">]</span><span class="p">,</span>
+        <span class="p">}</span>
+
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="n">base</span><span class="o">::</span><span class="n">skype</span> <span class="p">{</span>
+        <span class="nb">exec</span> <span class="p">{</span> <span class="s2">&#34;add-arc&#34;</span><span class="p">:</span>
+                <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&#34;/usr/bin/dpkg --add-architecture i386&#34;</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="nb">exec</span> <span class="p">{</span> <span class="s2">&#34;add-repo-skype&#34;</span><span class="p">:</span>
+                <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&#34;/usr/bin/add-apt-repository </span><span class="se">\&#34;</span><span class="s2">deb http://archive.canonical.com/ \$(lsb_release -sc) partner</span><span class="se">\&#34;</span><span class="s2">&#34;</span><span class="p">,</span>
+                <span class="nb">require</span> <span class="o">=&gt;</span> <span class="no">Exec</span><span class="o">[</span><span class="s1">&#39;add-arc&#39;</span><span class="o">]</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="nb">exec</span> <span class="p">{</span> <span class="s2">&#34;update-and-install&#34;</span><span class="p">:</span>
+                <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&#34;/usr/bin/apt-get update &amp;&amp; /usr/bin/apt-get install skype&#34;</span><span class="p">,</span>
+                <span class="nb">require</span> <span class="o">=&gt;</span> <span class="no">Exec</span><span class="o">[</span><span class="s1">&#39;add-repo-skype&#39;</span><span class="o">]</span><span class="p">,</span>
+        <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="n">base</span><span class="o">::</span><span class="n">java8</span> <span class="p">{</span>
+        <span class="c1"># Automatically does an update afterwards</span>
+        <span class="c1"># apt::ppa { &#39;ppa:webupd8team/java&#39;: }</span>
+        <span class="nb">exec</span> <span class="p">{</span> <span class="s2">&#34;add-repo-java&#34;</span><span class="p">:</span>
+                <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&#34;/usr/bin/add-apt-repository -y </span><span class="se">\&#34;</span><span class="s2">ppa:webupd8team/java</span><span class="se">\&#34;</span><span class="s2"> &amp;&amp; /usr/bin/apt-get update&#34;</span>
+        <span class="p">}</span>
+
+        <span class="nb">exec</span> <span class="p">{</span> <span class="s2">&#34;set-accept&#34;</span><span class="p">:</span>
+                <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&#34;/bin/echo /usr/bin/debconf shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections &amp;&amp; /bin/echo /usr/bin/debconf shared/accepted-oracle-license-v1-1 seen true | sudo /usr/bin/debconf-set-selections&#34;</span><span class="p">,</span>
+                <span class="nb">require</span> <span class="o">=&gt;</span> <span class="no">Exec</span><span class="o">[</span><span class="s1">&#39;add-repo-java&#39;</span><span class="o">]</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="nb">exec</span> <span class="p">{</span> <span class="s2">&#34;install&#34;</span><span class="p">:</span>
+                <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&#34;/usr/bin/apt-get install -y oracle-java8-installer&#34;</span><span class="p">,</span>
+                <span class="nb">require</span> <span class="o">=&gt;</span> <span class="no">Exec</span><span class="o">[</span><span class="s1">&#39;set-accept&#39;</span><span class="o">]</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="nb">exec</span> <span class="p">{</span> <span class="s2">&#34;setup_home&#34;</span><span class="p">:</span>
+                <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&#34;/bin/echo </span><span class="se">\&#34;</span><span class="s2">export JDK18_HOME=/usr/lib/jvm/java-8-oracle/</span><span class="se">\&#34;</span><span class="s2"> &gt;&gt; /etc/environment&#34;</span><span class="p">,</span>
+                <span class="nb">require</span> <span class="o">=&gt;</span> <span class="no">Exec</span><span class="o">[</span><span class="s1">&#39;install&#39;</span><span class="o">]</span><span class="p">,</span>
+        <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kp">include</span> <span class="n">base</span><span class="o">::</span><span class="n">basics</span>
+<span class="kp">include</span> <span class="n">base</span><span class="o">::</span><span class="n">skype</span>
+<span class="kp">include</span> <span class="n">base</span><span class="o">::</span><span class="n">java8</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>I&rsquo;ll improve upon it as I go, and you can check it out later from my git repo. I removed the parts which required extra libraries for now, as I want it to run without the need of getting extra stuff installed. I might automate that part as well later on.</p>
+<p>EDIT: <a href="https://github.com/Skarlso/puppet/blob/master/manifests/base_setup.pp" target="_blank"><a href="https://github.com/Skarlso/puppet/blob/master/manifests/base_setup.pp">https://github.com/Skarlso/puppet/blob/master/manifests/base_setup.pp</a></a></p>
+<p>Have fun.</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
+    <item>
+      <title>Busy building the future</title>
+      <link>https://skarlso.github.io/2015/05/19/busy-building-the-future/</link>
+      <pubDate>Tue, 19 May 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://skarlso.github.io/2015/05/19/busy-building-the-future/</guid>
+      <description><![CDATA[<p>Fact is, I&rsquo;ve been busy.</p>
+<p>I&rsquo;ve got a new job as a build engineer. As sort of a devops kind of guy. It&rsquo;s extremely interesting considering that I made a career as a tester. Granted, I always was technical, and never really knew my path; but it seems my path is finding me after all.</p>
+<p>In the past years, I got better at Docker, Puppet, Chef, AWS, Packer, Vagrant, Gradle, and a hell of a lot more. Also honed my linux skills from the ability of doing an ls -l to do an find . -type f -atime +5 | xargs rm -fr (find all the files which are 5 days older and pipe them to a delete command). I already read many books about devops but this time, it&rsquo;s different. This time, I can actually do these things as well in a live environment.</p>
+<p>As once a friend of mine told me: &ldquo;You ain&rsquo;t gonna learn anything unless you are getting payed for it.&rdquo; Wise words. True words.</p>
+<p>So stayed tuned for some devops and engineering type posts. I would like to continue working on the Django parts as well, however given my priorities and lack of time ( family and stuff, must choose what I learned in the hour I get each day), it might fall behind. I might stick it into some kind of provision practice or even give it a Travis.ci and put it into a gradle project. Now THAT&rsquo;S interesting.</p>
+<p>Cheers folks.</p>
+<p>And as always,</p>
+<p>Thanks for reading.</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
   </channel>
 </rss>
