@@ -6,7 +6,171 @@
     <description>Recent content in Blogs on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 01 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 02 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 2</title>
+      <link>https://skarlso.github.io/2021/12/02/aoc-day2/</link>
+      <pubDate>Thu, 02 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/02/aoc-day2/</guid>
+      <description><![CDATA[<p>Here we go for day 2!</p>
+<p>These first couple of problems prepare you on how to deal with input mainly. Learn and get used to parsing lines, and
+get comfortable with data structures.</p>
+<h2 id="day-2---part-1">Day 2 - Part 1</h2>
+<p>We continue the story of Santa and the submarine. This time, he has the task of trying to steer the thing.
+The task is straightforward. You get a couple of instructions and based on a value you increase or decrease a positions.</p>
+<p>We have a choice to make here. The wording says horizontal position and depth. Considering the future of these exercises
+we could go with variable names <code>horizontal</code> and <code>depth</code>. But I choose <code>x</code> and <code>y</code>. Why did I do that? That sounds like
+I&rsquo;m not considering the right variable names. But I&rsquo;m preparing for the inevitable 2D coordinates that will definitely
+come. You might as well get comfortable dealing with them now.</p>
+<p>So, what are our constraints?</p>
+<p>This time, it&rsquo;s quite clear and neatly packaged:</p>
+<ul>
+<li>forward X increases the horizontal position by X units.</li>
+<li>down X increases the depth by X units.</li>
+<li>up X decreases the depth by X units.</li>
+</ul>
+<p>Now comes a sentence I think is there only to confuse you. It might be not, but I swear I had to take a second look at
+that. The above constraints are clear and easy to follow. And then comes this sentence and makes me take spend a little
+bit more time on parsing them:</p>
+<blockquote>
+<p>Note that since you&rsquo;re on a submarine, down and up affect your depth, and so they have the opposite result of what you might expect.</p>
+</blockquote>
+<p>No, they are not. According to the constraints I expect down to increase depth and up to decrease depth. It&rsquo;s clearly
+written there. I believe this sentence should just be ignored.</p>
+<p>Let&rsquo;s get to solving this thing. We read the rest of the thing, and get to our test input.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">forward 5
+down 5
+forward 8
+up 3
+down 8
+forward 2
+</code></pre></td></tr></table>
+</div>
+</div><p>What comes now, is trying to parse the input. In Go, <code>Scanf</code> is an option. In other languages, you might want to just
+<code>Split(s, &quot; &quot;)</code> split by space. In Go I&rsquo;m using this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">		<span class="kd">var</span> <span class="p">(</span>
+			<span class="nx">op</span> <span class="kt">string</span>
+			<span class="nx">v</span>  <span class="kt">int</span>
+		<span class="p">)</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Sscanf</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">l</span><span class="p">),</span> <span class="s">&#34;%s %d&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">op</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">v</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>What&rsquo;s happening here is that <code>l</code> is a line from the above sample in a file ( reading line by line ). <code>&quot;%s %d&quot;</code> is saying
+scan for strings and then scan for a number. And the <code>&amp;op, &amp;v</code> just puts the result in their respective values.</p>
+<p>We have the result now in values. Let&rsquo;s implement the above three rules.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="k">switch</span> <span class="nx">op</span> <span class="p">{</span>
+<span class="k">case</span> <span class="s">&#34;forward&#34;</span><span class="p">:</span>
+    <span class="nx">x</span> <span class="o">+=</span> <span class="nx">v</span>
+<span class="k">case</span> <span class="s">&#34;up&#34;</span><span class="p">:</span>
+    <span class="nx">y</span> <span class="o">-=</span> <span class="nx">v</span>
+<span class="k">case</span> <span class="s">&#34;down&#34;</span><span class="p">:</span>
+    <span class="nx">y</span> <span class="o">+=</span> <span class="nx">v</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Pretty neat. Could be an <code>if</code>. Could be made tidier. Doesn&rsquo;t really matter as long as it solves the problem at hand. Competitive
+scripts usually are not meant to be maintainable masterpieces.</p>
+<p>It gets the job done. Then we continue by reading what the actual result should be and we see that we just have to multiple
+horizontal position with depth. Which is <code>x * y</code>.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;mult: &#34;</span><span class="p">,</span> <span class="nx">x</span><span class="o">*</span><span class="nx">y</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This gets us the right test value and, in fact, the right value to our input as well.</p>
+<p>Here, I would like to mention that you always have to deal with things like empty new lines, and spaces after a line. So always
+<code>trim</code> and make sure you don&rsquo;t accidentally parse an empty line as a valid input.</p>
+<h1 id="day-2---part-2">Day 2 - Part 2</h1>
+<p>Now, things get a bit more complex. Turns out we aren&rsquo;t actually parsing the coordinates correctly, so there are some
+new constraints. What are they?</p>
+<p>We have a new value, <code>aim</code>. And a new set of constraints:</p>
+<ul>
+<li>down X increases your aim by X units.</li>
+<li>up X decreases your aim by X units.</li>
+<li>forward X does two things:
+<ul>
+<li>It increases your horizontal position by X units.</li>
+<li>It increases your depth by your aim multiplied by X.</li>
+</ul>
+</li>
+</ul>
+<p>Again, just ignore the fluff around this this time, because it&rsquo;s more distracting than helpful. Sometimes it contains some weird extra
+info, but this time, I found them to be a bit misleading. The actual problem is super simple.</p>
+<p>We change our implementation to increase decrease <code>aim</code> and do the thing for <code>x</code> and <code>y</code> a bit differently.</p>
+<p>Following the rules we get to this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="k">switch</span> <span class="nx">op</span> <span class="p">{</span>
+<span class="k">case</span> <span class="s">&#34;forward&#34;</span><span class="p">:</span>
+    <span class="nx">x</span> <span class="o">+=</span> <span class="nx">v</span>
+    <span class="nx">y</span> <span class="o">+=</span> <span class="p">(</span><span class="nx">aim</span> <span class="o">*</span> <span class="nx">v</span><span class="p">)</span>
+<span class="k">case</span> <span class="s">&#34;up&#34;</span><span class="p">:</span>
+    <span class="nx">aim</span> <span class="o">-=</span> <span class="nx">v</span>
+<span class="k">case</span> <span class="s">&#34;down&#34;</span><span class="p">:</span>
+    <span class="nx">aim</span> <span class="o">+=</span> <span class="nx">v</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Then we carefully read what has to be done to get the result and we see that it actually did not change.
+We still multiple <code>x</code> and <code>y</code>.</p>
+<p>And indeed, this is the correct result for our test, so we run it for our input and that should yield the right value.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>This day now showed you that input comes in various forms and formats which you need to be prepared to parse correctly.
+We made sure that we skip empty new lines and always trim possible spaces. And we got to know <code>Sscanf</code> which can be handy
+at times if the format is strict enough.</p>
+<p>We also learned to read important information and disregard things which can distract from the actual goal.</p>
+<p>Thank you for reading!</p>
+<p>Happy coding!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 1</title>
       <link>https://skarlso.github.io/2021/12/01/aoc-day1/</link>
