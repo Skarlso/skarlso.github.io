@@ -6,7 +6,230 @@
     <description>Recent content in aoc on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 03 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 04 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 4</title>
+      <link>https://skarlso.github.io/2021/12/04/aoc-day4/</link>
+      <pubDate>Sat, 04 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/04/aoc-day4/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-4">Advent of Code - Day 4</h1>
+<p><strong>Disclaimer</strong>: There is surely a better solution than this one. But I&rsquo;m fairly okay with this one. And I wrote it, so&hellip;</p>
+<p>Okay, this day was a bit more complex now. But not in understanding what needed to be done, but implementing it. And
+then, part two of course.</p>
+<h2 id="day-4---part-1">Day 4 - Part 1</h2>
+<p>We met a squid this day and decided to play a round of Bingo with it. Because, why not? Bingo is a simple game. You have
+several papers on which there are a couple numbers in a square. Someone draws a number, and you need to find that number
+on your boards, cards, slips, whatevers. Once you have marked 5 numbers in a row, or a column ( or, in the original game
+diagonal also goes ) you win.</p>
+<p>Easy. You have a matrix. Get a number. Mark the numbers in the matrix which equal to the drawn number.</p>
+<p>I&rsquo;m gonna follow this logic. There might be better ones where you can calculate things based on some math, I encourage
+you to look at different solutions as well.</p>
+<p>First, we parse the input. Get the first line, and then skip the first two so we can get to the numbers.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">l</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">split</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">2</span> <span class="p">{</span>
+			<span class="k">continue</span>
+		<span class="p">}</span>
+		<span class="k">if</span> <span class="nx">l</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+			<span class="nx">boards</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">boards</span><span class="p">,</span> <span class="nx">board</span><span class="p">)</span>
+			<span class="nx">board</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([][]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+			<span class="k">continue</span>
+		<span class="p">}</span>
+
+		<span class="nx">nums</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Fields</span><span class="p">(</span><span class="nx">l</span><span class="p">)</span>
+		<span class="nx">n</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">number</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">nums</span> <span class="p">{</span>
+			<span class="nx">i</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nf">Atoi</span><span class="p">(</span><span class="nx">number</span><span class="p">)</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+			<span class="p">}</span>
+			<span class="nx">n</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span>
+		<span class="p">}</span>
+		<span class="nx">board</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">board</span><span class="p">,</span> <span class="nx">n</span><span class="p">)</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This should do it. Now, there is a small surprise here. The numbers in the matrix are not separated by just a single
+space. They are separated by multiple ones. This is just a small extra to mess with your head. Lucky for us, Go has us
+covered with <a href="https://pkg.go.dev/strings#Fields">strings.Fields</a>. This will retrieve just the numbers without the spaces.</p>
+<p>Now, we get to the main logic&hellip; Draw, mark, see if we have a winning board, calculate score.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">n</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">nums</span> <span class="p">{</span>
+		<span class="nf">markBoards</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">boards</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">winner</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nf">hasWinner</span><span class="p">(</span><span class="nx">boards</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;winner score: &#34;</span><span class="p">,</span> <span class="nf">calculateScore</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">winner</span><span class="p">))</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;winner board: &#34;</span><span class="p">,</span> <span class="nx">winner</span><span class="p">)</span>
+			<span class="nx">os</span><span class="p">.</span><span class="nf">Exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Pretty easy. Marking the board is just going through all the boards in the list of boards and do a <code>for i, for j</code> to get
+at the right number and change that number to <code>-1</code>. Why does <code>-1</code> work? Because if we read on, the score is calculated by
+going through the board and adding up UNMARKED numbers. So we don&rsquo;t need any special way to keep track of marked numbers.
+We just care about the unmarked ones.</p>
+<p>Now, <code>hasWinner</code> is a bit more complex, but just because we need to check horizontally and vertically. And we have to
+remember that we have to stop immediately once we found a winner.</p>
+<p>I&rsquo;m sure there is a better way to do this, but I just went for two loops:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">hasWinner</span><span class="p">(</span><span class="nx">boards</span> <span class="p">[][][]</span><span class="kt">int</span><span class="p">)</span> <span class="p">([][]</span><span class="kt">int</span><span class="p">,</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">board</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">boards</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">board</span><span class="p">);</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+			<span class="c1">// check vertically
+</span><span class="c1"></span>			<span class="nx">rowWon</span> <span class="o">:=</span> <span class="kc">true</span>
+			<span class="k">for</span> <span class="nx">j</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">j</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">board</span><span class="p">[</span><span class="nx">i</span><span class="p">]);</span> <span class="nx">j</span><span class="o">++</span> <span class="p">{</span>
+				<span class="k">if</span> <span class="nx">board</span><span class="p">[</span><span class="nx">i</span><span class="p">][</span><span class="nx">j</span><span class="p">]</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="p">{</span>
+					<span class="nx">rowWon</span> <span class="p">=</span> <span class="kc">false</span>
+					<span class="k">break</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+			<span class="k">if</span> <span class="nx">rowWon</span> <span class="p">{</span>
+				<span class="k">return</span> <span class="nx">board</span><span class="p">,</span> <span class="kc">true</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+
+		<span class="c1">// these are 5x5 and not varring in size.
+</span><span class="c1"></span>		<span class="nx">l</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">board</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+		<span class="k">for</span> <span class="nx">col</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">col</span> <span class="p">&lt;</span> <span class="nx">l</span><span class="p">;</span> <span class="nx">col</span><span class="o">++</span> <span class="p">{</span>
+			<span class="nx">colWon</span> <span class="o">:=</span> <span class="kc">true</span>
+			<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">board</span><span class="p">);</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+				<span class="k">if</span> <span class="nx">board</span><span class="p">[</span><span class="nx">i</span><span class="p">][</span><span class="nx">col</span><span class="p">]</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="p">{</span>
+					<span class="nx">colWon</span> <span class="p">=</span> <span class="kc">false</span>
+					<span class="k">break</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+			<span class="k">if</span> <span class="nx">colWon</span> <span class="p">{</span>
+				<span class="k">return</span> <span class="nx">board</span><span class="p">,</span> <span class="kc">true</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+
+	<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">false</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And then the calculation is just again going through and doing the adding and then the multiplication.</p>
+<p>We run it on our test data and input and it works. Fantastic. On to part 2!</p>
+<h2 id="day-4---part-2">Day 4 - Part 2</h2>
+<p>Part 2 is just about finding the last winning board. Great! We are already geared towards that. Once we find a winning
+board we remove that board and begin again. We do this until there are no boards left. I&rsquo;m not sure how that will make
+sure that the squid wins, I don&rsquo;t understand that part to be honest, but that&rsquo;s not our goal.</p>
+<p>For this, we slightly alter our main loop like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nb">len</span><span class="p">(</span><span class="nx">boards</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">n</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">nums</span> <span class="p">{</span>
+			<span class="nf">markBoards</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">boards</span><span class="p">)</span>
+			<span class="k">if</span> <span class="nx">loc</span><span class="p">,</span> <span class="nx">winner</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nf">hasWinner</span><span class="p">(</span><span class="nx">boards</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;winner score: number: %d, score: %d, loc: %d\n&#34;</span><span class="p">,</span> <span class="nx">n</span><span class="p">,</span> <span class="nf">calculateScore</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">winner</span><span class="p">),</span> <span class="nx">loc</span><span class="p">)</span>
+				<span class="nx">boards</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">boards</span><span class="p">[:</span><span class="nx">loc</span><span class="p">],</span> <span class="nx">boards</span><span class="p">[</span><span class="nx">loc</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span><span class="o">...</span><span class="p">)</span>
+				<span class="k">break</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This will display all boards which win. I don&rsquo;t really care about that, again, I could have just checked the last, or
+save all or when <code>len==1</code> check it. But this was the fastest, easiest way to do it. And as I said in the begin, these are
+small scripts which I will probably never look at again, so I don&rsquo;t care about maintainability. I care that it&rsquo;s
+efficient, fast and easy to read / write.</p>
+<p>We run this, and it works on the test and the input. And that&rsquo;s it for part 2!</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>We learned again that reading things and understanding can be hard. The samples can be daunting, but don&rsquo;t let yourself
+be intimidated. And never be afraid to ask questions, look at what other people are doing especially if you just started
+doing AOC this year.</p>
+<p>But most importantly, have fun with it!</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 3</title>
       <link>https://skarlso.github.io/2021/12/03/aoc-day3/</link>
