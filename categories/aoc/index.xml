@@ -6,7 +6,221 @@
     <description>Recent content in aoc on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 04 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 05 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 5</title>
+      <link>https://skarlso.github.io/2021/12/05/aoc-day5/</link>
+      <pubDate>Sun, 05 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/05/aoc-day5/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-5">Advent of Code - Day 5</h1>
+<p>Alright. Today, we are going to learn something that will be useful to us in the coming days.</p>
+<p>Let&rsquo;s see what we are dealing with.</p>
+<h2 id="day-5---part-1">Day 5 - Part 1</h2>
+<p>We deal with vents today. The sea is a dangerous place after all. Fortunately for us, these vents line up perfectly so
+Santa can dodge them easily. We get a bunch of coordinates which form lines basically. The wording is pretty weird, says one
+end and the other. But these are just begin and end coordinates in a 2D grid.</p>
+<p>We see the example, and it&rsquo;s a 2D grid with lines drawn over. Let&rsquo;s list our rules.</p>
+<ul>
+<li>lines with start x, y coordinates and end x, y coordinates</li>
+<li>only consider vertical and horizontal lines</li>
+<li>count the number of points where lines intersect</li>
+</ul>
+<p>Now, this seems like a problem for which you can use a 2D matrix. A coordinate system. But what if I tell you that you
+don&rsquo;t need that. Why? Let&rsquo;s think about this problem for a little bit. What do you need? You need a way to track some
+points. You need a way to see if <code>a</code> point already occurred or not&hellip; Aka, was an intersection point of two or more lines.
+What could help you track if a certain point, a certain data, was already encountered or not? What could be something
+that could we could use to easily and quickly access a value using another value? Have a little think. Go on, I&rsquo;ll wait.</p>
+<p>Okay, here we go. It&rsquo;s a <code>map</code>. Or a <code>dict</code>. Or an <code>associative array</code>. That&rsquo;s right, that&rsquo;s all we need. A map which
+can track if we encountered a point before. The map key is <code>x, y</code> together and the value is a simple count.</p>
+<p>In Go, we use a <code>struct</code> for that like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">point</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">x</span><span class="p">,</span> <span class="nx">y</span> <span class="kt">int</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And then our map is like this: <code>seaFloor := make(map[point]int)</code>.</p>
+<p>Alright let&rsquo;s scan our input. We use our trusty <code>Sscanf</code> function again, because the input follows a nice format:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">l</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">split</span> <span class="p">{</span>
+		<span class="kd">var</span> <span class="p">(</span>
+			<span class="nx">x1</span><span class="p">,</span> <span class="nx">x2</span> <span class="kt">int</span>
+			<span class="nx">y1</span><span class="p">,</span> <span class="nx">y2</span> <span class="kt">int</span>
+		<span class="p">)</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Sscanf</span><span class="p">(</span><span class="nx">l</span><span class="p">,</span> <span class="s">&#34;%d,%d -&gt; %d,%d&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">x1</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">y1</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">x2</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">y2</span><span class="p">)</span>
+
+		<span class="nx">lines</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">lines</span><span class="p">,</span> <span class="nx">line</span><span class="p">{</span>
+			<span class="nx">begin</span><span class="p">:</span> <span class="nx">point</span><span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="nx">x1</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="nx">y1</span><span class="p">},</span>
+			<span class="nx">end</span><span class="p">:</span>   <span class="nx">point</span><span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="nx">x2</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="nx">y2</span><span class="p">},</span>
+		<span class="p">})</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Now, I know that we said, that a map is enough and you don&rsquo;t need a 2D map. But how do we check horizontally and
+vertically then? Well, what is horizontal vertical? We check the sample.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">0,9 -&gt; 5,9
+8,0 -&gt; 0,8
+9,4 -&gt; 3,4
+2,2 -&gt; 2,1
+7,0 -&gt; 7,4
+6,4 -&gt; 2,0
+0,9 -&gt; 2,9
+3,4 -&gt; 1,4
+0,0 -&gt; 8,8
+5,5 -&gt; 8,2
+</code></pre></td></tr></table>
+</div>
+</div><p>Out of these, horizontal and vertical only mean that ONE OF THE COORDINATES EQUALS. And the other either increases or
+decreases.</p>
+<p>Okay, so we track if we need to add or subtract 1 to a number. Because &ldquo;drawing a line&rdquo; is literally just increasing
+the coordinate. One of them at least.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">l</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">lines</span> <span class="p">{</span>
+    <span class="nx">addx</span> <span class="o">:=</span> <span class="mi">0</span>
+    <span class="nx">addy</span> <span class="o">:=</span> <span class="mi">0</span>
+    <span class="o">...</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>So when do we increase x and when y? If one of them is greater or smaller than the other.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">l</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">lines</span> <span class="p">{</span>
+    <span class="nx">addx</span> <span class="o">:=</span> <span class="mi">0</span>
+    <span class="nx">addy</span> <span class="o">:=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="nx">l</span><span class="p">.</span><span class="nx">begin</span><span class="p">.</span><span class="nx">x</span> <span class="p">&gt;</span> <span class="nx">l</span><span class="p">.</span><span class="nx">end</span><span class="p">.</span><span class="nx">x</span> <span class="p">{</span>
+        <span class="nx">addx</span> <span class="p">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nx">l</span><span class="p">.</span><span class="nx">begin</span><span class="p">.</span><span class="nx">x</span> <span class="p">&lt;</span> <span class="nx">l</span><span class="p">.</span><span class="nx">end</span><span class="p">.</span><span class="nx">x</span> <span class="p">{</span>
+        <span class="nx">addx</span> <span class="p">=</span> <span class="mi">1</span>
+    <span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>We do that with y as well. But&hellip; This will result in both x and y increasing at the same time if neither of them equal.
+That would be&hellip; diagonal! We ignore that. We could say at the begin, something like, if neither of them equal, <code>continue</code>.</p>
+<p>For now I just skip if both addx and addy are not 0. Then comes our for loop. We have to &ldquo;draw a line&rdquo; from a starting
+point to and end point. So we just start adding the <code>addN</code> to the respective number until they match the end coordinate.</p>
+<p>And once we have a new coordinate we save that in our map. And if the map already contains it, we just increase that by
+one. In Go, that&rsquo;s easy, because things in the map have a default value. For <code>int</code> that&rsquo;s 0. Which is perfect for us.</p>
+<p>Our for loop looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">		<span class="k">for</span> <span class="nx">startX</span> <span class="o">!=</span> <span class="nx">targetX</span> <span class="o">||</span> <span class="nx">startY</span> <span class="o">!=</span> <span class="nx">targetY</span> <span class="p">{</span>
+			<span class="nx">seaFloor</span><span class="p">[</span><span class="nx">point</span><span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="nx">startX</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="nx">startY</span><span class="p">}]</span><span class="o">++</span>
+
+			<span class="nx">startX</span> <span class="o">+=</span> <span class="nx">addX</span>
+			<span class="nx">startY</span> <span class="o">+=</span> <span class="nx">addY</span>
+		<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Easy. Except I had a small bug here, where I forgot to add the last item as well.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">		<span class="nx">seaFloor</span><span class="p">[</span><span class="nx">point</span><span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="nx">startX</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="nx">startY</span><span class="p">}]</span><span class="o">++</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Now, we are ready to count overlaps. Which will just be going through the map and doing a <code>count++</code> in case a value in
+the map is greater than 1.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">overlaps</span> <span class="o">:=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">seaFloor</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">v</span> <span class="p">&gt;</span> <span class="mi">1</span> <span class="p">{</span>
+			<span class="nx">overlaps</span><span class="o">++</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;overlaps: &#34;</span><span class="p">,</span> <span class="nx">overlaps</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And done! That&rsquo;s all. No need for a 2D map or tracking coordinates or walking around with nested for loops.</p>
+<p>We run this on the test and our sample input and we got the right result!</p>
+<h2 id="day-5---part-2">Day 5 - Part 2</h2>
+<p>We check part 2 and guess what!! The only change is that we have to also run diagonally. What luck!?</p>
+<p>I just remove the <code>addx</code> and <code>addy</code> check and we have part 2 done.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>And that&rsquo;s it! We are done for today. We learned that we don&rsquo;t always need a matrix to solve problems with coordinates.
+We have to keep an open mind and find the right data to represent our problem. The right data will solve 50% of the puzzle.</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 4</title>
       <link>https://skarlso.github.io/2021/12/04/aoc-day4/</link>
