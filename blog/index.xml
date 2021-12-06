@@ -6,7 +6,329 @@
     <description>Recent content in Blogs on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 05 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 06 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 6</title>
+      <link>https://skarlso.github.io/2021/12/06/aoc-day6/</link>
+      <pubDate>Mon, 06 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/06/aoc-day6/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-6">Advent Of Code - Day 6</h1>
+<p>Alright. This time, we are going to learn something that AOC does from time to time&hellip; Let&rsquo;s break it down.</p>
+<h2 id="day-6---part-1">Day 6 - Part 1</h2>
+<p>We start off really easy. We venture around in the sea, looking for nothing but trouble. We have our squid friend with
+us, whom we were telling everything about vents on the sea floor. Which happen to line up perfectly straight for some
+weird reason.</p>
+<p>And then we encounter a bunch of fish. Like&hellip; a LOT of fish. Nothing to worry about, right? But just in case, we map
+how these fish reproduce. AOC tells us here that they might be reproducing in an exponential. And in hindsight, this
+should have given us a clue on part 2. But I get ahead of myself.</p>
+<p>First, let&rsquo;s list our constraints, or rules. We read the text and it&rsquo;s not a 100% clear yet. We see some text in bold,
+usually those mean something. And with the number <strong>7</strong> we have our first rule.</p>
+<ul>
+<li>fish reproduce every 7 day</li>
+</ul>
+<p>We read on and we see that there is a behaviour example there. Reading this requires a bit of understanding. But what
+comes out of it is that..</p>
+<ul>
+<li>A fish has an internal clock which decreases each day.</li>
+<li>When it hits 0 a new fish is created with initial timer of <strong>8</strong>.</li>
+<li>The fish&rsquo;s timer is then reset to <strong>6</strong>.</li>
+</ul>
+<p>And that&rsquo;s it. The rest is just basically telling us that then all fish will have their timer move. The rest of the text
+is basically fluff after this. We read things like, why it&rsquo;s reset to 6 and not 7. But we already know that in computer
+science everything starts from 0 anyways. And it&rsquo;s usually hinted if not. Then we have some more information that the
+new fish&rsquo;s timer only ticks on the new day and <strong>not</strong> on the day it was born. That&rsquo;s all fine.</p>
+<p>Then we have our first example. Cool, looks really nice. Let&rsquo;s take it on.</p>
+<p>Now, here I decided that upon reading this, I&rsquo;m going to create a fish struct and track the internal timer. Further, I
+decided that I&rsquo;m going to let the fish take care of the <code>tick</code> event on each new day.</p>
+<p>This looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">fish</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">timer</span> <span class="kt">int</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">f</span> <span class="o">*</span><span class="nx">fish</span><span class="p">)</span> <span class="nf">tick</span><span class="p">()</span> <span class="o">*</span><span class="nx">fish</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nx">f</span><span class="p">.</span><span class="nx">timer</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="nx">f</span><span class="p">.</span><span class="nx">timer</span> <span class="p">=</span> <span class="mi">6</span>
+		<span class="k">return</span> <span class="nf">newFish</span><span class="p">()</span>
+	<span class="p">}</span>
+	<span class="nx">f</span><span class="p">.</span><span class="nx">timer</span><span class="o">--</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">newFish</span><span class="p">()</span> <span class="o">*</span><span class="nx">fish</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">fish</span><span class="p">{</span>
+		<span class="nx">timer</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Basically, once it hits 0 we create a new fish with timer 8 and reset the timer back to 6. Pretty easy.</p>
+<p>We loop this in a 80 day cycle, and the length of the created list is how many fish we&rsquo;ll have. We always tick each fish
+on each day ( this should have raised an alarm flag here, but I was typing fast&hellip; ).</p>
+<p>The main loop looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">days</span> <span class="o">:=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="nx">days</span> <span class="p">&lt;</span> <span class="nx">max</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">f</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">fishes</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="nx">fish</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nf">tick</span><span class="p">();</span> <span class="nx">fish</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">fishes</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">fishes</span><span class="p">,</span> <span class="nx">fish</span><span class="p">)</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+		<span class="nx">days</span><span class="o">++</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Sweet. We list the length of the list, and indeed, that&rsquo;s the correct answer. We wrote a solution in about a minute or
+so. Little did we know that we were about to hit in the face with a giant fish shaped fist.</p>
+<h2 id="day-6---part-2">Day 6 - Part 2</h2>
+<p>So, AOC does this sometimes. It present you with a simple problem and then says, okay, now do this times 1000000. And
+you sit there using your machine as a heating device for the next couple days while your solution is calculating.</p>
+<p>Obviously, that&rsquo;s not the right way to do it. When you face something like this, there is ALWAYS a solution which will
+run withing a couple seconds. There are two solutions. You either need caching, or you need to math that sh*t out.</p>
+<p>I don&rsquo;t see an obvious way of caching here, so we&rsquo;ll have to be a bit clever about it.</p>
+<p>Let&rsquo;s try to think about this a bit. What is the most difficult part in this that runs to longest? Checking each and
+every fish and ticking them individually. We cannot do that. That will never ever be possible. There are way too many
+fish. We have to find a different angle to the problem. If we can&rsquo;t track the fishes what can we track? We can track the
+number of days. But does that help us in any way?</p>
+<p>Let&rsquo;s look at the example and try to see if we can find some kind of pattern as we go.</p>
+<p>The ticks of the fish are the numbers of days it has left until it gives birth. All of the numbers will be in the range
+of 0-8.</p>
+<p>Initial day looks like this: <code>3, 4, 3, 1, 2</code>. From the example. Sometimes it helps me to sort these numbers, see if I
+can make out a pattern. <code>1, 2, 3, 3, 4</code>. Okay, we see there are two fishes which are on the same cycle. If, like we said,
+we are trying to track the days instead of the fish, take a look how many fishes on a day there are.</p>
+<table>
+<thead>
+<tr>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+<th>7</th>
+<th>8</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>Okay, let&rsquo;s manually go and one-by-one increase the days and count the fish. Maybe we&rsquo;ll see an emerging pattern.</p>
+<p>Day 1:</p>
+<p><code>After  1 day:  2,3,2,0,1</code></p>
+<table>
+<thead>
+<tr>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+<th>7</th>
+<th>8</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>Immediately we see something very cool. The numbers all remained the same, but <strong>they shifted by one to the left</strong>.</p>
+<p>Let&rsquo;s keep going.</p>
+<p><code>After  2 days: 1,2,1,6,0,8</code></p>
+<table>
+<thead>
+<tr>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+<th>7</th>
+<th>8</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>Now we get to one of the rules. Once a fish reaches 0, there is a new fish and we reset the current fish to 6.
+What does that mean in our little table? Who was 0 before will be a 6 now. And we increase 8 by one. Which means
+on the next day we can see that it will be <code>2, 0, 0, 0, 0, 1, 1, 1, 1</code> without even checking. Because our two
+<code>1</code>s will be <code>0</code>s on the next day and our one <code>2</code> will be a <code>1</code> and we get a new fish because we had a <code>0</code>. But
+let&rsquo;s check to make sure.</p>
+<p><code>After  3 days: 0,1,0,5,6,7,8</code></p>
+<table>
+<thead>
+<tr>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+<th>7</th>
+<th>8</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>And indeed, our assumption was right. So what does this tell us? It will help us keep track of the count of fish
+on each days. How do we get the total number of fish then? We&rsquo;ll just sum up the numbers in this list.</p>
+<p>Let&rsquo;s see some code. We start off by creating our initial list with the right number of fish from our input:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">days</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">f</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">fishes</span> <span class="p">{</span>
+		<span class="nx">days</span><span class="p">[</span><span class="nx">f</span><span class="p">]</span><span class="o">++</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This will produce our starting numbers. Now, what&rsquo;s our cycle? Each day our fishes shift one to the left. With
+one tiny rule that the <code>0</code>s will become <code>8</code>s and <code>6</code>s. Because they birth a new fish and they reset their timer
+back to <code>6</code>. Shifting the numbers is easy, we just assign the next item to the current item. But we save the <code>0</code>
+first. And we create as many <code>6</code>s and <code>8</code>s as there were <code>0</code>s.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">max</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">first</span> <span class="o">:=</span> <span class="nx">days</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">8</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+			<span class="nx">days</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nx">days</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+		<span class="p">}</span>
+		<span class="nx">days</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">+=</span> <span class="nx">first</span> <span class="c1">// we add them because there might be `6`s from the previous day too we don&#39;t want to override those.
+</span><span class="c1"></span>		<span class="nx">days</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span> <span class="p">=</span> <span class="nx">first</span> <span class="c1">// there are as many new fish as there were `0`s on the previous day
+</span><span class="c1"></span>	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Next, we sum up the numbers:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">sum</span> <span class="o">:=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">f</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">days</span> <span class="p">{</span>
+		<span class="nx">sum</span> <span class="o">+=</span> <span class="nx">f</span>
+	<span class="p">}</span>
+
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;number of fish: &#34;</span><span class="p">,</span> <span class="nx">sum</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And we are done. We run on our input, and this produces the right number pretty quickly instead of a year or a thousand.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Phew, this one was a nice one! It prepared us for thinking a bit instead of blindly following the rules on the first part.
+It helps to take a look at the numbers and draw them out one by one on a peace of paper or on the computer or anywhere. Just
+trace the numbers by hand, which will surely make you see a pattern in all of it.</p>
+<p>And remember, that there is always a solution which will run fast. Whether it&rsquo;s caching or a bit of math. And again, don&rsquo;t be
+afraid to ask for clues! The people in the reddit forum are super nice and they will give you hints without spoiling the end
+result.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 5</title>
       <link>https://skarlso.github.io/2021/12/05/aoc-day5/</link>
