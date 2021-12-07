@@ -6,7 +6,120 @@
     <description>Recent content on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 06 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 07 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 7</title>
+      <link>https://skarlso.github.io/2021/12/07/aoc-day7/</link>
+      <pubDate>Tue, 07 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/07/aoc-day7/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-7">Advent Of Code - Day 7</h1>
+<h2 id="day-7---part-1">Day 7 - Part 1</h2>
+<p>Today we got a bit of respite with an easy one. Sort of like a Dark Souls bonfire.</p>
+<p><img src="img/2021/12/07/bonfire.jpeg" alt="campfire"></p>
+<p>Let&rsquo;s list our constraints.</p>
+<p>Today, we face a giant whale and some crabs in submarines which are less than effective. If they only move horizontally
+I have no idea how they&rsquo;ve gotten as far as you. Maybe they pivot from time to time. Or they are indigenous to this
+region only.</p>
+<p>In any case, the crab want to rescue you by blasting a giant hole into the ground in which you can escape. For that they
+need to <em>align to a position</em>. We&rsquo;ll have to try each position for the crabs to align to to find the one which requires
+the least amount of fuel ( steps ) to get to from each of the crabs.</p>
+<ul>
+<li>least amount of fuel</li>
+<li>from each position of the crabs</li>
+</ul>
+<p>Okay, this isn&rsquo;t so bad. This is a simple <code>min</code> search from <code>a</code> to <code>b</code>. Which is basically the lowest crab position to
+the highest crab position. We&rsquo;ll try each one of them and which ever produced the least steps for each crab to take,
+wins.</p>
+<p>Let&rsquo;s see some code. First, we parse the input. Just a <code>strings.Split(line, &quot;,&quot;)</code> this time. Then, we get the min and
+the max of the values to look for. This is simply a <code>for ... if v &lt; min ; if v &gt; max</code>. Nothing serious.</p>
+<p>Then we get to the meat. From the minimum, to the maximum, we calculate how much it would take to move to that position.
+The fuel is basically, the distance taken from a to b as an absolute value. <code>abs(a-b)</code>. This is how that looks like:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="nx">min</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;=</span> <span class="nx">max</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">currFuel</span> <span class="o">:=</span> <span class="mi">0</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">crab</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">crabs</span> <span class="p">{</span>
+			<span class="nx">v</span> <span class="o">:=</span> <span class="nf">abs</span><span class="p">(</span><span class="nx">i</span> <span class="o">-</span> <span class="nx">crab</span><span class="p">)</span>
+			<span class="nx">currFuel</span> <span class="o">+=</span> <span class="nx">v</span>
+		<span class="p">}</span>
+		<span class="k">if</span> <span class="nx">currFuel</span> <span class="p">&lt;</span> <span class="nx">minFuel</span> <span class="p">{</span>
+			<span class="nx">minFuel</span> <span class="p">=</span> <span class="nx">currFuel</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>We add all that together as our fuel and compare it to the smallest we found so far. And that&rsquo;s it. We have the solution
+for part1. Bring it on part 2!</p>
+<h2 id="day-7---part-2">Day 7 - Part 2</h2>
+<p>Okay, now we get to the fun stuff. Turns out, we actually have no idea how crab submarines work. Surprise, surprise. But
+they tell us that for each move they use +1 fuel. So 1 or the first, 2 for the second, 3 for the third, etc. We do some
+quick thinking and find that basically, each move requires +1 compared to the previous move. Now&hellip; You might be tempted
+to change around your looping. But remember. Look for patterns! 1, 2, 3, 4&hellip;. this is a base number sequence. And what
+you need is add 1, then 2, then 3, then 4 to the final sum for each move. So basically just sum the number sequence and
+add it to the end result.</p>
+<p>Here, the novice might be tempted to add the numbers with a for loop. But, if you remember your math class, there is a
+formula for that. It&rsquo;s called the Gauss formula. But that&rsquo;s just a fancy pants words for a base number sequence sum.
+It&rsquo;s (n*(1+n))/2. Or better, (n*(a1+a2))/2. You can look it up further <a href="https://mathbitsnotebook.com/Algebra2/Sequences/SSGauss.html">here</a>.</p>
+<p>With that, we simply create a small function value to calculate this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">sum</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="p">(</span><span class="nx">n</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="nx">n</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And we change our loop a tiny bit:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="nx">min</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;=</span> <span class="nx">max</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">currFuel</span> <span class="o">:=</span> <span class="mi">0</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">crab</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">crabs</span> <span class="p">{</span>
+			<span class="nx">v</span> <span class="o">:=</span> <span class="nf">sum</span><span class="p">(</span><span class="nf">abs</span><span class="p">(</span><span class="nx">i</span> <span class="o">-</span> <span class="nx">crab</span><span class="p">))</span> <span class="c1">// change this to add sum
+</span><span class="c1"></span>			<span class="nx">currFuel</span> <span class="o">+=</span> <span class="nx">v</span>
+		<span class="p">}</span>
+		<span class="k">if</span> <span class="nx">currFuel</span> <span class="p">&lt;</span> <span class="nx">minFuel</span> <span class="p">{</span>
+			<span class="nx">minFuel</span> <span class="p">=</span> <span class="nx">currFuel</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And that&rsquo;s it! With that, we have our number. Submit to AOC and that&rsquo;s another star in the bag!</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 6</title>
       <link>https://skarlso.github.io/2021/12/06/aoc-day6/</link>
@@ -27,7 +140,7 @@ usually those mean something. And with the number <strong>7</strong> we have our
 <ul>
 <li>fish reproduce every 7 day</li>
 </ul>
-<p>We read on and we see that there is a behaviour example there. Reading this requires a bit of understanding. But what
+<p>We read on and we see that there is a behavior example there. Reading this requires a bit of understanding. But what
 comes out of it is that..</p>
 <ul>
 <li>A fish has an internal clock which decreases each day.</li>
@@ -325,6 +438,7 @@ trace the numbers by hand, which will surely make you see a pattern in all of it
 <p>And remember, that there is always a solution which will run fast. Whether it&rsquo;s caching or a bit of math. And again, don&rsquo;t be
 afraid to ask for clues! The people in the reddit forum are super nice and they will give you hints without spoiling the end
 result.</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
 <p>Thank you for reading!</p>
 <p>Gergely.</p>
 ]]></description>
