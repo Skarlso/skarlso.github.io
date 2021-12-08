@@ -6,7 +6,232 @@
     <description>Recent content in aoc on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 07 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 08 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 8</title>
+      <link>https://skarlso.github.io/2021/12/08/aoc-day8/</link>
+      <pubDate>Wed, 08 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/08/aoc-day8/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-8">Advent Of Code - Day 8</h1>
+<p>If yesterday was a bit of a respite from adventuring, today was the boss fight for which we geared up for. The wall of
+text that hit us in the face, nearly depleted all of our HP. Let&rsquo;s hope tomorrow brings some potions.</p>
+<h2 id="day-8---part-1">Day 8 - Part 1</h2>
+<p>We start off relatively easy&hellip; We have to deal with old school number displays that use segments to display numbers.
+Luckily, for part one, all we are interested about is to find numbers in the output which are a definitive match
+against numbers which are displayed using the segmented display system.</p>
+<p>That&rsquo;s easy, we just gather all numbers which correspond to a certain length.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">out</span> <span class="o">:=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">line</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">content</span><span class="p">),</span> <span class="s">&#34;\n&#34;</span><span class="p">)</span> <span class="p">{</span>
+		<span class="nx">input</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">line</span><span class="p">),</span> <span class="s">&#34; | &#34;</span><span class="p">)</span>
+		<span class="c1">// signalPatterns := input[0]
+</span><span class="c1"></span>		<span class="nx">outputValue</span> <span class="o">:=</span> <span class="nx">input</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nx">outputValue</span><span class="p">,</span> <span class="s">&#34; &#34;</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">digitsToSegments</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)];</span> <span class="nx">ok</span> <span class="p">{</span>
+				<span class="nx">out</span><span class="o">++</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;out: &#34;</span><span class="p">,</span> <span class="nx">out</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Where <code>digitsToSegments</code> is just a map of length -&gt; number.</p>
+<p>That&rsquo;s it. This is part 1. Super easy. Barely an inconvenience.</p>
+<h2 id="day-8---part-2">Day 8 - Part 2</h2>
+<p>Okay, now comes the hard part. There are several solutions out there for this one. Some used bit logic, some used brute
+force, some used backtracking, some used set logic, some used permutations, and I used a lot of frigging <code>Contains</code>.</p>
+<p>There is a lot I don&rsquo;t like about the code, but I had my booster, I&rsquo;m tired, and I &ldquo;logiced&rdquo; it out on paper. I actually
+saw a person doing the same and posting their logic on it on reddit. I did the same thing. Cool, I&rsquo;m not insane.</p>
+<p>First step was to sort all of the values, since, I need to match them up later. This was just easier to do than creating
+a set and doing some intersection logic.</p>
+<p>Once I had my sorted items, I isolated <code>1, 4, 7, 8</code> like above. Created a map for <code>segmentToNumber</code> and
+<code>numberToSegment</code> for easy parsing.</p>
+<p>And then, I started to find the rest of the numbers. The paper logic translated to this monstrosity.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">findNumberMappings</span><span class="p">(</span><span class="nx">s</span> <span class="p">[]</span><span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// find 6 and 9
+</span><span class="c1"></span>	<span class="kd">var</span> <span class="p">(</span>
+		<span class="nx">ninezero</span>                          <span class="p">[]</span><span class="kt">string</span>
+		<span class="nx">six</span><span class="p">,</span> <span class="nx">three</span><span class="p">,</span> <span class="nx">five</span><span class="p">,</span> <span class="nx">two</span><span class="p">,</span> <span class="nx">nine</span><span class="p">,</span> <span class="nx">zero</span> <span class="kt">string</span>
+		<span class="nx">topOne</span><span class="p">,</span> <span class="nx">bottomOne</span>                 <span class="kt">string</span>
+	<span class="p">)</span>
+
+	<span class="c1">// find out which one of 1&#39;s &#34;ab&#34; is in 6 and 9
+</span><span class="c1"></span>	<span class="c1">// determine which of ones lines is top and bottom
+</span><span class="c1"></span>	<span class="c1">// find 2, 3, 5 and determine which is 2 and which is 5
+</span><span class="c1"></span>	<span class="c1">// by checking which one it contains.
+</span><span class="c1"></span>	<span class="c1">// the rest is 3.
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span> <span class="p">{</span>
+		<span class="c1">// 9, 6, 0
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span> <span class="o">&amp;&amp;</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span> <span class="o">&amp;&amp;</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span> <span class="p">{</span>
+			<span class="nx">ninezero</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">ninezero</span><span class="p">,</span> <span class="nx">v</span><span class="p">)</span>
+		<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span> <span class="o">||</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">1</span><span class="p">])))</span> <span class="p">{</span>
+			<span class="nx">six</span> <span class="p">=</span> <span class="nx">v</span>
+		<span class="p">}</span>
+		<span class="c1">// 3
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span> <span class="o">==</span> <span class="mi">5</span> <span class="o">&amp;&amp;</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span> <span class="o">&amp;&amp;</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span> <span class="p">{</span>
+			<span class="nx">three</span> <span class="p">=</span> <span class="nx">v</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+
+	<span class="k">if</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">six</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span> <span class="p">{</span>
+		<span class="nx">topOne</span> <span class="p">=</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+		<span class="nx">bottomOne</span> <span class="p">=</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+		<span class="nx">topOne</span> <span class="p">=</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+		<span class="nx">bottomOne</span> <span class="p">=</span> <span class="nb">string</span><span class="p">(</span><span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;1&#34;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+	<span class="p">}</span>
+
+	<span class="c1">// find 2, 5
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span> <span class="o">==</span> <span class="mi">5</span> <span class="o">&amp;&amp;</span> <span class="nx">v</span> <span class="o">!=</span> <span class="nx">three</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="nx">topOne</span><span class="p">)</span> <span class="p">{</span>
+				<span class="nx">two</span> <span class="p">=</span> <span class="nx">v</span>
+			<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="nx">bottomOne</span><span class="p">)</span> <span class="p">{</span>
+				<span class="nx">five</span> <span class="p">=</span> <span class="nx">v</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+
+	<span class="c1">// 9 contains all segments of 4
+</span><span class="c1"></span>	<span class="nx">nine</span> <span class="p">=</span> <span class="nx">ninezero</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+	<span class="nx">zero</span> <span class="p">=</span> <span class="nx">ninezero</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+	<span class="nx">isNine</span> <span class="o">:=</span> <span class="kc">true</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">c</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">numberToSegment</span><span class="p">[</span><span class="s">&#34;4&#34;</span><span class="p">]</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="p">!</span><span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">nine</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">c</span><span class="p">))</span> <span class="p">{</span>
+			<span class="nx">isNine</span> <span class="p">=</span> <span class="kc">false</span>
+			<span class="k">break</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="p">!</span><span class="nx">isNine</span> <span class="p">{</span>
+		<span class="nx">nine</span><span class="p">,</span> <span class="nx">zero</span> <span class="p">=</span> <span class="nx">zero</span><span class="p">,</span> <span class="nx">nine</span>
+	<span class="p">}</span>
+
+	<span class="nx">segmentToNumber</span><span class="p">[</span><span class="nx">nine</span><span class="p">]</span> <span class="p">=</span> <span class="s">&#34;9&#34;</span>
+	<span class="nx">segmentToNumber</span><span class="p">[</span><span class="nx">six</span><span class="p">]</span> <span class="p">=</span> <span class="s">&#34;6&#34;</span>
+	<span class="nx">segmentToNumber</span><span class="p">[</span><span class="nx">two</span><span class="p">]</span> <span class="p">=</span> <span class="s">&#34;2&#34;</span>
+	<span class="nx">segmentToNumber</span><span class="p">[</span><span class="nx">three</span><span class="p">]</span> <span class="p">=</span> <span class="s">&#34;3&#34;</span>
+	<span class="nx">segmentToNumber</span><span class="p">[</span><span class="nx">five</span><span class="p">]</span> <span class="p">=</span> <span class="s">&#34;5&#34;</span>
+	<span class="nx">segmentToNumber</span><span class="p">[</span><span class="nx">zero</span><span class="p">]</span> <span class="p">=</span> <span class="s">&#34;0&#34;</span>
+<span class="p">}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>Obviously, here, I need to replace the strings.Contains with some maps that I can than use more efficiently.</p>
+<p>I started working on something like:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">digit</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">value</span> <span class="kt">string</span>
+	<span class="nx">chars</span> <span class="kd">map</span><span class="p">[</span><span class="kt">rune</span><span class="p">]</span><span class="kd">struct</span><span class="p">{}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And then use this instead of strings. The map than can be used for quick checking of segments. This should yield some
+better benchmark results. Overall it&rsquo;s not that shabby.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Today we learned to read again. And we also learned that drawing things on paper gives a better perspective and
+playground on working out some details about the problem.</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 7</title>
       <link>https://skarlso.github.io/2021/12/07/aoc-day7/</link>
