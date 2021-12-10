@@ -6,7 +6,264 @@
     <description>Recent content in Blogs on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Thu, 09 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 10 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 10</title>
+      <link>https://skarlso.github.io/2021/12/10/aoc-day10/</link>
+      <pubDate>Fri, 10 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/10/aoc-day10/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-10">Advent Of Code - Day 10</h1>
+<p>Again, a bit of breathing time with an easier one. Although, it can be difficult, if you go down the path of trying to do
+it via recursion.</p>
+<h2 id="day-10---part-1">Day 10 - Part 1</h2>
+<p>We have to match brackets. There can be a bit of a hassle if you go off on the wrong foot and try to implement it using
+recursion. But that works perfectly fine as well. But, there is a more elegant solution in which we just use a stack or
+try matching the last by updating it constantly. The stack is a heck of a lot easier. And considering part 2, it&rsquo;s also
+more convenient.</p>
+<p>Let&rsquo;s see.. we parse our input, and then create a stack. In Go a stack is just simply a slice which we&rsquo;ll manipulate like
+a stack.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">stack</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">rune</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Why rune? Because we can iterate over strings which give runes.</p>
+<p>What are we trying to do? In the basest form, we push characters onto the stack. If a new one comes around which is a
+closing character, we see if the last one was an opening character for that closing one. If it wasn&rsquo;t there is an error.
+If it was, great, we popped it off of the stack so the next character can come along.</p>
+<p>First, let&rsquo;s create some maps which will hold some definitive values so we don&rsquo;t have to search for anything.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="p">(</span>
+	<span class="nx">openingForClosed</span> <span class="p">=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">rune</span><span class="p">]</span><span class="kt">rune</span><span class="p">{</span>
+		<span class="sc">&#39;)&#39;</span><span class="p">:</span> <span class="sc">&#39;(&#39;</span><span class="p">,</span>
+		<span class="sc">&#39;]&#39;</span><span class="p">:</span> <span class="sc">&#39;[&#39;</span><span class="p">,</span>
+		<span class="sc">&#39;}&#39;</span><span class="p">:</span> <span class="sc">&#39;{&#39;</span><span class="p">,</span>
+		<span class="sc">&#39;&gt;&#39;</span><span class="p">:</span> <span class="sc">&#39;&lt;&#39;</span><span class="p">,</span>
+	<span class="p">}</span>
+	<span class="nx">openingDelimiters</span> <span class="p">=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">rune</span><span class="p">]</span><span class="kd">struct</span><span class="p">{}{</span>
+		<span class="sc">&#39;(&#39;</span><span class="p">:</span> <span class="p">{},</span>
+		<span class="sc">&#39;[&#39;</span><span class="p">:</span> <span class="p">{},</span>
+		<span class="sc">&#39;{&#39;</span><span class="p">:</span> <span class="p">{},</span>
+		<span class="sc">&#39;&lt;&#39;</span><span class="p">:</span> <span class="p">{},</span>
+	<span class="p">}</span>
+	<span class="nx">closingDelimiters</span> <span class="p">=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">rune</span><span class="p">]</span><span class="kd">struct</span><span class="p">{}{</span>
+		<span class="sc">&#39;)&#39;</span><span class="p">:</span> <span class="p">{},</span>
+		<span class="sc">&#39;]&#39;</span><span class="p">:</span> <span class="p">{},</span>
+		<span class="sc">&#39;}&#39;</span><span class="p">:</span> <span class="p">{},</span>
+		<span class="sc">&#39;&gt;&#39;</span><span class="p">:</span> <span class="p">{},</span>
+	<span class="p">}</span>
+	<span class="nx">points</span> <span class="p">=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">rune</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span>
+		<span class="sc">&#39;)&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+		<span class="sc">&#39;]&#39;</span><span class="p">:</span> <span class="mi">57</span><span class="p">,</span>
+		<span class="sc">&#39;}&#39;</span><span class="p">:</span> <span class="mi">1197</span><span class="p">,</span>
+		<span class="sc">&#39;&gt;&#39;</span><span class="p">:</span> <span class="mi">25137</span><span class="p">,</span>
+	<span class="p">}</span>
+<span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>What have we here? We have the <code>openingForClosed</code> which we&rsquo;ll use to see if the last character was an opening for our
+closing character. We have <code>openingDelimiters</code> which we&rsquo;ll use to detect if we have an opening token. And closing, which
+is the same just for closings.</p>
+<p>Then we have our main logic:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">score</span> <span class="o">:=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">line</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">input</span> <span class="p">{</span>
+		<span class="nx">stack</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">rune</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="kd">var</span> <span class="nx">last</span> <span class="kt">rune</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">r</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">line</span> <span class="p">{</span>
+			<span class="c1">// if it&#39;s an opening thing, push it in stack
+</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">openingDelimiters</span><span class="p">[</span><span class="nx">r</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+				<span class="nx">stack</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">stack</span><span class="p">,</span> <span class="nx">r</span><span class="p">)</span>
+			<span class="p">}</span>
+			<span class="c1">// if it&#39;s a closing one, pop one if it&#39;s the opening of the previous one
+</span><span class="c1"></span>			<span class="c1">// we are good and we popped it.
+</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">closingDelimiters</span><span class="p">[</span><span class="nx">r</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+				<span class="nx">last</span><span class="p">,</span> <span class="nx">stack</span> <span class="p">=</span> <span class="nx">stack</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">stack</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">stack</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="nx">stack</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+				<span class="k">if</span> <span class="nx">last</span> <span class="o">!=</span> <span class="nx">openingForClosed</span><span class="p">[</span><span class="nx">r</span><span class="p">]</span> <span class="p">{</span>
+					<span class="nx">score</span> <span class="o">+=</span> <span class="nx">points</span><span class="p">[</span><span class="nx">r</span><span class="p">]</span>
+					<span class="k">break</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Number of corrupter lines: &#34;</span><span class="p">,</span> <span class="nx">score</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This is it. This is the whole thing, plus the score. We run this for our input and we are done.</p>
+<h1 id="day-10---part-2">Day 10 - Part 2</h1>
+<p>And of course, if you had a little insight and read the thing which said some of these lines are incomplete, your first
+thought was surely, that we&rsquo;ll have to complete them. And indeed, we have to. So our code is actually there already.</p>
+<p>We have to discard the ones that are corrupt. And then we&rsquo;ll have to complete the closing ones. But guess what&hellip; After
+your inner loop completes, what remains in the stack are just the openings which don&rsquo;t have any closings left.</p>
+<p>For example the example contains this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">}}]])})] - 288957 total points.
+</code></pre></td></tr></table>
+</div>
+</div><p>What our stack will have are these:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">[({([[{{
+</code></pre></td></tr></table>
+</div>
+</div><p>Which is exactly what that is just reversed. Now, the scoring goes like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">): 1 point.
+]: 2 points.
+}: 3 points.
+&gt;: 4 points.
+</code></pre></td></tr></table>
+</div>
+</div><p>But the same goes for the opening ones too! They cost the same&hellip; Which means we just have to take what&rsquo;s left in the
+stack, read it backwards, and score it.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">scores</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nx">out</span><span class="p">:</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">line</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">input</span> <span class="p">{</span>
+		<span class="nx">stack</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">rune</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="kd">var</span> <span class="nx">last</span> <span class="kt">rune</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">r</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">line</span> <span class="p">{</span>
+			<span class="c1">// if it&#39;s an opening thing, push it in stack
+</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">openingDelimiters</span><span class="p">[</span><span class="nx">r</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+				<span class="nx">stack</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">stack</span><span class="p">,</span> <span class="nx">r</span><span class="p">)</span>
+			<span class="p">}</span>
+			<span class="c1">// if it&#39;s a closing one, pop one if it&#39;s the opening of the previous one
+</span><span class="c1"></span>			<span class="c1">// we are good and we popped it.
+</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">closingDelimiters</span><span class="p">[</span><span class="nx">r</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+				<span class="nx">last</span><span class="p">,</span> <span class="nx">stack</span> <span class="p">=</span> <span class="nx">stack</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">stack</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">stack</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="nx">stack</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+				<span class="k">if</span> <span class="nx">last</span> <span class="o">!=</span> <span class="nx">openingForClosed</span><span class="p">[</span><span class="nx">r</span><span class="p">]</span> <span class="p">{</span>
+					<span class="k">continue</span> <span class="nx">out</span> <span class="c1">// and this continue with a label to jump outside if the line is corrupt
+</span><span class="c1"></span>				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+		<span class="c1">// this is what changed
+</span><span class="c1"></span>		<span class="nx">score</span> <span class="o">:=</span> <span class="mi">0</span>
+		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">stack</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span><span class="o">--</span> <span class="p">{</span>
+			<span class="nx">score</span> <span class="o">*=</span> <span class="mi">5</span>
+			<span class="nx">score</span> <span class="o">+=</span> <span class="nx">points</span><span class="p">[</span><span class="nx">stack</span><span class="p">[</span><span class="nx">i</span><span class="p">]]</span>
+		<span class="p">}</span>
+		<span class="nx">scores</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">scores</span><span class="p">,</span> <span class="nx">score</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">sort</span><span class="p">.</span><span class="nf">Ints</span><span class="p">(</span><span class="nx">scores</span><span class="p">)</span> <span class="c1">// sort and get the middle.
+</span><span class="c1"></span>	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;middle score: &#34;</span><span class="p">,</span> <span class="nx">scores</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">scores</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">])</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And that&rsquo;s it, we have our end score.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>We learned today to not over complicate things. If we don&rsquo;t have an idea about what to do, just try fitting the problem
+into random data structures and see if something sparks an idea. Finding the right data structure sometimes solves 90%
+of the problems.</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 9</title>
       <link>https://skarlso.github.io/2021/12/09/aoc-day9/</link>
@@ -24637,263 +24894,6 @@ sudo apt-get install bumblebee bumblebee-nvidia
 </div>
 </div><p>Perfect!!</p>
 <p>The name of the plugin is WP-Syntax. The trick is to edit the page in plain HTML. Because the WordPress word editor screws up the &lt;&gt; tags. But surely you already knew that.</p>
-]]></description>
-    </item>
-    
-    <item>
-      <title>Advent Of Code - Day 10</title>
-      <link>https://skarlso.github.io/2021/12/010/aoc-day10/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>https://skarlso.github.io/2021/12/010/aoc-day10/</guid>
-      <description><![CDATA[<h1 id="advent-of-code---day-10">Advent Of Code - Day 10</h1>
-<p>Again, a bit of breathing time with an easier one. Although, it can be difficult, if you go down the path of trying to do
-it via recursion.</p>
-<h2 id="day-10---part-1">Day 10 - Part 1</h2>
-<p>We have to match brackets. There can be a bit of a hassle if you go off on the wrong foot and try to implement it using
-recursion. But that works perfectly fine as well. But, there is a more elegant solution in which we just use a stack or
-try matching the last by updating it constantly. The stack is a heck of a lot easier. And considering part 2, it&rsquo;s also
-more convenient.</p>
-<p>Let&rsquo;s see.. we parse our input, and then create a stack. In Go a stack is just simply a slice which we&rsquo;ll manipulate like
-a stack.</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">stack</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">rune</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Why rune? Because we can iterate over strings which give runes.</p>
-<p>What are we trying to do? In the basest form, we push characters onto the stack. If a new one comes around which is a
-closing character, we see if the last one was an opening character for that closing one. If it wasn&rsquo;t there is an error.
-If it was, great, we popped it off of the stack so the next character can come along.</p>
-<p>First, let&rsquo;s create some maps which will hold some definitive values so we don&rsquo;t have to search for anything.</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="p">(</span>
-	<span class="nx">openingForClosed</span> <span class="p">=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">rune</span><span class="p">]</span><span class="kt">rune</span><span class="p">{</span>
-		<span class="sc">&#39;)&#39;</span><span class="p">:</span> <span class="sc">&#39;(&#39;</span><span class="p">,</span>
-		<span class="sc">&#39;]&#39;</span><span class="p">:</span> <span class="sc">&#39;[&#39;</span><span class="p">,</span>
-		<span class="sc">&#39;}&#39;</span><span class="p">:</span> <span class="sc">&#39;{&#39;</span><span class="p">,</span>
-		<span class="sc">&#39;&gt;&#39;</span><span class="p">:</span> <span class="sc">&#39;&lt;&#39;</span><span class="p">,</span>
-	<span class="p">}</span>
-	<span class="nx">openingDelimiters</span> <span class="p">=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">rune</span><span class="p">]</span><span class="kd">struct</span><span class="p">{}{</span>
-		<span class="sc">&#39;(&#39;</span><span class="p">:</span> <span class="p">{},</span>
-		<span class="sc">&#39;[&#39;</span><span class="p">:</span> <span class="p">{},</span>
-		<span class="sc">&#39;{&#39;</span><span class="p">:</span> <span class="p">{},</span>
-		<span class="sc">&#39;&lt;&#39;</span><span class="p">:</span> <span class="p">{},</span>
-	<span class="p">}</span>
-	<span class="nx">closingDelimiters</span> <span class="p">=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">rune</span><span class="p">]</span><span class="kd">struct</span><span class="p">{}{</span>
-		<span class="sc">&#39;)&#39;</span><span class="p">:</span> <span class="p">{},</span>
-		<span class="sc">&#39;]&#39;</span><span class="p">:</span> <span class="p">{},</span>
-		<span class="sc">&#39;}&#39;</span><span class="p">:</span> <span class="p">{},</span>
-		<span class="sc">&#39;&gt;&#39;</span><span class="p">:</span> <span class="p">{},</span>
-	<span class="p">}</span>
-	<span class="nx">points</span> <span class="p">=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">rune</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span>
-		<span class="sc">&#39;)&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
-		<span class="sc">&#39;]&#39;</span><span class="p">:</span> <span class="mi">57</span><span class="p">,</span>
-		<span class="sc">&#39;}&#39;</span><span class="p">:</span> <span class="mi">1197</span><span class="p">,</span>
-		<span class="sc">&#39;&gt;&#39;</span><span class="p">:</span> <span class="mi">25137</span><span class="p">,</span>
-	<span class="p">}</span>
-<span class="p">)</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>What have we here? We have the <code>openingForClosed</code> which we&rsquo;ll use to see if the last character was an opening for our
-closing character. We have <code>openingDelimiters</code> which we&rsquo;ll use to detect if we have an opening token. And closing, which
-is the same just for closings.</p>
-<p>Then we have our main logic:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">score</span> <span class="o">:=</span> <span class="mi">0</span>
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">line</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">input</span> <span class="p">{</span>
-		<span class="nx">stack</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">rune</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-		<span class="kd">var</span> <span class="nx">last</span> <span class="kt">rune</span>
-		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">r</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">line</span> <span class="p">{</span>
-			<span class="c1">// if it&#39;s an opening thing, push it in stack
-</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">openingDelimiters</span><span class="p">[</span><span class="nx">r</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
-				<span class="nx">stack</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">stack</span><span class="p">,</span> <span class="nx">r</span><span class="p">)</span>
-			<span class="p">}</span>
-			<span class="c1">// if it&#39;s a closing one, pop one if it&#39;s the opening of the previous one
-</span><span class="c1"></span>			<span class="c1">// we are good and we popped it.
-</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">closingDelimiters</span><span class="p">[</span><span class="nx">r</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
-				<span class="nx">last</span><span class="p">,</span> <span class="nx">stack</span> <span class="p">=</span> <span class="nx">stack</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">stack</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">stack</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="nx">stack</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-				<span class="k">if</span> <span class="nx">last</span> <span class="o">!=</span> <span class="nx">openingForClosed</span><span class="p">[</span><span class="nx">r</span><span class="p">]</span> <span class="p">{</span>
-					<span class="nx">score</span> <span class="o">+=</span> <span class="nx">points</span><span class="p">[</span><span class="nx">r</span><span class="p">]</span>
-					<span class="k">break</span>
-				<span class="p">}</span>
-			<span class="p">}</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Number of corrupter lines: &#34;</span><span class="p">,</span> <span class="nx">score</span><span class="p">)</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>This is it. This is the whole thing, plus the score. We run this for our input and we are done.</p>
-<h1 id="day-10---part-2">Day 10 - Part 2</h1>
-<p>And of course, if you had a little insight and read the thing which said some of these lines are incomplete, your first
-thought was surely, that we&rsquo;ll have to complete them. And indeed, we have to. So our code is actually there already.</p>
-<p>We have to discard the ones that are corrupt. And then we&rsquo;ll have to complete the closing ones. But guess what&hellip; After
-your inner loop completes, what remains in the stack are just the openings which don&rsquo;t have any closings left.</p>
-<p>For example the example contains this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">}}]])})] - 288957 total points.
-</code></pre></td></tr></table>
-</div>
-</div><p>What our stack will have are these:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">[({([[{{
-</code></pre></td></tr></table>
-</div>
-</div><p>Which is exactly what that is just reversed. Now, the scoring goes like this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">): 1 point.
-]: 2 points.
-}: 3 points.
-&gt;: 4 points.
-</code></pre></td></tr></table>
-</div>
-</div><p>But the same goes for the opening ones too! They cost the same&hellip; Which means we just have to take what&rsquo;s left in the
-stack, read it backwards, and score it.</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">scores</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-<span class="nx">out</span><span class="p">:</span>
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">line</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">input</span> <span class="p">{</span>
-		<span class="nx">stack</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">rune</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-		<span class="kd">var</span> <span class="nx">last</span> <span class="kt">rune</span>
-		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">r</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">line</span> <span class="p">{</span>
-			<span class="c1">// if it&#39;s an opening thing, push it in stack
-</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">openingDelimiters</span><span class="p">[</span><span class="nx">r</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
-				<span class="nx">stack</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">stack</span><span class="p">,</span> <span class="nx">r</span><span class="p">)</span>
-			<span class="p">}</span>
-			<span class="c1">// if it&#39;s a closing one, pop one if it&#39;s the opening of the previous one
-</span><span class="c1"></span>			<span class="c1">// we are good and we popped it.
-</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">closingDelimiters</span><span class="p">[</span><span class="nx">r</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
-				<span class="nx">last</span><span class="p">,</span> <span class="nx">stack</span> <span class="p">=</span> <span class="nx">stack</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">stack</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nx">stack</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="nx">stack</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-				<span class="k">if</span> <span class="nx">last</span> <span class="o">!=</span> <span class="nx">openingForClosed</span><span class="p">[</span><span class="nx">r</span><span class="p">]</span> <span class="p">{</span>
-					<span class="k">continue</span> <span class="nx">out</span> <span class="c1">// and this continue with a label to jump outside if the line is corrupt
-</span><span class="c1"></span>				<span class="p">}</span>
-			<span class="p">}</span>
-		<span class="p">}</span>
-		<span class="c1">// this is what changed
-</span><span class="c1"></span>		<span class="nx">score</span> <span class="o">:=</span> <span class="mi">0</span>
-		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">stack</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span><span class="o">--</span> <span class="p">{</span>
-			<span class="nx">score</span> <span class="o">*=</span> <span class="mi">5</span>
-			<span class="nx">score</span> <span class="o">+=</span> <span class="nx">points</span><span class="p">[</span><span class="nx">stack</span><span class="p">[</span><span class="nx">i</span><span class="p">]]</span>
-		<span class="p">}</span>
-		<span class="nx">scores</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">scores</span><span class="p">,</span> <span class="nx">score</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="nx">sort</span><span class="p">.</span><span class="nf">Ints</span><span class="p">(</span><span class="nx">scores</span><span class="p">)</span> <span class="c1">// sort and get the middle.
-</span><span class="c1"></span>	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;middle score: &#34;</span><span class="p">,</span> <span class="nx">scores</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">scores</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">])</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>And that&rsquo;s it, we have our end score.</p>
-<h2 id="conclusion">Conclusion</h2>
-<p>We learned today to not over complicate things. If we don&rsquo;t have an idea about what to do, just try fitting the problem
-into random data structures and see if something sparks an idea. Finding the right data structure sometimes solves 90%
-of the problems.</p>
-<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
-<p>Thank you for reading!</p>
-<p>Gergely.</p>
 ]]></description>
     </item>
     
