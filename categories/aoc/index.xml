@@ -6,7 +6,217 @@
     <description>Recent content in aoc on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 10 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 11 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 11</title>
+      <link>https://skarlso.github.io/2021/12/11/aoc-day11/</link>
+      <pubDate>Sat, 11 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/11/aoc-day11/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-11">Advent Of Code - Day 11</h1>
+<p>Today was an easier one again. It&rsquo;s been a while since I last did some recursion anyway. At least, that&rsquo;s how I solved
+this. I&rsquo;m pretty sure my solution isn&rsquo;t the most efficient one, but at least it&rsquo;s working and it&rsquo;s not horrible.</p>
+<h2 id="day-11---part-1">Day 11 - Part 1</h2>
+<p>We have some number tracking to do again. This time, instead of fishes, we find ourself an bioluminescent octopus!
+This time, the rules are neatly outlined to us in a straight forward list. It sort of is like a Conway&rsquo;s Game of Life
+scenario in which the current point affects its neighbours.</p>
+<p>Remember last time we did directions? Well guess what&rsquo;s coming to come in handy again. Our directions, but with
+diagonal directions.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="p">(</span>
+	<span class="nx">directions</span> <span class="p">=</span> <span class="p">[]</span><span class="nx">point</span><span class="p">{</span>
+		<span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">},</span>
+		<span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">},</span>
+		<span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="mi">0</span><span class="p">},</span>
+		<span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+		<span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+		<span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+		<span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="mi">0</span><span class="p">},</span>
+		<span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">},</span>
+	<span class="p">}</span>
+<span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>What the plan here? I&rsquo;ve drawn it our on paper. It&rsquo;s pretty easy actually. We have to track if an octopus already
+flashed or not. For that, we&rsquo;ll use a <code>struct</code> which will hold something like <code>flashed bool</code> value. We&rsquo;ll have to
+think about how to reset that after a <code>step</code> is done though.</p>
+<p>Next step is, go through the list and if they didn&rsquo;t flash in that round ( aka <code>!flashed</code> ) then we increase its energy.
+If the energy is above 9 ( aka. <code>== 10</code> ), we <code>flash</code>. What is flash? It&rsquo;s a recursive function. When dealing with
+recursive functions you have to determine two things.</p>
+<ul>
+<li>What is my exit criteria?</li>
+<li>What is my base case? ( aka. the recurring logic )</li>
+</ul>
+<p>What is our exit? When there are no more neighbours. What is our base case? Find all neighbours for a given point which
+did not flash yet and increase their energy. If they are energy reaches 10, <code>flash</code>. That&rsquo;s where our recurring call
+will happen. If a neighbour reaches energy level 10 we&rsquo;ll call <code>flash</code> with that neighbour&rsquo;s coordinate.</p>
+<p>Alright, that isn&rsquo;t so bad. Did we forget something? Yes&hellip; The reset. Unfortunately, this also means that those which
+did flash, we&rsquo;ll have to manually go and reset after everything has been done. If we reset them mid logic, then they
+might flash again, or might get their energy levels increased. Which is not what we want. Ah well.. I&rsquo;ll figure
+something out later maybe.</p>
+<p>Okay, let&rsquo;s see some code. Our initial thing is to loop through the steps and increase the energy level.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">steps</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="nx">y</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">y</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">);</span> <span class="nx">y</span><span class="o">++</span> <span class="p">{</span>
+			<span class="k">for</span> <span class="nx">x</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">x</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">]);</span> <span class="nx">x</span><span class="o">++</span> <span class="p">{</span>
+				<span class="k">if</span> <span class="p">!</span><span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">].</span><span class="nx">flashed</span> <span class="p">{</span>
+					<span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">].</span><span class="nx">energy</span><span class="o">++</span>
+					<span class="k">if</span> <span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">].</span><span class="nx">energy</span> <span class="o">==</span> <span class="mi">10</span> <span class="p">{</span>
+						<span class="nf">flash</span><span class="p">(</span><span class="nx">point</span><span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="nx">y</span><span class="p">},</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">grid</span><span class="p">)</span>
+					<span class="p">}</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+		<span class="c1">// reset flashed
+</span><span class="c1"></span>        <span class="c1">// unfortunate extra loop...
+</span><span class="c1"></span>		<span class="k">for</span> <span class="nx">y</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">y</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">);</span> <span class="nx">y</span><span class="o">++</span> <span class="p">{</span>
+			<span class="k">for</span> <span class="nx">x</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">x</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">]);</span> <span class="nx">x</span><span class="o">++</span> <span class="p">{</span>
+				<span class="k">if</span> <span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">].</span><span class="nx">flashed</span> <span class="p">{</span>
+					<span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">].</span><span class="nx">flashed</span> <span class="p">=</span> <span class="kc">false</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Now, flash&hellip;</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">flash</span><span class="p">(</span><span class="nx">currentPoint</span> <span class="nx">point</span><span class="p">,</span> <span class="nx">currentStep</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">grid</span> <span class="p">[</span><span class="mi">10</span><span class="p">][</span><span class="mi">10</span><span class="p">]</span><span class="o">*</span><span class="nx">octopus</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// flash the current octopus
+</span><span class="c1"></span>	<span class="nx">flashCount</span><span class="o">++</span>
+	<span class="nx">grid</span><span class="p">[</span><span class="nx">currentPoint</span><span class="p">.</span><span class="nx">y</span><span class="p">][</span><span class="nx">currentPoint</span><span class="p">.</span><span class="nx">x</span><span class="p">].</span><span class="nx">energy</span> <span class="p">=</span> <span class="mi">0</span>
+	<span class="nx">grid</span><span class="p">[</span><span class="nx">currentPoint</span><span class="p">.</span><span class="nx">y</span><span class="p">][</span><span class="nx">currentPoint</span><span class="p">.</span><span class="nx">x</span><span class="p">].</span><span class="nx">flashed</span> <span class="p">=</span> <span class="kc">true</span>
+	<span class="c1">// select neighbors and increase their energy
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">d</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">directions</span> <span class="p">{</span>
+		<span class="nx">np</span> <span class="o">:=</span> <span class="nx">point</span><span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="nx">currentPoint</span><span class="p">.</span><span class="nx">x</span> <span class="o">+</span> <span class="nx">d</span><span class="p">.</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="nx">currentPoint</span><span class="p">.</span><span class="nx">y</span> <span class="o">+</span> <span class="nx">d</span><span class="p">.</span><span class="nx">y</span><span class="p">}</span>
+		<span class="k">if</span> <span class="nx">np</span><span class="p">.</span><span class="nx">x</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">np</span><span class="p">.</span><span class="nx">x</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="nx">currentPoint</span><span class="p">.</span><span class="nx">y</span><span class="p">])</span> <span class="o">&amp;&amp;</span> <span class="nx">np</span><span class="p">.</span><span class="nx">y</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">np</span><span class="p">.</span><span class="nx">y</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="p">!</span><span class="nx">grid</span><span class="p">[</span><span class="nx">np</span><span class="p">.</span><span class="nx">y</span><span class="p">][</span><span class="nx">np</span><span class="p">.</span><span class="nx">x</span><span class="p">].</span><span class="nx">flashed</span> <span class="p">{</span>
+				<span class="nx">grid</span><span class="p">[</span><span class="nx">np</span><span class="p">.</span><span class="nx">y</span><span class="p">][</span><span class="nx">np</span><span class="p">.</span><span class="nx">x</span><span class="p">].</span><span class="nx">energy</span><span class="o">++</span>
+				<span class="k">if</span> <span class="nx">grid</span><span class="p">[</span><span class="nx">np</span><span class="p">.</span><span class="nx">y</span><span class="p">][</span><span class="nx">np</span><span class="p">.</span><span class="nx">x</span><span class="p">].</span><span class="nx">energy</span> <span class="o">==</span> <span class="mi">10</span> <span class="p">{</span>
+					<span class="nf">flash</span><span class="p">(</span><span class="nx">np</span><span class="p">,</span> <span class="nx">currentStep</span><span class="p">,</span> <span class="nx">grid</span><span class="p">)</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>So, what&rsquo;s going on in here? Once an octopus flashes, we set its energy to 0 and we set <code>flashed</code> to <code>true</code>. This is
+important, because otherwise it would flash again in the same step. Which is not allowed. Then, we check its
+neighbors and increase their energy. And if that reaches 10, we flash&hellip; And that&rsquo;s it! We do some counting to get how
+many times we flashed and done!</p>
+<h2 id="day-10---part-2">Day 10 - Part 2</h2>
+<p>Part 2 is just let it run and see when every one of these is <code>0</code>. Pretty simple, I didn&rsquo;t have to change much, just
+remove the counter for the for loop and add in a check in our reset loop which was already there anyways.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">		<span class="nx">allZeros</span> <span class="o">:=</span> <span class="kc">true</span>
+		<span class="k">for</span> <span class="nx">y</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">y</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">);</span> <span class="nx">y</span><span class="o">++</span> <span class="p">{</span>
+			<span class="k">for</span> <span class="nx">x</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">x</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">]);</span> <span class="nx">x</span><span class="o">++</span> <span class="p">{</span>
+				<span class="k">if</span> <span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">].</span><span class="nx">flashed</span> <span class="p">{</span>
+					<span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">].</span><span class="nx">flashed</span> <span class="p">=</span> <span class="kc">false</span>
+				<span class="p">}</span>
+				<span class="k">if</span> <span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">].</span><span class="nx">energy</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
+					<span class="nx">allZeros</span> <span class="p">=</span> <span class="kc">false</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+		<span class="k">if</span> <span class="nx">allZeros</span> <span class="p">{</span>
+			<span class="c1">// +1 because steps begin from 0.
+</span><span class="c1"></span>			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;sync achieved at: &#34;</span><span class="p">,</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+			<span class="nf">display</span><span class="p">(</span><span class="nx">grid</span><span class="p">)</span>
+			<span class="k">break</span>
+		<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And with that, part 2 is done!</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Today we had a little fun with recursion. Which is nice, because I didn&rsquo;t had to write recursion in a while.</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 10</title>
       <link>https://skarlso.github.io/2021/12/10/aoc-day10/</link>
