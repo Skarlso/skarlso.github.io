@@ -6,7 +6,296 @@
     <description>Recent content in aoc on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 11 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 13 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 13</title>
+      <link>https://skarlso.github.io/2021/12/13/aoc-day13/</link>
+      <pubDate>Mon, 13 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/13/aoc-day13/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-13">Advent Of Code - Day 13</h1>
+<p>This one was a lot of fun! Matrix folding was a bit fiddly but nothing too serious&hellip;</p>
+<h2 id="day13---part-1">Day13 - Part 1</h2>
+<p>By solving this part, I actually solved both parts. I had to butcher it to not solve both parts because I already dealt
+with folding both ways. First, we parse our input.</p>
+<p>We read out both the folding and the numbers first for easy handling later:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">readingFolds</span> <span class="o">:=</span> <span class="kc">false</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">line</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">input</span> <span class="p">{</span>
+		<span class="c1">// gather numbers
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">line</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+			<span class="nx">readingFolds</span> <span class="p">=</span> <span class="kc">true</span>
+			<span class="k">continue</span>
+		<span class="p">}</span>
+
+		<span class="k">if</span> <span class="p">!</span><span class="nx">readingFolds</span> <span class="p">{</span>
+			<span class="nx">numbers</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">numbers</span><span class="p">,</span> <span class="nx">line</span><span class="p">)</span>
+		<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+			<span class="nx">folders</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">folders</span><span class="p">,</span> <span class="nx">line</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Now, we have the numbers and folding bits in different slices. First, parse the numbers:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">points</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="nx">point</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="nx">maxx</span><span class="p">,</span> <span class="nx">maxy</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">numbers</span> <span class="p">{</span>
+		<span class="kd">var</span> <span class="p">(</span>
+			<span class="nx">x</span><span class="p">,</span> <span class="nx">y</span> <span class="kt">int</span>
+		<span class="p">)</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Sscanf</span><span class="p">(</span><span class="nx">v</span><span class="p">,</span> <span class="s">&#34;%d,%d&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">x</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">y</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">x</span> <span class="p">&gt;</span> <span class="nx">maxx</span> <span class="p">{</span>
+			<span class="nx">maxx</span> <span class="p">=</span> <span class="nx">x</span>
+		<span class="p">}</span>
+		<span class="k">if</span> <span class="nx">y</span> <span class="p">&gt;</span> <span class="nx">maxy</span> <span class="p">{</span>
+			<span class="nx">maxy</span> <span class="p">=</span> <span class="nx">y</span>
+		<span class="p">}</span>
+		<span class="nx">points</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">points</span><span class="p">,</span> <span class="nx">point</span><span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="nx">y</span><span class="p">})</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Our trusty <code>Sscanf</code> can help here again. Nice. We get the maximum length of things for later processing.</p>
+<p>Then we parse the folding bits (I&rsquo;m going to show &ldquo;part 2&rdquo; here, since that&rsquo;s the same as part 1, just without a <code>for</code>):</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">f</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">folders</span> <span class="p">{</span>
+		<span class="nx">split</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nx">f</span><span class="p">,</span> <span class="s">&#34; &#34;</span><span class="p">)</span>
+		<span class="nx">fold</span> <span class="o">:=</span> <span class="nx">split</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">split</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+		<span class="k">if</span> <span class="nx">fold</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="sc">&#39;x&#39;</span> <span class="p">{</span>
+			<span class="c1">// fmt.Println(&#34;folding left&#34;)
+</span><span class="c1"></span>			<span class="kd">var</span> <span class="nx">x</span> <span class="kt">int</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Sscanf</span><span class="p">(</span><span class="nx">fold</span><span class="p">,</span> <span class="s">&#34;x=%d&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">x</span><span class="p">)</span>
+			<span class="k">for</span> <span class="nx">y</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">y</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">);</span> <span class="nx">y</span><span class="o">++</span> <span class="p">{</span>
+				<span class="k">for</span> <span class="nx">j</span> <span class="o">:=</span> <span class="nx">x</span><span class="p">;</span> <span class="nx">j</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">]);</span> <span class="nx">j</span><span class="o">++</span> <span class="p">{</span>
+					<span class="k">if</span> <span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">j</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#34;#&#34;</span> <span class="p">{</span>
+						<span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="o">-</span><span class="p">(</span><span class="nx">j</span><span class="o">-</span><span class="nx">x</span><span class="p">)]</span> <span class="p">=</span> <span class="s">&#34;#&#34;</span>
+					<span class="p">}</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+			<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">grid</span> <span class="p">{</span>
+				<span class="nx">v</span> <span class="p">=</span> <span class="nx">v</span><span class="p">[:</span><span class="nx">x</span><span class="p">]</span>
+				<span class="nx">grid</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nx">v</span>
+			<span class="p">}</span>
+		<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">fold</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="sc">&#39;y&#39;</span> <span class="p">{</span>
+			<span class="c1">// fmt.Println(&#34;folding up&#34;)
+</span><span class="c1"></span>			<span class="kd">var</span> <span class="nx">y</span> <span class="kt">int</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Sscanf</span><span class="p">(</span><span class="nx">fold</span><span class="p">,</span> <span class="s">&#34;y=%d&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">y</span><span class="p">)</span>
+			<span class="c1">// scan downwards
+</span><span class="c1"></span>			<span class="c1">// offset is i - y 7-3 -&gt; 4 and we subtract that from level (7)
+</span><span class="c1"></span>			<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="nx">y</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">);</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+				<span class="k">for</span> <span class="nx">x</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">x</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="nx">i</span><span class="p">]);</span> <span class="nx">x</span><span class="o">++</span> <span class="p">{</span>
+					<span class="k">if</span> <span class="nx">grid</span><span class="p">[</span><span class="nx">i</span><span class="p">][</span><span class="nx">x</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#34;#&#34;</span> <span class="p">{</span>
+						<span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="o">-</span><span class="p">(</span><span class="nx">i</span><span class="o">-</span><span class="nx">y</span><span class="p">)][</span><span class="nx">x</span><span class="p">]</span> <span class="p">=</span> <span class="s">&#34;#&#34;</span>
+					<span class="p">}</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+			<span class="nx">grid</span> <span class="p">=</span> <span class="nx">grid</span><span class="p">[:</span><span class="nx">y</span><span class="p">]</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This is a bit large and arguably, I could refactor this whole thing to be NOT this huge and separate. Let&rsquo;s see what&rsquo;s
+happening here&hellip; First, Y, aka. fold up. We copy over all <code>#</code>s to the other side. How
+does the other side look like?</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">...#..#..#.
+....#......
+...........
+#..........
+...#....#.# -3
+........... -2 (5)
+........... -1 (6)
+........... -- this is where it will fold -&gt; this will be 0 -&gt; 7
+........... +1 (8)
+........... +2 (9)
+.#....#.##. +3
+....#......
+......#...#
+#..........
+#.#........
+</code></pre></td></tr></table>
+</div>
+</div><p>Then, we cut the grid at that point. Which is just <code>grid = grid[:y]</code> in Go. Pretty neat.</p>
+<p>And that&rsquo;s it! For Part 2 I just added the loop and part 1 I just counter the <code>#</code>s and we were done. On Part 2 I let it
+fold and run a <code>display</code> to see the points.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Today we learned to count coordinates. I&rsquo;m sure someone had a better way of calculating the outcome.</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
+    <item>
+      <title>Advent Of Code - Day 12</title>
+      <link>https://skarlso.github.io/2021/12/12/aoc-day12/</link>
+      <pubDate>Sun, 12 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/12/aoc-day12/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-12">Advent Of Code - Day 12</h1>
+<p>This one is a bit different from our little BFS walk the other day. I didn&rsquo;t quite remember how DFS works, so I looked
+at the <a href="https://en.wikipedia.org/wiki/Depth-first_search">Wikipedia</a> a bit. Then I remembered that I implemented this
+previously at some point in a later year.</p>
+<p><em>Disclaimer</em>: I didn&rsquo;t manage to finish part 2. I&rsquo;m not sure what the bug is, but I moved on. When I&rsquo;ll have the
+inspiration, I&rsquo;ll figure it out. Unless, someone has an idea what&rsquo;s going on.</p>
+<h2 id="day-12---part-1">Day 12 - Part 1</h2>
+<p>There isn&rsquo;t much to decipher this time. It&rsquo;s basically a graph traversal. Specifically, finding all path in a graph.
+With a tiny addition that large caves can be visited as many times as we like. Which just means that we&rsquo;ll never put
+them into the <code>visited</code> | <code>seen</code> map.</p>
+<p>But first we&rsquo;ll have to construct our graph. That one is a bit fiddly. I wasn&rsquo;t sure if the connections are directed
+or that there are on connections as in <code>a -&gt; b</code> and this doesn&rsquo;t mean that we&rsquo;ll update the connection for <code>b</code> to point
+back to <code>a</code>.</p>
+<p>I choose to update both connections.</p>
+<p>So once, the boring part is done and we managed to parse our graph we&rsquo;ll have to do a <code>dfs</code>. We have to find ALL paths
+in this graph. For that we&rsquo;ll collect the path in a global value and do some recursion with dfs. There is an iterative
+approach but I find the recursive one more intuitive.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">dfs</span><span class="p">(</span><span class="nx">curr</span> <span class="o">*</span><span class="nx">node</span><span class="p">,</span> <span class="nx">path</span> <span class="p">[]</span><span class="kt">string</span><span class="p">,</span> <span class="nx">seen</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">struct</span><span class="p">{})</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nf">isLower</span><span class="p">(</span><span class="nx">curr</span><span class="p">.</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+		<span class="nx">seen</span><span class="p">[</span><span class="nx">curr</span><span class="p">.</span><span class="nx">value</span><span class="p">]</span> <span class="p">=</span> <span class="kd">struct</span><span class="p">{}{}</span>
+	<span class="p">}</span>
+	<span class="nx">path</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">path</span><span class="p">,</span> <span class="nx">curr</span><span class="p">.</span><span class="nx">value</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">curr</span><span class="p">.</span><span class="nx">value</span> <span class="o">==</span> <span class="s">&#34;end&#34;</span> <span class="p">{</span>
+		<span class="nx">paths</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">paths</span><span class="p">,</span> <span class="nx">path</span><span class="p">)</span>
+	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">next</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">curr</span><span class="p">.</span><span class="nx">connections</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">seen</span><span class="p">[</span><span class="nx">next</span><span class="p">.</span><span class="nx">value</span><span class="p">];</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+				<span class="nf">dfs</span><span class="p">(</span><span class="nx">next</span><span class="p">,</span> <span class="nx">path</span><span class="p">,</span> <span class="nx">seen</span><span class="p">)</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="nb">delete</span><span class="p">(</span><span class="nx">seen</span><span class="p">,</span> <span class="nx">curr</span><span class="p">.</span><span class="nx">value</span><span class="p">)</span>
+<span class="p">}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>What&rsquo;s happening here? We only put it into <code>seen</code> if it&rsquo;s lower case. This is where the big cave / small cave thing
+comes in. Then, we append the currently visiting node to the path. If we reached <code>'end'</code> we are done with that part and
+we put our path so far into the all paths gathering global value. Then, we delete the current value and return. If it&rsquo;s
+done at that point, it will just unravel and be done.</p>
+<p>If we didn&rsquo;t reach the path so far, we call dfs on each of the neighbors of our current node. So we identified our base
+case. Which is to check if we are at the end, and save the path. That&rsquo;s it, we run this and we have our first star.</p>
+<h2 id="day-12---part-2">Day 12 - Part 2</h2>
+<p>This is where it gets a bit more complex. We&rsquo;ll have to now allow for a single cave to be visited twice. I&rsquo;m doing that
+by looping over all of the small caves and adding them into a seenTwice map. But for some reason, I&rsquo;m not getting the
+right value yet. We&rsquo;ll get back to that.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 11</title>
       <link>https://skarlso.github.io/2021/12/11/aoc-day11/</link>
