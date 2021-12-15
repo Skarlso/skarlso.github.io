@@ -6,7 +6,308 @@
     <description>Recent content in Blogs on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 14 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 15 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 15</title>
+      <link>https://skarlso.github.io/2021/12/15/aoc-day15/</link>
+      <pubDate>Wed, 15 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/15/aoc-day15/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-15">Advent Of Code - Day 15</h1>
+<p>Today, again, we open up <a href="https://www.redblobgames.com/pathfinding/a-star/introduction.html">Red Blob Games</a>.
+It is a great source of information and descriptions. Especially, since this scenario is right up Red Blob&rsquo;s ally.
+We need some weighted path finding. And Red Blob has a lovely post on that using the ever famous <a href="https://www.redblobgames.com/pathfinding/a-star/introduction.html#dijkstra">Dijkstra</a> algorithm with a Priority Queue.</p>
+<h2 id="day-15---part-1">Day 15 - Part 1</h2>
+<p>Let&rsquo;s get to it. After refreshing my memory about priority queues, I remembered that there is a package and some sample
+code in Go which implements priority queues using the <code>container/heap</code> package <a href="https://pkg.go.dev/container/heap#example-package-PriorityQueue">here</a>.</p>
+<p>Pretty straight forward. There are some bits that we don&rsquo;t need. For example, the <code>update</code> function is not needed.
+And there is a single small thing which we really need to be aware of in this code base. This part:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">pq</span> <span class="nx">PriorityQueue</span><span class="p">)</span> <span class="nf">Less</span><span class="p">(</span><span class="nx">i</span><span class="p">,</span> <span class="nx">j</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">bool</span> <span class="p">{</span>
+	<span class="c1">// We want Pop to give us the highest, not lowest, priority so we use greater than here.
+</span><span class="c1"></span>	<span class="k">return</span> <span class="nx">pq</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">priority</span> <span class="p">&gt;</span> <span class="nx">pq</span><span class="p">[</span><span class="nx">j</span><span class="p">].</span><span class="nx">priority</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This infuriating detail got me at least 20 minutes of trying to figure out why my path wasn&rsquo;t correct. We need to change
+this to <code>&lt;</code>.</p>
+<p>Also, important detail is that you don&rsquo;t use the priority queue directly. You use it with <code>heap.Push(&amp;pq)</code>. Otherwise
+the priorities and indexes will not be up to date.</p>
+<p>Okay, first&hellip; We parse our grid using our trusty character cheat code:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">input</span> <span class="p">{</span>
+		<span class="nx">row</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">i</span> <span class="p">{</span>
+			<span class="nx">c</span> <span class="o">:=</span> <span class="nx">v</span> <span class="o">-</span> <span class="sc">&#39;0&#39;</span>
+			<span class="nx">row</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">row</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="nx">c</span><span class="p">))</span>
+		<span class="p">}</span>
+		<span class="nx">grid</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">grid</span><span class="p">,</span> <span class="nx">row</span><span class="p">)</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Then we write our path finding. It&rsquo;s a bit more verbose in Go than in Python of course. We have to initialize the PQ,
+then add in some code to get the neighbors, than set up the <code>cameFrom</code> part and traverse that backwards to get our full
+path. I&rsquo;m sure there are better solutions out there than this, but this is what I feel comfortable with. And I saw many
+solutions using PQ.</p>
+<p>The whole thing looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">start</span> <span class="o">:=</span> <span class="nx">point</span><span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+	<span class="nx">goal</span> <span class="o">:=</span> <span class="nx">point</span><span class="p">{</span><span class="nx">x</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">y</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">}</span>
+	<span class="nx">pq</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="nx">PriorityQueue</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="nx">heap</span><span class="p">.</span><span class="nf">Init</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">pq</span><span class="p">)</span>
+	<span class="nx">heap</span><span class="p">.</span><span class="nf">Push</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">pq</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">Item</span><span class="p">{</span>
+		<span class="nx">point</span><span class="p">:</span>    <span class="nx">start</span><span class="p">,</span>
+		<span class="nx">priority</span><span class="p">:</span> <span class="nx">grid</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+	<span class="p">})</span>
+	<span class="nx">cost</span> <span class="o">:=</span> <span class="kd">map</span><span class="p">[</span><span class="nx">point</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span>
+		<span class="nx">start</span><span class="p">:</span> <span class="nx">grid</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+	<span class="p">}</span>
+	<span class="nx">cameFrom</span> <span class="o">:=</span> <span class="kd">map</span><span class="p">[</span><span class="nx">point</span><span class="p">]</span><span class="nx">point</span><span class="p">{</span>
+		<span class="nx">start</span><span class="p">:</span> <span class="nx">start</span><span class="p">,</span>
+	<span class="p">}</span>
+	<span class="k">for</span> <span class="nx">pq</span><span class="p">.</span><span class="nf">Len</span><span class="p">()</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="nx">current</span> <span class="o">:=</span> <span class="nx">heap</span><span class="p">.</span><span class="nf">Pop</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">pq</span><span class="p">).(</span><span class="o">*</span><span class="nx">Item</span><span class="p">)</span>
+
+		<span class="k">if</span> <span class="nx">current</span><span class="p">.</span><span class="nx">point</span> <span class="o">==</span> <span class="nx">goal</span> <span class="p">{</span>
+			<span class="k">break</span>
+		<span class="p">}</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">next</span> <span class="o">:=</span> <span class="k">range</span> <span class="nf">neighbors</span><span class="p">(</span><span class="nx">current</span><span class="p">.</span><span class="nx">point</span><span class="p">,</span> <span class="nx">grid</span><span class="p">)</span> <span class="p">{</span>
+			<span class="nx">newCost</span> <span class="o">:=</span> <span class="nx">cost</span><span class="p">[</span><span class="nx">current</span><span class="p">.</span><span class="nx">point</span><span class="p">]</span> <span class="o">+</span> <span class="nx">grid</span><span class="p">[</span><span class="nx">next</span><span class="p">.</span><span class="nx">y</span><span class="p">][</span><span class="nx">next</span><span class="p">.</span><span class="nx">x</span><span class="p">]</span>
+			<span class="k">if</span> <span class="nx">v</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">cost</span><span class="p">[</span><span class="nx">next</span><span class="p">];</span> <span class="p">!</span><span class="nx">ok</span> <span class="o">||</span> <span class="nx">newCost</span> <span class="p">&lt;</span> <span class="nx">v</span> <span class="p">{</span>
+				<span class="nx">cameFrom</span><span class="p">[</span><span class="nx">next</span><span class="p">]</span> <span class="p">=</span> <span class="nx">current</span><span class="p">.</span><span class="nx">point</span>
+				<span class="nx">cost</span><span class="p">[</span><span class="nx">next</span><span class="p">]</span> <span class="p">=</span> <span class="nx">newCost</span>
+				<span class="nx">heap</span><span class="p">.</span><span class="nf">Push</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">pq</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">Item</span><span class="p">{</span>
+					<span class="nx">point</span><span class="p">:</span>    <span class="nx">next</span><span class="p">,</span>
+					<span class="nx">priority</span><span class="p">:</span> <span class="nx">newCost</span><span class="p">,</span>
+				<span class="p">})</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Not that bad. And now, following the path back and calculating the sum.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="kd">var</span> <span class="nx">sum</span> <span class="kt">int</span>
+	<span class="nx">current</span> <span class="o">:=</span> <span class="nx">goal</span>
+	<span class="k">for</span> <span class="nx">current</span> <span class="o">!=</span> <span class="nx">start</span> <span class="p">{</span>
+		<span class="nx">sum</span> <span class="o">+=</span> <span class="nx">grid</span><span class="p">[</span><span class="nx">current</span><span class="p">.</span><span class="nx">y</span><span class="p">][</span><span class="nx">current</span><span class="p">.</span><span class="nx">x</span><span class="p">]</span>
+		<span class="nx">current</span> <span class="p">=</span> <span class="nx">cameFrom</span><span class="p">[</span><span class="nx">current</span><span class="p">]</span>
+	<span class="p">}</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;sum: &#34;</span><span class="p">,</span> <span class="nx">sum</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And that&rsquo;s it. This is our correct number. Now, checking part 2&hellip;</p>
+<h2 id="day-15---part-2">Day 15 - Part 2</h2>
+<p>Part 2 is the same, but with a twist. We have to expand the grid by&hellip; what? Uh. So, our tile is just a piece of a
+greater tile. And as we duplicate our tile, we need to increase the numbers by one compared to their original part.</p>
+<p>Okay, this takes a little bit to wrap my head around. So let&rsquo;s remove some rules and make it easier. First, let&rsquo;s deal
+with a simpler objective. Just copy our initial tile into a 5x5 grid. To do that, we create the initial grid with the
+size original y * 5 and original x * 5.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">expandedGrid</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([][]</span><span class="kt">int</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">)</span><span class="o">*</span><span class="mi">5</span><span class="p">)</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">expandedGrid</span><span class="p">);</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">expandedGrid</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">*</span><span class="mi">5</span><span class="p">)</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Done. Now, copy over the initial rows.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="c1">// Prime the first tile
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">y</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">y</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">);</span> <span class="nx">y</span><span class="o">++</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="nx">x</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">x</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">]);</span> <span class="nx">x</span><span class="o">++</span> <span class="p">{</span>
+			<span class="nx">expandedGrid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">]</span> <span class="p">=</span> <span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">]</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>With this, actually we did create our 5x5 matrix, so let&rsquo;s think a little bit about the problem. We take each number of
+the original grid, and +1-it compared to the previous number in the original grid. Let&rsquo;s make this easy as the example
+has it. If the grid would be a single number, <code>8</code>, we would get this grid:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">8 9 1 2 3
+9 1 2 3 4
+1 2 3 4 5
+2 3 4 5 6
+3 4 5 6 7
+</code></pre></td></tr></table>
+</div>
+</div><p>If look at the pattern, all we have to do is create the first row correctly, and then we just +1 downwards on each
+column and we are golden(star (pun intended))! Nice. So, let&rsquo;s create that first row.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="c1">// fill out first line for all of the original grid sizes.
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">y</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">y</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">);</span> <span class="nx">y</span><span class="o">++</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="nx">x</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">]);</span> <span class="nx">x</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">expandedGrid</span><span class="p">[</span><span class="nx">y</span><span class="p">]);</span> <span class="nx">x</span><span class="o">++</span> <span class="p">{</span>
+			<span class="c1">// x - the length of the initial grid
+</span><span class="c1"></span>			<span class="nx">newValue</span> <span class="o">:=</span> <span class="p">(</span><span class="nx">expandedGrid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">[</span><span class="nx">y</span><span class="p">])]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">10</span>
+			<span class="k">if</span> <span class="nx">newValue</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+				<span class="nx">newValue</span> <span class="p">=</span> <span class="mi">1</span>
+			<span class="p">}</span>
+			<span class="nx">expandedGrid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">]</span> <span class="p">=</span> <span class="nx">newValue</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Basically, the <code>newValue := (expandedGrid[y][x-len(grid[y])] + 1) % 10</code> new value, is the original location, which is
+the current location minus the size of the original grid[y] and then +1. And it wraps around of course.</p>
+<p>That&rsquo;s fantastic. With that, we have our first row like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">89123
+00000
+00000
+00000
+00000
+</code></pre></td></tr></table>
+</div>
+</div><p>Now, we just have to go downwards with the same logic. Compared to the original location, minus the size, and +1.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="c1">// fill out downwards
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">y</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">);</span> <span class="nx">y</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">expandedGrid</span><span class="p">);</span> <span class="nx">y</span><span class="o">++</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="nx">x</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">x</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">expandedGrid</span><span class="p">[</span><span class="nx">y</span><span class="p">]);</span> <span class="nx">x</span><span class="o">++</span> <span class="p">{</span>
+			<span class="c1">// x - the length of the initial grid
+</span><span class="c1"></span>			<span class="nx">newValue</span> <span class="o">:=</span> <span class="p">(</span><span class="nx">expandedGrid</span><span class="p">[</span><span class="nx">y</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="nx">grid</span><span class="p">)][</span><span class="nx">x</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">10</span>
+			<span class="k">if</span> <span class="nx">newValue</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+				<span class="nx">newValue</span> <span class="p">=</span> <span class="mi">1</span>
+			<span class="p">}</span>
+			<span class="nx">expandedGrid</span><span class="p">[</span><span class="nx">y</span><span class="p">][</span><span class="nx">x</span><span class="p">]</span> <span class="p">=</span> <span class="nx">newValue</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And done! We have our correct grid! We run the path finding, which didn&rsquo;t change, and we have our correct result!
+Another star in the bag!</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Today, we again learned that Red Blob Games is an invaluable resource of path finding information. And it&rsquo;s nice to read
+through the material once in a while to refresh our knowledge about these things that exist. And we had some fun
+manipulating a matrix again and understanding that patterns will save our asses in these exercises.</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 14</title>
       <link>https://skarlso.github.io/2021/12/14/aoc-day14/</link>
