@@ -6,7 +6,139 @@
     <description>Recent content on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 13 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 14 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 14</title>
+      <link>https://skarlso.github.io/2021/12/14/aoc-day14/</link>
+      <pubDate>Tue, 14 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/14/aoc-day14/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-14">Advent Of Code - Day 14</h1>
+<p>Now we have to do some chemistry. Santa is pretty cool this way. They have a lot of skills mastered and read manuals
+like an expert. But this also means that manuals are always faulty. But Santa manages to work around these problems
+rather well.</p>
+<h2 id="day-14---part-1">Day 14 - Part 1</h2>
+<p>So, by reading the description and looking at the outcome, that a string only after 5 iterations will be this big, begs
+the question if we should build a primitive solution for this. Well, yes, I think we should. Part 2 will most likely be
+about something like, okay, now do this, but longer. I suspect this will be like the lanterfish thing. But let&rsquo;s do it
+anyways.</p>
+<p>A naive approach is to track the whole string and concatenate. This is done rather quickly, and earns us a good place
+if you managed to either wake up early, or not go to bed at all.</p>
+<p>The concatenation is done quickly:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">steps</span> <span class="o">:=</span> <span class="mi">10</span>
+	<span class="c1">// insert then skip because pairs overlap.
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">step</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">step</span> <span class="p">&lt;</span> <span class="nx">steps</span><span class="p">;</span> <span class="nx">step</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">newTemplate</span> <span class="o">:=</span> <span class="s">&#34; &#34;</span> <span class="c1">// cheeky
+</span><span class="c1"></span>		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">template</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+			<span class="nx">pair</span> <span class="o">:=</span> <span class="nb">string</span><span class="p">(</span><span class="nx">template</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span> <span class="o">+</span> <span class="nb">string</span><span class="p">(</span><span class="nx">template</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+			<span class="nx">pair</span> <span class="p">=</span> <span class="nb">string</span><span class="p">(</span><span class="nx">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="nx">pairs</span><span class="p">[</span><span class="nx">pair</span><span class="p">]</span> <span class="o">+</span> <span class="nb">string</span><span class="p">(</span><span class="nx">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+			<span class="nx">newTemplate</span> <span class="p">=</span> <span class="nx">newTemplate</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="nx">newTemplate</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+			<span class="nx">newTemplate</span> <span class="o">+=</span> <span class="nx">pair</span>
+		<span class="p">}</span>
+		<span class="nx">template</span> <span class="p">=</span> <span class="nx">newTemplate</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And you can just see immediately how bad this would scale. But it works. And we have our star and the hull of the ship
+is now a bit stronger.</p>
+<h2 id="day-14---part-2">Day 14 - Part 2</h2>
+<p>Of course part 2 hits us in the face again, but instead of a fishy fist, we get a chemical fist. We know that this is
+similar to the lanterfish problem, right? So we got to look for some patterns again. We will have to most likely track
+something other than the string. Which means there is a solution to this which involves only counting. But what do we
+count and how? This is the question.</p>
+<p>Let&rsquo;s look at our string. Initial string is <code>NNCB</code>. We have a couple of pairs in this one as the example suggests.
+<code>NN</code>, <code>NC</code>, <code>CB</code>. That&rsquo;s fine. Let&rsquo;s look at the next iteration. <code>NCNBCHB</code>. Pairs?</p>
+<p><code>NC</code>, <code>CN</code>, <code>NB</code>, <code>BC</code>, <code>CH</code>, <code>HB</code>. We can see now a tiny bit of a pattern; namely that we&rsquo;ll always end with <code>B</code> and
+that we&rsquo;ll always start with <code>N</code>. Next.</p>
+<p><code>NBCCNBBBCBHCB</code>. Somewhat longer now, let&rsquo;s list some pairs.</p>
+<p><code>NB</code>, <code>BC</code>, <code>CC</code>, <code>CN</code>, <code>NB</code>&hellip; hmmm. These are the same pairs. And if we go further and with a greater example, we&rsquo;ll
+see that there are a finite number of pairs. So we track the pairs! But! Where do we get the pairs from? We can actually
+construct the pairs without having to concatenate all the strings.</p>
+<p>Okay, okay, wait, what? Let&rsquo;s initialize things so we can understand better.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">trackPairs</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
+
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">template</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">trackPairs</span><span class="p">[</span><span class="nb">string</span><span class="p">(</span><span class="nx">template</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span><span class="o">+</span><span class="nb">string</span><span class="p">(</span><span class="nx">template</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])]</span><span class="o">++</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>We have our initial pairs from the initial template. Now, what we have to do is use our rules for each pair in that map
+and construct new pairs with them. That part didn&rsquo;t change. And add those pairs to a new map and update our tracking map.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">steps</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">update</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
+		<span class="k">for</span> <span class="nx">k</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">trackPairs</span> <span class="p">{</span>
+			<span class="nx">update</span><span class="p">[</span><span class="nb">string</span><span class="p">(</span><span class="nx">k</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">+</span><span class="nx">rules</span><span class="p">[</span><span class="nx">k</span><span class="p">]]</span> <span class="o">+=</span> <span class="nx">v</span>
+			<span class="nx">update</span><span class="p">[</span><span class="nx">rules</span><span class="p">[</span><span class="nx">k</span><span class="p">]</span><span class="o">+</span><span class="nb">string</span><span class="p">(</span><span class="nx">k</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span> <span class="o">+=</span> <span class="nx">v</span>
+		<span class="p">}</span>
+		<span class="nx">trackPairs</span> <span class="p">=</span> <span class="nx">update</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>We construct a new map and add the number of encountered pairs to this new pair. And if we already have it, it increases.
+Mind blown! This is all fine, but what do about counting the min and max characters? Well, all the characters are
+already there. Just construct a new map with a character count for each character.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">counts</span> <span class="o">:=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{}</span>
+	<span class="k">for</span> <span class="nx">k</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">trackPairs</span> <span class="p">{</span>
+		<span class="nx">counts</span><span class="p">[</span><span class="nb">string</span><span class="p">(</span><span class="nx">k</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="o">+=</span> <span class="nx">v</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>It&rsquo;s enough to use the first one because they repeat.</p>
+<p>We do some min, max on this map and tadaam. We have our value! We submit, and there is our second star. Fantastic!</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Today, we learned again, that we should always look for patterns in the output. Sometimes they are well hidden. So we
+write out everything and try all combinations of things until something clicks.</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 13</title>
       <link>https://skarlso.github.io/2021/12/13/aoc-day13/</link>
