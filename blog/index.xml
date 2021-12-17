@@ -6,7 +6,287 @@
     <description>Recent content in Blogs on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 15 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 17 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code - Day 12 - Updated</title>
+      <link>https://skarlso.github.io/2021/12/17/aoc-day12-updated/</link>
+      <pubDate>Fri, 17 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/17/aoc-day12-updated/</guid>
+      <description><![CDATA[<h1 id="advent-of-code---day-12---updated">Advent Of Code - Day 12 - Updated</h1>
+<p>A comment from one of my readers prompted me to revise my solution on this trying to do part 2. The suggestions was that
+instead of using a <code>struct</code> as seen, use <code>int</code> and keep track of the count for small caves that way. I started to do
+that but got into various problems along the way when I got frustrated with my code, deleted the whole thing and begun
+again. But this lead me to a small, and better code than before which actually worked.</p>
+<h2 id="day-12---part-1">Day 12 - Part 1</h2>
+<p>There are a number of things I realized and improved upon. Let&rsquo;s take them one by one.</p>
+<h3 id="parsing">Parsing</h3>
+<p>I did this whole convoluted way of parsing the &ldquo;graph&rdquo; into an actual graph when I saw two things. First, I don&rsquo;t need a
+graph I just need the values. Second, if you don&rsquo;t need the graph, you don&rsquo;t have anything to initialize and you can use
+Go map&rsquo;s feature of creating default entries for default keys.</p>
+<p>Go maps initialize to value default. For reference types that&rsquo;s nil. For primitives, whatever the primitives zero value
+is. Empty string, <code>0</code>, etc.</p>
+<p>This lead me to parsing the input such as:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">input</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">content</span><span class="p">),</span> <span class="s">&#34;\n&#34;</span><span class="p">)</span>
+	<span class="nx">caves</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">string</span><span class="p">)</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">line</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">input</span> <span class="p">{</span>
+		<span class="kd">var</span> <span class="p">(</span>
+			<span class="nx">a</span><span class="p">,</span> <span class="nx">b</span> <span class="kt">string</span>
+		<span class="p">)</span>
+		<span class="nx">split</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span> <span class="s">&#34;-&#34;</span><span class="p">)</span>
+		<span class="nx">a</span> <span class="p">=</span> <span class="nx">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+		<span class="nx">b</span> <span class="p">=</span> <span class="nx">split</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+		<span class="nx">caves</span><span class="p">[</span><span class="nx">a</span><span class="p">]</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">caves</span><span class="p">[</span><span class="nx">a</span><span class="p">],</span> <span class="nx">b</span><span class="p">)</span>
+		<span class="nx">caves</span><span class="p">[</span><span class="nx">b</span><span class="p">]</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">caves</span><span class="p">[</span><span class="nx">b</span><span class="p">],</span> <span class="nx">a</span><span class="p">)</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And that&rsquo;s it. <code>append</code> deals with <code>nil</code> slices and creates the slice if needed. Meaning if the entry doesn&rsquo;t exist,
+append will create a new slice for it.</p>
+<h3 id="state">State</h3>
+<p>I need to keep state of the caves I&rsquo;m visiting somehow. After reading a bunch of more information on DFS and BFS and
+listing all paths and all those things I never read otherwise every in my day to day life, I saw, that I for part two,
+and in fact, for part 1 as well, I need a state which I can refresh based on the current location.</p>
+<p>Previously, my recursive dfs was doing that with the <code>path</code> passed in. That&rsquo;s all fine, but I also need now if I ever
+visited a cave twice. The suggestions of using an int for visited is nice, but somehow, wasn&rsquo;t working for me, because I
+kept messing up the subtraction when recursing back. So I decided that I drop the recursing and try to do this
+iteratively.</p>
+<p>Second, I also saw in most of the cases I don&rsquo;t care about the path, I just need a count. I just kept the path for debug
+to see where my algorithm is going. So I ditched that and just increase a counter.</p>
+<p>To keep the state I&rsquo;m using a <code>struct</code> which will have the current value of the cave, the path so far which was
+travelled from the current location and so far and the fact if I visited this cave before.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">cave</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">value</span>     <span class="kt">string</span>
+	<span class="nx">pathSoFar</span> <span class="p">[]</span><span class="kt">string</span>
+	<span class="nx">twice</span>     <span class="kt">bool</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This allows for a number of things. First, I don&rsquo;t need to pass around path recursively, I will have a reference to it
+at the current visited location. Second, I can track the actual state in the cave, like paint the cave if I already saw
+that one. Once that happens, every other cave will have this value passed around, meaning all other caves will come in
+with a flag, that hey, I already visited a cave twice before, so I&rsquo;m not gonna do that again.</p>
+<h3 id="the-loop">The Loop</h3>
+<p>No, not the amazon prime series The Loop ( which is fantastic btw ), but the main for loop of this logic. Now that I
+have my state, I can just do a BFS on this baby. The main loop changes slightly. We now, keep track of caves, not just
+the values.</p>
+<p>But it&rsquo;s super easy. Barely an inconvenience. Oh really? Yeah, you see, we just make our queue have caves. But what
+about the <code>seen</code> part? This changes as well. Now, because we pass around the path taken so far, we&rsquo;ll have to look in
+that path if the neighbor if our current cave is already in the path that has been taken so far for that save.</p>
+<p>Just create a small <code>Contains</code> method ( which will be obsolete after finally go 1.18 comes out with generics and we&rsquo;ll
+have the mighty <code>Filter</code> or <code>Search</code> on our side!!!!!! ) like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">seen</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">a</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">b</span> <span class="p">[]</span><span class="kt">string</span><span class="p">)</span> <span class="kt">bool</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">b</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="nx">v</span> <span class="o">==</span> <span class="nx">a</span> <span class="p">{</span>
+				<span class="k">return</span> <span class="kc">true</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="kc">false</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>&hellip; and then we can look in the path if we met this cave before. What I also realized was that I was turning the cave
+value into lowercase and checked it that way, when I could have just said that if it matched with the ToLower version
+of the name it is lower case. :facepalm:. But this is why I&rsquo;m doing AOC. To learn and evolve. Hopefully, I learned a lot
+from this day.</p>
+<p>So the main loop:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">count</span> <span class="o">:=</span> <span class="mi">0</span>
+	<span class="nx">start</span> <span class="o">:=</span> <span class="nx">cave</span><span class="p">{</span>
+		<span class="nx">pos</span><span class="p">:</span>       <span class="s">&#34;start&#34;</span><span class="p">,</span>
+		<span class="nx">pathSoFar</span><span class="p">:</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;start&#34;</span><span class="p">},</span>
+	<span class="p">}</span>
+	<span class="nx">queue</span> <span class="o">:=</span> <span class="p">[]</span><span class="nx">cave</span><span class="p">{</span><span class="nx">start</span><span class="p">}</span>
+	<span class="kd">var</span> <span class="nx">current</span> <span class="nx">cave</span>
+	<span class="k">for</span> <span class="nb">len</span><span class="p">(</span><span class="nx">queue</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="nx">current</span><span class="p">,</span> <span class="nx">queue</span> <span class="p">=</span> <span class="nx">queue</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">queue</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+		<span class="k">if</span> <span class="nx">current</span><span class="p">.</span><span class="nx">pos</span> <span class="o">==</span> <span class="s">&#34;end&#34;</span> <span class="p">{</span>
+			<span class="nx">count</span><span class="o">++</span>
+			<span class="k">continue</span>
+		<span class="p">}</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">next</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">caves</span><span class="p">[</span><span class="nx">current</span><span class="p">.</span><span class="nx">pos</span><span class="p">]</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="p">!</span><span class="nf">seen</span><span class="p">(</span><span class="nx">next</span><span class="p">,</span> <span class="nx">current</span><span class="p">.</span><span class="nx">pathSoFar</span><span class="p">)</span> <span class="p">{</span>
+				<span class="nx">path</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">string</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+				<span class="nx">path</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">path</span><span class="p">,</span> <span class="nx">current</span><span class="p">.</span><span class="nx">pathSoFar</span><span class="o">...</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">ToLower</span><span class="p">(</span><span class="nx">next</span><span class="p">)</span> <span class="o">==</span> <span class="nx">next</span> <span class="p">{</span>
+					<span class="nx">path</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">path</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span>
+				<span class="p">}</span>
+				<span class="nx">queue</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">queue</span><span class="p">,</span> <span class="nx">cave</span><span class="p">{</span>
+					<span class="nx">pos</span><span class="p">:</span>       <span class="nx">next</span><span class="p">,</span>
+					<span class="nx">pathSoFar</span><span class="p">:</span> <span class="nx">path</span><span class="p">,</span>
+				<span class="p">})</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And that&rsquo;s it. We print <code>count</code> and we have our number.</p>
+<h2 id="day-12---part-2">Day 12 - Part 2</h2>
+<p>Now that we have our state in the loop itself, we just add a new variable to the <code>cave</code> called <code>twice</code> (it was already
+there but I haven&rsquo;t used it yet). Our criteria for twice is as follows. If we haven&rsquo;t seen it yet, we explore it. If it
+is already in the path so far, from which we came in AND none of the caves so far were visited twice ( which we&rsquo;ll know
+because we bring our marker with us during the loop ) we set our cave to visited ( paint it ) and we only take the path
+so far with us, so we don&rsquo;t put this guy in the path YET. We&rsquo;ll eventually do that though on the next time this cave is
+encountered at which point it will bring twice with it.</p>
+<p>How does that look like in code?</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">start</span> <span class="o">:=</span> <span class="nx">cave</span><span class="p">{</span>
+		<span class="nx">value</span><span class="p">:</span>     <span class="s">&#34;start&#34;</span><span class="p">,</span>
+		<span class="nx">pathSoFar</span><span class="p">:</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;start&#34;</span><span class="p">},</span>
+	<span class="p">}</span>
+	<span class="nx">queue</span> <span class="o">:=</span> <span class="p">[]</span><span class="nx">cave</span><span class="p">{</span><span class="nx">start</span><span class="p">}</span>
+	<span class="kd">var</span> <span class="nx">current</span> <span class="nx">cave</span>
+	<span class="k">for</span> <span class="nb">len</span><span class="p">(</span><span class="nx">queue</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="nx">current</span><span class="p">,</span> <span class="nx">queue</span> <span class="p">=</span> <span class="nx">queue</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">queue</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+		<span class="k">if</span> <span class="nx">current</span><span class="p">.</span><span class="nx">value</span> <span class="o">==</span> <span class="s">&#34;end&#34;</span> <span class="p">{</span>
+			<span class="nx">count</span><span class="o">++</span>
+			<span class="k">continue</span>
+		<span class="p">}</span>
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">next</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">caves</span><span class="p">[</span><span class="nx">current</span><span class="p">.</span><span class="nx">value</span><span class="p">]</span> <span class="p">{</span>
+			<span class="nx">seenThisCaveBefore</span> <span class="o">:=</span> <span class="nf">seen</span><span class="p">(</span><span class="nx">next</span><span class="p">,</span> <span class="nx">current</span><span class="p">.</span><span class="nx">pathSoFar</span><span class="p">)</span>
+			<span class="k">if</span> <span class="p">!</span><span class="nx">seenThisCaveBefore</span> <span class="p">{</span>
+				<span class="nx">path</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">string</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+				<span class="nx">path</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">path</span><span class="p">,</span> <span class="nx">current</span><span class="p">.</span><span class="nx">pathSoFar</span><span class="o">...</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">ToLower</span><span class="p">(</span><span class="nx">next</span><span class="p">)</span> <span class="o">==</span> <span class="nx">next</span> <span class="p">{</span>
+					<span class="nx">path</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">path</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span>
+				<span class="p">}</span>
+				<span class="nx">queue</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">queue</span><span class="p">,</span> <span class="nx">cave</span><span class="p">{</span>
+					<span class="nx">value</span><span class="p">:</span>     <span class="nx">next</span><span class="p">,</span>
+					<span class="nx">pathSoFar</span><span class="p">:</span> <span class="nx">path</span><span class="p">,</span>
+					<span class="nx">twice</span><span class="p">:</span>     <span class="nx">current</span><span class="p">.</span><span class="nx">twice</span><span class="p">,</span>
+				<span class="p">})</span>
+			<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">seenThisCaveBefore</span> <span class="o">&amp;&amp;</span> <span class="p">!</span><span class="nx">current</span><span class="p">.</span><span class="nx">twice</span> <span class="o">&amp;&amp;</span> <span class="p">!</span><span class="nf">seen</span><span class="p">(</span><span class="nx">next</span><span class="p">,</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;start&#34;</span><span class="p">,</span> <span class="s">&#34;end&#34;</span><span class="p">})</span> <span class="p">{</span>
+				<span class="nx">queue</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">queue</span><span class="p">,</span> <span class="nx">cave</span><span class="p">{</span>
+					<span class="nx">value</span><span class="p">:</span>     <span class="nx">next</span><span class="p">,</span>
+					<span class="nx">pathSoFar</span><span class="p">:</span> <span class="nx">current</span><span class="p">.</span><span class="nx">pathSoFar</span><span class="p">,</span>
+					<span class="nx">twice</span><span class="p">:</span>     <span class="kc">true</span><span class="p">,</span>
+				<span class="p">})</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Again, we start off by adding <code>start</code>. Oh, and we don&rsquo;t do that for <code>start</code> or <code>end</code>. Also realized that I can use
+<code>seen</code> now as sort of like a check for a value NOT being one of two values instead of a convoluted if structure.</p>
+<p>So if everything is as before, expect we also take <code>twice</code> with us, and if we&rsquo;ve <code>seenThisCaveBefore</code> but we haven&rsquo;t
+visited any caves twice before ( we take the marker with us during the journey ) and it&rsquo;s not start or end, we mark it
+as visited twice, and we add pathSoFar as the current path so far, without adding this cave into it.</p>
+<p>And that&rsquo;s it!</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>This day was somehow difficult on the first run. I couldn&rsquo;t figure out a nice way to keep track of my journey so far.
+What helped me eventually was the prompt from my reading and reading various articles about keeping track during a
+BFS and how listing all paths in a graph work. Which can be a difficult problem especially when there is a circle in the
+graph. This would probably not work in that case, but we are confident that Eric doesn&rsquo;t do tricks like that.</p>
+<p>The repository for all my solutions for AOC 2021 can be found <a href="https://github.com/Skarlso/aoc2021">here</a>.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 15</title>
       <link>https://skarlso.github.io/2021/12/15/aoc-day15/</link>
@@ -656,6 +936,7 @@ fold and run a <code>display</code> to see the points.</p>
       
       <guid>https://skarlso.github.io/2021/12/12/aoc-day12/</guid>
       <description><![CDATA[<h1 id="advent-of-code---day-12">Advent Of Code - Day 12</h1>
+<p><strong>EDIT</strong>: I revisited this problem and completely revised my solution to it: <a href="https://skarlso.github.io/2021/12/17/aoc-day12-updated/">Day 12 Updated</a></p>
 <p>This one is a bit different from our little BFS walk the other day. I didn&rsquo;t quite remember how DFS works, so I looked
 at the <a href="https://en.wikipedia.org/wiki/Depth-first_search">Wikipedia</a> a bit. Then I remembered that I implemented this
 previously at some point in a later year.</p>
