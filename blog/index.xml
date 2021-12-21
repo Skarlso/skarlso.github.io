@@ -6,7 +6,483 @@
     <description>Recent content in Blogs on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 17 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 21 Dec 2021 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Providers Pattern</title>
+      <link>https://skarlso.github.io/2021/12/21/providers-pattern/</link>
+      <pubDate>Tue, 21 Dec 2021 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2021/12/21/providers-pattern/</guid>
+      <description><![CDATA[<p>Hello Dear readers.</p>
+<p>Today, I would like to write about a project design pattern I&rsquo;ve been using successfully over the past years for
+various projects. It has many variations and it has some design patterns that are commonly found in the wild, so there
+is nothing really special about it.</p>
+<p>Let&rsquo;s begin.</p>
+<h1 id="providers-pattern">Providers Pattern</h1>
+<p>What is this pattern anyways? It&rsquo;s a pattern I learned while working at <a href="https://www.arangodb.com/">ArangoDB</a>. It&rsquo;s
+quite nice and defines package abstractions wonderfully. It somewhat resembles the Repository pattern from DDD and also
+uses Chain of Responsibility to setup multiple providers for a given functionality. Like a fallback, in case a Provider
+does not understand the current thing it got. In that case, it will delegate to <code>Next</code>.</p>
+<p>I&rsquo;m going to demonstrate all of the pattern&rsquo;s capabilities through a sample project which is hopefully a sensible thing
+and not just dummy functionality.</p>
+<h2 id="tldr">TL;DR</h2>
+<p>A Provider is like the <a href="https://martinfowler.com/eaaCatalog/repository.html">Repository pattern</a> from DDD combined with
+<a href="https://en.wikipedia.org/wiki/Chain-of-responsibility_pattern">Chain Of Responsibility</a>. Basically, set up a Provider
+using an <code>interface</code> as a definition. Give that as dependency to another provider and call it&rsquo;s function. If the
+Provider doesn&rsquo;t understand the type its supposed to work on, it will call <code>Next</code> in the chain delegating the function
+to the following Provider. For a detailed use of this pattern, check out
+<a href="https://github.com/Skarlso/providers-example">Providers Example</a> project on GitHub.</p>
+<h2 id="the-project">The Project</h2>
+<p><a href="https://github.com/Skarlso/providers-example">Providers Example</a> is the project I&rsquo;ll be using to demonstrate this
+pattern. It&rsquo;s pretty simple; yet, I hope, it presents a useful function to be show off this pattern&rsquo;s capabilities.</p>
+<p>In essence, this is a plugin executor. We have a CLI which can register plugins to execute. These plugins can either be
+bare metal (as in a simple executable living somewhere), or a docker container, in which case it will use Docker to
+execute the plugin. It will forward all possible parameters and display any outputs.</p>
+<p>Simple, yet there are a couple things that we can extract into Providers such as:</p>
+<ol>
+<li><del>Dealing with the archive ( so we can test the Tar function )</del> (sorry, I scrapped this, to keep things simple)</li>
+<li>Selecting the executing environment ( bare metal, container ) which we can chain</li>
+<li>Output formatting ( possibly, thing like, JSON, Table, etc. )</li>
+<li>Saving things into a Database ( we will save what kind of plugins exist using sqlite )
+4.1. We&rsquo;ll just save the name and the type for simplicity</li>
+</ol>
+<h2 id="basics">Basics</h2>
+<p>Let&rsquo;s take a look at the folder structure here.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">➜  providers-example git:(main) tree
+.
+├── LICENSE
+├── Makefile
+├── README.md
+├── bin
+├── cmd
+│   ├── add.go
+│   ├── list.go
+│   ├── remove.go
+│   ├── root.go
+│   └── run.go
+├── example
+│   └── echo_plugin
+│       └── Dockerfile
+├── go.mod
+├── go.sum
+├── main.go
+├── pkg
+│   ├── commands
+│   │   └── add.go
+│   ├── models
+│   │   └── plugin.go
+│   └── providers
+│       ├── archiver.go
+│       ├── bare
+│       │   └── bare_runner.go
+│       ├── container
+│       │   ├── container_runner.go
+│       │   └── container_runner_test.go
+│       ├── fakes
+│       │   └── fake_storer_client.go
+│       ├── runner.go
+│       ├── storage.go
+│       ├── storer
+│       │   └── storer.go
+│       └── tar
+│           ├── tar.go
+│           ├── tar_test.go
+│           └── testdata
+│               └── test.tar.gz
+└── tests
+    └── integration
+        ├── init_test.go
+        └── plugin_store_test.go
+
+18 directories, 29 files
+</code></pre></td></tr></table>
+</div>
+</div><p>What are we looking at? We have some standard packages, like <code>pkg</code>, <code>cmd</code> and <code>tests</code>. What&rsquo;s &ldquo;new&rdquo; is <code>pkg/providers</code>.
+I ended up not using archiver, but I left it in for prosperity. There are 3 interfaces under <code>providers</code>. Each support
+a simple functionality. Let&rsquo;s go over them.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Archiver can extract files from an archive.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Archiver</span> <span class="kd">interface</span> <span class="p">{</span>
+	<span class="nf">Untar</span><span class="p">(</span><span class="nx">content</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>My initial plan was to implement the bare metal as an ability to download an archive and then untar that. But I scrapped
+that idea for a simpler one. This provider would have been an <code>untarer</code>.</p>
+<p>Next up is storage.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// ListOpts defines options for listing plugins.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">ListOpts</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">TypeFilter</span> <span class="kt">string</span>
+<span class="p">}</span>
+
+<span class="c1">// Storer can store information about the plugins that were created.
+</span><span class="c1">//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+</span><span class="c1">//counterfeiter:generate -o fakes/fake_storer_client.go . Storer
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Storer</span> <span class="kd">interface</span> <span class="p">{</span>
+	<span class="nf">Init</span><span class="p">()</span> <span class="kt">error</span>
+	<span class="nf">Create</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">plugin</span> <span class="o">*</span><span class="nx">models</span><span class="p">.</span><span class="nx">Plugin</span><span class="p">)</span> <span class="kt">error</span>
+	<span class="nf">Get</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">name</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">models</span><span class="p">.</span><span class="nx">Plugin</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+	<span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">name</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span>
+	<span class="nf">List</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">opts</span> <span class="nx">ListOpts</span><span class="p">)</span> <span class="p">([]</span><span class="o">*</span><span class="nx">models</span><span class="p">.</span><span class="nx">Plugin</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>A simple CRUD interface, with an Init action. Whatever that init is. Currently, I&rsquo;m using sqlite3, so the live store init
+is simply creating the database file and bootstrapping it with the <code>plugins</code> table. I&rsquo;m using counterfeiter to generate
+a mock which I&rsquo;ll be using in tests to mock this provider where I don&rsquo;t care about it.</p>
+<p>And the runner&hellip;</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Runner runs a plugin.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Runner</span> <span class="kd">interface</span> <span class="p">{</span>
+	<span class="nf">Run</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">name</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">args</span> <span class="p">[]</span><span class="kt">string</span><span class="p">)</span> <span class="kt">error</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This is the single method a runner needs to be able to provide / do. A runner simply takes a name and some arguments
+and based on the plugin&rsquo;s type, runs it.</p>
+<p>These interfaces are then implemented by real providers. For example, the storage has its implementation under <code>storer</code>.
+Which has code for sqlite. The runner has two implementations. One for container and one for bare metal. And now, let&rsquo;s
+see how the chain works.</p>
+<h2 id="dependency-injection-and-usage">Dependency Injection and Usage</h2>
+<p>Take a closer look at the container implementation for example.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Config defines parameters for the Runner.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Config</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">DefaultMaximumCommandRuntime</span> <span class="kt">int</span>
+<span class="p">}</span>
+
+<span class="c1">// Dependencies defines the provider dependencies this provider has.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Dependencies</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Next</span>   <span class="nx">providers</span><span class="p">.</span><span class="nx">Runner</span>
+	<span class="nx">Storer</span> <span class="nx">providers</span><span class="p">.</span><span class="nx">Storer</span>
+    <span class="nx">Logger</span> <span class="nx">zerolog</span><span class="p">.</span><span class="nx">Logger</span>
+<span class="p">}</span>
+
+<span class="c1">// Runner implements the Run interface for container based runtimes.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Runner</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Config</span>
+	<span class="nx">Dependencies</span>
+
+	<span class="nx">cli</span>    <span class="nx">client</span><span class="p">.</span><span class="nx">APIClient</span>
+<span class="p">}</span>
+
+<span class="c1">// NewRunner creates a new container based runtime.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">NewRunner</span><span class="p">(</span><span class="nx">cfg</span> <span class="nx">Config</span><span class="p">,</span> <span class="nx">deps</span> <span class="nx">Dependencies</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Runner</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nf">NewClientWithOpts</span><span class="p">(</span><span class="nx">client</span><span class="p">.</span><span class="nx">FromEnv</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">deps</span><span class="p">.</span><span class="nx">Logger</span><span class="p">.</span><span class="nf">Debug</span><span class="p">().</span><span class="nf">Err</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Msg</span><span class="p">(</span><span class="s">&#34;Failed to create docker client.&#34;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">Runner</span><span class="p">{</span>
+		<span class="nx">Config</span><span class="p">:</span>       <span class="nx">cfg</span><span class="p">,</span>
+		<span class="nx">Dependencies</span><span class="p">:</span> <span class="nx">deps</span><span class="p">,</span>
+		<span class="nx">cli</span><span class="p">:</span>          <span class="nx">cli</span><span class="p">,</span>
+	<span class="p">},</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This is the main structure of a provider. It gets Configuration options via the <code>Config</code> struct. Things like,
+<code>DefaultMaximumCommandRuntime</code> which is a configuration value for maximum wait time. And it gets dependencies, other
+providers and third party things, like logger, through the <code>Dependencies</code> struct. We also wire things up that we are
+going to use later on, like a client for Docker. Later on, in the tests, I can inject a mock for it.</p>
+<p>Notice the field in the <code>Dependencies</code> struct called <code>Next</code>. This is the chain&rsquo;s first stop. In <code>root.go</code> we wired up
+next to be the bare metal type plugin like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">barePlugin</span> <span class="o">:=</span> <span class="nx">bare</span><span class="p">.</span><span class="nf">NewBareRunner</span><span class="p">(</span><span class="nx">bare</span><span class="p">.</span><span class="nx">Config</span><span class="p">{},</span> <span class="nx">bare</span><span class="p">.</span><span class="nx">Dependencies</span><span class="p">{</span>
+		<span class="nx">Logger</span><span class="p">:</span> <span class="nx">log</span><span class="p">,</span>
+		<span class="nx">Storer</span><span class="p">:</span> <span class="nx">store</span><span class="p">,</span>
+	<span class="p">})</span>
+	<span class="nx">containerPlugin</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">container</span><span class="p">.</span><span class="nf">NewRunner</span><span class="p">(</span><span class="nx">container</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+		<span class="nx">DefaultMaximumCommandRuntime</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+	<span class="p">},</span> <span class="nx">container</span><span class="p">.</span><span class="nx">Dependencies</span><span class="p">{</span>
+		<span class="nx">Storer</span><span class="p">:</span> <span class="nx">store</span><span class="p">,</span>
+		<span class="nx">Next</span><span class="p">:</span>   <span class="nx">barePlugin</span><span class="p">,</span>
+		<span class="nx">Logger</span><span class="p">:</span> <span class="nx">log</span><span class="p">,</span>
+	<span class="p">})</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And then, when calling <code>Run</code> we check the type of the plugin we got, and if we know it, we execute it, if not, we call
+the <code>Next</code> thing in the chain. Simple.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Run implements the container based runtime details, using Docker as an engine.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">cr</span> <span class="o">*</span><span class="nx">Runner</span><span class="p">)</span> <span class="nf">Run</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">name</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">args</span> <span class="p">[]</span><span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="c1">// Find the plugin, get the location, find the type, if it&#39;s not container, call next.
+</span><span class="c1"></span>	<span class="nx">cmd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cr</span><span class="p">.</span><span class="nx">Storer</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">name</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;plugin not found: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="nx">cmd</span><span class="p">.</span><span class="nx">Type</span> <span class="o">!=</span> <span class="nx">models</span><span class="p">.</span><span class="nx">Container</span> <span class="p">{</span>
+		<span class="nx">cr</span><span class="p">.</span><span class="nx">Logger</span><span class="p">.</span><span class="nf">Info</span><span class="p">().</span><span class="nf">Msg</span><span class="p">(</span><span class="s">&#34;Unknown plugin type, calling next in line.&#34;</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">cr</span><span class="p">.</span><span class="nx">Next</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;no next provider configured&#34;</span><span class="p">)</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="nx">cr</span><span class="p">.</span><span class="nx">Next</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">args</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cr</span><span class="p">.</span><span class="nf">runCommand</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span> <span class="nx">cmd</span><span class="p">.</span><span class="nx">Container</span><span class="p">.</span><span class="nx">Image</span><span class="p">,</span> <span class="nx">args</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to run command: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And that&rsquo;s it! But wait a second. How is this different from just calling the thing? Well, this makes it so that in the
+actual code, we only have to call the top level element in the chain and call <code>Run</code> on it. A default if you will.
+By default, our plugins are of <code>container</code> type. This way, you can avoid a type switch for example. Or avoid having
+implementation choosing logic in the code when deciding what runner to use.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">containerPlugin</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">runArgs</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span> <span class="nx">runArgs</span><span class="p">.</span><span class="nx">args</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">log</span><span class="p">.</span><span class="nf">Error</span><span class="p">().</span><span class="nf">Err</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Msg</span><span class="p">(</span><span class="s">&#34;Failed to run plugin&#34;</span><span class="p">)</span>
+		<span class="nx">os</span><span class="p">.</span><span class="nf">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>I&rsquo;m just calling <code>containerPlugin</code>&rsquo;s Run and the rest will just work. With generics coming in 1.18 this will be even
+more easier to use.</p>
+<h2 id="testability">Testability</h2>
+<p>The great thing about these providers are that they enclose ( you might say, encapsulate ) a single functionality. They
+provide some kind of behavior to another behavior. Because that behavior is defined by an interface, and the dependency
+requires an interface, it&rsquo;s trivial to unit test the actual provider. For example, the storage. You see above, that the
+storage is defined as <code>Storer providers.Storer</code>. And we already have a fake. So in the tests we can set it up such as:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">    <span class="nx">fakeStorer</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">fakes</span><span class="p">.</span><span class="nx">FakeStorer</span><span class="p">{}</span>
+    <span class="nx">fakeStorer</span><span class="p">.</span><span class="nf">GetReturns</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">models</span><span class="p">.</span><span class="nx">Plugin</span><span class="p">{</span>
+        <span class="nx">ID</span><span class="p">:</span>   <span class="mi">1</span><span class="p">,</span>
+        <span class="nx">Name</span><span class="p">:</span> <span class="s">&#34;test&#34;</span><span class="p">,</span>
+        <span class="nx">Type</span><span class="p">:</span> <span class="nx">models</span><span class="p">.</span><span class="nx">Container</span><span class="p">,</span>
+        <span class="nx">Container</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">models</span><span class="p">.</span><span class="nx">ContainerPlugin</span><span class="p">{</span>
+            <span class="nx">Image</span><span class="p">:</span> <span class="s">&#34;test-image&#34;</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">},</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="o">...</span>
+	<span class="nx">r</span> <span class="o">:=</span> <span class="nx">Runner</span><span class="p">{</span>
+		<span class="nx">Dependencies</span><span class="p">:</span> <span class="nx">Dependencies</span><span class="p">{</span>
+			<span class="nx">Storer</span><span class="p">:</span> <span class="nx">fakeStorer</span><span class="p">,</span>
+			<span class="nx">Logger</span><span class="p">:</span> <span class="nx">logger</span><span class="p">,</span>
+		<span class="p">},</span>
+		<span class="nx">Config</span><span class="p">:</span> <span class="nx">Config</span><span class="p">{</span>
+			<span class="nx">DefaultMaximumCommandRuntime</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+		<span class="p">},</span>
+		<span class="nx">cli</span><span class="p">:</span> <span class="nx">apiClient</span><span class="p">,</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>After that, we can use it to return errors and various bits and pieces to test our actual plugin runner and not care
+about storage.</p>
+<h2 id="pros-and-cons">Pros and Cons</h2>
+<p>The pros are obvious. Separation, testability, chaining, fallback logic, encapsulated behavior, etc.</p>
+<p>But what about the cons? The downside could be the following things:</p>
+<ul>
+<li>naming gets hard and packages can get prolific</li>
+<li>interfaces will be binding, changing them might result in changing a bunch of implementations</li>
+<li>some implementations might not use some parameters from the interface if they don&rsquo;t provide that functionality ( this
+might be mitigated by a very restrictive interface design )</li>
+<li>it&rsquo;s a bit verbose ( this can be mitigated by not calling it dependencies or passing in a single struct instead of two)</li>
+<li>wiring up all the dependencies can lead to a long set up function if there are several providers ( this can be
+mitigated by having defaults and smaller setup functions )</li>
+</ul>
+<p>Still, I think the benefits easily out weight these problems. And many other package designs have similar issues.</p>
+<h2 id="other-providers">Other providers</h2>
+<p>This is just an example. Another couple of examples include:</p>
+<ul>
+<li>fallback authentication; start with Auth0, then SSH, username/password, finally localhost and fail</li>
+<li>output parsing; what does the struct provide, use that, otherwise, fallback to table</li>
+<li>github, gitlab, bitbucket handlers chained up and chosen based on url types</li>
+</ul>
+<h2 id="conclusions">Conclusions</h2>
+<p>This is it. That&rsquo;s the provider pattern. It&rsquo;s a useful little tool in the box to have. With generics, the choosing type
+will change, but the pattern can adapt to that too. It&rsquo;s a nice little thing to have. Of course it&rsquo;s not a solution to
+all the problems ever. But I&rsquo;ve been using it for a while now, to good effect.</p>
+<p>Thanks for reading,</p>
+<p>Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Advent Of Code - Day 12 - Updated</title>
       <link>https://skarlso.github.io/2021/12/17/aoc-day12-updated/</link>
