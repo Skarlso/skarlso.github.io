@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase - Ramblings of a cloud engineer</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="hannibal" /><meta name="description" content="Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase Hello Dear readers.
+Today, I would like to write about a project I&amp;rsquo;ve been working on these past months or so. This is a longer story and hopefully an interesting one to read.
+I&amp;rsquo;m going to write about the journey I took while trying to implement IPv6 based Kubernetes cluster for CAPA and EKS." />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.83.1 with theme even" />
+
+
+<link rel="canonical" href="https://skarlso.github.io/2022/06/26/hacking-on-capa/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
+
+
+
+<meta property="og:title" content="Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase" />
+<meta property="og:description" content="Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase Hello Dear readers.
+Today, I would like to write about a project I&rsquo;ve been working on these past months or so. This is a longer story and hopefully an interesting one to read.
+I&rsquo;m going to write about the journey I took while trying to implement IPv6 based Kubernetes cluster for CAPA and EKS." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://skarlso.github.io/2022/06/26/hacking-on-capa/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2022-06-26T01:01:00&#43;01:00" />
+<meta property="article:modified_time" content="2022-06-26T01:01:00&#43;01:00" />
+
+<meta itemprop="name" content="Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase">
+<meta itemprop="description" content="Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase Hello Dear readers.
+Today, I would like to write about a project I&rsquo;ve been working on these past months or so. This is a longer story and hopefully an interesting one to read.
+I&rsquo;m going to write about the journey I took while trying to implement IPv6 based Kubernetes cluster for CAPA and EKS."><meta itemprop="datePublished" content="2022-06-26T01:01:00&#43;01:00" />
+<meta itemprop="dateModified" content="2022-06-26T01:01:00&#43;01:00" />
+<meta itemprop="wordCount" content="3019">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase"/>
+<meta name="twitter:description" content="Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase Hello Dear readers.
+Today, I would like to write about a project I&rsquo;ve been working on these past months or so. This is a longer story and hopefully an interesting one to read.
+I&rsquo;m going to write about the journey I took while trying to implement IPv6 based Kubernetes cluster for CAPA and EKS."/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">Ramblings of a cloud engineer</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/blog/">
+        <li class="mobile-menu-item">Archive</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">Tags</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">Categories</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">Ramblings of a cloud engineer</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/blog/">Archive</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">Tags</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">Categories</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-06-26 </span>
+        <div class="post-category">
+            <a href="/categories/go/"> go </a>
+            <a href="/categories/capa/"> capa </a>
+            </div>
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#hacking-on-capa---the-journey-of-implementing-a-nontrivial-feature-in-a-barely-known-codebase">Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase</a>
+      <ul>
+        <li><a href="#tldr">TL;DR</a></li>
+        <li><a href="#what-is-capa">What is CAPA</a></li>
+        <li><a href="#ipv6">IPv6</a>
+          <ul>
+            <li><a href="#how-do-i-approach-the-unknown">How do I approach the unknown</a></li>
+            <li><a href="#understanding-ipv6">Understanding IPv6</a></li>
+            <li><a href="#understanding-ipv6-in-relation-to-aws">Understanding IPv6 in relation to AWS</a></li>
+            <li><a href="#why-do-you-still-need-subnets">Why do you still need subnets?</a></li>
+            <li><a href="#private-networking">Private networking</a></li>
+          </ul>
+        </li>
+        <li><a href="#implementation-time">Implementation Time</a>
+          <ul>
+            <li><a href="#approaching-an-unknown-codebase">Approaching an unknown codebase</a></li>
+            <li><a href="#analysing-the-code">Analysing the code</a></li>
+            <li><a href="#update-test-update-test">Update, test, update, test&hellip;</a></li>
+          </ul>
+        </li>
+        <li><a href="#testing">Testing</a></li>
+      </ul>
+    </li>
+    <li><a href="#conclusion">Conclusion</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="hacking-on-capa---the-journey-of-implementing-a-nontrivial-feature-in-a-barely-known-codebase">Hacking on CAPA - The journey of implementing a nontrivial feature in a barely known codebase</h1>
+<p>Hello Dear readers.</p>
+<p>Today, I would like to write about a project I&rsquo;ve been working on these past months or so. This is a longer story
+and hopefully an interesting one to read.</p>
+<p>I&rsquo;m going to write about the journey I took while trying to implement IPv6 based Kubernetes cluster for <a href="https://github.com/kubernetes-sigs/cluster-api-provider-aws">CAPA</a>
+and EKS.</p>
+<p>The interesting points of this journey are twofold. First, understanding IPv6 in AWS land and how it&rsquo;s configured
+and how it works. What are it&rsquo;s limitations and requirements? Topology, routing, security groups, launch configuration,
+IAM roles, node policies&hellip; etc.</p>
+<p>The second part is the codebase of CAPA, which was largely unknown to me. What I&rsquo;m going to write about here is
+how I navigated these hurdles.</p>
+<h2 id="tldr">TL;DR</h2>
+<ul>
+<li>I take lots of notes and re-work these notes into a semi-zettelkasten format</li>
+<li>I read RFCs and documentations a couple times</li>
+<li>I start exploring the codebase by reading package information and going through a known code path like, creating a
+cluster and reading tests</li>
+<li>I had some prior knowledge due to working on a similar project at Weaveworks ( implementing ipv6 for eksctl )</li>
+<li>I had ample of help from one of the project maintainers who happens to work at Weaveworks</li>
+<li>I had some documentation already available on IPv6 and AWS and could compare to existing, working IPv6 clusters
+using eksctl</li>
+</ul>
+<h2 id="what-is-capa">What is CAPA</h2>
+<p>Before I begin, let&rsquo;s talk about what <a href="https://github.com/kubernetes-sigs/cluster-api-provider-aws">CAPA</a> is. It&rsquo;s a project which implements
+<a href="https://cluster-api.sigs.k8s.io/">cluster API</a> for Kubernetes using AWS. CAPI ( Cluster API ) is simply a set of API
+projects and tooling for Kubernetes to basically use Kubernetes programmatically. It provides a way to create
+clusters using a management cluster which runs the API code using a couple CRDs and controllers.</p>
+<p>Once you create your management cluster, you can apply a YAML template which will use the AWS API to create a set of
+objects for an EKS cluster. These are for example, IAM roles, a VPC, subnets, routing tables, security groups, IGWs, NAT gateways,
+instances and many many more things. Once that&rsquo;s done it will keep reconciling the cluster. Detect diffs and manage its
+state until you remove the resources for it ( the CRDs installed onto the management cluster ).</p>
+<h2 id="ipv6">IPv6</h2>
+<p>The first thing to tackle was understanding and knowing IPv6. Though, funny enough, as we&rsquo;ll see later, it wasn&rsquo;t a hard
+requirement. Never the less, it did me good to study up on it.</p>
+<h3 id="how-do-i-approach-the-unknown">How do I approach the unknown</h3>
+<p>The reason why I wanted to understand IPv6 was because of how to calculate subnets. Subnetting is an interesting topic
+in the land of IPs and one that isn&rsquo;t easy to grasp if you aren&rsquo;t into these kinds of things in the first place.</p>
+<p>I did learn how to calculate CIDRs for IPv4 so I thought it should be kind of in the same ballpark. It actually took me
+a while to find a resource which neatly explained the math behind the calculations and not just throw a website into my
+face into which you input a prefix range and done, you have your subnets. I rarely watch videos but <a href="https://www.youtube.com/watch?v=KSiZ751-Zs8">this</a> one has
+a neat explanation with detailed calculations and samples.</p>
+<p>What I do in these cases, is as follows. I open up a new page in my trusty notebook and start listing what things I
+can read or watch to understand the subject at hand better. Then I slowly start working down my list, taking notes from
+the material or video in a fashion similar as what is depicted in <a href="https://www.amazon.de/-/en/Fiona-McPherson/dp/1927166527/">Effective Note taking</a> book
+written by Dr. Fiona McPherson. I create concept graphs and various visuals and just write down my thoughts.</p>
+<p>I&rsquo;ll try to connect to future notes or write ideas next to it, things like &ldquo;Oh this will be useful when I do x,y,z&rdquo;.</p>
+<p>A page from one my notes:</p>
+<p><img src="/img/2022/06/27/notes-01.jpeg" alt="page1"></p>
+<p>This is in pre-review format. Once I&rsquo;m done with a material, I&rsquo;ll start translating the notes and get the gist of it into a
+semi-zettelkasten type of note system using Obsidian. Or if it makes more sense, I&rsquo;ll use a single obsidian note to
+collect all the things together. For this implementation I&rsquo;m doing on CAPA I have a single file which points to various
+other files with various other information about the code and about IPv6 itself.</p>
+<p>Once I translated my written notes, I&rsquo;ll move on to the next topic. I have lots of tags and always create back-links. I use
+something akin to <a href="https://zettelkasten.de/posts/overview/">Zettelkasten</a> but with a slight modification that sometimes
+my atomic notes contain a bit more information than a single idea.</p>
+<h4 id="why-use-a-notebook-in-the-digital-age">Why use a notebook in the digital age?</h4>
+<p>I like writing by hand. It gives me a motoric impression of the subject and drawing pictures is a lot easier. Also, I
+found if I take notes on the computer in Obsidian directly, I tend to ramble more because typing is so easy. Which leaves
+my notes full of unnecessary information that I have to go through when refining. Lots more to read. Further, typing is
+so easy indeed, that it&rsquo;s too easy. There are no motoric impressions, no muscle memory built no aid in thinking. And lastly,
+the linear nature of a notebook forces me to focus on a single thing at once unless I want my notes completely jumbled up.
+If I&rsquo;m on the computer I found I tend to jump around different subjects all the time and not finish what I started.</p>
+<p>This blog post&rsquo;s idea has its origins in a notebook.</p>
+<h3 id="understanding-ipv6">Understanding IPv6</h3>
+<p>The first step I took was to understand IPv6 itself. I already knew a couple of things about it, but I didn&rsquo;t intimately knew
+its structure and composition. The best way to know about these things is go to the source. I read a couple of RFCs
+about it. Notably <a href="https://datatracker.ietf.org/doc/html/rfc8200">RFC 8200 - The protocol itself</a> and <a href="https://datatracker.ietf.org/doc/html/rfc4291">RFC 4291 - The Address itself</a>.</p>
+<p>Reading these and taking notes and understanding the underlying technology made me not be afraid of it anymore. But also
+it had the added benefit of me understanding why some of the decisions were made at AWS. I have a saying.</p>
+<p>If you are afraid of it, you have to do it. If some technology or software concept or hard problem intimidates you THAT
+is a clear sign that you have to understand it and make it your own.</p>
+<p>Next, I watched the video about subnetting and read some posts, of which I saved the links and took some notes that I
+connected back to my existing notes, to get a large picture and the immediate usage and interesting parts of IPv6.</p>
+<p>It was time to put it all in perspective.</p>
+<h3 id="understanding-ipv6-in-relation-to-aws">Understanding IPv6 in relation to AWS</h3>
+<p>As always with AWS finding documentation which describes a feature in its completeness is near impossible. I found
+various blog posts, some hints here and there and when you open the EKS console page, there is an announcement at the
+top that they started supporting IPv6. That page contains some information about restrictions and requirements. But
+nothing profound enough to know how to call some APIs or what to set up or how routing works exactly. Or what to pass to
+the VPC. Or how to slice subnets not using eksctl and cloudformation.</p>
+<p>Lucky for me, I had some prior knowledge in the area. I work at <a href="https://weave.works/">https://weave.works/</a>. And at <code>eksctl</code> a couple of
+co-workers of mine already did some research and created some documentations that I was able to follow. But ultimately,
+that was using a different approach because it&rsquo;s using CloudFormation. But the notes on security groups and VPCs was
+invaluable.</p>
+<p>The other guide which helped me was the <a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-ug.pdf">VPC usage guide</a> and
+the IPv6 section. And the EKS usage guide and how to migrate to IPv6 clusters. There were numerous restrictions which
+helped me understand what I needed to create. I read these over 5-6 times.</p>
+<p>From all of these, notes taken into my trusty notebook in which I gathered together all the relevant information that I
+could connect to things I needed, I slowly put together an approach for CAPA.</p>
+<p>I also had the benefit that I could compare my CAPA created network topology to that of an <code>eksctl</code> created cluster. I
+could verify that the cluster created by CAPA had similar routings, VPCs and subnet configuration.</p>
+<p>For example, a &ldquo;private&rdquo; ( there is no such thing as private in the land of IPv6 ( there are no private/local ips ) )
+VPC configuration requires an Egress Only Internet Gateway for IPv6 clusters so network translation can still work.</p>
+<p>The most difficult part though to discover was subnetting.</p>
+<h4 id="the-journey-of-subnetting-ipv6">The journey of subnetting IPv6</h4>
+<p>My first approach was the mathematical one. I implemented code which would slice an IPv6 address into the needed number
+of subnets based on AZs that looked like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">SplitIntoSubnetsIPv6</span><span class="p">(</span><span class="nx">cidrBlock</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">numSubnets</span> <span class="kt">int</span><span class="p">)</span> <span class="p">([]</span><span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">IPNet</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">_</span><span class="p">,</span> <span class="nx">parent</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">ParseCIDR</span><span class="p">(</span><span class="nx">cidrBlock</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">Wrap</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="s">&#34;failed to parse CIDR&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+
+	<span class="nx">subnetBits</span> <span class="o">:=</span> <span class="nx">math</span><span class="p">.</span><span class="nf">Ceil</span><span class="p">(</span><span class="nx">math</span><span class="p">.</span><span class="nf">Log2</span><span class="p">(</span><span class="nb">float64</span><span class="p">(</span><span class="nx">numSubnets</span><span class="p">)))</span>
+	<span class="nx">networkLen</span><span class="p">,</span> <span class="nx">addrLen</span> <span class="o">:=</span> <span class="nx">parent</span><span class="p">.</span><span class="nx">Mask</span><span class="p">.</span><span class="nf">Size</span><span class="p">()</span>
+	<span class="nx">modifiedNetworkLen</span> <span class="o">:=</span> <span class="nx">networkLen</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nx">subnetBits</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="nx">modifiedNetworkLen</span> <span class="p">&gt;</span> <span class="nx">addrLen</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;cidr range %s cannot accommodate %d subnets&#34;</span><span class="p">,</span> <span class="nx">cidrBlock</span><span class="p">,</span> <span class="nx">numSubnets</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">addr</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">netaddr</span><span class="p">.</span><span class="nf">ParseIPv6Net</span><span class="p">(</span><span class="nx">cidrBlock</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">Wrapf</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="s">&#34;failed to parse network address %s&#34;</span><span class="p">,</span> <span class="nx">cidrBlock</span><span class="p">)</span>
+	<span class="p">}</span>
+
+	<span class="kd">var</span> <span class="nx">subnets</span> <span class="p">[]</span><span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">IPNet</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">numSubnets</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">subnetIP</span> <span class="o">:=</span> <span class="nx">addr</span><span class="p">.</span><span class="nf">NthSubnet</span><span class="p">(</span><span class="nb">uint</span><span class="p">(</span><span class="nx">modifiedNetworkLen</span><span class="p">),</span> <span class="nb">uint64</span><span class="p">(</span><span class="nx">i</span><span class="p">))</span>
+		<span class="k">if</span> <span class="nx">subnetIP</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;exceeded the subnet space with len %d&#34;</span><span class="p">,</span> <span class="nx">modifiedNetworkLen</span><span class="p">)</span>
+		<span class="p">}</span>
+		<span class="nx">parsedSubnetIP</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">ParseCIDR</span><span class="p">(</span><span class="nx">subnetIP</span><span class="p">.</span><span class="nf">Long</span><span class="p">())</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+		<span class="p">}</span>
+		<span class="nx">v</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">net</span><span class="p">.</span><span class="nx">IPNet</span><span class="p">{</span>
+			<span class="nx">IP</span><span class="p">:</span>   <span class="nx">parsedSubnetIP</span><span class="p">,</span>
+			<span class="nx">Mask</span><span class="p">:</span> <span class="nx">net</span><span class="p">.</span><span class="nf">CIDRMask</span><span class="p">(</span><span class="nx">modifiedNetworkLen</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+		<span class="p">}</span>
+		<span class="nx">subnets</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">subnets</span><span class="p">,</span> <span class="nx">v</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">subnets</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>It&rsquo;s using a library to calculate the actual new IP based on <code>NthSubnet</code>. I did some bit shifting myself, but that turned
+out to be not so error resilient and didn&rsquo;t handle some edge cases that the library already did.</p>
+<p>However, this research all turned out to be mute once I re-read my notes and some of the docs and I internalized the point
+that all subnets have a fixed prefix length of <code>64</code>. And further reading about subnet IDs in IPv6 and creating IPv6
+clusters using the console it became apparent that subnets are super easy, barely an inconvenience.</p>
+<p>See, it basically works like this. You get an IPv6 pool and an IPv6 address with a fixed prefix length of 56. You need to
+switch that to 64 and just increase the subnet ID for any further subnets. This looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">SplitIntoSubnetsIPv6</span><span class="p">(</span><span class="nx">cidrBlock</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">numSubnets</span> <span class="kt">int</span><span class="p">)</span> <span class="p">([]</span><span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">IPNet</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">_</span><span class="p">,</span> <span class="nx">ipv6CidrBlock</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">ParseCIDR</span><span class="p">(</span><span class="nx">cidrBlock</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to parse cidr block %s with error: %w&#34;</span><span class="p">,</span> <span class="nx">cidrBlock</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="c1">// update the prefix to 64.
+</span><span class="c1"></span>	<span class="nx">ipv6CidrBlock</span><span class="p">.</span><span class="nx">Mask</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">CIDRMask</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+	<span class="kd">var</span> <span class="p">(</span>
+		<span class="nx">subnets</span> <span class="p">[]</span><span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">IPNet</span>
+	<span class="p">)</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">numSubnets</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">ipv6CidrBlock</span><span class="p">.</span><span class="nx">IP</span><span class="p">[</span><span class="nx">subnetIDLocation</span><span class="p">]</span><span class="o">++</span>
+		<span class="nx">newIP</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">ParseIP</span><span class="p">(</span><span class="nx">ipv6CidrBlock</span><span class="p">.</span><span class="nx">IP</span><span class="p">.</span><span class="nf">String</span><span class="p">())</span>
+		<span class="nx">v</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">net</span><span class="p">.</span><span class="nx">IPNet</span><span class="p">{</span>
+			<span class="nx">IP</span><span class="p">:</span>   <span class="nx">newIP</span><span class="p">,</span>
+			<span class="nx">Mask</span><span class="p">:</span> <span class="nx">net</span><span class="p">.</span><span class="nf">CIDRMask</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+		<span class="p">}</span>
+		<span class="nx">subnets</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">subnets</span><span class="p">,</span> <span class="nx">v</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">subnets</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Boom. And that&rsquo;s all there is to it! That&rsquo;s mostly what the CloudFormation is doing internally too.</p>
+<h3 id="why-do-you-still-need-subnets">Why do you still need subnets?</h3>
+<p>Once I gathered all resources that needed updates, it was time to write them down. Subnets and networking are obviously
+the two big hitters. With IPv4 we needed the separation and a thing called <code>SecondaryCidrBlock</code> because you can easily
+run out of ips. With IPv6 you don&rsquo;t need to worry about that. However, we do still need to subnet, because we want
+resiliency through availability zones. Each AZ gets a subnet and an assigned IPv6 address.</p>
+<h3 id="private-networking">Private networking</h3>
+<p>Another thing of the past is private networking. There no private addresses or local addresses for IPv6. All IPv6
+addresses are public. Which means, we need another way of defining a private network. That is achieved through security
+groups and routing. The routes will have a new resource called <code>EgressOnlyInternetGateway</code>. Which is basically what it
+says. An IWG which works with IPv6 addresses, allows for outgoing communication through IPv6 but blocks all incoming
+data through IPv6.</p>
+<h2 id="implementation-time">Implementation Time</h2>
+<p>Alright. With these things out of the way, it was time to get acquainted with the source code.</p>
+<h3 id="approaching-an-unknown-codebase">Approaching an unknown codebase</h3>
+<p>I had the a couple of things on my side.</p>
+<ul>
+<li>I had ample of experience with working with controllers in Kubernetes</li>
+<li>I had personally wrote couple of projects which worked with AWS and the GO SDK</li>
+<li>I had experience in working with AWS in general</li>
+<li>I had one of the maintainers as a colleague working here at Weaveworks</li>
+</ul>
+<p>How did these things help me? Let&rsquo;s take a look.</p>
+<p>The fact that I already worked with a lot of controllers makes me aware of a couple of things when working with such a
+codebase. What are these?</p>
+<ul>
+<li>The API is versioned in a certain way like <code>alphav1</code> and <code>alphav2</code> and <code>betav1</code> and so on</li>
+<li>Lots and LOTS of generated code</li>
+<li>Controller lifecycle
+<ul>
+<li>What does this mean? This has a couple of baggages when you think about it. The code has a reconciliation loop
+which takes care of creating, updating and deleting resources based on their state. But this also means that you
+have to always consider existing infrastructure and objects in Kubernetes. And when deleting you always have to be
+aware of finalizers.</li>
+</ul>
+</li>
+<li>Unit testing and mocking calls and Kubernetes</li>
+<li>Certain package structure and code constructs</li>
+</ul>
+<p>All these helped me massively to discover where things are and why. Richard ( the maintainer ) talked us through a general
+flow and from there it was easier to go with the flow. And he was constantly available when I was stuck at a certain part
+like conversions&hellip;</p>
+<h3 id="analysing-the-code">Analysing the code</h3>
+<p>When faced with the unknown you must find what you might no in relation. I already knew it creates a cluster and that
+cluster has resources and log outputs. So&hellip; follow the flow. I started checking out the code and followed a <code>create</code>
+code path. How a cluster is reconciled.</p>
+<p>I started taking notes and write down which package and path did what. I started following <code>reconcileCluster</code>.
+This is the main flow. It contained everything. I glanced over the sub flows of reconciling providers and security groups
+and the likes, but I mainly kept with the main flow.</p>
+<p>This limitation allowed me to focus on the most important bits. Where code lives, why and how it is configured.
+Once I knew all of these things, I could focus on various sub-flows. Since my main focus was altering the network and
+instance bits, I focused on <code>ReconcileNetwork</code> flow and Machines.</p>
+<p>Again, same thing. Go over the main flow, follow the code path, see how things are set up where they live and why, but
+don&rsquo;t go too deep. Once the main flow is understood, follow the sub-flow, like <code>reconcileVPC</code>.</p>
+<h3 id="update-test-update-test">Update, test, update, test&hellip;</h3>
+<p>Once I got a feel for things and noted down places where I probably will have to update something, I started updating
+things incrementally. Small bits at a time. My first update, for example, was this trivial thing:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="c1">// EnableIPv6 requests an Amazon-provided IPv6 CIDR block with a /56 prefix length for
+</span><span class="c1"></span>	<span class="c1">// the VPC. You cannot specify the range of IP addresses, or the size of the
+</span><span class="c1"></span>	<span class="c1">// CIDR block.
+</span><span class="c1"></span>	<span class="c1">// +optional
+</span><span class="c1"></span>	<span class="nx">EnableIPv6</span> <span class="kt">bool</span> <span class="s">`json:&#34;enableIPv6&#34;`</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Basically I started updating the config types. It was a small, trivial thin to add but it got the ball rolling. Which
+is the most important part of tackling a hard problem. When the codebase is daunting and you have no idea where to even
+begin, a tiny update can make all the differences. It gets you started. It gives you an entry point.</p>
+<p>I started adding more new settings and types and once I had all the settings I could think of, I started writing code
+which actually used them. First, gradually. Things like these came in to picture:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">		<span class="nx">s</span><span class="p">.</span><span class="nx">scope</span><span class="p">.</span><span class="nf">VPC</span><span class="p">().</span><span class="nx">EnableIPv6</span> <span class="p">=</span> <span class="nx">vpc</span><span class="p">.</span><span class="nx">EnableIPv6</span>
+		<span class="nx">s</span><span class="p">.</span><span class="nx">scope</span><span class="p">.</span><span class="nf">VPC</span><span class="p">().</span><span class="nx">IPv6CidrBlock</span> <span class="p">=</span> <span class="nx">vpc</span><span class="p">.</span><span class="nx">IPv6CidrBlock</span>
+		<span class="nx">s</span><span class="p">.</span><span class="nx">scope</span><span class="p">.</span><span class="nf">VPC</span><span class="p">().</span><span class="nx">IPv6Pool</span> <span class="p">=</span> <span class="nx">vpc</span><span class="p">.</span><span class="nx">IPv6Pool</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Just a trivial assignment. Then a tiny bit of logic&hellip;</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">if</span> <span class="p">!</span><span class="nx">s</span><span class="p">.</span><span class="nx">scope</span><span class="p">.</span><span class="nf">VPC</span><span class="p">().</span><span class="nx">EnableIPv6</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="o">&amp;</span><span class="nx">infrav1</span><span class="p">.</span><span class="nx">VPCSpec</span><span class="p">{</span>
+			<span class="nx">ID</span><span class="p">:</span>        <span class="o">*</span><span class="nx">out</span><span class="p">.</span><span class="nx">Vpc</span><span class="p">.</span><span class="nx">VpcId</span><span class="p">,</span>
+			<span class="nx">CidrBlock</span><span class="p">:</span> <span class="o">*</span><span class="nx">out</span><span class="p">.</span><span class="nx">Vpc</span><span class="p">.</span><span class="nx">CidrBlock</span><span class="p">,</span>
+			<span class="nx">Tags</span><span class="p">:</span>      <span class="nx">converters</span><span class="p">.</span><span class="nf">TagsToMap</span><span class="p">(</span><span class="nx">out</span><span class="p">.</span><span class="nx">Vpc</span><span class="p">.</span><span class="nx">Tags</span><span class="p">),</span>
+		<span class="p">},</span> <span class="kc">nil</span>
+	<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Deal with things that returned with normal flow. Here, the important part is that CIDR block is defined instead of
+<code>IPv6CidrBlock</code>.</p>
+<p>These small, incremental updates, eventually lead to this pr: <a href="https://github.com/kubernetes-sigs/cluster-api-provider-aws/pull/3513">PR</a>. As of this writing it needs some validations added
+and an e2e test, but it&rsquo;s pretty much complete.</p>
+<h2 id="testing">Testing</h2>
+<p>Tests are super important in a new codebase ( in an old one too, but that&rsquo;s a different story ). Reading the tests helps
+me understand somewhat how the code is structured and what it does and why and what calls are expected to happen. What I
+do is, that I fiddle with the code and start to run the unit tests and see what things fail. That gives me more
+insight into how the thing I just changed works. This is invaluable when I&rsquo;m facing code which is difficult to decipher.</p>
+<p>Write tests folks! I don&rsquo;t care if you use TDD or not, jut PLEASE write tests!</p>
+<h1 id="conclusion">Conclusion</h1>
+<p>If you made it this far, congratulations! You deserve a cookie. This has been my journey in understanding a fairly new
+thing and implementing it into a largely unknown codebase. How I approached it and how I eventually ended up writing
+around +2500 lines of code. You got some insight into how I take notes and how I figure out a larger problem in an
+unknown environment. I hope it was a good read and worth your time.</p>
+<p>Thank you for reading!</p>
+<p>Gergely.</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        
+        <a class="next" href="/2022/05/16/dependabot-bundler/">
+            <span class="next-text nav-default">Dependabot Bundler</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        <div id="disqus_thread"></div>
+    <script type="text/javascript">
+    (function() {
+      
+      
+      if (window.location.hostname === 'localhost') return;
+
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      var disqus_shortname = 'hannibalDisqus';
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="https://twitter.com/skarlso" class="iconfont icon-twitter" title="twitter"></a>
+      <a href="https://github.com/Skarlso" class="iconfont icon-github" title="github"></a>
+  <a href="https://skarlso.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+     - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>Gergely Brautigam</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  <script type="text/javascript" src="/lib/jquery/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="/lib/slideout/slideout-1.0.1.min.js"></script>
+  
+
+
+
+<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-69463020-2', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
