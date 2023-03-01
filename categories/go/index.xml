@@ -6,7 +6,1574 @@
     <description>Recent content in Go on Ramblings of a cloud engineer</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 19 Oct 2022 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/go/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 25 Feb 2023 01:01:00 +0100</lastBuildDate><atom:link href="https://skarlso.github.io/categories/go/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Rapid Kubernetes Controller Development with Tilt</title>
+      <link>https://skarlso.github.io/2023/02/25/rapid-controller-development-with-tilt/</link>
+      <pubDate>Sat, 25 Feb 2023 01:01:00 +0100</pubDate>
+      
+      <guid>https://skarlso.github.io/2023/02/25/rapid-controller-development-with-tilt/</guid>
+      <description><![CDATA[<p>Welcome dear reader.</p>
+<p>Today, we are going to dive into how to use <a href="https://tilt.dev">Tilt</a> to speed up the feedback loop of developing a
+Kubernetes controller. We are going to do that using an open-source project called <a href="https://ocm.software">OCM</a> which has
+a controller called <a href="github.com/open-component-model/ocm-controller">ocm-controller</a>. I&rsquo;m going to walk through the
+following process:</p>
+<ul>
+<li>researching tilt</li>
+<li>what it could do for me</li>
+<li>understanding the Tilt file</li>
+<li>trivial mapping of the developer process</li>
+<li>understanding Starlark</li>
+<li>adding more features</li>
+<li>tackling hot swapping</li>
+<li>troubleshooting</li>
+</ul>
+<p>Let&rsquo;s dive in.</p>
+<h1 id="rapid-controller-development-with-tilt">Rapid controller development with Tilt</h1>
+<h2 id="tilt">Tilt</h2>
+<p><img src="/img/2023/02/25/tilt.png" alt="tilt"></p>
+<p>If you know some things about Tilt already, skip ahead to where I&rsquo;ll be applying its concepts to the controller <a href="#development-process-of-an-controller">here</a>.</p>
+<h3 id="what-is-tilt">What is Tilt</h3>
+<p>Tilt is a tool we can use to automate build and deploy processes for microservices. Technically, it can handle so much
+more than just a simple controller, but we are going to use this example to keep it simple for a first start.</p>
+<h3 id="what-can-it-do">What can it do</h3>
+<p>It is <em>almost</em> like a controller itself. It has an internal control loop that constantly &ldquo;reconciles&rdquo; the environment to
+make sure it&rsquo;s up-to-date. I&rsquo;m using quotes because it&rsquo;s not 100% like that. It doesn&rsquo;t recreate if something is
+deleted. But it <em>does</em> update them if the configuration changes. For example, if you create a secret with an incorrect
+name, and change its name, there won&rsquo;t be two secrets, one with the correct name, and the other with an incorrect name,
+but one secret with the correct name.</p>
+<h3 id="reading-the-documentation---where-to-start">Reading the documentation - where to start</h3>
+<p><img src="/img/2023/02/25/documentation-hell.png" alt="document-hell"></p>
+<p>You can start by visiting the <a href="https://docs.tilt.dev">docs</a> and then jumping right into <a href="https://docs.tilt.dev/tutorial/index.html">First Look At Tilt</a>.</p>
+<p>This will guide you through setting up Tilt. There is one thing I don&rsquo;t like here&hellip; It&rsquo;s starting by using a demo
+application and a special command called <code>tilt demo</code>. I believe that this is not a great way to begin because you will
+<em>never</em> run this command again. I would have preferred to do a walkthrough like the one I&rsquo;m going to write now. But,
+this is <em>my</em> view. Others might find the demo app more useful. Nevertheless, it&rsquo;s useful to read through it to understand
+the basic concepts and the application (avatar generator) is pretty sweet!</p>
+<h4 id="concepts">Concepts</h4>
+<p>You can read all about the concepts <a href="https://docs.tilt.dev/tiltfile_concepts.html">here</a>.</p>
+<p>TL;DR:</p>
+<p>Tilt uses building blocks called <a href="https://docs.tilt.dev/tiltfile_concepts.html#resources">Resources</a> that it manages.
+A resource can be anything from a Deployment or a local file or a script or a service. It does that so it can track
+them separately and display them in a shiny UI.</p>
+<h4 id="control-loop">Control Loop</h4>
+<p>The control loop is described <a href="https://docs.tilt.dev/tutorial/2-tilt-up.html#the-control-loop">here</a>.</p>
+<p>TL;DR:</p>
+<p>It&rsquo;s a feedback loop around things that happen and things that Tilt watches. Tilt continuously watches resources and
+reacts to their changes in ways that are described in the Tiltfile. Another interesting effect of this is that if a
+resource is already running in your cluster it won&rsquo;t try to rebuild/redeploy that.</p>
+<h4 id="tiltfile">Tiltfile</h4>
+<p>We are going to dive deep into the Tiltfile a bit later, for now, it&rsquo;s the main file that describes the behavior of tilt.
+It&rsquo;s using <a href="https://github.com/bazelbuild/starlark">Starlark</a> which is a dialect of Python. Here is an example:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># Define a number</span>
+<span class="n">number</span> <span class="o">=</span> <span class="mi">18</span>
+
+<span class="c1"># Define a dictionary</span>
+<span class="n">people</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&#34;Alice&#34;</span><span class="p">:</span> <span class="mi">22</span><span class="p">,</span>
+    <span class="s2">&#34;Bob&#34;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+    <span class="s2">&#34;Charlie&#34;</span><span class="p">:</span> <span class="mi">55</span><span class="p">,</span>
+    <span class="s2">&#34;Dave&#34;</span><span class="p">:</span> <span class="mi">14</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">names</span> <span class="o">=</span> <span class="s2">&#34;, &#34;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">people</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>  <span class="c1"># Alice, Bob, Charlie, Dave</span>
+
+<span class="c1"># Define a function</span>
+<span class="k">def</span> <span class="nf">greet</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="s2">&#34;&#34;&#34;Return a greeting.&#34;&#34;&#34;</span>
+    <span class="k">return</span> <span class="s2">&#34;Hello {}!&#34;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+<span class="n">greeting</span> <span class="o">=</span> <span class="n">greet</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+
+<span class="n">above30</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">age</span> <span class="ow">in</span> <span class="n">people</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">age</span> <span class="o">&gt;=</span> <span class="mi">30</span><span class="p">]</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s2">&#34;{} people are above 30.&#34;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">above30</span><span class="p">)))</span>
+
+<span class="k">def</span> <span class="nf">fizz_buzz</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="s2">&#34;&#34;&#34;Print Fizz Buzz numbers from 1 to n.&#34;&#34;&#34;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s2">&#34;&#34;</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">3</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="s2">&#34;Fizz&#34;</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">5</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="s2">&#34;Buzz&#34;</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">s</span> <span class="k">if</span> <span class="n">s</span> <span class="k">else</span> <span class="n">i</span><span class="p">)</span>
+
+<span class="n">fizz_buzz</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This syntax is used for configuration. As you can see, it supports various Python things which give the user the ability
+to do virtually anything in Tilt.</p>
+<ul>
+<li>download yaml manifests</li>
+<li>mutate objects</li>
+<li>changes deployments before applying them ( this will be important later )</li>
+<li>run a local script</li>
+<li>fetch something from a remote location</li>
+</ul>
+<p>Anything is possible.</p>
+<p>A Tiltfile has a bunch of built-in functions and APIs which are described <a href="https://api.tilt.dev/">here</a>.</p>
+<p>However, I found that <a href="https://docs.tilt.dev/api.html">THIS API</a> page will be your best friend together with the
+extensions list <a href="https://github.com/tilt-dev/tilt-extensions">Tilt Extensions</a>. Tilt&rsquo;s functionality is extended using
+extensions that are loaded using an expression like this <code>load('ext://restart_process', 'docker_build_with_restart')</code>.</p>
+<p>During troubleshooting, reading the extension&rsquo;s code or documentation can often be helpful.</p>
+<p>The <a href="https://docs.tilt.dev/tiltfile_authoring.html">Writing your first Tiltfile</a> guide is pretty good though for
+demystifying and understanding the dialect. It&rsquo;s rather basic but that&rsquo;s all you need to get started. So next, let&rsquo;s
+dive into how to gradually build up a complex Tiltfile and development process.</p>
+<h2 id="the-development-process-of-a-controller">The development process of a controller</h2>
+<p><img src="/img/2023/02/25/yaml-hell.png" alt="yaml-hell"></p>
+<h3 id="basic-flow">Basic flow</h3>
+<p>When you are building a controller you have a couple of choices:</p>
+<ul>
+<li>
+<p>run the controller locally on your machine by calling the compile manager binary
+Most of the time you&rsquo;d do this but by doing this, you are skipping testing in cluster communication, RBAC, service
+discovery, etc. Also, it gets cumbersome to constantly port-forward other services being used by your controller to
+access them.</p>
+</li>
+<li>
+<p>build a container and push it to a registry and publish the deployment with the given container image and tag
+This is good if you want to test the release process of new containers. But takes a lot of time.</p>
+</li>
+<li>
+<p>use a local docker registry with kind (<a href="https://kind.sigs.k8s.io/docs/user/local-registry/">https://kind.sigs.k8s.io/docs/user/local-registry/</a>) and do a cycle of constant
+build/push/deploy like this</p>
+</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">docker build -t localhost:5001/open-component-model/ocm-controller:v0.0.1 .
+...
+docker push localhost:5001/open-component-model/ocm-controller:v0.0.1
+</code></pre></td></tr></table>
+</div>
+</div><p>All of these take time. Building a docker container, even when it&rsquo;s reusing layers, takes time. For <code>ocm-controller</code>, on
+my machine, it takes about two minutes or so. Then push and deploy takes another couple of seconds.</p>
+<p>Tilt can help a lot in speeding up this process. We&rsquo;ll see about that later.</p>
+<h3 id="mapping-flow-to-tiltfile">Mapping flow to Tiltfile</h3>
+<p><img src="/img/2023/02/25/tilt-go-with-the-flow.png" alt="tilt-with-the-flow"></p>
+<p>We are going to choose the third option. Tilt has its local registry and uses unique build tags for each container to be
+able to debug problems for a specific change.</p>
+<p>As a first step, to keep it simple, we map the process of installing controller resources and deploying them using
+`docker_build``.</p>
+<p>Usually, a controller uses <code>kustomize</code>. Tilt can leverage that. We can use <code>kustomize</code> to build a single install file
+that will create the deployment, the RBAX roles, and any other thing, like patches, configuration and the CRDs.</p>
+<p>To do this, we simply run <code>kustomize</code> build ./config/default &gt; install.yaml<code>. The </code>install.yaml` will contain everything
+that can be applied to the cluster as is. Tilt can do the same thing using a very simple directive. Take a look at our
+first draft of a Tiltfile:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># Apply the install file to the cluster</span>
+<span class="n">k8s_yaml</span><span class="p">(</span><span class="n">kustomize</span><span class="p">(</span><span class="s1">&#39;config/default&#39;</span><span class="p">))</span>
+
+<span class="n">docker_build</span><span class="p">(</span><span class="s1">&#39;ghcr.io/open-component-model/ocm-controller&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>By defining the <code>docker_build</code> directive we make it possible for Tilt to use a local registry. Internally, it will do its
+magic and change the deployment&rsquo;s image to the right registry address.</p>
+<p>In reality, this is the actual deployment that will be used:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">Image</span><span class="p">:</span><span class="w">      </span><span class="l">localhost:5001/ghcr.io_open-component-model_ocm-controller:tilt-772cb281aa593470</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>Now, we can try and test our Tiltfile. To use tilt, simply run <code>tilt up</code> next to the Tiltfile.
+Press <code>space</code> and you should see your deployment starting up. Any errors will nicely be displayed on the respective
+resource.</p>
+<p>If we make any changes to any of the files now, tilt will rebuild the entire container. This is already nice because
+this means that you don&rsquo;t have to bother with building, pushing and updating the kustomize manifest to use the local
+registry. Tilt will take care of all that for us.</p>
+<p>But wait&hellip; there is more!</p>
+<h3 id="introducing-settings">Introducing settings</h3>
+<p>For now, let&rsquo;s upgrade our Tilt experience with a couple of settings so any user can customize their deployment for
+themselves. Starlark is just a Python dialect so we can do something like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># -*- mode: Python -*-</span>
+
+<span class="n">kubectl_cmd</span> <span class="o">=</span> <span class="s2">&#34;kubectl&#34;</span>
+
+<span class="c1"># verify kubectl command exists</span>
+<span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">(</span><span class="s2">&#34;command -v &#34;</span> <span class="o">+</span> <span class="n">kubectl_cmd</span> <span class="o">+</span> <span class="s2">&#34; || true&#34;</span><span class="p">,</span> <span class="n">quiet</span> <span class="o">=</span> <span class="bp">True</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&#34;&#34;</span><span class="p">:</span>
+    <span class="n">fail</span><span class="p">(</span><span class="s2">&#34;Required command &#39;&#34;</span> <span class="o">+</span> <span class="n">kubectl_cmd</span> <span class="o">+</span> <span class="s2">&#34;&#39; not found in PATH&#34;</span><span class="p">)</span>
+
+<span class="c1"># set defaults</span>
+<span class="n">settings</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&#34;create_secrets&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enable&#34;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+        <span class="s2">&#34;token&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_TOKEN&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;email&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_EMAIL&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;user&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_USER&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;forward_registry&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+    <span class="s2">&#34;verification_keys&#34;</span><span class="p">:</span> <span class="p">{},</span>
+<span class="p">}</span>
+
+<span class="c1"># global settings</span>
+<span class="n">tilt_file</span> <span class="o">=</span> <span class="s2">&#34;./tilt-settings.yaml&#34;</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&#34;./tilt-settings.yaml&#34;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&#34;./tilt-settings.json&#34;</span>
+<span class="n">settings</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">read_yaml</span><span class="p">(</span>
+    <span class="n">tilt_file</span><span class="p">,</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="p">{},</span>
+<span class="p">))</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Okay, <em>what</em> is happening here? Let&rsquo;s break it down.</p>
+<p><code>kubectl_cmd</code> is just a convenient variable so we don&rsquo;t have to repeat the command as a string.</p>
+<p>The next section checks whether the <code>kubectl</code> command exists. We are using a tilt built-in command called <code>local</code> to
+execute a local command called <code>command</code>.</p>
+<p>Now comes the interesting part. We define a dict. This is something akin to dict, but it&rsquo;s a Starlark dict. You can
+check the dialect definition in the <a href="https://github.com/bazelbuild/starlark/blob/master/spec.md">Specification</a>.
+This doc will also be your best friend. The <a href="https://github.com/bazelbuild/starlark/blob/master/spec.md#dict">dict</a> can be found here.</p>
+<p>Next, we define the variable <code>tilt_file</code> and assign it either <code>json</code> or a <code>yaml</code> extension with the name <code>tilt-settings</code>.
+After this comes another built-in directive called <code>read_yaml</code>. This is a versatile directive that will produce a yaml
+output from the given file. If the file is not found it will use <code>default</code> to set some default values. <code>update</code> will
+merge the two produced dict results.</p>
+<p>So, with a local file like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">create_secrets</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>We&rsquo;ll get a dict like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="n">settings</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&#34;create_secrets&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enable&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;forward_registry&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+    <span class="s2">&#34;verification_keys&#34;</span><span class="p">:</span> <span class="p">{},</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>We can override any values in our settings and customize the deployment.</p>
+<h3 id="adding-more-features">Adding more features</h3>
+<p><img src="/img/2023/02/25/feature-hell.png" alt="feature-hell"></p>
+<p>Let&rsquo;s add some more features. ocm uses <a href="https://github.com/fluxcd/flux2">flux</a> for deployment and various other tasks.
+To help the user, add a simple flux bootstrap OR install. Maybe the user doesn&rsquo;t want to bootstrap a repository but
+does want flux CRDs and components installed in the cluster. The two commands we would like to replicate are:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">flux bootstrap github --owner=skarlso --repository=ocm-flux-example --path .
+</code></pre></td></tr></table>
+</div>
+</div><p>and simply</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">flux install
+</code></pre></td></tr></table>
+</div>
+</div><p>&hellip; depending on the user&rsquo;s choice. First, we&rsquo;ll extend our settings:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="n">settings</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&#34;flux&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enabled&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s2">&#34;bootstrap&#34;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+        <span class="s2">&#34;repository&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_REPOSITORY&#34;</span><span class="p">,</span> <span class="s2">&#34;podinfo-flux-example&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;owner&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_OWNER&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;path&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_PATH&#34;</span><span class="p">,</span> <span class="s2">&#34;.&#34;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;create_secrets&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enable&#34;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+        <span class="s2">&#34;token&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_TOKEN&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;email&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_EMAIL&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;user&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_USER&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;forward_registry&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+    <span class="s2">&#34;verification_keys&#34;</span><span class="p">:</span> <span class="p">{},</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Here, we used another built-in directive with <code>os.getenv</code>. These could just be empty, but we give the option of users
+to define environment properties instead of a file. Whichever is more convenient.</p>
+<p>Now, we&rsquo;ll add the flux commands:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="n">flux_cmd</span> <span class="o">=</span> <span class="s1">&#39;flux&#39;</span>
+
+<span class="n">opts</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;flux&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;enabled&#34;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">(</span><span class="s2">&#34;command -v &#34;</span> <span class="o">+</span> <span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34; || true&#34;</span><span class="p">,</span> <span class="n">quiet</span> <span class="o">=</span> <span class="bp">True</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&#34;&#34;</span><span class="p">:</span>
+        <span class="n">fail</span><span class="p">(</span><span class="s2">&#34;Required command &#39;&#34;</span> <span class="o">+</span> <span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34;&#39; not found in PATH&#34;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;bootstrap&#34;</span><span class="p">):</span>
+        <span class="n">local</span><span class="p">(</span><span class="s2">&#34;</span><span class="si">%s</span><span class="s2"> bootstrap github --owner </span><span class="si">%s</span><span class="s2"> --repository </span><span class="si">%s</span><span class="s2"> --path </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">flux_cmd</span><span class="p">,</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;owner&#39;</span><span class="p">),</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;repository&#39;</span><span class="p">),</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">local</span><span class="p">(</span><span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34; install&#34;</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Super easy. This feels familiar, doesn&rsquo;t it? It&rsquo;s just like when you first began using something like Ansible to code down
+some deployment or translate some weird script into a higher-order definition or a DSL.</p>
+<p>Let&rsquo;s go one step further and try to make this nicer to read by using functions.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">bootstrap_or_install_flux</span><span class="p">():</span>
+    <span class="n">opts</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;flux&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;enabled&#34;</span><span class="p">):</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">(</span><span class="s2">&#34;command -v &#34;</span> <span class="o">+</span> <span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34; || true&#34;</span><span class="p">,</span> <span class="n">quiet</span> <span class="o">=</span> <span class="bp">True</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&#34;&#34;</span><span class="p">:</span>
+        <span class="n">fail</span><span class="p">(</span><span class="s2">&#34;Required command &#39;&#34;</span> <span class="o">+</span> <span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34;&#39; not found in PATH&#34;</span><span class="p">)</span>
+
+    <span class="c1"># flux bootstrap github --owner=${FLUX_OWNER} --repository=${FLUX_REPOSITORY} --path ${FLUX_PATH}</span>
+    <span class="k">if</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;bootstrap&#34;</span><span class="p">):</span>
+        <span class="n">local</span><span class="p">(</span><span class="s2">&#34;</span><span class="si">%s</span><span class="s2"> bootstrap github --owner </span><span class="si">%s</span><span class="s2"> --repository </span><span class="si">%s</span><span class="s2"> --path </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">flux_cmd</span><span class="p">,</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;owner&#39;</span><span class="p">),</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;repository&#39;</span><span class="p">),</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">local</span><span class="p">(</span><span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34; install&#34;</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>How does our complete Tiltfile now look like, you might wonder. Let&rsquo;s take a look:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># -*- mode: Python -*-</span>
+
+<span class="n">kubectl_cmd</span> <span class="o">=</span> <span class="s2">&#34;kubectl&#34;</span>
+<span class="n">flux_cmd</span> <span class="o">=</span> <span class="s2">&#34;flux&#34;</span>
+
+<span class="c1"># verify kubectl command exists</span>
+<span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">(</span><span class="s2">&#34;command -v &#34;</span> <span class="o">+</span> <span class="n">kubectl_cmd</span> <span class="o">+</span> <span class="s2">&#34; || true&#34;</span><span class="p">,</span> <span class="n">quiet</span> <span class="o">=</span> <span class="bp">True</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&#34;&#34;</span><span class="p">:</span>
+    <span class="n">fail</span><span class="p">(</span><span class="s2">&#34;Required command &#39;&#34;</span> <span class="o">+</span> <span class="n">kubectl_cmd</span> <span class="o">+</span> <span class="s2">&#34;&#39; not found in PATH&#34;</span><span class="p">)</span>
+
+<span class="c1"># set defaults</span>
+<span class="n">settings</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&#34;flux&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enabled&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s2">&#34;bootstrap&#34;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+        <span class="s2">&#34;repository&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_REPOSITORY&#34;</span><span class="p">,</span> <span class="s2">&#34;podinfo-flux-example&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;owner&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_OWNER&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;path&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_PATH&#34;</span><span class="p">,</span> <span class="s2">&#34;.&#34;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;forward_registry&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+    <span class="s2">&#34;verification_keys&#34;</span><span class="p">:</span> <span class="p">{},</span>
+<span class="p">}</span>
+
+<span class="c1"># global settings</span>
+<span class="n">tilt_file</span> <span class="o">=</span> <span class="s2">&#34;./tilt-settings.yaml&#34;</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&#34;./tilt-settings.yaml&#34;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&#34;./tilt-settings.json&#34;</span>
+<span class="n">settings</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">read_yaml</span><span class="p">(</span>
+    <span class="n">tilt_file</span><span class="p">,</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="p">{},</span>
+<span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">bootstrap_or_install_flux</span><span class="p">():</span>
+    <span class="n">opts</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;flux&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;enabled&#34;</span><span class="p">):</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">(</span><span class="s2">&#34;command -v &#34;</span> <span class="o">+</span> <span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34; || true&#34;</span><span class="p">,</span> <span class="n">quiet</span> <span class="o">=</span> <span class="bp">True</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&#34;&#34;</span><span class="p">:</span>
+        <span class="n">fail</span><span class="p">(</span><span class="s2">&#34;Required command &#39;&#34;</span> <span class="o">+</span> <span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34;&#39; not found in PATH&#34;</span><span class="p">)</span>
+
+    <span class="c1"># flux bootstrap github --owner=${FLUX_OWNER} --repository=${FLUX_REPOSITORY} --path ${FLUX_PATH}</span>
+    <span class="k">if</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;bootstrap&#34;</span><span class="p">):</span>
+        <span class="n">local</span><span class="p">(</span><span class="s2">&#34;</span><span class="si">%s</span><span class="s2"> bootstrap github --owner </span><span class="si">%s</span><span class="s2"> --repository </span><span class="si">%s</span><span class="s2"> --path </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">flux_cmd</span><span class="p">,</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;owner&#39;</span><span class="p">),</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;repository&#39;</span><span class="p">),</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">local</span><span class="p">(</span><span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34; install&#34;</span><span class="p">)</span>
+
+
+<span class="c1"># set up the development environment</span>
+
+<span class="c1"># check if flux is needed</span>
+<span class="n">bootstrap_or_install_flux</span><span class="p">()</span>
+
+<span class="c1"># Use kustomize to build the install yaml files</span>
+<span class="n">k8s_yaml</span><span class="p">(</span><span class="n">kustomize</span><span class="p">(</span><span class="s1">&#39;config/default&#39;</span><span class="p">))</span>
+
+<span class="n">docker_build</span><span class="p">(</span><span class="s1">&#39;ghcr.io/open-component-model/ocm-controller&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+
+<span class="c1"># This is new thing we added here to port-forward more on this a bit later.</span>
+<span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;forward_registry&#39;</span><span class="p">):</span>
+    <span class="n">k8s_resource</span><span class="p">(</span><span class="s1">&#39;ocm-controller&#39;</span><span class="p">,</span> <span class="n">extra_pod_selectors</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="s1">&#39;registry&#39;</span><span class="p">}],</span> <span class="n">port_forwards</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This looks pretty nice already. But there is a lot more that we can do.</p>
+<h4 id="adding-secrets">Adding secrets</h4>
+<p><img src="/img/2023/02/25/secrets.jpg" alt="secrets"></p>
+<p>Another thing that OCM needs ( or any other deployment really ) is creating secrets for various things and deployments.
+OCM needs some docker registry credentials and some other credentials to pull things from outside repositories.</p>
+<p>Creating secrets can be done by using an extension. The particular extension we are looking for is <a href="https://github.com/tilt-dev/tilt-extensions/tree/master/secret">secrets</a>.</p>
+<p>We will use three types. A <code>from-file</code> for creating a secret that contains an SSH key. A plain key/value secret for
+repository access. And a docker-registry type secret.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># set defaults</span>
+<span class="n">settings</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&#34;flux&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enabled&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s2">&#34;bootstrap&#34;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+        <span class="s2">&#34;repository&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_REPOSITORY&#34;</span><span class="p">,</span> <span class="s2">&#34;podinfo-flux-example&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;owner&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_OWNER&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;path&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_PATH&#34;</span><span class="p">,</span> <span class="s2">&#34;.&#34;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;install_unpacker&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enabled&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s2">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;&#34;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="c1"># Added this one</span>
+    <span class="c1"># +++++++++++++++</span>
+    <span class="s2">&#34;create_secrets&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enable&#34;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+        <span class="s2">&#34;token&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_TOKEN&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;email&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_EMAIL&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;user&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_USER&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="c1"># +++++++++++++++</span>
+    <span class="s2">&#34;forward_registry&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+    <span class="s2">&#34;verification_keys&#34;</span><span class="p">:</span> <span class="p">{},</span>
+<span class="p">}</span>
+
+<span class="c1"># ... other stuff ...</span>
+
+<span class="k">def</span> <span class="nf">create_secrets</span><span class="p">():</span>
+    <span class="n">opts</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;create_secrets&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;enable&#34;</span><span class="p">):</span>
+        <span class="k">return</span>
+
+    <span class="n">k8s_yaml</span><span class="p">(</span><span class="n">secret_yaml_registry</span><span class="p">(</span><span class="s2">&#34;regcred&#34;</span><span class="p">,</span> <span class="s2">&#34;ocm-system&#34;</span><span class="p">,</span> <span class="n">flags_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;docker-server&#39;</span><span class="p">:</span> <span class="s1">&#39;ghcr.io&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;docker-username&#39;</span><span class="p">:</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;docker-email&#39;</span><span class="p">:</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;email&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;docker-password&#39;</span><span class="p">:</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;token&#39;</span><span class="p">),</span>
+    <span class="p">}))</span>
+    <span class="n">k8s_yaml</span><span class="p">(</span><span class="n">secret_from_dict</span><span class="p">(</span><span class="s2">&#34;creds&#34;</span><span class="p">,</span> <span class="s2">&#34;ocm-system&#34;</span><span class="p">,</span> <span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;username&#39;</span> <span class="p">:</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;password&#39;</span> <span class="p">:</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;token&#39;</span><span class="p">),</span>
+    <span class="p">}))</span>
+
+<span class="k">def</span> <span class="nf">create_verification_keys</span><span class="p">():</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;verification_keys&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">keys</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">secret_create_generic</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s1">&#39;ocm-system&#39;</span><span class="p">,</span> <span class="n">from_file</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>We added two new functions and an extension to the settings. Let&rsquo;s break this down.</p>
+<p><code>k8s_yaml(secret_yaml_registry</code> -&gt; this directive creates a yaml output which we apply to the cluster. Its kubectl
+equivalent would be</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">kubectl create secret docker-registry -n ocm-system regcred \
+    --docker-server=ghcr.io \
+    --docker-username=$GITHUB_USER \
+    --docker-password=$GITHUB_TOKEN \
+    --docker-email=$GITHUB_EMAIL
+</code></pre></td></tr></table>
+</div>
+</div><p><code>k8s_yaml(secret_from_dict</code> -&gt; same here. Equivalent kubectl command: <code>kubectl create secret generic creds --from-literal=username=$GITHUB_USER --from-literal=password=$GITHUB_TOKEN -n ocm-system</code></p>
+<p>Next, we have <code>create_verification_keys</code>. This is a bit trickier, but nothing too fancy. Verification keys are SSH keys
+that can be used to verify components. We can have multiple keys. Therefore, the setting is a dict. We loop through the
+dict and create a secret from each of those. This is what that setting could look like:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">verification_keys</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">alice</span><span class="p">:</span><span class="w"> </span><span class="l">alice=./rsa.pub</span><span class="w">
+</span><span class="w">  </span><span class="nt">bob</span><span class="p">:</span><span class="w"> </span><span class="l">bob=/Users/user/home/.ssh/bob.pub</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>All valid values. If a key is missing or the path is wrong, tilt does a dry-run first, so before applying to the cluster
+there would be an error that the key cannot be found.</p>
+<p>Phew, this was quite a lot. But now, we have secrets. Next, is the most important topic of them all&hellip;</p>
+<h4 id="hot-swapping">Hot-Swapping</h4>
+<p>Hot-swapping is the most important ability of tilt of all of them. Instead of rebuilding the whole container it can
+just rebuild the binary and switch out the running process. This is nothing new but combined with Kubernetes and
+the controller development cycle will provide us with valuable time saved.</p>
+<p>To do that though, we first, need to give Tilt some new abilities.</p>
+<h5 id="letting-tilt-build-the-controller">Letting Tilt build the controller</h5>
+<p>Tilt needs to manage the building of the binary for our project. Lucky for me, ocm is pretty basic in its design.
+Doesn&rsquo;t require anything too weird. Not that tilt doesn&rsquo;t support <em>weird</em>, it does, with custom builds, but for me, this wasn&rsquo;t needed.</p>
+<p>And I suspect for most controllers that is the case. Let&rsquo;s add something called a <code>local_resource</code>.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="n">local_resource</span><span class="p">(</span>
+    <span class="s1">&#39;manager&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/manager ./&#39;</span><span class="p">,</span>
+    <span class="n">deps</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&#34;main.go&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;go.mod&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;go.sum&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;api&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;controllers&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;pkg&#34;</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>A <code>local_resource</code> is similar to <code>local</code>. It executes a command on the host computer. However, it also creates a resource.
+Remember, that a resource is any unit of work that Tilt manages. To learn more read up <a href="https://docs.tilt.dev/local_resource.html">here</a>. The extra here is that whenever something changes in <code>deps</code> it will re-run the command and rebuild the resource.</p>
+<p>Here is the API definition of <a href="https://docs.tilt.dev/api.html#api.local_resource">local_resource</a>.</p>
+<p>This means that whenever something changes in <code>deps</code>, like files in API or controllers or pkg, etc, tilt rebuilds our
+binary. It already monitors the component YAML files, now we also monitor the go files.</p>
+<p>We can add any script here or anything that produces our binary.</p>
+<p>Now, we&rsquo;ll modify our docker build. There are some gotcha&rsquo;s there.</p>
+<h5 id="root-access">Root access</h5>
+<p>The first gotcha is that Tilt requires root access to hot-swap processes. If you are doing it right, you are using a
+scratch container and something like this in your deployment:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">  </span><span class="nt">securityContext</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">runAsNonRoot</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="w">    </span><span class="nt">seccompProfile</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">RuntimeDefault</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>If you aren&rsquo;t you really should be! First, problem is that scratch containers aren&rsquo;t supported by Tilt because it expects
+certain commands to be in the container, like <code>touch</code>. So we add a very simple Dockerfile that only tilt will use.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="k">FROM</span><span class="s"> alpine</span><span class="err">
+</span><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /</span><span class="err">
+</span><span class="err"></span><span class="k">COPY</span> ./bin/manager /manager<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">ENTRYPOINT</span> <span class="p">[</span><span class="s2">&#34;/manager&#34;</span><span class="p">]</span><span class="err">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>And, we have to get rid of the <code>runAsNonRoot: true</code>. Or rather, set it to false. Remember we are writing code here.
+So we just take the yaml, change that field, and apply it after we are finished updating the object. There is a little
+doc about that that you can read: <a href="https://docs.tilt.dev/templating.html">Modifying YAML for Dev</a>.</p>
+<p>Let&rsquo;s take a look. The basic flow is:</p>
+<ul>
+<li>read in our kustomize files</li>
+<li>convert it to objects</li>
+<li>look for our deployment and change this setting</li>
+<li>compile it back to yaml</li>
+<li>apply</li>
+</ul>
+<p>We could also apply the objects separately but it&rsquo;s nice to do it with the install yaml because it contains the CRDs and
+Kubernetes applies those first. It&rsquo;s a server-side apply.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># Use kustomize to build the install yaml files</span>
+<span class="n">install</span> <span class="o">=</span> <span class="n">kustomize</span><span class="p">(</span><span class="s1">&#39;config/default&#39;</span><span class="p">)</span>
+
+<span class="c1"># Update the root security group. Tilt requires root access to update the</span>
+<span class="c1"># running process.</span>
+<span class="n">objects</span> <span class="o">=</span> <span class="n">decode_yaml_stream</span><span class="p">(</span><span class="n">install</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">objects</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">o</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;kind&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;Deployment&#39;</span> <span class="ow">and</span> <span class="n">o</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;ocm-controller&#39;</span><span class="p">:</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;template&#39;</span><span class="p">][</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;securityContext&#39;</span><span class="p">][</span><span class="s1">&#39;runAsNonRoot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">break</span>
+
+<span class="n">updated_install</span> <span class="o">=</span> <span class="n">encode_yaml_stream</span><span class="p">(</span><span class="n">objects</span><span class="p">)</span>
+
+<span class="c1"># Apply the updated yaml to the cluster.</span>
+<span class="n">k8s_yaml</span><span class="p">(</span><span class="n">updated_install</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And thus, if our kind is <code>Deployment</code> and the name is the one we are looking for <code>ocm-controller</code> we change that value
+under <code>spec: template: spec: securityContext:</code>. DONE. Next!</p>
+<h5 id="with-restart">With restart</h5>
+<p>Now that we have the right Dockerfile and the right deployment, let&rsquo;s use another extension called <code>restart_process</code>.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="n">load</span><span class="p">(</span><span class="s1">&#39;ext://restart_process&#39;</span><span class="p">,</span> <span class="s1">&#39;docker_build_with_restart&#39;</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Load the extension and then change the <code>docker_build</code> to <code>docker_build_with_restart</code> like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="n">docker_build_with_restart</span><span class="p">(</span>
+    <span class="s1">&#39;ghcr.io/open-component-model/ocm-controller&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span>
+    <span class="n">dockerfile</span> <span class="o">=</span> <span class="s1">&#39;tilt.dockerfile&#39;</span><span class="p">,</span>
+    <span class="n">entrypoint</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;/manager&#39;</span><span class="p">],</span>
+    <span class="n">only</span><span class="o">=</span><span class="p">[</span>
+      <span class="s1">&#39;./bin&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="n">live_update</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">sync</span><span class="p">(</span><span class="s1">&#39;./bin/manager&#39;</span><span class="p">,</span> <span class="s1">&#39;/manager&#39;</span><span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Let&rsquo;s break this down. We have two pretty straightforward things. The first is the name of the container.
+The second is the context. The third is <code>dockerfile</code> our custom <code>alpine</code> container.</p>
+<p>Fourth is <code>entrypoint</code>. Now comes the <code>only</code> part and the <code>live_update</code>. The <code>only</code> part here is <strong>important</strong>. This
+tells Tilt to only watch that folder for changes. Since the <code>local_resource</code> is already watching for changes to the
+binary the deployment only needs to care about that!</p>
+<p><code>live_update</code> tells Tilt what to change in the container. We copy from the local <code>bin/</code>manager<code>to the container</code>/manager<code>. It can also execute a script in the container, but we don't need that here. For example, a </code>restart.sh<code>. Or, in the case of python a </code>pip install -r requirements.txt` or something like that.</p>
+<p>The rest is taken care of by a Tilt wrapper; a bash script that can swap out processes. That&rsquo;s what
+<code>docker_build_with_restart</code> does. It wraps our container and Dockerfile into its container and runs our <code>entrypoint</code>.</p>
+<h4 id="attaching-a-debugger">Attaching a debugger</h4>
+<p><img src="/img/2023/02/25/tilt-debug.png" alt="debugger"></p>
+<blockquote>
+<p>But I&rsquo;m running the manager locally because I use a debugger.</p>
+</blockquote>
+<p>I hear you! And it&rsquo;s possible with Tilt as well! We need to do a couple of things to achieve running delve correctly.
+Luckily, once set up, it should work for the foreseeable future.</p>
+<p>First, let&rsquo;s alter our settings and include a debug value:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># set defaults</span>
+<span class="n">settings</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&#34;flux&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enabled&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s2">&#34;bootstrap&#34;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+        <span class="s2">&#34;repository&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_REPOSITORY&#34;</span><span class="p">,</span> <span class="s2">&#34;podinfo-flux-example&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;owner&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_OWNER&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;path&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_PATH&#34;</span><span class="p">,</span> <span class="s2">&#34;.&#34;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;install_unpacker&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enabled&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s2">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;&#34;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;debug&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enabled&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;create_secrets&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enable&#34;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+        <span class="s2">&#34;token&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_TOKEN&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;email&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_EMAIL&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;user&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_USER&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;forward_registry&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+    <span class="s2">&#34;verification_keys&#34;</span><span class="p">:</span> <span class="p">{},</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Once enabled, for simplicity, we will forward delve on port <code>30000</code>.</p>
+<p>Next, we need a dedicated Dockerfile that installs and runs <code>delve</code>.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-Dockerfile" data-lang="Dockerfile"><span class="k">FROM</span><span class="s"> golang:1.20.1</span><span class="err">
+</span><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /</span><span class="err">
+</span><span class="err"></span><span class="k">COPY</span> ./bin/manager /manager<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">RUN</span> go install github.com/go-delve/delve/cmd/dlv@latest<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> chmod +x /go/bin/dlv<span class="err">
+</span><span class="err"></span><span class="k">RUN</span> mv /go/bin/dlv /<span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">EXPOSE</span><span class="s"> 30000</span><span class="err">
+</span><span class="err">
+</span><span class="err"></span><span class="k">ENTRYPOINT</span> <span class="p">[</span><span class="s2">&#34;/dlv&#34;</span><span class="p">,</span> <span class="s2">&#34;--listen=:30000&#34;</span><span class="p">,</span> <span class="s2">&#34;--api-version=2&#34;</span><span class="p">,</span> <span class="s2">&#34;--headless=true&#34;</span><span class="p">,</span> <span class="s2">&#34;--continue=true&#34;</span><span class="p">,</span> <span class="s2">&#34;--accept-multiclient=true&#34;</span><span class="p">,</span> <span class="s2">&#34;exec&#34;</span><span class="p">,</span> <span class="s2">&#34;/manager&#34;</span><span class="p">,</span> <span class="s2">&#34;--&#34;</span><span class="p">]</span><span class="err">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>The two important settings here are <code>--continue</code> and <code>--accept-multiclient</code>. Without it, delve will stop the process and
+our readiness and liveliness probes will fail. Another <strong>super</strong> important part is <code>--</code> at the end. Without it, our
+<code>manager</code> will not get the arguments passed in by the deployment. Or rather, it will try to pass them to <code>delve</code>.</p>
+<p>With delve in place, now we get to the funky part. We need to tell Tilt to use our debug Dockerfile and change the
+<code>entrypoint</code> if debugging is enabled. Also, let&rsquo;s not forget that the deployment needs to port-forward <code>30000</code> otherwise
+we can&rsquo;t access it with our debugger. Another thing we SHOULD do is, alter the Go build process and add some flags.
+Usually, when debugging Go code you want the flags <code>-N -l</code>. We add that with a variable called <code>gcflags</code>.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># ... other things ...</span>
+<span class="c1"># Update the root security group. Tilt requires root access to update the</span>
+<span class="c1"># running process.</span>
+<span class="n">objects</span> <span class="o">=</span> <span class="n">decode_yaml_stream</span><span class="p">(</span><span class="n">install</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">objects</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">o</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;kind&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;Deployment&#39;</span> <span class="ow">and</span> <span class="n">o</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;ocm-controller&#39;</span><span class="p">:</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;template&#39;</span><span class="p">][</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;securityContext&#39;</span><span class="p">][</span><span class="s1">&#39;runAsNonRoot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="c1"># This is what we added. OCM has a single container so we don&#39;t need to look for a specific one.</span>
+        <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;enabled&#39;</span><span class="p">):</span>
+            <span class="n">o</span><span class="p">[</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;template&#39;</span><span class="p">][</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;containers&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;ports&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;containerPort&#39;</span><span class="p">:</span> <span class="mi">30000</span><span class="p">}]</span>
+        <span class="k">break</span>
+
+<span class="c1"># ... other things ....</span>
+
+<span class="c1"># Update our Go build and add conditional gcflags.</span>
+<span class="n">gcflags</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+<span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;enabled&#39;</span><span class="p">):</span>
+    <span class="n">gcflags</span> <span class="o">=</span> <span class="s1">&#39;-N -l&#39;</span>
+
+<span class="n">local_resource</span><span class="p">(</span>
+    <span class="s1">&#39;manager&#39;</span><span class="p">,</span>
+    <span class="s2">&#34;CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -gcflags &#39;{gcflags}&#39; -o bin/manager ./&#34;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gcflags</span><span class="o">=</span><span class="n">gcflags</span><span class="p">),</span>
+    <span class="n">deps</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&#34;main.go&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;go.mod&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;go.sum&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;api&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;controllers&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;pkg&#34;</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+<span class="c1"># ... other things ...</span>
+
+<span class="c1"># Finally, our port-forwarding and the addition of the updated entrypoint and dockerfile.</span>
+<span class="c1"># The `[]` syntax on entrypoint is important because we want tilt to be able to append to it.</span>
+<span class="n">entrypoint</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;/manager&#39;</span><span class="p">]</span>
+<span class="n">dockerfile</span> <span class="o">=</span> <span class="s1">&#39;tilt.dockerfile&#39;</span>
+<span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;enabled&#39;</span><span class="p">):</span>
+    <span class="n">k8s_resource</span><span class="p">(</span><span class="s1">&#39;ocm-controller&#39;</span><span class="p">,</span> <span class="n">port_forwards</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">port_forward</span><span class="p">(</span><span class="mi">30000</span><span class="p">,</span> <span class="mi">30000</span><span class="p">,</span> <span class="s1">&#39;debugger&#39;</span><span class="p">),</span>
+    <span class="p">])</span>
+    <span class="n">entrypoint</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;/dlv&#39;</span><span class="p">,</span> <span class="s1">&#39;--listen=:30000&#39;</span><span class="p">,</span> <span class="s1">&#39;--api-version=2&#39;</span><span class="p">,</span> <span class="s1">&#39;--continue=true&#39;</span><span class="p">,</span> <span class="s1">&#39;--accept-multiclient=true&#39;</span><span class="p">,</span> <span class="s1">&#39;--headless=true&#39;</span><span class="p">,</span> <span class="s1">&#39;exec&#39;</span><span class="p">,</span> <span class="s1">&#39;/manager&#39;</span><span class="p">,</span> <span class="s1">&#39;--&#39;</span><span class="p">]</span>
+    <span class="n">dockerfile</span> <span class="o">=</span> <span class="s1">&#39;tilt.debug.dockerfile&#39;</span>
+
+
+<span class="n">docker_build_with_restart</span><span class="p">(</span>
+    <span class="s1">&#39;ghcr.io/open-component-model/ocm-controller&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span>
+    <span class="n">dockerfile</span> <span class="o">=</span> <span class="n">dockerfile</span><span class="p">,</span>
+    <span class="n">entrypoint</span> <span class="o">=</span> <span class="n">entrypoint</span><span class="p">,</span>
+    <span class="n">only</span><span class="o">=</span><span class="p">[</span>
+      <span class="s1">&#39;./bin&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="n">live_update</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">sync</span><span class="p">(</span><span class="s1">&#39;./bin/manager&#39;</span><span class="p">,</span> <span class="s1">&#39;/manager&#39;</span><span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Now, to attach to the debugger in GoLand follow this guide: <a href="https://www.jetbrains.com/help/go/attach-to-running-go-processes-with-debugger.html#step-3-create-the-remote-run-debug-configuration-on-the-client-computer">Attach To Remote Debugger</a>.</p>
+<p>The only important piece there is to clear the <strong>Shutdown remote debugger on disconnect</strong> flag.</p>
+<p>In VSCode:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-json" data-lang="json">    <span class="p">{</span>
+        <span class="nt">&#34;name&#34;</span><span class="p">:</span> <span class="s2">&#34;Connect to Container&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;go&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;request&#34;</span><span class="p">:</span> <span class="s2">&#34;attach&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;mode&#34;</span><span class="p">:</span> <span class="s2">&#34;remote&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;remotePath&#34;</span><span class="p">:</span> <span class="s2">&#34;&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;port&#34;</span><span class="p">:</span> <span class="mi">30000</span><span class="p">,</span>
+        <span class="nt">&#34;host&#34;</span><span class="p">:</span> <span class="s2">&#34;127.0.0.1&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;showLog&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="nt">&#34;trace&#34;</span><span class="p">:</span> <span class="s2">&#34;log&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;logOutput&#34;</span><span class="p">:</span> <span class="s2">&#34;rpc&#34;</span>
+    <span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>And that&rsquo;s it! We got delve working.</p>
+<p>Let&rsquo;s take a look at the full Tiltfile.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span><span class="lnt">139
+</span><span class="lnt">140
+</span><span class="lnt">141
+</span><span class="lnt">142
+</span><span class="lnt">143
+</span><span class="lnt">144
+</span><span class="lnt">145
+</span><span class="lnt">146
+</span><span class="lnt">147
+</span><span class="lnt">148
+</span><span class="lnt">149
+</span><span class="lnt">150
+</span><span class="lnt">151
+</span><span class="lnt">152
+</span><span class="lnt">153
+</span><span class="lnt">154
+</span><span class="lnt">155
+</span><span class="lnt">156
+</span><span class="lnt">157
+</span><span class="lnt">158
+</span><span class="lnt">159
+</span><span class="lnt">160
+</span><span class="lnt">161
+</span><span class="lnt">162
+</span><span class="lnt">163
+</span><span class="lnt">164
+</span><span class="lnt">165
+</span><span class="lnt">166
+</span><span class="lnt">167
+</span><span class="lnt">168
+</span><span class="lnt">169
+</span><span class="lnt">170
+</span><span class="lnt">171
+</span><span class="lnt">172
+</span><span class="lnt">173
+</span><span class="lnt">174
+</span><span class="lnt">175
+</span><span class="lnt">176
+</span><span class="lnt">177
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># -*- mode: Python -*-</span>
+
+<span class="n">kubectl_cmd</span> <span class="o">=</span> <span class="s2">&#34;kubectl&#34;</span>
+<span class="n">flux_cmd</span> <span class="o">=</span> <span class="s2">&#34;flux&#34;</span>
+
+<span class="c1"># verify kubectl command exists</span>
+<span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">(</span><span class="s2">&#34;command -v &#34;</span> <span class="o">+</span> <span class="n">kubectl_cmd</span> <span class="o">+</span> <span class="s2">&#34; || true&#34;</span><span class="p">,</span> <span class="n">quiet</span> <span class="o">=</span> <span class="bp">True</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&#34;&#34;</span><span class="p">:</span>
+    <span class="n">fail</span><span class="p">(</span><span class="s2">&#34;Required command &#39;&#34;</span> <span class="o">+</span> <span class="n">kubectl_cmd</span> <span class="o">+</span> <span class="s2">&#34;&#39; not found in PATH&#34;</span><span class="p">)</span>
+
+<span class="c1"># set defaults</span>
+<span class="n">settings</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&#34;flux&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enabled&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s2">&#34;bootstrap&#34;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+        <span class="s2">&#34;repository&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_REPOSITORY&#34;</span><span class="p">,</span> <span class="s2">&#34;podinfo-flux-example&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;owner&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_OWNER&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;path&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;FLUX_PATH&#34;</span><span class="p">,</span> <span class="s2">&#34;.&#34;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;install_unpacker&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enabled&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+        <span class="s2">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;&#34;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;debug&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enabled&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;create_secrets&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&#34;enable&#34;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+        <span class="s2">&#34;token&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_TOKEN&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;email&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_EMAIL&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+        <span class="s2">&#34;user&#34;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&#34;GITHUB_USER&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="s2">&#34;forward_registry&#34;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span>
+    <span class="s2">&#34;verification_keys&#34;</span><span class="p">:</span> <span class="p">{},</span>
+<span class="p">}</span>
+
+<span class="c1"># global settings</span>
+<span class="n">tilt_file</span> <span class="o">=</span> <span class="s2">&#34;./tilt-settings.yaml&#34;</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&#34;./tilt-settings.yaml&#34;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&#34;./tilt-settings.json&#34;</span>
+<span class="n">settings</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">read_yaml</span><span class="p">(</span>
+    <span class="n">tilt_file</span><span class="p">,</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="p">{},</span>
+<span class="p">))</span>
+<span class="n">load</span><span class="p">(</span><span class="s1">&#39;ext://secret&#39;</span><span class="p">,</span> <span class="s1">&#39;secret_yaml_registry&#39;</span><span class="p">,</span> <span class="s1">&#39;secret_from_dict&#39;</span><span class="p">,</span> <span class="s1">&#39;secret_create_generic&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">bootstrap_or_install_flux</span><span class="p">():</span>
+    <span class="n">opts</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;flux&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;enabled&#34;</span><span class="p">):</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">(</span><span class="s2">&#34;command -v &#34;</span> <span class="o">+</span> <span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34; || true&#34;</span><span class="p">,</span> <span class="n">quiet</span> <span class="o">=</span> <span class="bp">True</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&#34;&#34;</span><span class="p">:</span>
+        <span class="n">fail</span><span class="p">(</span><span class="s2">&#34;Required command &#39;&#34;</span> <span class="o">+</span> <span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34;&#39; not found in PATH&#34;</span><span class="p">)</span>
+
+    <span class="c1"># flux bootstrap github --owner=${FLUX_OWNER} --repository=${FLUX_REPOSITORY} --path ${FLUX_PATH}</span>
+    <span class="k">if</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;bootstrap&#34;</span><span class="p">):</span>
+        <span class="n">local</span><span class="p">(</span><span class="s2">&#34;</span><span class="si">%s</span><span class="s2"> bootstrap github --owner </span><span class="si">%s</span><span class="s2"> --repository </span><span class="si">%s</span><span class="s2"> --path </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="p">(</span><span class="n">flux_cmd</span><span class="p">,</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;owner&#39;</span><span class="p">),</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;repository&#39;</span><span class="p">),</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">local</span><span class="p">(</span><span class="n">flux_cmd</span> <span class="o">+</span> <span class="s2">&#34; install&#34;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">install_unpacker</span><span class="p">():</span>
+    <span class="n">opts</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;install_unpacker&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;enabled&#34;</span><span class="p">):</span>
+        <span class="k">return</span>
+
+
+<span class="k">def</span> <span class="nf">create_secrets</span><span class="p">():</span>
+    <span class="n">opts</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;create_secrets&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;enable&#34;</span><span class="p">):</span>
+        <span class="k">return</span>
+
+    <span class="n">k8s_yaml</span><span class="p">(</span><span class="n">secret_yaml_registry</span><span class="p">(</span><span class="s2">&#34;regcred&#34;</span><span class="p">,</span> <span class="s2">&#34;ocm-system&#34;</span><span class="p">,</span> <span class="n">flags_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;docker-server&#39;</span><span class="p">:</span> <span class="s1">&#39;ghcr.io&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;docker-username&#39;</span><span class="p">:</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;docker-email&#39;</span><span class="p">:</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;email&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;docker-password&#39;</span><span class="p">:</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;token&#39;</span><span class="p">),</span>
+    <span class="p">}))</span>
+    <span class="n">k8s_yaml</span><span class="p">(</span><span class="n">secret_from_dict</span><span class="p">(</span><span class="s2">&#34;creds&#34;</span><span class="p">,</span> <span class="s2">&#34;ocm-system&#34;</span><span class="p">,</span> <span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;username&#39;</span> <span class="p">:</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;password&#39;</span> <span class="p">:</span> <span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;token&#39;</span><span class="p">),</span>
+    <span class="p">}))</span>
+
+
+<span class="k">def</span> <span class="nf">create_verification_keys</span><span class="p">():</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;verification_keys&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">keys</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">secret_create_generic</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s1">&#39;ocm-system&#39;</span><span class="p">,</span> <span class="n">from_file</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+
+<span class="c1"># set up the development environment</span>
+
+<span class="c1"># check if flux is needed</span>
+<span class="n">bootstrap_or_install_flux</span><span class="p">()</span>
+
+<span class="c1"># check if installing unpacker is needed</span>
+<span class="n">install_unpacker</span><span class="p">()</span>
+
+<span class="c1"># Use kustomize to build the install yaml files</span>
+<span class="n">install</span> <span class="o">=</span> <span class="n">kustomize</span><span class="p">(</span><span class="s1">&#39;config/default&#39;</span><span class="p">)</span>
+
+<span class="c1"># Update the root security group. Tilt requires root access to update the</span>
+<span class="c1"># running process.</span>
+<span class="n">objects</span> <span class="o">=</span> <span class="n">decode_yaml_stream</span><span class="p">(</span><span class="n">install</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">objects</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">o</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;kind&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;Deployment&#39;</span> <span class="ow">and</span> <span class="n">o</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;ocm-controller&#39;</span><span class="p">:</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;template&#39;</span><span class="p">][</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;securityContext&#39;</span><span class="p">][</span><span class="s1">&#39;runAsNonRoot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;enabled&#39;</span><span class="p">):</span>
+            <span class="n">o</span><span class="p">[</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;template&#39;</span><span class="p">][</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;containers&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;ports&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;containerPort&#39;</span><span class="p">:</span> <span class="mi">30000</span><span class="p">}]</span>
+        <span class="k">break</span>
+
+<span class="n">updated_install</span> <span class="o">=</span> <span class="n">encode_yaml_stream</span><span class="p">(</span><span class="n">objects</span><span class="p">)</span>
+
+<span class="c1"># Apply the updated yaml to the cluster.</span>
+<span class="n">k8s_yaml</span><span class="p">(</span><span class="n">updated_install</span><span class="p">)</span>
+
+<span class="c1"># Create Secrets</span>
+<span class="n">create_secrets</span><span class="p">()</span>
+<span class="n">create_verification_keys</span><span class="p">()</span>
+
+<span class="n">load</span><span class="p">(</span><span class="s1">&#39;ext://restart_process&#39;</span><span class="p">,</span> <span class="s1">&#39;docker_build_with_restart&#39;</span><span class="p">)</span>
+
+<span class="c1"># enable hot reloading by doing the following:</span>
+<span class="c1"># - locally build the whole project</span>
+<span class="c1"># - create a docker imagine using tilt&#39;s hot-swap wrapper</span>
+<span class="c1"># - push that container to the local tilt registry</span>
+<span class="c1"># Once done, rebuilding now should be a lot faster since only the relevant</span>
+<span class="c1"># binary is rebuilt and the hot swat wrapper takes care of the rest.</span>
+<span class="n">gcflags</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+<span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;enabled&#39;</span><span class="p">):</span>
+    <span class="n">gcflags</span> <span class="o">=</span> <span class="s1">&#39;-N -l&#39;</span>
+
+<span class="n">local_resource</span><span class="p">(</span>
+    <span class="s1">&#39;manager&#39;</span><span class="p">,</span>
+    <span class="s2">&#34;CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -gcflags &#39;{gcflags}&#39; -o bin/manager ./&#34;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gcflags</span><span class="o">=</span><span class="n">gcflags</span><span class="p">),</span>
+    <span class="n">deps</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&#34;main.go&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;go.mod&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;go.sum&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;api&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;controllers&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;pkg&#34;</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+<span class="c1"># Build the docker image for our controller. We use a specific Dockerfile</span>
+<span class="c1"># since tilt can&#39;t run on a scratch container.</span>
+<span class="c1"># `only` here is important, otherwise, the container will get updated</span>
+<span class="c1"># on _any_ file change. We only want to monitor the binary.</span>
+<span class="c1"># If debugging is enabled, we switch to a different docker file using</span>
+<span class="c1"># the delve port.</span>
+<span class="n">entrypoint</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;/manager&#39;</span><span class="p">]</span>
+<span class="n">dockerfile</span> <span class="o">=</span> <span class="s1">&#39;tilt.dockerfile&#39;</span>
+<span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;enabled&#39;</span><span class="p">):</span>
+    <span class="n">k8s_resource</span><span class="p">(</span><span class="s1">&#39;ocm-controller&#39;</span><span class="p">,</span> <span class="n">port_forwards</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">port_forward</span><span class="p">(</span><span class="mi">30000</span><span class="p">,</span> <span class="mi">30000</span><span class="p">,</span> <span class="s1">&#39;debugger&#39;</span><span class="p">),</span>
+    <span class="p">])</span>
+    <span class="n">entrypoint</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;/dlv&#39;</span><span class="p">,</span> <span class="s1">&#39;--listen=:30000&#39;</span><span class="p">,</span> <span class="s1">&#39;--api-version=2&#39;</span><span class="p">,</span> <span class="s1">&#39;--continue=true&#39;</span><span class="p">,</span> <span class="s1">&#39;--accept-multiclient=true&#39;</span><span class="p">,</span> <span class="s1">&#39;--headless=true&#39;</span><span class="p">,</span> <span class="s1">&#39;exec&#39;</span><span class="p">,</span> <span class="s1">&#39;/manager&#39;</span><span class="p">,</span> <span class="s1">&#39;--&#39;</span><span class="p">]</span>
+    <span class="n">dockerfile</span> <span class="o">=</span> <span class="s1">&#39;tilt.debug.dockerfile&#39;</span>
+
+
+<span class="n">docker_build_with_restart</span><span class="p">(</span>
+    <span class="s1">&#39;ghcr.io/open-component-model/ocm-controller&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span>
+    <span class="n">dockerfile</span> <span class="o">=</span> <span class="n">dockerfile</span><span class="p">,</span>
+    <span class="n">entrypoint</span> <span class="o">=</span> <span class="n">entrypoint</span><span class="p">,</span>
+    <span class="n">only</span><span class="o">=</span><span class="p">[</span>
+      <span class="s1">&#39;./bin&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="n">live_update</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">sync</span><span class="p">(</span><span class="s1">&#39;./bin/manager&#39;</span><span class="p">,</span> <span class="s1">&#39;/manager&#39;</span><span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;forward_registry&#39;</span><span class="p">):</span>
+    <span class="n">k8s_resource</span><span class="p">(</span><span class="s1">&#39;ocm-controller&#39;</span><span class="p">,</span> <span class="n">extra_pod_selectors</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;app&#39;</span><span class="p">:</span> <span class="s1">&#39;registry&#39;</span><span class="p">}],</span> <span class="n">port_forwards</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>That last line extracts a resource that Tilt doesn&rsquo;t control. But we can say that it&rsquo;s the resource <code>ocm-controller</code> by
+defining a label selector.</p>
+<h3 id="numbers">Numbers</h3>
+<p>So what did we improve after ALL of this hassle? Well, let&rsquo;s see. Before, we needed around 2 minutes to build and deploy
+then test something. With Tilt, now it&rsquo;s 10-15 SECONDS tops! That is a huge improvement in the feedback loop.</p>
+<h3 id="when-it-gets-annoying">When it gets annoying</h3>
+<p>Any drawbacks? Well, if you are using GoLand or save changes frequently, it will rebuild. On. Each. Save. That can be
+pretty annoying. Luckily, Tilt got you covered. If you would like to pause for a second to do some rapid-fire changes,
+disable the <code>local_resource</code> ( whatever you named it, for me it&rsquo;s <code>manager</code> ) that is the Go Build. If you do that, no
+changes will be reconciled, which means, the container will not be hot-swapped either.</p>
+<p>Looks like this:</p>
+<p><img src="/img/2023/02/25/tilt-disabled.png" alt="tilt-disabled"></p>
+<p>Once re-enabled, you can continue your development cycle.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Tilt is not easy to set up at times. Especially when you have to fiddle with a lot of access and custom-built stuff.
+The syntax and view of a complex Tiltfile can be rather intimidating. Some structure adds easier ways of reading, but
+sadly, this is seldom the case.</p>
+<p>However, it can be helped. A nice Tiltfile with rightly named functions and a good structure can help a lot in readability.
+Also, comments. And I can&rsquo;t stress this enough. Add comments! They help a lot for a new person reading the file and
+understanding what is being altered why and where.</p>
+<p>I hope this helped, and good luck!</p>
+<p>As always,</p>
+<p>Thank you for reading,
+Gergely.</p>
+]]></description>
+    </item>
+    
     <item>
       <title>Generate a sample YAML file from a CRD</title>
       <link>https://skarlso.github.io/2022/10/19/crd-to-yaml/</link>
