@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Painless controller testing with e2e-framework and tilt - Ramblings of a cloud engineer</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="hannibal" /><meta name="description" content="Welcome dear reader.
+When last we met, we talked a lot about setting up Tilt for rapid controller development.
+Now, let&amp;rsquo;s see how powerful Tilt can be once we bring it together with Kubernetes&#39; e2e-framework.
+Controller E2E Framework I&amp;rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run tests for controllers that work together.
+This framework can be used to integration test or e2e test controllers that work together." />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.83.1 with theme even" />
+
+
+<link rel="canonical" href="https://skarlso.github.io/2023/03/12/painless-controller-testing-with-e2e-framework-tilt/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
+
+
+
+<meta property="og:title" content="Painless controller testing with e2e-framework and tilt" />
+<meta property="og:description" content="Welcome dear reader.
+When last we met, we talked a lot about setting up Tilt for rapid controller development.
+Now, let&rsquo;s see how powerful Tilt can be once we bring it together with Kubernetes&#39; e2e-framework.
+Controller E2E Framework I&rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run tests for controllers that work together.
+This framework can be used to integration test or e2e test controllers that work together." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://skarlso.github.io/2023/03/12/painless-controller-testing-with-e2e-framework-tilt/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2023-03-12T01:01:00&#43;01:00" />
+<meta property="article:modified_time" content="2023-03-12T01:01:00&#43;01:00" />
+
+<meta itemprop="name" content="Painless controller testing with e2e-framework and tilt">
+<meta itemprop="description" content="Welcome dear reader.
+When last we met, we talked a lot about setting up Tilt for rapid controller development.
+Now, let&rsquo;s see how powerful Tilt can be once we bring it together with Kubernetes&#39; e2e-framework.
+Controller E2E Framework I&rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run tests for controllers that work together.
+This framework can be used to integration test or e2e test controllers that work together."><meta itemprop="datePublished" content="2023-03-12T01:01:00&#43;01:00" />
+<meta itemprop="dateModified" content="2023-03-12T01:01:00&#43;01:00" />
+<meta itemprop="wordCount" content="1558">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Painless controller testing with e2e-framework and tilt"/>
+<meta name="twitter:description" content="Welcome dear reader.
+When last we met, we talked a lot about setting up Tilt for rapid controller development.
+Now, let&rsquo;s see how powerful Tilt can be once we bring it together with Kubernetes&#39; e2e-framework.
+Controller E2E Framework I&rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run tests for controllers that work together.
+This framework can be used to integration test or e2e test controllers that work together."/>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6QPDC2X6TV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6QPDC2X6TV');
+</script>
+
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">Ramblings of a cloud engineer</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/blog/">
+        <li class="mobile-menu-item">Archive</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">Tags</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">Categories</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">Ramblings of a cloud engineer</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/blog/">Archive</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">Tags</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">Categories</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Painless controller testing with e2e-framework and tilt</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2023-03-12 </span>
+        <div class="post-category">
+            <a href="/categories/go/"> go </a>
+            <a href="/categories/tilt/"> tilt </a>
+            <a href="/categories/kubernetes/"> kubernetes </a>
+            </div>
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#controller-e2e-framework">Controller E2E Framework</a>
+      <ul>
+        <li><a href="#test-1-controller">Test 1 Controller</a></li>
+        <li><a href="#test-2-controller">Test 2 Controller</a></li>
+        <li><a href="#e2e-framework">E2E Framework</a></li>
+        <li><a href="#ci">CI</a></li>
+        <li><a href="#conclusion">Conclusion</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <p>Welcome dear reader.</p>
+<p>When <a href="https://skarlso.github.io/2023/02/25/rapid-controller-development-with-tilt/">last</a> we met, we talked a lot about setting up Tilt
+for rapid controller development.</p>
+<p>Now, let&rsquo;s see how powerful Tilt can be once we bring it together with Kubernetes' <a href="https://github.com/kubernetes-sigs/e2e-framework">e2e-framework</a>.</p>
+<h1 id="controller-e2e-framework">Controller E2E Framework</h1>
+<p>I&rsquo;d like to present my <a href="https://github.com/controller-e2e-framework">controller-e2e-framework</a> which brings Tilt and e2e-framework together to easily write and run
+tests for controllers that work together.</p>
+<p>This framework can be used to integration test or e2e test controllers that work together. They set up some kind of
+ref connection between certain objects and perform some operation on said object.</p>
+<p>The result should contain the operation of both (or many) controllers.</p>
+<p>The linked organization contains three main repositories. Let&rsquo;s walk through them.</p>
+<h2 id="test-1-controller">Test 1 Controller</h2>
+<p>Test 1 controller is a simple controller that accepts a basic object like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">delivery.controller-e2e-framework/v1alpha1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Controller</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">controller-sample</span><span class="w">
+</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">ref</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Responder</span><span class="w">
+</span><span class="w">    </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">delivery.controller-e2e-framework/v1alpha1</span><span class="w">
+</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">test-responder</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>The <code>ref</code> is the interface between test-2-controller and test-1-controller. Its simple operation involves fetching this
+reference, whatever the kind is, adding a label to it, and patching that object back to Kubernetes.</p>
+<p>The label that it adds is <code>controller-e2e-framework.controlled = true</code>.</p>
+<p>This repository contains another main ingredient. A simple Tilt file that does the following. It builds the project and
+sets up all necessary yaml objects like the CRD definition, RBAC, any patches that might exist and the deployment.</p>
+<p>This is important to note for various reasons. First, if we would build a testing image instead of using Tilt, we would
+flood the package manager with a bunch of test imagines. Or, always set the <code>latest</code> image, in which case, we would lose
+the ability to debug any problems. Further, we would have to have some kind of way to download the manifest files that
+correspond to that version. If doing local development, that would be a hassle or we would have to have a checked-out
+source of the manifest files anyways.</p>
+<p>Thus, we bring together all of this with Tilt which uses a local registry and the files from the checked-out source.</p>
+<p>This simple Tiltfile looks like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># -*- mode: Python -*-</span>
+
+<span class="n">kubectl_cmd</span> <span class="o">=</span> <span class="s2">&#34;kubectl&#34;</span>
+
+<span class="c1"># verify kubectl command exists</span>
+<span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">(</span><span class="s2">&#34;command -v &#34;</span> <span class="o">+</span> <span class="n">kubectl_cmd</span> <span class="o">+</span> <span class="s2">&#34; || true&#34;</span><span class="p">,</span> <span class="n">quiet</span> <span class="o">=</span> <span class="bp">True</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&#34;&#34;</span><span class="p">:</span>
+    <span class="n">fail</span><span class="p">(</span><span class="s2">&#34;Required command &#39;&#34;</span> <span class="o">+</span> <span class="n">kubectl_cmd</span> <span class="o">+</span> <span class="s2">&#34;&#39; not found in PATH&#34;</span><span class="p">)</span>
+
+<span class="c1"># Use kustomize to build the install yaml files</span>
+<span class="n">install</span> <span class="o">=</span> <span class="n">kustomize</span><span class="p">(</span><span class="s1">&#39;config/default&#39;</span><span class="p">)</span>
+
+<span class="c1"># Update the root security group. Tilt requires root access to update the</span>
+<span class="c1"># running process.</span>
+<span class="n">objects</span> <span class="o">=</span> <span class="n">decode_yaml_stream</span><span class="p">(</span><span class="n">install</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">objects</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">o</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;kind&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;Deployment&#39;</span> <span class="ow">and</span> <span class="n">o</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;test-1-controller&#39;</span><span class="p">:</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;template&#39;</span><span class="p">][</span><span class="s1">&#39;spec&#39;</span><span class="p">][</span><span class="s1">&#39;securityContext&#39;</span><span class="p">][</span><span class="s1">&#39;runAsNonRoot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">break</span>
+
+<span class="n">updated_install</span> <span class="o">=</span> <span class="n">encode_yaml_stream</span><span class="p">(</span><span class="n">objects</span><span class="p">)</span>
+
+<span class="c1"># Apply the updated yaml to the cluster.</span>
+<span class="c1"># Allow duplicates so the e2e test can include this tilt file with other tilt files</span>
+<span class="c1"># setting up the same namespace.</span>
+<span class="n">k8s_yaml</span><span class="p">(</span><span class="n">updated_install</span><span class="p">,</span> <span class="n">allow_duplicates</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+
+<span class="n">load</span><span class="p">(</span><span class="s1">&#39;ext://restart_process&#39;</span><span class="p">,</span> <span class="s1">&#39;docker_build_with_restart&#39;</span><span class="p">)</span>
+
+<span class="c1"># enable hot reloading by doing the following:</span>
+<span class="c1"># - locally build the whole project</span>
+<span class="c1"># - create a docker imagine using tilt&#39;s hot-swap wrapper</span>
+<span class="c1"># - push that container to the local tilt registry</span>
+<span class="c1"># Once done, rebuilding now should be a lot faster since only the relevant</span>
+<span class="c1"># binary is rebuilt and the hot swat wrapper takes care of the rest.</span>
+<span class="n">local_resource</span><span class="p">(</span>
+    <span class="s1">&#39;test-1-controller-binary&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/manager ./&#39;</span><span class="p">,</span>
+    <span class="n">deps</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&#34;main.go&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;go.mod&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;go.sum&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;api&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;controllers&#34;</span><span class="p">,</span>
+        <span class="s2">&#34;pkg&#34;</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+<span class="c1"># Build the docker image for our controller. We use a specific Dockerfile</span>
+<span class="c1"># since tilt can&#39;t run on a scratch container.</span>
+<span class="c1"># `only` here is important, otherwise, the container will get updated</span>
+<span class="c1"># on _any_ file change. We only want to monitor the binary.</span>
+<span class="c1"># If debugging is enabled, we switch to a different docker file using</span>
+<span class="c1"># the delve port.</span>
+<span class="n">entrypoint</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;/manager&#39;</span><span class="p">]</span>
+<span class="n">dockerfile</span> <span class="o">=</span> <span class="s1">&#39;tilt.dockerfile&#39;</span>
+<span class="n">docker_build_with_restart</span><span class="p">(</span>
+    <span class="s1">&#39;ghcr.io/controller-e2e-framework/test-1-controller&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span>
+    <span class="n">dockerfile</span> <span class="o">=</span> <span class="n">dockerfile</span><span class="p">,</span>
+    <span class="n">entrypoint</span> <span class="o">=</span> <span class="n">entrypoint</span><span class="p">,</span>
+    <span class="n">only</span><span class="o">=</span><span class="p">[</span>
+      <span class="s1">&#39;./bin&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="n">live_update</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">sync</span><span class="p">(</span><span class="s1">&#39;./bin/manager&#39;</span><span class="p">,</span> <span class="s1">&#39;/manager&#39;</span><span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Basic things, plus the modification of the root securityContext so Tilt can hot-swap the binary.</p>
+<h2 id="test-2-controller">Test 2 Controller</h2>
+<p>Test 2 controller looks at a responder object and once it detects the above label on the object, it will set a status
+flag called <code>Acquired</code> to <code>true</code>. Also, a simple operation just to demo how these two controllers work together.</p>
+<p>This repository has the same Tiltfile as test-1-controller.</p>
+<h2 id="e2e-framework">E2E Framework</h2>
+<p>Now comes the main menu. The heart of the thing.</p>
+<p>First, we can determine the flow. We would like to apply two files. <code>controller-sample.yaml</code> and <code>responder-sample.yaml</code>.
+This will kick-start the whole process of reconciliation of the responder object.</p>
+<p>Once these two exists and we verified that they exist, we will wait for the label to be applied and the <code>Acquired</code> flag
+to be set to true.</p>
+<p>Let&rsquo;s look at the architecture of this whole thing.</p>
+<p><img src="img/2023/03/12/architecture.png" alt="architecture"></p>
+<p>What happens here is as follows&hellip; e2e-framework has a <code>TestMain</code> function defined.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">TestMain</span><span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">M</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">cfg</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">envconf</span><span class="p">.</span><span class="nf">NewFromFlags</span><span class="p">()</span>
+	<span class="nx">testEnv</span> <span class="p">=</span> <span class="nx">env</span><span class="p">.</span><span class="nf">NewWithConfig</span><span class="p">(</span><span class="nx">cfg</span><span class="p">)</span>
+	<span class="nx">kindClusterName</span> <span class="p">=</span> <span class="nx">envconf</span><span class="p">.</span><span class="nf">RandomName</span><span class="p">(</span><span class="s">&#34;test-controller-e2e&#34;</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+	<span class="nx">namespace</span> <span class="p">=</span> <span class="nx">envconf</span><span class="p">.</span><span class="nf">RandomName</span><span class="p">(</span><span class="s">&#34;namespace&#34;</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>
+
+	<span class="nx">testEnv</span><span class="p">.</span><span class="nf">Setup</span><span class="p">(</span>
+		<span class="nx">envfuncs</span><span class="p">.</span><span class="nf">CreateKindCluster</span><span class="p">(</span><span class="nx">kindClusterName</span><span class="p">),</span>
+		<span class="nx">envfuncs</span><span class="p">.</span><span class="nf">CreateNamespace</span><span class="p">(</span><span class="nx">namespace</span><span class="p">),</span>
+		<span class="nx">shared</span><span class="p">.</span><span class="nf">RunTiltForControllers</span><span class="p">(</span><span class="s">&#34;test-1-controller&#34;</span><span class="p">,</span> <span class="s">&#34;test-2-controller&#34;</span><span class="p">),</span>
+	<span class="p">)</span>
+
+	<span class="nx">testEnv</span><span class="p">.</span><span class="nf">Finish</span><span class="p">(</span>
+		<span class="nx">envfuncs</span><span class="p">.</span><span class="nf">DeleteNamespace</span><span class="p">(</span><span class="nx">namespace</span><span class="p">),</span>
+		<span class="nx">envfuncs</span><span class="p">.</span><span class="nf">DestroyKindCluster</span><span class="p">(</span><span class="nx">kindClusterName</span><span class="p">),</span>
+	<span class="p">)</span>
+
+	<span class="nx">os</span><span class="p">.</span><span class="nf">Exit</span><span class="p">(</span><span class="nx">testEnv</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="nx">m</span><span class="p">))</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This function has a <code>Setup</code> and a <code>Teardown</code> phase. During this phase, a kind cluster is created and <code>tilt ci</code> is
+executed to bring up a cluster and run tilt. But what Tiltfile does it run? Well&hellip; it imports all the Tiltfiles of the
+defined controllers.</p>
+<p>This part:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">shared</span><span class="p">.</span><span class="nf">RunTiltForControllers</span><span class="p">(</span><span class="s">&#34;test-1-controller&#34;</span><span class="p">,</span> <span class="s">&#34;test-2-controller&#34;</span><span class="p">),</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>But where are they? They have to be checked-out next to this project. Then, the framework will do a <code>cd </code>..` like a
+thing and look for these folders until it either finds them or reaches the root.</p>
+<p><code>tilt ci</code> is super convenient because it will run to completion or fail if it doesn&rsquo;t start up for whatever reason. Thus
+we can be sure that we set up RBAC and controller settings correctly. Something that we can&rsquo;t test through pure unit
+testing.</p>
+<p>Once we have a cluster and tilt the test starts. Here we have steps that are either a <code>Setup</code> an <code>Assess</code> or a
+<code>Teardown</code>.</p>
+<p>We can extract a bunch of steps here to make it easy to just plug together tests using common steps.</p>
+<p>Like, setting up a scheme, looking for objects, checking object state, applying test data, etc.</p>
+<p>In this test we do something like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">TestControllerApply</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">t</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">&#34;running component version apply&#34;</span><span class="p">)</span>
+
+	<span class="nx">feature</span> <span class="o">:=</span> <span class="nx">features</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;Custom Controller&#34;</span><span class="p">).</span>
+		<span class="nf">Setup</span><span class="p">(</span><span class="nx">setup</span><span class="p">.</span><span class="nf">AddSchemeAndNamespace</span><span class="p">(</span><span class="nx">cv1</span><span class="p">.</span><span class="nx">AddToScheme</span><span class="p">,</span> <span class="nx">namespace</span><span class="p">)).</span>
+		<span class="nf">Setup</span><span class="p">(</span><span class="nx">setup</span><span class="p">.</span><span class="nf">AddSchemeAndNamespace</span><span class="p">(</span><span class="nx">rv1</span><span class="p">.</span><span class="nx">AddToScheme</span><span class="p">,</span> <span class="nx">namespace</span><span class="p">)).</span>
+		<span class="nf">Setup</span><span class="p">(</span><span class="nx">setup</span><span class="p">.</span><span class="nf">ApplyTestData</span><span class="p">(</span><span class="nx">v1alpha1</span><span class="p">.</span><span class="nx">AddToScheme</span><span class="p">,</span> <span class="nx">namespace</span><span class="p">,</span> <span class="s">&#34;*&#34;</span><span class="p">)).</span>
+		<span class="nf">Assess</span><span class="p">(</span><span class="s">&#34;check if controller was created&#34;</span><span class="p">,</span> <span class="nx">assess</span><span class="p">.</span><span class="nf">ResourceWasCreated</span><span class="p">(</span><span class="s">&#34;controller-sample&#34;</span><span class="p">,</span> <span class="nx">namespace</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">cv1</span><span class="p">.</span><span class="nx">Controller</span><span class="p">{})).</span>
+		<span class="nf">Assess</span><span class="p">(</span><span class="s">&#34;check if responder was created&#34;</span><span class="p">,</span> <span class="nx">assess</span><span class="p">.</span><span class="nf">ResourceWasCreated</span><span class="p">(</span><span class="s">&#34;responder-sample&#34;</span><span class="p">,</span> <span class="nx">namespace</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">rv1</span><span class="p">.</span><span class="nx">Responder</span><span class="p">{})).</span>
+		<span class="nf">Assess</span><span class="p">(</span><span class="s">&#34;wait for responder condition to be true&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">,</span> <span class="nx">cfg</span> <span class="o">*</span><span class="nx">envconf</span><span class="p">.</span><span class="nx">Config</span><span class="p">)</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span> <span class="p">{</span>
+        <span class="o">...</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>We have then waiters or waiting steps for certain conditions and once everything is tested and done, we remove all
+objects in a <code>Teardown</code> so the next test doesn&rsquo;t collide with anything.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go">		<span class="nf">Teardown</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">,</span> <span class="nx">cfg</span> <span class="o">*</span><span class="nx">envconf</span><span class="p">.</span><span class="nx">Config</span><span class="p">)</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span> <span class="p">{</span>
+			<span class="nx">t</span><span class="p">.</span><span class="nf">Helper</span><span class="p">()</span>
+			<span class="nx">t</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">&#34;teardown&#34;</span><span class="p">)</span>
+
+			<span class="c1">// remove test resources before exiting
+</span><span class="c1"></span>			<span class="nx">r</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">resources</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">cfg</span><span class="p">.</span><span class="nf">Client</span><span class="p">().</span><span class="nf">RESTConfig</span><span class="p">())</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">t</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+			<span class="p">}</span>
+
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">decoder</span><span class="p">.</span><span class="nf">DecodeEachFile</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nf">DirFS</span><span class="p">(</span><span class="s">&#34;./testdata&#34;</span><span class="p">),</span> <span class="s">&#34;*&#34;</span><span class="p">,</span>
+				<span class="nx">decoder</span><span class="p">.</span><span class="nf">DeleteHandler</span><span class="p">(</span><span class="nx">r</span><span class="p">),</span>           <span class="c1">// try to DELETE objects after decoding
+</span><span class="c1"></span>				<span class="nx">decoder</span><span class="p">.</span><span class="nf">MutateNamespace</span><span class="p">(</span><span class="nx">namespace</span><span class="p">),</span> <span class="c1">// inject a namespace into decoded objects, before calling DeleteHandler
+</span><span class="c1"></span>			<span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">t</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+			<span class="p">}</span>
+
+			<span class="nx">t</span><span class="p">.</span><span class="nf">Log</span><span class="p">(</span><span class="s">&#34;teardown done&#34;</span><span class="p">)</span>
+
+			<span class="k">return</span> <span class="nx">ctx</span>
+		<span class="p">}).</span><span class="nf">Feature</span><span class="p">()</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>This is super convenient because we tested apply, scheme, delete and finalizers, everything in one go.</p>
+<p>And the <strong>BEST</strong> part about all this is that the ONLY thing the user needs to run is <em>just</em> <code>go test ./...</code>.</p>
+<p>You can funk it up if you wish to only run a single suite with <code>go test -v ./test/controller</code>.</p>
+<h2 id="ci">CI</h2>
+<p>To set all this up in a CI that runs it continuously or some kind of trigger just set it up like this:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">e2e</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="nt">on</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">workflow_dispatch</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
+</span><span class="w">  </span><span class="nt">schedule</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">cron</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="m">0</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="c"># every Monday at 00:00</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="nt">permissions</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">contents</span><span class="p">:</span><span class="w"> </span><span class="l">read</span><span class="w"> </span><span class="c"># for actions/checkout to fetch code</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="nt">jobs</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">kind-linux</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l">ubuntu-latest</span><span class="w">
+</span><span class="w">    </span><span class="nt">steps</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Checkout this repo</span><span class="w">
+</span><span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l">actions/checkout@v3</span><span class="w">
+</span><span class="w">        </span><span class="nt">with</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">e2e-framework</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Checkout test-1-framework</span><span class="w">
+</span><span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l">actions/checkout@v3</span><span class="w">
+</span><span class="w">        </span><span class="nt">with</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;controller-e2e-framework/test-1-controller&#39;</span><span class="w">
+</span><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">test-1-controller</span><span class="w">
+</span><span class="w">     </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Checkout test-2-controller</span><span class="w">
+</span><span class="w">       </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l">actions/checkout@v3</span><span class="w">
+</span><span class="w">       </span><span class="nt">with</span><span class="p">:</span><span class="w">
+</span><span class="w">         </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;controller-e2e-framework/test-2-controller&#39;</span><span class="w">
+</span><span class="w">         </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">test-2-controller</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Setup Go</span><span class="w">
+</span><span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l">actions/setup-go@v3</span><span class="w">
+</span><span class="w">        </span><span class="nt">with</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">go-version-file</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;${{ github.workspace }}/e2e-framework/go.mod&#39;</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Restore Go cache</span><span class="w">
+</span><span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l">actions/cache@v3</span><span class="w">
+</span><span class="w">        </span><span class="nt">with</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/home/runner/work/_temp/_github_home/go/pkg/mod</span><span class="w">
+</span><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">${{ runner.os }}-go-${{ hashFiles(&#39;**/go.sum&#39;) }}</span><span class="w">
+</span><span class="w">          </span><span class="nt">restore-keys</span><span class="p">:</span><span class="w"> </span><span class="p">|</span><span class="sd">
+</span><span class="sd">            </span><span class="w">            </span><span class="l">${{ runner.os }}-go-</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Run tests</span><span class="w">
+</span><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l">cd e2e-framework &amp;&amp; go test ./...</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p><em>Note</em> that you need to have checkout access to all repositories involved.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>I find this testing amazingly simple. It lets me focus on the tests and I <strong>know</strong> that I will run the same thing in CI
+and my <em>local</em>__ environment. And I know that any modification I&rsquo;ll do in code will immediately be tested without me
+having to either run something weird with exported environment properties such as **TEST_IMAGE** or a dedicated test
+runner with some weird parameters. CI runs the same thing I&rsquo;m running on my local environment. And that&rsquo;s <code>go test ./...</code>.</p>
+<p>Thank you for reading.</p>
+<p>And as always, have a nice day.</p>
+<p>Gergely.</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        
+        <a class="next" href="/2023/02/25/rapid-controller-development-with-tilt/">
+            <span class="next-text nav-default">Rapid Kubernetes Controller Development with Tilt</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        <div id="disqus_thread"></div>
+    <script type="text/javascript">
+    (function() {
+      
+      
+      if (window.location.hostname === 'localhost') return;
+
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      var disqus_shortname = 'hannibalDisqus';
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="https://twitter.com/skarlso" class="iconfont icon-twitter" title="twitter"></a>
+      <a href="https://github.com/Skarlso" class="iconfont icon-github" title="github"></a>
+  <a href="https://skarlso.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+     - 
+    2023<span class="heart"><i class="iconfont icon-heart"></i></span><span>Gergely Brautigam</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  <script type="text/javascript" src="/lib/jquery/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="/lib/slideout/slideout-1.0.1.min.js"></script>
+  
+
+
+
+<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-69463020-2', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
