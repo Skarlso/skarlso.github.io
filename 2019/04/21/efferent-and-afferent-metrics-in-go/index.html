@@ -1,180 +1,211 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <title>Efferent and Afferent metrics in Go - Ramblings of a cloud engineer</title>
-  <meta name="renderer" content="webkit" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<html lang="en" dir="auto">
 
-<meta http-equiv="Cache-Control" content="no-transform" />
-<meta http-equiv="Cache-Control" content="no-siteapp" />
-
-<meta name="theme-color" content="#f8f5ec" />
-<meta name="msapplication-navbutton-color" content="#f8f5ec">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
-
-
-<meta name="author" content="hannibal" /><meta name="description" content="Intro Hi folks!
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Efferent and Afferent metrics in Go | Ramblings of a cloud engineer</title>
+<meta name="keywords" content="">
+<meta name="description" content="Intro Hi folks!
 Today I would like to write about a metric that I read in a book called Clean Architecture from Robert Cecil Martin ( Uncle Bob ).
-Abstract The metrics I mean are Efferent and Afferent coupling in packages. So you, dear reader, don&amp;rsquo;t have to navigate away from this page, here are the descriptions pasted in:
-  Afferent couplings (Ca): The number of classes in other packages that depend upon classes within the package is an indicator of the package&amp;rsquo;s responsibility." />
+Abstract The metrics I mean are Efferent and Afferent coupling in packages. So you, dear reader, don&rsquo;t have to navigate away from this page, here are the descriptions pasted in:
+Afferent couplings (Ca): The number of classes in other packages that depend upon classes within the package is an indicator of the package&rsquo;s responsibility.">
+<meta name="author" content="hannibal">
+<link rel="canonical" href="https://skarlso.github.io/2019/04/21/efferent-and-afferent-metrics-in-go/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://skarlso.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://skarlso.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
 
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
 
+            .list {
+                background: var(--theme);
+            }
 
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
 
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
 
-
-<meta name="generator" content="Hugo 0.83.1 with theme even" />
-
-
-<link rel="canonical" href="https://skarlso.github.io/2019/04/21/efferent-and-afferent-metrics-in-go/" />
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/manifest.json">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-
-
-
-<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
-
-
-
-<meta property="og:title" content="Efferent and Afferent metrics in Go" />
+    </style>
+</noscript><meta property="og:title" content="Efferent and Afferent metrics in Go" />
 <meta property="og:description" content="Intro Hi folks!
 Today I would like to write about a metric that I read in a book called Clean Architecture from Robert Cecil Martin ( Uncle Bob ).
 Abstract The metrics I mean are Efferent and Afferent coupling in packages. So you, dear reader, don&rsquo;t have to navigate away from this page, here are the descriptions pasted in:
-  Afferent couplings (Ca): The number of classes in other packages that depend upon classes within the package is an indicator of the package&rsquo;s responsibility." />
+Afferent couplings (Ca): The number of classes in other packages that depend upon classes within the package is an indicator of the package&rsquo;s responsibility." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2019/04/21/efferent-and-afferent-metrics-in-go/" /><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2019-04-21T21:01:00&#43;01:00" />
-<meta property="article:modified_time" content="2019-04-21T21:01:00&#43;01:00" />
+<meta property="og:url" content="https://skarlso.github.io/2019/04/21/efferent-and-afferent-metrics-in-go/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2019-04-21T21:01:00+01:00" />
+<meta property="article:modified_time" content="2019-04-21T21:01:00+01:00" />
 
-<meta itemprop="name" content="Efferent and Afferent metrics in Go">
-<meta itemprop="description" content="Intro Hi folks!
-Today I would like to write about a metric that I read in a book called Clean Architecture from Robert Cecil Martin ( Uncle Bob ).
-Abstract The metrics I mean are Efferent and Afferent coupling in packages. So you, dear reader, don&rsquo;t have to navigate away from this page, here are the descriptions pasted in:
-  Afferent couplings (Ca): The number of classes in other packages that depend upon classes within the package is an indicator of the package&rsquo;s responsibility."><meta itemprop="datePublished" content="2019-04-21T21:01:00&#43;01:00" />
-<meta itemprop="dateModified" content="2019-04-21T21:01:00&#43;01:00" />
-<meta itemprop="wordCount" content="1176">
-<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Efferent and Afferent metrics in Go"/>
 <meta name="twitter:description" content="Intro Hi folks!
 Today I would like to write about a metric that I read in a book called Clean Architecture from Robert Cecil Martin ( Uncle Bob ).
 Abstract The metrics I mean are Efferent and Afferent coupling in packages. So you, dear reader, don&rsquo;t have to navigate away from this page, here are the descriptions pasted in:
-  Afferent couplings (Ca): The number of classes in other packages that depend upon classes within the package is an indicator of the package&rsquo;s responsibility."/>
+Afferent couplings (Ca): The number of classes in other packages that depend upon classes within the package is an indicator of the package&rsquo;s responsibility."/>
 
 
-
-
-<!--[if lte IE 9]>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
-<![endif]-->
-
-<!--[if lt IE 9]>
-  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
-<![endif]-->
-
-</head>
-<body>
-  <div id="mobile-navbar" class="mobile-navbar">
-  <div class="mobile-header-logo">
-    <a href="/" class="logo">Ramblings of a cloud engineer</a>
-  </div>
-  <div class="mobile-navbar-icon">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
-</div>
-<nav id="mobile-menu" class="mobile-menu slideout-menu">
-  <ul class="mobile-menu-list">
-    <a href="/blog/">
-        <li class="mobile-menu-item">Archive</li>
-      </a><a href="/tags/">
-        <li class="mobile-menu-item">Tags</li>
-      </a><a href="/categories/">
-        <li class="mobile-menu-item">Categories</li>
-      </a>
-  </ul>
-
-  
-
-
-</nav>
-
-  <div class="container" id="mobile-panel">
-    <header id="header" class="header">
-        <div class="logo-wrapper">
-  <a href="/" class="logo">Ramblings of a cloud engineer</a>
-</div>
-
-
-
-
-
-<nav class="site-navbar">
-  <ul id="menu" class="menu">
-    <li class="menu-item">
-        <a class="menu-item-link" href="/blog/">Archive</a>
-      </li><li class="menu-item">
-        <a class="menu-item-link" href="/tags/">Tags</a>
-      </li><li class="menu-item">
-        <a class="menu-item-link" href="/categories/">Categories</a>
-      </li>
-  </ul>
-</nav>
-
-    </header>
-
-    <main id="main" class="main">
-      <div class="content-wrapper">
-        <div id="content" class="content">
-          <article class="post">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://skarlso.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "Efferent and Afferent metrics in Go",
+      "item": "https://skarlso.github.io/2019/04/21/efferent-and-afferent-metrics-in-go/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Efferent and Afferent metrics in Go",
+  "name": "Efferent and Afferent metrics in Go",
+  "description": "Intro Hi folks!\nToday I would like to write about a metric that I read in a book called Clean Architecture from Robert Cecil Martin ( Uncle Bob ).\nAbstract The metrics I mean are Efferent and Afferent coupling in packages. So you, dear reader, don\u0026rsquo;t have to navigate away from this page, here are the descriptions pasted in:\nAfferent couplings (Ca): The number of classes in other packages that depend upon classes within the package is an indicator of the package\u0026rsquo;s responsibility.",
+  "keywords": [
     
-    <header class="post-header">
-      <h1 class="post-title">Efferent and Afferent metrics in Go</h1>
+  ],
+  "articleBody": "Intro Hi folks!\nToday I would like to write about a metric that I read in a book called Clean Architecture from Robert Cecil Martin ( Uncle Bob ).\nAbstract The metrics I mean are Efferent and Afferent coupling in packages. So you, dear reader, don’t have to navigate away from this page, here are the descriptions pasted in:\nAfferent couplings (Ca): The number of classes in other packages that depend upon classes within the package is an indicator of the package’s responsibility. Afferent couplings signal inward. (Affected by this package) (Fan-In).\nEfferent couplings (Ce): The number of classes in other packages that the classes in this package depend upon is an indicator of the package’s dependence on externalities. Efferent couplings signal outward. (Effecting this package) (Fan-Out).\nThese metrics used together will indicate the stability / instability of each package in a project.\nMetric Usage What does it mean if the package is stable vs. unstable? Let’s take a closer look.\nUnstable If the instability metric comes out as 1 or close to 1, that means that the package is unstable. It means that there are only packages which this package is depending upon and nothing, or only 1 or 2, packages depend on it. This infers two things:\nThe package is easy to change since there is nothing depending on the behavior explicitly The package is volatile since it depends on a lot of out side things The first one is self-explanatory. The second one has ramifications. These ramifications are that there are a lot of packages that could cause bugs in this package. Ideally, a package with instability 1 or high, requires a large test coverage to ensure that no bugs seep in.\nStable On the other spectrum lies the indicator for a stable package. If this metric is 0 or close to 0, the package is said to be stable. A stable package resists change because it has a lot of depending packages. The depending packages lock this package in place, meaning we can’t change the package easily. Ideally this is the package that would contain business logic for example, or code which does not change often.\nAppliance in Go ecosystem The book was using mostly Java or C/C++ for examples and dealt with classes describing these metrics. Especially the Abstractness of a package which calculates as ratio of abstract classes + interfaces vs concrete classes and implementations. This isn’t that easy to define in Go. Not impossible though and we could still get something close enough. Something like, count interfaces + structs vs implementations of said interfaces with function receivers and functions.\nThe easier of these is the coupling metrics. I think we can define them since Go also has import statements. Go doesn’t have classes, but it’s enough if we calculate the number of packages that said package depends upon and are depended upon by. Should be close enough.\nTool If there is a project with a lot of packages and files, it would be quite difficult to calculate things using your hands… Hence, Effrit. This tool, at the writing of this post, only calculates the stability metric for now. If given a parameter like -p effrit it will only calculate the Fan-Out metrics considering project packages. If no project name is given, it will also calculate not project packages (for example cobra or aws sdk) as Efferent. Usage is really simple. Navigate to the root of the project and run effrit scan -p .\nApplying the tool Let’s see with a real example on using the tool and what to do with the metrics it provides.\nI have a project called Furnace. Running the tool on it I get the following stats:\n.\nWhat do these means?\nIt means, that hopefully, command packages have a high coverage and that config packages don’t require change that often. The coverage count for aws command package is:\ncoverage: 74.7% of statements\nThat is pretty good. I think it’s covered well enough for now.\nOn to the config package. This is the whole file:\npackage config import ( \"os/user\" \"path/filepath\" \"github.com/go-furnace/go-furnace/handle\" ) // Spinners is a collection os spinner types var Spinners = []string{`←↖↑↗→↘↓↙`, `▁▃▄▅▆▇█▇▆▅▄▃`, `┤┘┴└├┌┬┐`, `◰◳◲◱`, `◴◷◶◵`, `◐◓◑◒`, `⣾⣽⣻⢿⡿⣟⣯⣷`, `|/-\\`} // WAITFREQUENCY global wait frequency default. var WAITFREQUENCY = 1 // STACKNAME is the default name for a stack. var STACKNAME = \"FurnaceStack\" // SPINNER is the index of which spinner to use. Defaults to 7. var SPINNER = 7 // Path retrieves the main configuration path. func Path() string { // Get configuration path usr, err := user.Current() handle.Error(err) return filepath.Join(usr.HomeDir, \".config\", \"go-furnace\") } Not a lot of stuff in there. But it’s using the handle package. Hence the 0.2. Luckily, we also have some coverage to take care of that.\nThe handle is pretty stable. Let’s take a peak inside:\npackage handle import \"log\" // LogFatalf is used to define the fatal error handler function. In unit tests, this is used to // mock out fatal errors so we can test for them. var LogFatalf = log.Fatalf // Error extracts the if err != nil check. If the given error is not nil it will call // the defined fatal error handler function. func Error(err error) { if err != nil { Fatal(\"Error occurred:\", err) } } // Fatal is a wrapper for LogFatalf function. It's used to throw a Fatal in case it needs to. func Fatal(s string, err error) { LogFatalf(s, err) } Basic logic to take care of errors in Furnace. Last time I changed this file was… a year ago. Yeah, I think it’s doing fine.\nConclusion And that’s it. Hopefully this is an interesting metric to use to define what packages may need refactoring, or need to be repurposed because they are too rigid. If a packages is stable, aka. hard to change but must undergo changes frequently, it may be time to refactor and introduce a mediator or a liaison package. If a package is unstable and has a lot of bugs, we might want to refactor it and inverse it’s dependencies. This is called the Dependency Inversion Principle, DIP. Which is also described in the same book. However it’s not always bad if a package is unstable. Maybe it contains code which needs to change frequently. It’s a database schema code. Or an algorithm which requires constant tweaking. And that is fine. Just make sure it’s covered well enough.\nThe principles that these metrics are based on are: SAP and SDP. Stable Abstraction Principle and Stable Dependencies Principle. These are also described in the same book, Clean Architecture. A highly recommend it. Applying these principles could help maintain the project’s stability and it’s dependencies.\nThank you for reading, Gergely.\n",
+  "wordCount" : "1121",
+  "inLanguage": "en",
+  "datePublished": "2019-04-21T21:01:00+01:00",
+  "dateModified": "2019-04-21T21:01:00+01:00",
+  "author":{
+    "@type": "Person",
+    "name": "hannibal"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://skarlso.github.io/2019/04/21/efferent-and-afferent-metrics-in-go/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Ramblings of a cloud engineer",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://skarlso.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
 
-      <div class="post-meta">
-        <span class="post-time"> 2019-04-21 </span>
-        <div class="post-category">
-            <a href="/categories/go/"> go </a>
-            <a href="/categories/golang/"> golang </a>
-            <a href="/categories/tools/"> tools </a>
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
             </div>
-        
-      </div>
-    </header>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://skarlso.github.io/posts/" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
 
-    <div class="post-toc" id="post-toc">
-  <h2 class="post-toc-title">Contents</h2>
-  <div class="post-toc-content always-active">
-    <nav id="TableOfContents">
-  <ul>
-    <li><a href="#intro">Intro</a></li>
-    <li><a href="#abstract">Abstract</a></li>
-    <li><a href="#metric-usage">Metric Usage</a>
-      <ul>
-        <li><a href="#unstable">Unstable</a></li>
-        <li><a href="#stable">Stable</a></li>
-      </ul>
-    </li>
-    <li><a href="#appliance-in-go-ecosystem">Appliance in Go ecosystem</a></li>
-    <li><a href="#tool">Tool</a></li>
-    <li><a href="#applying-the-tool">Applying the tool</a></li>
-    <li><a href="#conclusion">Conclusion</a></li>
-  </ul>
-</nav>
-  </div>
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title">
+      Efferent and Afferent metrics in Go
+    </h1>
+    <div class="post-meta"><span title='2019-04-21 21:01:00 +0100 +0100'>April 21, 2019</span>&nbsp;·&nbsp;hannibal
+
 </div>
-    <div class="post-content">
-      <h1 id="intro">Intro</h1>
+  </header> 
+  <div class="post-content"><h1 id="intro">Intro<a hidden class="anchor" aria-hidden="true" href="#intro">#</a></h1>
 <p>Hi folks!</p>
 <p>Today I would like to write about a metric that I read in a book called Clean Architecture from Robert Cecil Martin ( Uncle Bob ).</p>
-<h1 id="abstract">Abstract</h1>
+<h1 id="abstract">Abstract<a hidden class="anchor" aria-hidden="true" href="#abstract">#</a></h1>
 <p>The metrics I mean are <a href="https://en.wikipedia.org/wiki/Software_package_metrics">Efferent</a> and <a href="https://en.wikipedia.org/wiki/Software_package_metrics">Afferent</a> coupling in packages. So you, dear reader, don&rsquo;t have to navigate away from this page, here are the descriptions pasted in:</p>
 <ul>
 <li>
@@ -185,264 +216,174 @@ Abstract The metrics I mean are Efferent and Afferent coupling in packages. So y
 </li>
 </ul>
 <p>These metrics used together will indicate the stability / instability of each package in a project.</p>
-<h1 id="metric-usage">Metric Usage</h1>
+<h1 id="metric-usage">Metric Usage<a hidden class="anchor" aria-hidden="true" href="#metric-usage">#</a></h1>
 <p>What does it mean if the package is stable vs. unstable? Let&rsquo;s take a closer look.</p>
-<h2 id="unstable">Unstable</h2>
+<h2 id="unstable">Unstable<a hidden class="anchor" aria-hidden="true" href="#unstable">#</a></h2>
 <p>If the instability metric comes out as 1 or close to 1, that means that the package is unstable. It means that there are only packages which this package is depending upon and nothing, or only 1 or 2, packages depend on it. This infers two things:</p>
 <ul>
 <li>The package is easy to change since there is nothing depending on the behavior explicitly</li>
 <li>The package is volatile since it depends on a lot of out side things</li>
 </ul>
 <p>The first one is self-explanatory. The second one has ramifications. These ramifications are that there are a lot of packages that could cause bugs in this package. Ideally, a package with instability 1 or high, requires a large test coverage to ensure that no bugs seep in.</p>
-<h2 id="stable">Stable</h2>
+<h2 id="stable">Stable<a hidden class="anchor" aria-hidden="true" href="#stable">#</a></h2>
 <p>On the other spectrum lies the indicator for a stable package. If this metric is 0 or close to 0, the package is said to be stable. A stable package resists change because it has a lot of depending packages. The depending packages lock this package in place, meaning we can&rsquo;t change the package easily. Ideally this is the package that would contain business logic for example, or code which does not change often.</p>
-<h1 id="appliance-in-go-ecosystem">Appliance in Go ecosystem</h1>
+<h1 id="appliance-in-go-ecosystem">Appliance in Go ecosystem<a hidden class="anchor" aria-hidden="true" href="#appliance-in-go-ecosystem">#</a></h1>
 <p>The book was using mostly Java or C/C++ for examples and dealt with classes describing these metrics. Especially the Abstractness of a package which calculates as ratio of abstract classes + interfaces vs concrete classes and implementations. This isn&rsquo;t that easy to define in Go. Not impossible though and we could still get something close enough. Something like, count interfaces + structs vs implementations of said interfaces with function receivers and functions.</p>
 <p>The easier of these is the coupling metrics. I think we can define them since Go also has import statements. Go doesn&rsquo;t have classes, but it&rsquo;s enough if we calculate the number of packages that said package depends upon and are depended upon by. Should be close enough.</p>
-<h1 id="tool">Tool</h1>
+<h1 id="tool">Tool<a hidden class="anchor" aria-hidden="true" href="#tool">#</a></h1>
 <p>If there is a project with a <strong>lot</strong> of packages and files, it would be quite difficult to calculate things using your hands&hellip; Hence, <a href="https://github.com/Skarlso/effrit">Effrit</a>. This tool, at the writing of this post, only calculates the stability metric for now. If given a parameter like <code>-p effrit</code> it will only calculate the Fan-Out metrics considering project packages. If no project name is given, it will also calculate not project packages (for example cobra or aws sdk) as Efferent. Usage is really simple. Navigate to the root of the project and run <code>effrit scan -p &lt;projectname&gt;</code>.</p>
-<h1 id="applying-the-tool">Applying the tool</h1>
+<h1 id="applying-the-tool">Applying the tool<a hidden class="anchor" aria-hidden="true" href="#applying-the-tool">#</a></h1>
 <p>Let&rsquo;s see with a real example on using the tool and what to do with the metrics it provides.</p>
 <p>I have a project called <a href="https://github.com/go-furnace/go-furnace">Furnace</a>. Running the tool on it I get the following stats:</p>
-<p><img src="/img/effrit/effrit1.png" alt="furnace-before-tool">.</p>
+<p><img loading="lazy" src="/img/effrit/effrit1.png" alt="furnace-before-tool"  />
+.</p>
 <p>What do these means?</p>
 <p>It means, that hopefully, <code>command</code> packages have a high coverage and that <code>config</code> packages don&rsquo;t require change that often. The coverage count for aws command package is:</p>
 <p><code>coverage: 74.7% of statements</code></p>
 <p>That is pretty good. I think it&rsquo;s covered well enough for now.</p>
 <p>On to the <code>config</code> package. This is the whole file:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">config</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;os/user&#34;</span>
-	<span class="s">&#34;path/filepath&#34;</span>
-
-	<span class="s">&#34;github.com/go-furnace/go-furnace/handle&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// Spinners is a collection os spinner types
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">Spinners</span> <span class="p">=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">`←↖↑↗→↘↓↙`</span><span class="p">,</span>
-	<span class="s">`▁▃▄▅▆▇█▇▆▅▄▃`</span><span class="p">,</span>
-	<span class="s">`┤┘┴└├┌┬┐`</span><span class="p">,</span>
-	<span class="s">`◰◳◲◱`</span><span class="p">,</span>
-	<span class="s">`◴◷◶◵`</span><span class="p">,</span>
-	<span class="s">`◐◓◑◒`</span><span class="p">,</span>
-	<span class="s">`⣾⣽⣻⢿⡿⣟⣯⣷`</span><span class="p">,</span>
-	<span class="s">`|/-\`</span><span class="p">}</span>
-
-<span class="c1">// WAITFREQUENCY global wait frequency default.
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">WAITFREQUENCY</span> <span class="p">=</span> <span class="mi">1</span>
-
-<span class="c1">// STACKNAME is the default name for a stack.
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">STACKNAME</span> <span class="p">=</span> <span class="s">&#34;FurnaceStack&#34;</span>
-
-<span class="c1">// SPINNER is the index of which spinner to use. Defaults to 7.
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">SPINNER</span> <span class="p">=</span> <span class="mi">7</span>
-
-<span class="c1">// Path retrieves the main configuration path.
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Path</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
-	<span class="c1">// Get configuration path
-</span><span class="c1"></span>	<span class="nx">usr</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">user</span><span class="p">.</span><span class="nf">Current</span><span class="p">()</span>
-	<span class="nx">handle</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-	<span class="k">return</span> <span class="nx">filepath</span><span class="p">.</span><span class="nf">Join</span><span class="p">(</span><span class="nx">usr</span><span class="p">.</span><span class="nx">HomeDir</span><span class="p">,</span> <span class="s">&#34;.config&#34;</span><span class="p">,</span> <span class="s">&#34;go-furnace&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Not a lot of stuff in there. But it&rsquo;s using the <code>handle</code> package. Hence the <code>0.2</code>. Luckily, we also have some coverage to take care of that.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">config</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;os/user&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;path/filepath&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/go-furnace/go-furnace/handle&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Spinners is a collection os spinner types
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">Spinners</span> = []<span style="color:#66d9ef">string</span>{<span style="color:#e6db74">`←↖↑↗→↘↓↙`</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">`▁▃▄▅▆▇█▇▆▅▄▃`</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">`┤┘┴└├┌┬┐`</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">`◰◳◲◱`</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">`◴◷◶◵`</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">`◐◓◑◒`</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">`⣾⣽⣻⢿⡿⣟⣯⣷`</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">`|/-\`</span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// WAITFREQUENCY global wait frequency default.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">WAITFREQUENCY</span> = <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// STACKNAME is the default name for a stack.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">STACKNAME</span> = <span style="color:#e6db74">&#34;FurnaceStack&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// SPINNER is the index of which spinner to use. Defaults to 7.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">SPINNER</span> = <span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Path retrieves the main configuration path.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Path</span>() <span style="color:#66d9ef">string</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Get configuration path
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">usr</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">user</span>.<span style="color:#a6e22e">Current</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">handle</span>.<span style="color:#a6e22e">Error</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">filepath</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">usr</span>.<span style="color:#a6e22e">HomeDir</span>, <span style="color:#e6db74">&#34;.config&#34;</span>, <span style="color:#e6db74">&#34;go-furnace&#34;</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Not a lot of stuff in there. But it&rsquo;s using the <code>handle</code> package. Hence the <code>0.2</code>. Luckily, we also have some coverage to take care of that.</p>
 <p>The <code>handle</code> is pretty stable. Let&rsquo;s take a peak inside:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">handle</span>
-
-<span class="kn">import</span> <span class="s">&#34;log&#34;</span>
-
-<span class="c1">// LogFatalf is used to define the fatal error handler function. In unit tests, this is used to
-</span><span class="c1">// mock out fatal errors so we can test for them.
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">LogFatalf</span> <span class="p">=</span> <span class="nx">log</span><span class="p">.</span><span class="nx">Fatalf</span>
-
-<span class="c1">// Error extracts the if err != nil check. If the given error is not nil it will call
-</span><span class="c1">// the defined fatal error handler function.
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Error</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nf">Fatal</span><span class="p">(</span><span class="s">&#34;Error occurred:&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-
-<span class="c1">// Fatal is a wrapper for LogFatalf function. It&#39;s used to throw a Fatal in case it needs to.
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Fatal</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nf">LogFatalf</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Basic logic to take care of errors in Furnace. Last time I changed this file was&hellip; a year ago. Yeah, I think it&rsquo;s doing fine.</p>
-<h1 id="conclusion">Conclusion</h1>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">handle</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> <span style="color:#e6db74">&#34;log&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// LogFatalf is used to define the fatal error handler function. In unit tests, this is used to
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// mock out fatal errors so we can test for them.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">LogFatalf</span> = <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Error extracts the if err != nil check. If the given error is not nil it will call
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// the defined fatal error handler function.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Error</span>(<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;Error occurred:&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Fatal is a wrapper for LogFatalf function. It&#39;s used to throw a Fatal in case it needs to.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">s</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">LogFatalf</span>(<span style="color:#a6e22e">s</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Basic logic to take care of errors in Furnace. Last time I changed this file was&hellip; a year ago. Yeah, I think it&rsquo;s doing fine.</p>
+<h1 id="conclusion">Conclusion<a hidden class="anchor" aria-hidden="true" href="#conclusion">#</a></h1>
 <p>And that&rsquo;s it. Hopefully this is an interesting metric to use to define what packages may need refactoring, or need to be repurposed because they are too rigid. If a packages is stable, aka. hard to change but must undergo changes frequently, it may be time to refactor and introduce a mediator or a liaison package. If a package is unstable and has a lot of bugs, we might want to refactor it and inverse it&rsquo;s dependencies. This is called the Dependency Inversion Principle, DIP. Which is also described in the same book. However it&rsquo;s not always bad if a package is unstable. Maybe it contains code which needs to change frequently. It&rsquo;s a database schema code. Or an algorithm which requires constant tweaking. And that is fine. Just make sure it&rsquo;s covered well enough.</p>
 <p>The principles that these metrics are based on are: <a href="http://wiki.c2.com/?StableAbstractionsPrinciple">SAP</a> and <a href="https://www.smartics.eu/confluence/display/ADOC/Stable+Dependencies+Principle">SDP</a>. Stable Abstraction Principle and Stable Dependencies Principle. These are also described in the same book, Clean Architecture. A highly recommend it. Applying these principles could help maintain the project&rsquo;s stability and it&rsquo;s dependencies.</p>
 <p>Thank you for reading,
 Gergely.</p>
 
-    </div>
 
-    
-<footer class="post-footer">
-      
-      <nav class="post-nav">
-        <a class="prev" href="/2019/09/19/updated-face-recog-drawing/">
-            <i class="iconfont icon-left"></i>
-            <span class="prev-text nav-default">Updated Face-recog architecture drawing</span>
-            <span class="prev-text nav-mobile">Prev</span>
-          </a>
-        <a class="next" href="/2019/04/12/living-with-a-parser/">
-            <span class="next-text nav-default">Living with a new Parser for a year</span>
-            <span class="next-text nav-mobile">Next</span>
-            <i class="iconfont icon-right"></i>
-          </a>
-      </nav>
-    </footer>
-  </article>
-        </div>
-        <div id="disqus_thread"></div>
-    <script type="text/javascript">
-    (function() {
-      
-      
-      if (window.location.hostname === 'localhost') return;
-
-      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      var disqus_shortname = 'hannibalDisqus';
-      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-    })();
-    </script>
-    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-
-  
-
-  
-
-      </div>
-    </main>
-
-    <footer id="footer" class="footer">
-      <div class="social-links">
-      <a href="https://twitter.com/skarlso" class="iconfont icon-twitter" title="twitter"></a>
-      <a href="https://github.com/Skarlso" class="iconfont icon-github" title="github"></a>
-  <a href="https://skarlso.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
-</div>
-
-<div class="copyright">
-  <span class="power-by">
-    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
-  </span>
-  <span class="division">|</span>
-  <span class="theme-info">
-    Theme - 
-    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
-  </span>
-
-  
-
-  <span class="copyright-year">
-    &copy; 
-     - 
-    2023<span class="heart"><i class="iconfont icon-heart"></i></span><span>Gergely Brautigam</span>
-  </span>
-</div>
-
-    </footer>
-
-    <div class="back-to-top" id="back-to-top">
-      <i class="iconfont icon-up"></i>
-    </div>
   </div>
-  <script type="text/javascript" src="/lib/jquery/jquery-3.2.1.min.js"></script>
-  <script type="text/javascript" src="/lib/slideout/slideout-1.0.1.min.js"></script>
-  
 
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
 
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
 
-<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
 
-
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-69463020-2', 'auto');
-	
-	ga('send', 'pageview');
-}
 </script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
 
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
 
-
-
-
-
-
-
-
-
+</script>
 </body>
+
 </html>

@@ -1,210 +1,219 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <title>Replacing Eval with Object.send and a self written Parser - Ramblings of a cloud engineer</title>
-  <meta name="renderer" content="webkit" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<html lang="en" dir="auto">
 
-<meta http-equiv="Cache-Control" content="no-transform" />
-<meta http-equiv="Cache-Control" content="no-siteapp" />
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Replacing Eval with Object.send and a self written Parser | Ramblings of a cloud engineer</title>
+<meta name="keywords" content="">
+<meta name="description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
+You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $.">
+<meta name="author" content="hannibal">
+<link rel="canonical" href="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://skarlso.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://skarlso.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
 
-<meta name="theme-color" content="#f8f5ec" />
-<meta name="msapplication-navbutton-color" content="#f8f5ec">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
 
+            .list {
+                background: var(--theme);
+            }
 
-<meta name="author" content="hannibal" /><meta name="description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It&amp;rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
-You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $." />
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
 
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
 
-
-
-
-
-<meta name="generator" content="Hugo 0.83.1 with theme even" />
-
-
-<link rel="canonical" href="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/" />
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/manifest.json">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-
-
-
-<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
-
-
-
-<meta property="og:title" content="Replacing Eval with Object.send and a self written Parser" />
+    </style>
+</noscript><meta property="og:title" content="Replacing Eval with Object.send and a self written Parser" />
 <meta property="og:description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
 You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/" /><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2017-05-28T19:23:00&#43;01:00" />
-<meta property="article:modified_time" content="2017-05-28T19:23:00&#43;01:00" />
+<meta property="og:url" content="https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2017-05-28T19:23:00+01:00" />
+<meta property="article:modified_time" content="2017-05-28T19:23:00+01:00" />
 
-<meta itemprop="name" content="Replacing Eval with Object.send and a self written Parser">
-<meta itemprop="description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
-You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $."><meta itemprop="datePublished" content="2017-05-28T19:23:00&#43;01:00" />
-<meta itemprop="dateModified" content="2017-05-28T19:23:00&#43;01:00" />
-<meta itemprop="wordCount" content="1459">
-<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Replacing Eval with Object.send and a self written Parser"/>
 <meta name="twitter:description" content="Intro A while ago, I was added as a curator for a Gem called JsonPath. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.
 You could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $."/>
 
 
-
-
-<!--[if lte IE 9]>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
-<![endif]-->
-
-<!--[if lt IE 9]>
-  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
-<![endif]-->
-
-</head>
-<body>
-  <div id="mobile-navbar" class="mobile-navbar">
-  <div class="mobile-header-logo">
-    <a href="/" class="logo">Ramblings of a cloud engineer</a>
-  </div>
-  <div class="mobile-navbar-icon">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
-</div>
-<nav id="mobile-menu" class="mobile-menu slideout-menu">
-  <ul class="mobile-menu-list">
-    <a href="/blog/">
-        <li class="mobile-menu-item">Archive</li>
-      </a><a href="/tags/">
-        <li class="mobile-menu-item">Tags</li>
-      </a><a href="/categories/">
-        <li class="mobile-menu-item">Categories</li>
-      </a>
-  </ul>
-
-  
-
-
-</nav>
-
-  <div class="container" id="mobile-panel">
-    <header id="header" class="header">
-        <div class="logo-wrapper">
-  <a href="/" class="logo">Ramblings of a cloud engineer</a>
-</div>
-
-
-
-
-
-<nav class="site-navbar">
-  <ul id="menu" class="menu">
-    <li class="menu-item">
-        <a class="menu-item-link" href="/blog/">Archive</a>
-      </li><li class="menu-item">
-        <a class="menu-item-link" href="/tags/">Tags</a>
-      </li><li class="menu-item">
-        <a class="menu-item-link" href="/categories/">Categories</a>
-      </li>
-  </ul>
-</nav>
-
-    </header>
-
-    <main id="main" class="main">
-      <div class="content-wrapper">
-        <div id="content" class="content">
-          <article class="post">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://skarlso.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "Replacing Eval with Object.send and a self written Parser",
+      "item": "https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Replacing Eval with Object.send and a self written Parser",
+  "name": "Replacing Eval with Object.send and a self written Parser",
+  "description": "Intro A while ago, I was added as a curator for a Gem called JsonPath. It\u0026rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.\nYou could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $.",
+  "keywords": [
     
-    <header class="post-header">
-      <h1 class="post-title">Replacing Eval with Object.send and a self written Parser</h1>
+  ],
+  "articleBody": "Intro A while ago, I was added as a curator for a Gem called JsonPath. It’s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.\nYou could opt in using eval with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like Huginn they had to opt out by default, thus missing out on sweet parsing like this: $..book[?(@['price'] \u003e 20)].\nEval In order to remove eval, first I had to understand what it is actually doing. I had to take it apart.\nAfter much digging and understanding the code, I found, all it does is perform the given operations on the current node. And if the operation is true, it will select that node, otherwise, return false, and ignore that node.\nFor example $..book[?(@['price'] \u003e 20)] could be translated to:\nreturn @_current_node['price'] \u003e 20 Checking first if 'price' is even a key in @_current_node. Once I’ve understood this part, I set on trying to fix eval.\nSAFE = 4 In ruby, you could extract the part where you Eval and put it into its own proc and set SAFE = 4 which will disable some things like system calls.\nproc do SAFE = 4 eval(some_expression) end.call SAFE levels:\n$SAFE\tDescription 0\tNo checking of the use of externally supplied (tainted) data is performed. This is Ruby’s default mode.\n= 1\tRuby disallows the use of tainted data by potentially dangerous operations. = 2\tRuby prohibits the loading of program files from globally writable locations. = 3\tAll newly created objects are considered tainted. = 4\tRuby effectively partitions the running program in two. None - tainted objects may not be modified. Typically, this will be used to create a sandbox: the program sets up an environment using a lower $SAFE level, then resets $SAFE to 4 to prevent subsequent changes to that environment.\nThis has the disadvantage that anything below 4 is just, meh. But nothing above 1 will actually work with JsonPath so… scratch that.\nSandboxing We could technically try and sandbox eval into it’s own process with a PID and whitelist methods which are allowed to be called.\nNot bad, and there are a few gems out there which are trying to do that like SafeRuby. But all of these project have been abandoned years ago for a good reason.\nObject.send Object.send is the best way to get some flexibility while still being safe. You basically just call methods on objects by describing said method on an object and giving parameters to it, like:\n1.send(:+, 2) =\u003e 3 This is a very powerful tool in our toolbox which we will exploit immensely.\nSo let’s get to it.\nWriting a parser Writing a parser in Ruby is a very fluid experience. It has nice tools which support that, and the one I used is StringScanner. It has the ability to track where you are currently at in a string and move a pointer along with regex matches. In fact, JsonPath already employs this method when parsing a json expression. So reusing that logic was in fact… elementary.\nThe expression How do we get from this:\n$..book[?(@['price'] \u003c 20)] To this:\n@_current_node['price'] \u003c 20 Well. By simple elimination. There are a couple of problems along the way of course. Because this wouldn’t be a parser if it couldn’t handle ALL the other cases…\nRemoving Clutter Some of this we don’t need. Like, $..book part.\nThe other things we don’t need are all the '[]?()\nOnce this is done, we can move to isolating the important bits.\nBreakDown Elements How does an expression actually look like?\nLet’s break it down.\nSo, this is a handful. Operations can be \u003c=,\u003e=,\u003c,\u003e,==,!= and operands can be either numbers, or words, and element accessor can be nested since something like this is perfectly valid: $..book[?(@.written.year == 1997)].\nTo avoid being overwhelmed, ruby has our back with a method called dig.\nThis, basically lets us pass in some parameters into a dig function on a hash or an array with variadic parameters, which will go on and access those elements in order how they were supplied. Until it either returns a nil or an end result.\nFor example:\n2.3.1 :001 \u003e a = {a: {b: 'c'}} =\u003e {:a=\u003e{:b=\u003e\"c\"}} 2.3.1 :002 \u003e a.dig(:a, :b) =\u003e \"c\" Easy. However… Dig was only added after ruby 2.3 thus, I had to write my own dig for now, until I stop supporting anything below 2.3.\nAt first, I wanted to add it to the hash class, but it proved to be a futile attempt if I wanted to do it nicely, thus the parser got it as a private method.\ndef dig(keys, hash) return hash unless hash.is_a? Hash return nil unless hash.key?(keys.first) return hash.fetch(keys.first) if keys.size == 1 prev = keys.shift dig(keys, hash.fetch(prev)) end And the corresponding regex behind getting a multitude of elements is as follows:\n... if t = scanner.scan(/\\['\\w+'\\]+/) ... Operator Selecting the operator is another interesting part as it can be a single one or multiple and all sorts. Until I realized that no… it can actually be only a couple.\nAlso, after a bit of fiddling and doing and doing a silly case statement first:\ncase op when '\u003e' dig(@_current_node, *elements) \u003e operand when '\u003c' dig(@_current_node, *elements) \u003e operand ... end …I promptly saw that this is not how it should be done.\nAnd here comes Object.send.\nThis gave me the opportunity to write this:\ndig(elements, @_current_node).send(operator, operand) Much better. Now I could send all the things in the way of a node.\nParsing an op be like:\nelsif t = scanner.scan(/\\s+[\u003c\u003e=][\u003c\u003e=]?\\s+?/) Operand Now comes the final piece. The value which we are comparing. This could either be a simple integer, a floating number, or a word. Hah. So coming up with a regex which fits this tightly took a little fiddling, but eventually I ended up with this:\nelsif t = scanner.scan(/(\\s+)?'?(\\w+)?[.,]?(\\w+)?'?(\\s+)?/) Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because an this expression $..book[?(@.price)] is valid. Which is basically just asserting if a given node has a price element.\nLogical Operators The last thing that remains is logical operators, which if you are using eval, is pretty straight forward. It takes care of anything that you might add in like \u0026\u0026, ||, |, \u0026, ^ etc etc.\nNow, that’s something I did with a case though. Until I find a nicer solution. Since we can already parse a single expression it’s just a question of breaking down a multi structure expression as the following one: $..book[?(@['price'] \u003e 20 \u0026\u0026 @.written.year == 1998)].\nexps = exp.split(/(\u0026\u0026)|(\\|\\|)/) This splits up the string by either \u0026\u0026 or || and the usage of groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like [true, '\u0026\u0026', false]. You know what could immediately resolve this? Yep…\n.\nI’d rather just parse it although technically an eval at this stage wouldn’t be that big of a problem…\ndef parse(exp) exps = exp.split(/(\u0026\u0026)|(\\|\\|)/) ret = parse_exp(exps.shift) exps.each_with_index do |item, index| case item when '\u0026\u0026' ret \u0026\u0026= parse_exp(exps[index + 1]) when '||' ret ||= parse_exp(exps[index + 1]) end end ret end Closing words That’s it folks. The parser is done. And there is no eval being used. There are some more things here that are interesting. Like, array indexing is allowed in jsonpath which is solved by sending .length to a current node. For example:\nif scanner.scan(/\\./) sym = scanner.scan(/\\w+/) op = scanner.scan(/./) num = scanner.scan(/\\d+/) return @_current_node.send(sym.to_sym).send(op.to_sym, num.to_i) end If an expression begins with a .. So you see that using send will help a lot, and understanding what eval is trying to evaluate and rather writing your own parser, isn’t that hard at all using ruby.\nI hope you enjoyed reading this little tid-bit as much as I enjoyed writing and drawing it. Leave a comment if your liked the drawings or if you did not and I should never do them again (( I don’t really care, this is my blog haha. )). Note to self: I shouldn’t draw on the other side of the drawing because of bleed-through.\nThank you! Gergely.\n",
+  "wordCount" : "1407",
+  "inLanguage": "en",
+  "datePublished": "2017-05-28T19:23:00+01:00",
+  "dateModified": "2017-05-28T19:23:00+01:00",
+  "author":{
+    "@type": "Person",
+    "name": "hannibal"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://skarlso.github.io/2017/05/28/replace-eval-with-object-send-and-a-parser/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Ramblings of a cloud engineer",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://skarlso.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
 
-      <div class="post-meta">
-        <span class="post-time"> 2017-05-28 </span>
-        <div class="post-category">
-            <a href="/categories/ruby/"> Ruby </a>
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
             </div>
-        
-      </div>
-    </header>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://skarlso.github.io/posts/" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
 
-    <div class="post-toc" id="post-toc">
-  <h2 class="post-toc-title">Contents</h2>
-  <div class="post-toc-content always-active">
-    <nav id="TableOfContents">
-  <ul>
-    <li><a href="#intro">Intro</a>
-      <ul>
-        <li><a href="#eval">Eval</a>
-          <ul>
-            <li><a href="#safe--4">SAFE = 4</a></li>
-            <li><a href="#sandboxing">Sandboxing</a></li>
-            <li><a href="#objectsend">Object.send</a></li>
-          </ul>
-        </li>
-      </ul>
-    </li>
-    <li><a href="#writing-a-parser">Writing a parser</a>
-      <ul>
-        <li><a href="#the-expression">The expression</a>
-          <ul>
-            <li><a href="#removing-clutter">Removing Clutter</a></li>
-            <li><a href="#breakdown">BreakDown</a></li>
-          </ul>
-        </li>
-      </ul>
-    </li>
-    <li><a href="#closing-words">Closing words</a></li>
-  </ul>
-</nav>
-  </div>
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title">
+      Replacing Eval with Object.send and a self written Parser
+    </h1>
+    <div class="post-meta"><span title='2017-05-28 19:23:00 +0100 +0100'>May 28, 2017</span>&nbsp;·&nbsp;hannibal
+
 </div>
-    <div class="post-content">
-      <h1 id="intro">Intro</h1>
+  </header> 
+  <div class="post-content"><h1 id="intro">Intro<a hidden class="anchor" aria-hidden="true" href="#intro">#</a></h1>
 <p>A while ago, I was added as a curator for a Gem called <a href="https://github.com/joshbuddy/jsonpath">JsonPath</a>. It&rsquo;s a small but very useful and brilliant gem. It had a couple of problems which I fixed, but the hardest to eliminate proved to be a series of evals throughout the code.</p>
 <p>You could opt in using <code>eval</code> with a constructor parameter, but generally, it was considered to be unsafe. Thus, normally when a project was using it, like <a href="https://github.com/huginn/huginn">Huginn</a> they had to opt out by default, thus missing out on sweet parsing like this: <code>$..book[?(@['price'] &gt; 20)]</code>.</p>
-<h2 id="eval">Eval</h2>
+<h2 id="eval">Eval<a hidden class="anchor" aria-hidden="true" href="#eval">#</a></h2>
 <p>In order to remove eval, first I had to understand what it is actually doing. I had to take it apart.</p>
-<p><img src="/img/takeevalapart.jpg" alt="apart"></p>
+<p><img loading="lazy" src="/img/takeevalapart.jpg" alt="apart"  />
+</p>
 <p>After much digging and understanding the code, I found, all it does is perform the given operations on the current node. And if the operation is true, it will select that node, otherwise, return false, and ignore that node.</p>
 <p>For example <code>$..book[?(@['price'] &gt; 20)]</code> could be translated to:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">return</span> <span class="vi">@_current_node</span><span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> <span class="o">&gt;</span> <span class="mi">20</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Checking first if <code>'price'</code> is even a key in <code>@_current_node</code>. Once I&rsquo;ve understood this part, I set on trying to fix eval.</p>
-<h3 id="safe--4">SAFE = 4</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span><span style="color:#66d9ef">return</span> @_current_node<span style="color:#f92672">[</span><span style="color:#e6db74">&#39;price&#39;</span><span style="color:#f92672">]</span> <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">20</span>
+</span></span></code></pre></div><p>Checking first if <code>'price'</code> is even a key in <code>@_current_node</code>. Once I&rsquo;ve understood this part, I set on trying to fix eval.</p>
+<h3 id="safe--4">SAFE = 4<a hidden class="anchor" aria-hidden="true" href="#safe--4">#</a></h3>
 <p>In ruby, you could extract the part where you Eval and put it into its own proc and set <code>SAFE = 4</code> which will disable some things like system calls.</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="nb">proc</span> <span class="k">do</span>
-  <span class="no">SAFE</span> <span class="o">=</span> <span class="mi">4</span>
-  <span class="nb">eval</span><span class="p">(</span><span class="n">some_expression</span><span class="p">)</span>
-<span class="k">end</span><span class="o">.</span><span class="n">call</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>SAFE levels:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span>proc <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">SAFE</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span>  eval(some_expression)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span><span style="color:#f92672">.</span>call
+</span></span></code></pre></div><p>SAFE levels:</p>
 <p>$SAFE	Description
 0	No checking of the use of externally supplied (tainted) data is performed. This is Ruby&rsquo;s default mode.</p>
 <blockquote>
@@ -214,343 +223,206 @@ You could opt in using eval with a constructor parameter, but generally, it was 
 = 4	Ruby effectively partitions the running program in two. None - tainted objects may not be modified. Typically, this will be used to create a sandbox: the program sets up an environment using a lower $SAFE level, then resets $SAFE to 4 to prevent subsequent changes to that environment.</p>
 </blockquote>
 <p>This has the disadvantage that anything below 4 is just, meh. But nothing above 1 will actually work with JsonPath so&hellip; scratch that.</p>
-<h3 id="sandboxing">Sandboxing</h3>
+<h3 id="sandboxing">Sandboxing<a hidden class="anchor" aria-hidden="true" href="#sandboxing">#</a></h3>
 <p>We could technically try and sandbox eval into it&rsquo;s own process with a PID and whitelist methods which are allowed to be called.</p>
 <p>Not bad, and there are a few gems out there which are trying to do that like <a href="https://github.com/ukutaht/safe_ruby">SafeRuby</a>. But all of these project have been abandoned years ago for a good reason.</p>
-<h3 id="objectsend">Object.send</h3>
-<p><img src="/img/nobodylikesyou.jpg" alt="nobodylikesyou"></p>
+<h3 id="objectsend">Object.send<a hidden class="anchor" aria-hidden="true" href="#objectsend">#</a></h3>
+<p><img loading="lazy" src="/img/nobodylikesyou.jpg" alt="nobodylikesyou"  />
+</p>
 <p><code>Object.send</code> is the best way to get some flexibility while still being safe. You basically just call methods on objects by describing said method on an object and giving parameters to it, like:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="mi">1</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="ss">:+</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="mi">3</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>This is a very powerful tool in our toolbox which we will exploit immensely.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span><span style="color:#ae81ff">1</span><span style="color:#f92672">.</span>send(<span style="color:#e6db74">:+</span>, <span style="color:#ae81ff">2</span>) <span style="color:#f92672">=&gt;</span> <span style="color:#ae81ff">3</span>
+</span></span></code></pre></div><p>This is a very powerful tool in our toolbox which we will exploit immensely.</p>
 <p>So let&rsquo;s get to it.</p>
-<h1 id="writing-a-parser">Writing a parser</h1>
+<h1 id="writing-a-parser">Writing a parser<a hidden class="anchor" aria-hidden="true" href="#writing-a-parser">#</a></h1>
 <p>Writing a parser in Ruby is a very fluid experience. It has nice tools which support that, and the one I used is <code>StringScanner</code>. It has the ability to track where you are currently at in a string and move a pointer along with regex matches. In fact, JsonPath already employs this method when parsing a json expression. So reusing that logic was in fact&hellip; elementary.</p>
-<h2 id="the-expression">The expression</h2>
+<h2 id="the-expression">The expression<a hidden class="anchor" aria-hidden="true" href="#the-expression">#</a></h2>
 <p>How do we get from this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-bash" data-lang="bash">$..book<span class="o">[</span>?<span class="o">(</span>@<span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> &lt; 20<span class="o">)]</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>To this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="vi">@_current_node</span><span class="o">[</span><span class="s1">&#39;price&#39;</span><span class="o">]</span> <span class="o">&lt;</span> <span class="mi">20</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Well. By simple elimination. There are a couple of problems along the way of course. Because this wouldn&rsquo;t be a parser if it couldn&rsquo;t handle ALL the other cases&hellip;</p>
-<h3 id="removing-clutter">Removing Clutter</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$..book<span style="color:#f92672">[</span>?<span style="color:#f92672">(</span>@<span style="color:#f92672">[</span><span style="color:#e6db74">&#39;price&#39;</span><span style="color:#f92672">]</span> &lt; 20<span style="color:#f92672">)]</span>
+</span></span></code></pre></div><p>To this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span>@_current_node<span style="color:#f92672">[</span><span style="color:#e6db74">&#39;price&#39;</span><span style="color:#f92672">]</span> <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">20</span>
+</span></span></code></pre></div><p>Well. By simple elimination. There are a couple of problems along the way of course. Because this wouldn&rsquo;t be a parser if it couldn&rsquo;t handle ALL the other cases&hellip;</p>
+<h3 id="removing-clutter">Removing Clutter<a hidden class="anchor" aria-hidden="true" href="#removing-clutter">#</a></h3>
 <p>Some of this we don&rsquo;t need. Like, <code>$..book</code> part.</p>
-<p><img src="/img/dontneed1.jpg" alt="dontneed1"></p>
+<p><img loading="lazy" src="/img/dontneed1.jpg" alt="dontneed1"  />
+</p>
 <p>The other things we don&rsquo;t need are all the <code>'[]?()</code></p>
-<p><img src="/img/dontneed2.jpg" alt="dontneed2"></p>
+<p><img loading="lazy" src="/img/dontneed2.jpg" alt="dontneed2"  />
+</p>
 <p>Once this is done, we can move to isolating the important bits.</p>
-<p><img src="/img/takingaim.jpg" alt="takingaim"></p>
-<h3 id="breakdown">BreakDown</h3>
-<h4 id="elements">Elements</h4>
+<p><img loading="lazy" src="/img/takingaim.jpg" alt="takingaim"  />
+</p>
+<h3 id="breakdown">BreakDown<a hidden class="anchor" aria-hidden="true" href="#breakdown">#</a></h3>
+<h4 id="elements">Elements<a hidden class="anchor" aria-hidden="true" href="#elements">#</a></h4>
 <p>How does an expression actually look like?</p>
 <p>Let&rsquo;s break it down.</p>
-<p><img src="/img/confused.jpg" alt="confused"></p>
+<p><img loading="lazy" src="/img/confused.jpg" alt="confused"  />
+</p>
 <p>So, this is a handful. Operations can be <code>&lt;=,&gt;=,&lt;,&gt;,==,!=</code> and operands can be either numbers, or words, and element accessor can be nested since something like this is perfectly valid: <code>$..book[?(@.written.year == 1997)]</code>.</p>
-<p><img src="/img/feedline.jpg" alt="feedline"></p>
+<p><img loading="lazy" src="/img/feedline.jpg" alt="feedline"  />
+</p>
 <p>To avoid being overwhelmed, ruby has our back with a method called <code>dig</code>.</p>
-<p><img src="/img/dig.jpg" alt="dig"></p>
+<p><img loading="lazy" src="/img/dig.jpg" alt="dig"  />
+</p>
 <p>This, basically lets us pass in some parameters into a dig function on a hash or an array with variadic parameters, which will go on and access those elements in order how they were supplied. Until it either returns a <code>nil</code> or an end result.</p>
 <p>For example:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="mi">2</span><span class="o">.</span><span class="mi">3</span><span class="o">.</span><span class="mi">1</span> <span class="p">:</span><span class="mo">001</span> <span class="o">&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="p">{</span><span class="ss">a</span><span class="p">:</span> <span class="p">{</span><span class="ss">b</span><span class="p">:</span> <span class="s1">&#39;c&#39;</span><span class="p">}}</span>
- <span class="o">=&gt;</span> <span class="p">{</span><span class="ss">:a</span><span class="o">=&gt;</span><span class="p">{</span><span class="ss">:b</span><span class="o">=&gt;</span><span class="s2">&#34;c&#34;</span><span class="p">}}</span>
-<span class="mi">2</span><span class="o">.</span><span class="mi">3</span><span class="o">.</span><span class="mi">1</span> <span class="p">:</span><span class="mo">002</span> <span class="o">&gt;</span> <span class="n">a</span><span class="o">.</span><span class="n">dig</span><span class="p">(</span><span class="ss">:a</span><span class="p">,</span> <span class="ss">:b</span><span class="p">)</span>
- <span class="o">=&gt;</span> <span class="s2">&#34;c&#34;</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Easy. However&hellip; Dig was only added after ruby 2.3 thus, I had to write my own dig for now, until I stop supporting anything below 2.3.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span><span style="color:#ae81ff">2</span><span style="color:#f92672">.</span><span style="color:#ae81ff">3</span><span style="color:#f92672">.</span><span style="color:#ae81ff">1</span> :<span style="color:#ae81ff">001</span> <span style="color:#f92672">&gt;</span> a <span style="color:#f92672">=</span> {<span style="color:#e6db74">a</span>: {<span style="color:#e6db74">b</span>: <span style="color:#e6db74">&#39;c&#39;</span>}}
+</span></span><span style="display:flex;"><span> <span style="color:#f92672">=&gt;</span> {<span style="color:#e6db74">:a</span><span style="color:#f92672">=&gt;</span>{<span style="color:#e6db74">:b</span><span style="color:#f92672">=&gt;</span><span style="color:#e6db74">&#34;c&#34;</span>}}
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2</span><span style="color:#f92672">.</span><span style="color:#ae81ff">3</span><span style="color:#f92672">.</span><span style="color:#ae81ff">1</span> :<span style="color:#ae81ff">002</span> <span style="color:#f92672">&gt;</span> a<span style="color:#f92672">.</span>dig(<span style="color:#e6db74">:a</span>, <span style="color:#e6db74">:b</span>)
+</span></span><span style="display:flex;"><span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;c&#34;</span>
+</span></span></code></pre></div><p>Easy. However&hellip; Dig was only added after ruby 2.3 thus, I had to write my own dig for now, until I stop supporting anything below 2.3.</p>
 <p>At first, I wanted to add it to the hash class, but it proved to be a futile attempt if I wanted to do it nicely, thus the parser got it as a private method.</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby">    <span class="k">def</span> <span class="nf">dig</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="nb">hash</span><span class="p">)</span>
-      <span class="k">return</span> <span class="nb">hash</span> <span class="k">unless</span> <span class="nb">hash</span><span class="o">.</span><span class="n">is_a?</span> <span class="no">Hash</span>
-      <span class="k">return</span> <span class="kp">nil</span> <span class="k">unless</span> <span class="nb">hash</span><span class="o">.</span><span class="n">key?</span><span class="p">(</span><span class="n">keys</span><span class="o">.</span><span class="n">first</span><span class="p">)</span>
-      <span class="k">return</span> <span class="nb">hash</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">keys</span><span class="o">.</span><span class="n">first</span><span class="p">)</span> <span class="k">if</span> <span class="n">keys</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span>
-      <span class="n">prev</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="n">shift</span>
-      <span class="n">dig</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="nb">hash</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">prev</span><span class="p">))</span>
-    <span class="k">end</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>And the corresponding regex behind getting a multitude of elements is as follows:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="o">...</span>
-<span class="k">if</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\[&#39;\w+&#39;\]+/</span><span class="p">)</span>
-<span class="o">...</span>
-</code></pre></td></tr></table>
-</div>
-</div><h4 id="operator">Operator</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">dig</span>(keys, hash)
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">return</span> hash <span style="color:#66d9ef">unless</span> hash<span style="color:#f92672">.</span>is_a? <span style="color:#66d9ef">Hash</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span> <span style="color:#66d9ef">unless</span> hash<span style="color:#f92672">.</span>key?(keys<span style="color:#f92672">.</span>first)
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">return</span> hash<span style="color:#f92672">.</span>fetch(keys<span style="color:#f92672">.</span>first) <span style="color:#66d9ef">if</span> keys<span style="color:#f92672">.</span>size <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>      prev <span style="color:#f92672">=</span> keys<span style="color:#f92672">.</span>shift
+</span></span><span style="display:flex;"><span>      dig(keys, hash<span style="color:#f92672">.</span>fetch(prev))
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>And the corresponding regex behind getting a multitude of elements is as follows:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span><span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> t <span style="color:#f92672">=</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/\[&#39;\w+&#39;\]+/</span>)
+</span></span><span style="display:flex;"><span><span style="color:#f92672">...</span>
+</span></span></code></pre></div><h4 id="operator">Operator<a hidden class="anchor" aria-hidden="true" href="#operator">#</a></h4>
 <p>Selecting the operator is another interesting part as it can be a single one or multiple and all sorts. Until I realized that no&hellip; it can actually be only a couple.</p>
-<p><img src="/img/whatone.jpg" alt="whatone"></p>
-<p><img src="/img/whattwo.jpg" alt="whattwo"></p>
+<p><img loading="lazy" src="/img/whatone.jpg" alt="whatone"  />
+</p>
+<p><img loading="lazy" src="/img/whattwo.jpg" alt="whattwo"  />
+</p>
 <p>Also, after a bit of fiddling and doing and doing a silly case statement first:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">case</span> <span class="n">op</span>
-<span class="k">when</span> <span class="s1">&#39;&gt;&#39;</span>
-  <span class="n">dig</span><span class="p">(</span><span class="vi">@_current_node</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">operand</span>
-<span class="k">when</span> <span class="s1">&#39;&lt;&#39;</span>
-  <span class="n">dig</span><span class="p">(</span><span class="vi">@_current_node</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">operand</span>
-<span class="o">...</span>
-<span class="k">end</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>&hellip;I promptly saw that this is not how it should be done.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span><span style="color:#66d9ef">case</span> op
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">when</span> <span style="color:#e6db74">&#39;&gt;&#39;</span>
+</span></span><span style="display:flex;"><span>  dig(@_current_node, <span style="color:#f92672">*</span>elements) <span style="color:#f92672">&gt;</span> operand
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">when</span> <span style="color:#e6db74">&#39;&lt;&#39;</span>
+</span></span><span style="display:flex;"><span>  dig(@_current_node, <span style="color:#f92672">*</span>elements) <span style="color:#f92672">&gt;</span> operand
+</span></span><span style="display:flex;"><span><span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>&hellip;I promptly saw that this is not how it should be done.</p>
 <p>And here comes Object.send.</p>
-<p><img src="/img/send.jpg" alt="send"></p>
+<p><img loading="lazy" src="/img/send.jpg" alt="send"  />
+</p>
 <p>This gave me the opportunity to write this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">dig</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="vi">@_current_node</span><span class="p">)</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">operator</span><span class="p">,</span> <span class="n">operand</span><span class="p">)</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Much better. Now I could send all the things in the way of a node.</p>
-<p><img src="/img/sendtwo.jpg" alt="send"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span>dig(elements, @_current_node)<span style="color:#f92672">.</span>send(operator, operand)
+</span></span></code></pre></div><p>Much better. Now I could send all the things in the way of a node.</p>
+<p><img loading="lazy" src="/img/sendtwo.jpg" alt="send"  />
+</p>
 <p>Parsing an op be like:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\s+[&lt;&gt;=][&lt;&gt;=]?\s+?/</span><span class="p">)</span>
-</code></pre></td></tr></table>
-</div>
-</div><h4 id="operand">Operand</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span><span style="color:#66d9ef">elsif</span> t <span style="color:#f92672">=</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/\s+[&lt;&gt;=][&lt;&gt;=]?\s+?/</span>)
+</span></span></code></pre></div><h4 id="operand">Operand<a hidden class="anchor" aria-hidden="true" href="#operand">#</a></h4>
 <p>Now comes the final piece. The value which we are comparing. This could either be a simple integer, a floating number, or a word. Hah. So coming up with a regex which fits this tightly took a little fiddling, but eventually I ended up with this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">elsif</span> <span class="n">t</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(\s+)?&#39;?(\w+)?[.,]?(\w+)?&#39;?(\s+)?/</span><span class="p">)</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because an this expression <code>$..book[?(@.price)]</code> is valid. Which is basically just asserting if a given node has a price element.</p>
-<h4 id="logical-operators">Logical Operators</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span><span style="color:#66d9ef">elsif</span> t <span style="color:#f92672">=</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/(\s+)?&#39;?(\w+)?[.,]?(\w+)?&#39;?(\s+)?/</span>)
+</span></span></code></pre></div><p>Without StackOverflow I would say this is fine ((although I need to remove all those space check, shees)). What are all the question marks? Basically, everything is optional. Because an this expression <code>$..book[?(@.price)]</code> is valid. Which is basically just asserting if a given node has a price element.</p>
+<h4 id="logical-operators">Logical Operators<a hidden class="anchor" aria-hidden="true" href="#logical-operators">#</a></h4>
 <p>The last thing that remains is logical operators, which if you are using eval, is pretty straight forward. It takes care of anything that you might add in like <code>&amp;&amp;, ||, |, &amp;, ^</code> etc etc.</p>
 <p>Now, that&rsquo;s something I did with a case though. Until I find a nicer solution. Since we can already parse a single expression it&rsquo;s just a question of breaking down a multi structure expression as the following one: <code>$..book[?(@['price'] &gt; 20 &amp;&amp; @.written.year == 1998)]</code>.</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="n">exps</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sr">/(&amp;&amp;)|(\|\|)/</span><span class="p">)</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>This splits up the string by either <code>&amp;&amp;</code> or <code>||</code> and the usage of groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like <code>[true, '&amp;&amp;', false]</code>. You know what could immediately resolve this? Yep&hellip;</p>
-<p><img src="/img/saynotoeval.jpg" alt="saynotoeval">.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span>exps <span style="color:#f92672">=</span> exp<span style="color:#f92672">.</span>split(<span style="color:#e6db74">/(&amp;&amp;)|(\|\|)/</span>)
+</span></span></code></pre></div><p>This splits up the string by either <code>&amp;&amp;</code> or <code>||</code> and the usage of groups () also includes the operators. Than I evaluate the expressions and save the whole thing in an array like <code>[true, '&amp;&amp;', false]</code>. You know what could immediately resolve this? Yep&hellip;</p>
+<p><img loading="lazy" src="/img/saynotoeval.jpg" alt="saynotoeval"  />
+.</p>
 <p>I&rsquo;d rather just parse it although technically an eval at this stage wouldn&rsquo;t be that big of a problem&hellip;</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
-  <span class="n">exps</span> <span class="o">=</span> <span class="n">exp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sr">/(&amp;&amp;)|(\|\|)/</span><span class="p">)</span>
-  <span class="n">ret</span> <span class="o">=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">.</span><span class="n">shift</span><span class="p">)</span>
-  <span class="n">exps</span><span class="o">.</span><span class="n">each_with_index</span> <span class="k">do</span> <span class="o">|</span><span class="n">item</span><span class="p">,</span> <span class="n">index</span><span class="o">|</span>
-    <span class="k">case</span> <span class="n">item</span>
-    <span class="k">when</span> <span class="s1">&#39;&amp;&amp;&#39;</span>
-      <span class="n">ret</span> <span class="o">&amp;&amp;=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="o">]</span><span class="p">)</span>
-    <span class="k">when</span> <span class="s1">&#39;||&#39;</span>
-      <span class="n">ret</span> <span class="o">||=</span> <span class="n">parse_exp</span><span class="p">(</span><span class="n">exps</span><span class="o">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="o">]</span><span class="p">)</span>
-    <span class="k">end</span>
-  <span class="k">end</span>
-  <span class="n">ret</span>
-<span class="k">end</span>
-</code></pre></td></tr></table>
-</div>
-</div><h1 id="closing-words">Closing words</h1>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">parse</span>(exp)
+</span></span><span style="display:flex;"><span>  exps <span style="color:#f92672">=</span> exp<span style="color:#f92672">.</span>split(<span style="color:#e6db74">/(&amp;&amp;)|(\|\|)/</span>)
+</span></span><span style="display:flex;"><span>  ret <span style="color:#f92672">=</span> parse_exp(exps<span style="color:#f92672">.</span>shift)
+</span></span><span style="display:flex;"><span>  exps<span style="color:#f92672">.</span>each_with_index <span style="color:#66d9ef">do</span> <span style="color:#f92672">|</span>item, index<span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> item
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">when</span> <span style="color:#e6db74">&#39;&amp;&amp;&#39;</span>
+</span></span><span style="display:flex;"><span>      ret <span style="color:#f92672">&amp;&amp;=</span> parse_exp(exps<span style="color:#f92672">[</span>index <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">]</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">when</span> <span style="color:#e6db74">&#39;||&#39;</span>
+</span></span><span style="display:flex;"><span>      ret <span style="color:#f92672">||=</span> parse_exp(exps<span style="color:#f92672">[</span>index <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">]</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>  ret
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><h1 id="closing-words">Closing words<a hidden class="anchor" aria-hidden="true" href="#closing-words">#</a></h1>
 <p>That&rsquo;s it folks. The parser is done. And there is no eval being used. There are some more things here that are interesting. Like, array indexing is allowed in jsonpath which is solved by sending <code>.length</code> to a current node. For example:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-ruby" data-lang="ruby"><span class="k">if</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\./</span><span class="p">)</span>
-  <span class="n">sym</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\w+/</span><span class="p">)</span>
-  <span class="n">op</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/./</span><span class="p">)</span>
-  <span class="n">num</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/\d+/</span><span class="p">)</span>
-  <span class="k">return</span> <span class="vi">@_current_node</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sym</span><span class="o">.</span><span class="n">to_sym</span><span class="p">)</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">to_sym</span><span class="p">,</span> <span class="n">num</span><span class="o">.</span><span class="n">to_i</span><span class="p">)</span>
-<span class="k">end</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>If an expression begins with a <code>.</code>. So you see that using <code>send</code> will help a lot, and understanding what eval is trying to evaluate and rather writing your own parser, isn&rsquo;t that hard at all using ruby.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ruby" data-lang="ruby"><span style="display:flex;"><span><span style="color:#66d9ef">if</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/\./</span>)
+</span></span><span style="display:flex;"><span>  sym <span style="color:#f92672">=</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/\w+/</span>)
+</span></span><span style="display:flex;"><span>  op <span style="color:#f92672">=</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/./</span>)
+</span></span><span style="display:flex;"><span>  num <span style="color:#f92672">=</span> scanner<span style="color:#f92672">.</span>scan(<span style="color:#e6db74">/\d+/</span>)
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> @_current_node<span style="color:#f92672">.</span>send(sym<span style="color:#f92672">.</span>to_sym)<span style="color:#f92672">.</span>send(op<span style="color:#f92672">.</span>to_sym, num<span style="color:#f92672">.</span>to_i)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>If an expression begins with a <code>.</code>. So you see that using <code>send</code> will help a lot, and understanding what eval is trying to evaluate and rather writing your own parser, isn&rsquo;t that hard at all using ruby.</p>
 <p>I hope you enjoyed reading this little tid-bit as much as I enjoyed writing and drawing it. Leave a comment if your liked the drawings or if you did not and I should never do them again (( I don&rsquo;t really care, this is my blog haha. )). Note to self: I shouldn&rsquo;t draw on the other side of the drawing because of bleed-through.</p>
 <p>Thank you!
 Gergely.</p>
 
-    </div>
 
-    
-<footer class="post-footer">
-      
-      <nav class="post-nav">
-        <a class="prev" href="/2017/05/31/notetaking/">
-            <i class="iconfont icon-left"></i>
-            <span class="prev-text nav-default">Notetaking</span>
-            <span class="prev-text nav-mobile">Prev</span>
-          </a>
-        <a class="next" href="/2017/04/16/building-furnace-part-4/">
-            <span class="next-text nav-default">Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 4</span>
-            <span class="next-text nav-mobile">Next</span>
-            <i class="iconfont icon-right"></i>
-          </a>
-      </nav>
-    </footer>
-  </article>
-        </div>
-        <div id="disqus_thread"></div>
-    <script type="text/javascript">
-    (function() {
-      
-      
-      if (window.location.hostname === 'localhost') return;
-
-      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      var disqus_shortname = 'hannibalDisqus';
-      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-    })();
-    </script>
-    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-
-  
-
-  
-
-      </div>
-    </main>
-
-    <footer id="footer" class="footer">
-      <div class="social-links">
-      <a href="https://twitter.com/skarlso" class="iconfont icon-twitter" title="twitter"></a>
-      <a href="https://github.com/Skarlso" class="iconfont icon-github" title="github"></a>
-  <a href="https://skarlso.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
-</div>
-
-<div class="copyright">
-  <span class="power-by">
-    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
-  </span>
-  <span class="division">|</span>
-  <span class="theme-info">
-    Theme - 
-    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
-  </span>
-
-  
-
-  <span class="copyright-year">
-    &copy; 
-     - 
-    2023<span class="heart"><i class="iconfont icon-heart"></i></span><span>Gergely Brautigam</span>
-  </span>
-</div>
-
-    </footer>
-
-    <div class="back-to-top" id="back-to-top">
-      <i class="iconfont icon-up"></i>
-    </div>
   </div>
-  <script type="text/javascript" src="/lib/jquery/jquery-3.2.1.min.js"></script>
-  <script type="text/javascript" src="/lib/slideout/slideout-1.0.1.min.js"></script>
-  
 
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
 
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
 
-<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
 
-
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-69463020-2', 'auto');
-	
-	ga('send', 'pageview');
-}
 </script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
 
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
 
-
-
-
-
-
-
-
-
+</script>
 </body>
+
 </html>

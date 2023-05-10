@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>cucumber-jvm on Ramblings of a cloud engineer</title>
     <link>https://skarlso.github.io/tags/cucumber-jvm/</link>
@@ -13,85 +13,11 @@
       <pubDate>Mon, 15 Apr 2013 00:00:00 +0000</pubDate>
       
       <guid>https://skarlso.github.io/2013/04/15/cucumber-test-name-and-tags-on-feature/</guid>
-      <description><![CDATA[<p>Hello everybody.</p>
-<p>I would like to show you a gem today that I found out.</p>
-<p>Apparently there is no easy way to get to the name of an executing cucumber scenario in cucumber-jvm</p>
-<p>You can try something like that:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-java" data-lang="java"><span class="nd">@After</span> <span class="c1">//this is cucumbers @Afters
-</span><span class="c1"></span><span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">afterExecution</span><span class="o">(</span><span class="n">Scenario</span> <span class="n">scenario</span><span class="o">)</span> <span class="o">{</span>
-    <span class="n">logger</span><span class="o">.</span><span class="na">log</span><span class="o">(</span><span class="s">&#34;The status of the test is: &#34;</span> <span class="o">+</span> <span class="n">scenario</span><span class="o">.</span><span class="na">getStatus</span><span class="o">());</span>
-<span class="o">}</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>But that isn&rsquo;t giving you too much now is it? And the API of scenario is as small as it can get. It offers you four options:</p>
-<ul>
-<li>Ember</li>
-<li>getStatus</li>
-<li>isFailed</li>
-<li>write</li>
-</ul>
-<p>That doesn&rsquo;t help me. I wanted to get the name of the executed feature and the tags on that particular feature. I thought that&rsquo;s got to be as easy as just getting a scenario accessing the feature and get the tags. Hooooowww boy I was wrong.</p>
-<p>I ended up with this..</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-java" data-lang="java"><span class="n">Field</span> <span class="n">f</span> <span class="o">=</span> <span class="n">scenario</span><span class="o">.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getDeclaredField</span><span class="o">(</span><span class="s">&#34;reporter&#34;</span><span class="o">);</span>
-<span class="n">f</span><span class="o">.</span><span class="na">setAccessible</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
-<span class="n">JUnitReporter</span> <span class="n">reporter</span> <span class="o">=</span> <span class="o">(</span><span class="n">JUnitReporter</span><span class="o">)</span> <span class="n">f</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">scenario</span><span class="o">);</span>
-
-<span class="n">Field</span> <span class="n">executionRunnerField</span> <span class="o">=</span> <span class="n">reporter</span><span class="o">.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getDeclaredField</span><span class="o">(</span><span class="s">&#34;executionUnitRunner&#34;</span><span class="o">);</span>
-<span class="n">executionRunnerField</span><span class="o">.</span><span class="na">setAccessible</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
-<span class="n">ExecutionUnitRunner</span> <span class="n">executionUnitRunner</span> <span class="o">=</span> <span class="o">(</span><span class="n">ExecutionUnitRunner</span><span class="o">)</span> <span class="n">executionRunnerField</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">reporter</span><span class="o">);</span>
-
-<span class="n">Field</span> <span class="n">cucumberScenarioField</span> <span class="o">=</span> <span class="n">executionUnitRunner</span><span class="o">.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getDeclaredField</span><span class="o">(</span><span class="s">&#34;cucumberScenario&#34;</span><span class="o">);</span>
-<span class="n">cucumberScenarioField</span><span class="o">.</span><span class="na">setAccessible</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
-<span class="n">CucumberScenario</span> <span class="n">cucumberScenario</span> <span class="o">=</span> <span class="o">(</span><span class="n">CucumberScenario</span><span class="o">)</span> <span class="n">cucumberScenarioField</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">executionUnitRunner</span><span class="o">);</span>
-
-<span class="n">Field</span> <span class="n">cucumberBackgroundField</span> <span class="o">=</span> <span class="n">cucumberScenario</span><span class="o">.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getDeclaredField</span><span class="o">(</span><span class="s">&#34;cucumberBackground&#34;</span><span class="o">);</span>
-<span class="n">cucumberBackgroundField</span><span class="o">.</span><span class="na">setAccessible</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
-<span class="n">CucumberBackground</span> <span class="n">cucumberBackground</span> <span class="o">=</span> <span class="o">(</span><span class="n">CucumberBackground</span><span class="o">)</span> <span class="n">cucumberBackgroundField</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">cucumberScenario</span><span class="o">);</span>
-
-<span class="n">Field</span> <span class="n">cucumberFeatureField</span> <span class="o">=</span> <span class="n">cucumberBackground</span><span class="o">.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getSuperclass</span><span class="o">().</span><span class="na">getDeclaredField</span><span class="o">(</span><span class="s">&#34;cucumberFeature&#34;</span><span class="o">);</span>
-<span class="n">cucumberFeatureField</span><span class="o">.</span><span class="na">setAccessible</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
-<span class="n">CucumberFeature</span> <span class="n">cucumberFeature</span> <span class="o">=</span> <span class="o">(</span><span class="n">CucumberFeature</span><span class="o">)</span> <span class="n">cucumberFeatureField</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">cucumberBackground</span><span class="o">);</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Ohhhhh yes! The fields which I wanted were all private and not accessible. I&rsquo;m sure there was a reason behind this decision but if it was sensible it eludes me. But in the world of programming nothing is impossible they say so there.</p>
-<p>In cucumberFeature there will be everything what you need. Tags, Names, Tests, Execution time. Everything.</p>
-<p>I know that cucumber runs with jUnit so if there is a better way to do this please for the love of my sanity share it with me.</p>
-<p>Thank you for reading.</p>
-<p>And as always,</p>
-<p>Have a nice day.</p>
-<p>G.</p>
-]]></description>
+      <description>Hello everybody.
+I would like to show you a gem today that I found out.
+Apparently there is no easy way to get to the name of an executing cucumber scenario in cucumber-jvm
+You can try something like that:
+@After //this is cucumbers @Afters public static void afterExecution(Scenario scenario) { logger.log(&amp;#34;The status of the test is: &amp;#34; + scenario.getStatus()); } But that isn&amp;rsquo;t giving you too much now is it? And the API of scenario is as small as it can get.</description>
     </item>
     
   </channel>

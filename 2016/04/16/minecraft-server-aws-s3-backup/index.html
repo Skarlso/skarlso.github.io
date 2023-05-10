@@ -1,65 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <title>Minecraft world automatic backup to AWS S3 bucket - Ramblings of a cloud engineer</title>
-  <meta name="renderer" content="webkit" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<html lang="en" dir="auto">
 
-<meta http-equiv="Cache-Control" content="no-transform" />
-<meta http-equiv="Cache-Control" content="no-siteapp" />
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Minecraft world automatic backup to AWS S3 bucket | Ramblings of a cloud engineer</title>
+<meta name="keywords" content="">
+<meta name="description" content="Hi Folks.
+Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&rsquo;m backing up the world once in a while.
+For that, I&rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.
+The script is really straightforward. I&rsquo;m doing manual versioning, although S3 does provide one out of the box.">
+<meta name="author" content="hannibal">
+<link rel="canonical" href="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://skarlso.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://skarlso.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
 
-<meta name="theme-color" content="#f8f5ec" />
-<meta name="msapplication-navbutton-color" content="#f8f5ec">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
 
+            .list {
+                background: var(--theme);
+            }
 
-<meta name="author" content="hannibal" /><meta name="description" content="Hi Folks.
-Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&amp;rsquo;m backing up the world once in a while.
-For that, I&amp;rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.
-The script is really straightforward. I&amp;rsquo;m doing manual versioning, although S3 does provide one out of the box." />
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
 
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
 
-
-
-
-
-<meta name="generator" content="Hugo 0.83.1 with theme even" />
-
-
-<link rel="canonical" href="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/" />
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/manifest.json">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-
-
-
-<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
-
-
-
-<meta property="og:title" content="Minecraft world automatic backup to AWS S3 bucket" />
+    </style>
+</noscript><meta property="og:title" content="Minecraft world automatic backup to AWS S3 bucket" />
 <meta property="og:description" content="Hi Folks.
 Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&rsquo;m backing up the world once in a while.
 For that, I&rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.
 The script is really straightforward. I&rsquo;m doing manual versioning, although S3 does provide one out of the box." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/" /><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2016-04-16T00:00:00&#43;00:00" />
-<meta property="article:modified_time" content="2016-04-16T00:00:00&#43;00:00" />
+<meta property="og:url" content="https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2016-04-16T00:00:00+00:00" />
+<meta property="article:modified_time" content="2016-04-16T00:00:00+00:00" />
 
-<meta itemprop="name" content="Minecraft world automatic backup to AWS S3 bucket">
-<meta itemprop="description" content="Hi Folks.
-Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&rsquo;m backing up the world once in a while.
-For that, I&rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.
-The script is really straightforward. I&rsquo;m doing manual versioning, although S3 does provide one out of the box."><meta itemprop="datePublished" content="2016-04-16T00:00:00&#43;00:00" />
-<meta itemprop="dateModified" content="2016-04-16T00:00:00&#43;00:00" />
-<meta itemprop="wordCount" content="389">
-<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Minecraft world automatic backup to AWS S3 bucket"/>
 <meta name="twitter:description" content="Hi Folks.
 Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&rsquo;m backing up the world once in a while.
@@ -67,307 +77,267 @@ For that, I&rsquo;m using AWS S3 with the CLI and a little bash script which run
 The script is really straightforward. I&rsquo;m doing manual versioning, although S3 does provide one out of the box."/>
 
 
-
-
-<!--[if lte IE 9]>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
-<![endif]-->
-
-<!--[if lt IE 9]>
-  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
-<![endif]-->
-
-</head>
-<body>
-  <div id="mobile-navbar" class="mobile-navbar">
-  <div class="mobile-header-logo">
-    <a href="/" class="logo">Ramblings of a cloud engineer</a>
-  </div>
-  <div class="mobile-navbar-icon">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
-</div>
-<nav id="mobile-menu" class="mobile-menu slideout-menu">
-  <ul class="mobile-menu-list">
-    <a href="/blog/">
-        <li class="mobile-menu-item">Archive</li>
-      </a><a href="/tags/">
-        <li class="mobile-menu-item">Tags</li>
-      </a><a href="/categories/">
-        <li class="mobile-menu-item">Categories</li>
-      </a>
-  </ul>
-
-  
-
-
-</nav>
-
-  <div class="container" id="mobile-panel">
-    <header id="header" class="header">
-        <div class="logo-wrapper">
-  <a href="/" class="logo">Ramblings of a cloud engineer</a>
-</div>
-
-
-
-
-
-<nav class="site-navbar">
-  <ul id="menu" class="menu">
-    <li class="menu-item">
-        <a class="menu-item-link" href="/blog/">Archive</a>
-      </li><li class="menu-item">
-        <a class="menu-item-link" href="/tags/">Tags</a>
-      </li><li class="menu-item">
-        <a class="menu-item-link" href="/categories/">Categories</a>
-      </li>
-  </ul>
-</nav>
-
-    </header>
-
-    <main id="main" class="main">
-      <div class="content-wrapper">
-        <div id="content" class="content">
-          <article class="post">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://skarlso.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "Minecraft world automatic backup to AWS S3 bucket",
+      "item": "https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Minecraft world automatic backup to AWS S3 bucket",
+  "name": "Minecraft world automatic backup to AWS S3 bucket",
+  "description": "Hi Folks.\nPreviously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I\u0026rsquo;m backing up the world once in a while.\nFor that, I\u0026rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.\nThe script is really straightforward. I\u0026rsquo;m doing manual versioning, although S3 does provide one out of the box.",
+  "keywords": [
     
-    <header class="post-header">
-      <h1 class="post-title">Minecraft world automatic backup to AWS S3 bucket</h1>
+  ],
+  "articleBody": "Hi Folks.\nPreviously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I’m backing up the world once in a while.\nFor that, I’m using AWS S3 with the CLI and a little bash script which runs once a week.\nThe script is really straightforward. I’m doing manual versioning, although S3 does provide one out of the box. However, amazon’s S3 versioning doesn’t allow limiting the number of versions being kept. And since I’m doing that anyways, might as well take care of the rest.\nWithout further ado, here is the script:\n#!/bin/bash if [[ -t 1 ]]; then colors=$(tput colors) if [[ $colors ]]; then RED='\\033[0;31m' LIGHT_GREEN='\\033[1;32m' NC='\\033[0m' fi fi if [[ -z ${MINECRAFT_BUCKET} ]]; then printf \"Please set the env variable ${RED}MINECRAFT_BUCKET${NC} to the s3 archive bucket name.\\n\" exit 0 fi if [[ -z ${MINECRAFT_ARCHIVE_LIMIT} ]]; then printf \"Please set the env variable ${RED}MINECRAFT_ARCHIVE_LIMIT${NC} to limit the number of archives to keep.\\n\" exit 0 fi backup_bucket=${MINECRAFT_BUCKET} backup_limit=${MINECRAFT_ARCHIVE_LIMIT} world=$1 printf \"Creating archive of ${RED}${world}${NC}\\n\" archive_name=\"${world}-$(date +\"%H-%M-%S-%m-%d-%Y\").zip\" zip -r $archive_name $world printf \"Checking if bucket has more than ${RED}${backup_limit}${NC} files already.\\n\" content=( $(aws s3 ls s3://$backup_bucket | awk '{print $4}') ) if [[ ${#content[@]} -eq $backup_limit || ${#content[@]} -gt $backup_limit ]]; then echo \"There are too many archives. Deleting oldest one.\" # We can assume here that the list is in cronological order printf \"${RED}s3://${backup_bucket}/${content[0]}\\n\" aws s3 rm s3://$backup_bucket/${content[0]} fi printf \"Uploading ${RED}${archive_name}${NC} to s3 archive bucket.\\n\" state=$(aws s3 cp $archive_name s3://$backup_bucket) if [[ \"$state\" =~ \"upload:\" ]]; then printf \"File upload ${LIGHT_GREEN}successful${NC}.\\n\" else printf \"${RED}Error${NC} occured while uploading archive. Please investigate.\\n\" fi It uses environment properties to define where to upload the given world and how many versions to keep.\nI’m calling this from a cron job, and it’s sitting next to where the Minecraft world is.\nThat’s it folks.\nI’ll start expanding on this idea and implement various services, like your own server address, or dropbox, or what have you.\nHappy backing up.\nGergely.\n",
+  "wordCount" : "348",
+  "inLanguage": "en",
+  "datePublished": "2016-04-16T00:00:00Z",
+  "dateModified": "2016-04-16T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "hannibal"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://skarlso.github.io/2016/04/16/minecraft-server-aws-s3-backup/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Ramblings of a cloud engineer",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://skarlso.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
 
-      <div class="post-meta">
-        <span class="post-time"> 2016-04-16 </span>
-        <div class="post-category">
-            <a href="/categories/minecraft/"> Minecraft </a>
-            <a href="/categories/aws/"> AWS </a>
-            <a href="/categories/bash/"> Bash </a>
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
             </div>
-        
-      </div>
-    </header>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://skarlso.github.io/posts/" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
 
-    <div class="post-toc" id="post-toc">
-  <h2 class="post-toc-title">Contents</h2>
-  <div class="post-toc-content always-active">
-    <nav id="TableOfContents"></nav>
-  </div>
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title">
+      Minecraft world automatic backup to AWS S3 bucket
+    </h1>
+    <div class="post-meta"><span title='2016-04-16 00:00:00 +0000 UTC'>April 16, 2016</span>&nbsp;·&nbsp;hannibal
+
 </div>
-    <div class="post-content">
-      <p>Hi Folks.</p>
+  </header> 
+  <div class="post-content"><p>Hi Folks.</p>
 <p>Previously we created a Minecraft server using Docker. After my server got popular in the family, and a lot of stuff started to pile up on it, as a good IT person, I&rsquo;m backing up the world once in a while.</p>
 <p>For that, I&rsquo;m using AWS S3 with the CLI and a little bash script which runs once a week.</p>
 <p>The script is really straightforward. I&rsquo;m doing manual versioning, although S3 does provide one out of the box. However, amazon&rsquo;s S3 versioning doesn&rsquo;t allow limiting the number of versions being kept. And since I&rsquo;m doing that anyways, might as well take care of the rest.</p>
 <p>Without further ado, here is the script:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/bash
-</span><span class="cp"></span>
-<span class="k">if</span> <span class="o">[[</span> -t <span class="m">1</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-    <span class="nv">colors</span><span class="o">=</span><span class="k">$(</span>tput colors<span class="k">)</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$colors</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-        <span class="nv">RED</span><span class="o">=</span><span class="s1">&#39;\033[0;31m&#39;</span>
-        <span class="nv">LIGHT_GREEN</span><span class="o">=</span><span class="s1">&#39;\033[1;32m&#39;</span>
-        <span class="nv">NC</span><span class="o">=</span><span class="s1">&#39;\033[0m&#39;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_BUCKET</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-	<span class="nb">printf</span> <span class="s2">&#34;Please set the env variable </span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">MINECRAFT_BUCKET</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> to the s3 archive bucket name.\n&#34;</span>
-	<span class="nb">exit</span> <span class="m">0</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> -z <span class="si">${</span><span class="nv">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">}</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-	<span class="nb">printf</span> <span class="s2">&#34;Please set the env variable </span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> to limit the number of archives to keep.\n&#34;</span>
-	<span class="nb">exit</span> <span class="m">0</span>
-<span class="k">fi</span>
-
-<span class="nv">backup_bucket</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_BUCKET</span><span class="si">}</span>
-<span class="nv">backup_limit</span><span class="o">=</span><span class="si">${</span><span class="nv">MINECRAFT_ARCHIVE_LIMIT</span><span class="si">}</span>
-<span class="nv">world</span><span class="o">=</span><span class="nv">$1</span>
-<span class="nb">printf</span> <span class="s2">&#34;Creating archive of </span><span class="si">${</span><span class="nv">RED</span><span class="si">}${</span><span class="nv">world</span><span class="si">}${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">\n&#34;</span>
-<span class="nv">archive_name</span><span class="o">=</span><span class="s2">&#34;</span><span class="si">${</span><span class="nv">world</span><span class="si">}</span><span class="s2">-</span><span class="k">$(</span>date +<span class="s2">&#34;%H-%M-%S-%m-%d-%Y&#34;</span><span class="k">)</span><span class="s2">.zip&#34;</span>
-zip -r <span class="nv">$archive_name</span> <span class="nv">$world</span>
-
-<span class="nb">printf</span> <span class="s2">&#34;Checking if bucket has more than </span><span class="si">${</span><span class="nv">RED</span><span class="si">}${</span><span class="nv">backup_limit</span><span class="si">}${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> files already.\n&#34;</span>
-<span class="nv">content</span><span class="o">=(</span> <span class="k">$(</span>aws s3 ls s3://<span class="nv">$backup_bucket</span> <span class="p">|</span> awk <span class="s1">&#39;{print $4}&#39;</span><span class="k">)</span> <span class="o">)</span>
-
-<span class="k">if</span> <span class="o">[[</span> <span class="si">${#</span><span class="nv">content</span><span class="p">[@]</span><span class="si">}</span> -eq <span class="nv">$backup_limit</span> <span class="o">||</span> <span class="si">${#</span><span class="nv">content</span><span class="p">[@]</span><span class="si">}</span> -gt <span class="nv">$backup_limit</span>  <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-    <span class="nb">echo</span> <span class="s2">&#34;There are too many archives. Deleting oldest one.&#34;</span>
-    <span class="c1"># We can assume here that the list is in cronological order</span>
-	<span class="nb">printf</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">s3://</span><span class="si">${</span><span class="nv">backup_bucket</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">content</span><span class="p">[0]</span><span class="si">}</span><span class="s2">\n&#34;</span>
-    aws s3 rm s3://<span class="nv">$backup_bucket</span>/<span class="si">${</span><span class="nv">content</span><span class="p">[0]</span><span class="si">}</span>
-<span class="k">fi</span>
-
-<span class="nb">printf</span> <span class="s2">&#34;Uploading </span><span class="si">${</span><span class="nv">RED</span><span class="si">}${</span><span class="nv">archive_name</span><span class="si">}${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> to s3 archive bucket.\n&#34;</span>
-<span class="nv">state</span><span class="o">=</span><span class="k">$(</span>aws s3 cp <span class="nv">$archive_name</span> s3://<span class="nv">$backup_bucket</span><span class="k">)</span>
-
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$state</span><span class="s2">&#34;</span> <span class="o">=</span>~ <span class="s2">&#34;upload:&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-    <span class="nb">printf</span> <span class="s2">&#34;File upload </span><span class="si">${</span><span class="nv">LIGHT_GREEN</span><span class="si">}</span><span class="s2">successful</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">.\n&#34;</span>
-<span class="k">else</span>
-    <span class="nb">printf</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">Error</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2"> occured while uploading archive. Please investigate.\n&#34;</span>
-<span class="k">fi</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>It uses environment properties to define where to upload the given world and how many versions to keep.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/bash
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> -t <span style="color:#ae81ff">1</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>    colors<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>tput colors<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> $colors <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>        RED<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;\033[0;31m&#39;</span>
+</span></span><span style="display:flex;"><span>        LIGHT_GREEN<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;\033[1;32m&#39;</span>
+</span></span><span style="display:flex;"><span>        NC<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;\033[0m&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> -z <span style="color:#e6db74">${</span>MINECRAFT_BUCKET<span style="color:#e6db74">}</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>	printf <span style="color:#e6db74">&#34;Please set the env variable </span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">MINECRAFT_BUCKET</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74"> to the s3 archive bucket name.\n&#34;</span>
+</span></span><span style="display:flex;"><span>	exit <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> -z <span style="color:#e6db74">${</span>MINECRAFT_ARCHIVE_LIMIT<span style="color:#e6db74">}</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>	printf <span style="color:#e6db74">&#34;Please set the env variable </span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">MINECRAFT_ARCHIVE_LIMIT</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74"> to limit the number of archives to keep.\n&#34;</span>
+</span></span><span style="display:flex;"><span>	exit <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>backup_bucket<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>MINECRAFT_BUCKET<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>backup_limit<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>MINECRAFT_ARCHIVE_LIMIT<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>world<span style="color:#f92672">=</span>$1
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#34;Creating archive of </span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}${</span>world<span style="color:#e6db74">}${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">\n&#34;</span>
+</span></span><span style="display:flex;"><span>archive_name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>world<span style="color:#e6db74">}</span><span style="color:#e6db74">-</span><span style="color:#66d9ef">$(</span>date +<span style="color:#e6db74">&#34;%H-%M-%S-%m-%d-%Y&#34;</span><span style="color:#66d9ef">)</span><span style="color:#e6db74">.zip&#34;</span>
+</span></span><span style="display:flex;"><span>zip -r $archive_name $world
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#34;Checking if bucket has more than </span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}${</span>backup_limit<span style="color:#e6db74">}${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74"> files already.\n&#34;</span>
+</span></span><span style="display:flex;"><span>content<span style="color:#f92672">=(</span> <span style="color:#66d9ef">$(</span>aws s3 ls s3://$backup_bucket | awk <span style="color:#e6db74">&#39;{print $4}&#39;</span><span style="color:#66d9ef">)</span> <span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> <span style="color:#e6db74">${#</span>content[@]<span style="color:#e6db74">}</span> -eq $backup_limit <span style="color:#f92672">||</span> <span style="color:#e6db74">${#</span>content[@]<span style="color:#e6db74">}</span> -gt $backup_limit  <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>    echo <span style="color:#e6db74">&#34;There are too many archives. Deleting oldest one.&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># We can assume here that the list is in cronological order</span>
+</span></span><span style="display:flex;"><span>	printf <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">s3://</span><span style="color:#e6db74">${</span>backup_bucket<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>content[0]<span style="color:#e6db74">}</span><span style="color:#e6db74">\n&#34;</span>
+</span></span><span style="display:flex;"><span>    aws s3 rm s3://$backup_bucket/<span style="color:#e6db74">${</span>content[0]<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#34;Uploading </span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}${</span>archive_name<span style="color:#e6db74">}${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74"> to s3 archive bucket.\n&#34;</span>
+</span></span><span style="display:flex;"><span>state<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>aws s3 cp $archive_name s3://$backup_bucket<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> <span style="color:#e6db74">&#34;</span>$state<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">=</span>~ <span style="color:#e6db74">&#34;upload:&#34;</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>    printf <span style="color:#e6db74">&#34;File upload </span><span style="color:#e6db74">${</span>LIGHT_GREEN<span style="color:#e6db74">}</span><span style="color:#e6db74">successful</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74">.\n&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>    printf <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>RED<span style="color:#e6db74">}</span><span style="color:#e6db74">Error</span><span style="color:#e6db74">${</span>NC<span style="color:#e6db74">}</span><span style="color:#e6db74"> occured while uploading archive. Please investigate.\n&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">fi</span>
+</span></span></code></pre></div><p>It uses environment properties to define where to upload the given world and how many versions to keep.</p>
 <p>I&rsquo;m calling this from a cron job, and it&rsquo;s sitting next to where the Minecraft world is.</p>
 <p>That&rsquo;s it folks.</p>
 <p>I&rsquo;ll start expanding on this idea and implement various services, like your own server address, or dropbox, or what have you.</p>
 <p>Happy backing up.</p>
 <p>Gergely.</p>
 
-    </div>
 
-    
-<footer class="post-footer">
-      
-      <nav class="post-nav">
-        <a class="prev" href="/2016/04/17/minecraft-server-aws-s3-backup-part2/">
-            <i class="iconfont icon-left"></i>
-            <span class="prev-text nav-default">Minecraft world automatic backup to AWS S3 bucket - Part 2 (Custom functions)</span>
-            <span class="prev-text nav-mobile">Prev</span>
-          </a>
-        <a class="next" href="/2016/03/29/minecraft-server-with-docker-and-osx/">
-            <span class="next-text nav-default">Minecraft Server with Docker on OSX &#43; Mods</span>
-            <span class="next-text nav-mobile">Next</span>
-            <i class="iconfont icon-right"></i>
-          </a>
-      </nav>
-    </footer>
-  </article>
-        </div>
-        <div id="disqus_thread"></div>
-    <script type="text/javascript">
-    (function() {
-      
-      
-      if (window.location.hostname === 'localhost') return;
-
-      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      var disqus_shortname = 'hannibalDisqus';
-      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-    })();
-    </script>
-    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-
-  
-
-  
-
-      </div>
-    </main>
-
-    <footer id="footer" class="footer">
-      <div class="social-links">
-      <a href="https://twitter.com/skarlso" class="iconfont icon-twitter" title="twitter"></a>
-      <a href="https://github.com/Skarlso" class="iconfont icon-github" title="github"></a>
-  <a href="https://skarlso.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
-</div>
-
-<div class="copyright">
-  <span class="power-by">
-    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
-  </span>
-  <span class="division">|</span>
-  <span class="theme-info">
-    Theme - 
-    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
-  </span>
-
-  
-
-  <span class="copyright-year">
-    &copy; 
-     - 
-    2023<span class="heart"><i class="iconfont icon-heart"></i></span><span>Gergely Brautigam</span>
-  </span>
-</div>
-
-    </footer>
-
-    <div class="back-to-top" id="back-to-top">
-      <i class="iconfont icon-up"></i>
-    </div>
   </div>
-  <script type="text/javascript" src="/lib/jquery/jquery-3.2.1.min.js"></script>
-  <script type="text/javascript" src="/lib/slideout/slideout-1.0.1.min.js"></script>
-  
 
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
 
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
 
-<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
 
-
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-69463020-2', 'auto');
-	
-	ga('send', 'pageview');
-}
 </script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
 
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
 
-
-
-
-
-
-
-
-
+</script>
 </body>
+
 </html>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>django on Ramblings of a cloud engineer</title>
     <link>https://skarlso.github.io/tags/django/</link>
@@ -13,140 +13,8 @@
       <pubDate>Sun, 12 Apr 2015 00:00:00 +0000</pubDate>
       
       <guid>https://skarlso.github.io/2015/04/12/django-rpg-part-2/</guid>
-      <description><![CDATA[<p>Hello.</p>
-<p>Continuing where we left off with the Django RPG project. Next up is implementing a rudimentary registration and adding the ability to create a character. Maybe even, design the database through django&rsquo;s modelling.</p>
-<p>Since we are using Django&rsquo;s very own authentication model, I think we are covered in terms of users. Let&rsquo;s add two things for now. An Index page, where there is a link to login and a link to registration.</p>
-<p>Adding the index first. Later I would like to switch to a base template model, but for now, I created a simple index.html page. That only contains the two links to the two views. The views are a simple function call in the views.py too which the URLConfig will later point to.</p>
-<p>For now, the index function looks like this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-python" data-lang="python">
-<span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-  <span class="s1">&#39;&#39;&#39;
-</span><span class="s1">  myrpg/rpg/views.py
-</span><span class="s1">  &#39;&#39;&#39;</span>
-	<span class="n">title</span> <span class="o">=</span> <span class="s2">&#34;My RPG&#34;</span>
-	<span class="k">return</span> <span class="n">render_to_response</span><span class="p">(</span><span class="s1">&#39;index.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span><span class="n">title</span><span class="p">})</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Note, that the title here is utterly unimportant but because I want to switch to a base.html template I&rsquo;ll leave it here for later usage.</p>
-<p>That concludes the index. Now, let&rsquo;s create the registration. That is a little more complex, but still rather easy. We are just checking of the user already exists or not, if so, display and error, if not, create the user.</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># myrpg/rpg/views.py</span>
-<span class="k">def</span> <span class="nf">registration</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-	<span class="n">state</span> <span class="o">=</span> <span class="s2">&#34;Please register.&#34;</span>
-	<span class="n">username</span> <span class="o">=</span> <span class="n">password</span> <span class="o">=</span> <span class="n">email</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-	<span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">:</span>
-		<span class="n">username</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">)</span>
-		<span class="n">email</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;email&#39;</span><span class="p">)</span>
-		<span class="n">password</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;password&#39;</span><span class="p">)</span>
-		<span class="k">if</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">username</span> <span class="o">=</span> <span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-			<span class="c1"># raise forms.ValidationError(&#34;Username %s is already in use.&#34; % username)</span>
-			<span class="n">state</span> <span class="o">=</span> <span class="s2">&#34;Username </span><span class="si">%s</span><span class="s2"> is already in use. Please try another.&#34;</span> <span class="o">%</span> <span class="n">username</span>
-		<span class="k">else</span><span class="p">:</span>
-			<span class="k">try</span><span class="p">:</span>
-				<span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create_user</span><span class="p">(</span><span class="n">username</span> <span class="o">=</span> <span class="n">username</span><span class="p">,</span> <span class="n">email</span> <span class="o">=</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span> <span class="o">=</span> <span class="n">password</span><span class="p">)</span>
-				<span class="n">state</span> <span class="o">=</span> <span class="s2">&#34;Thank you for registering with us </span><span class="si">%s</span><span class="s2">!&#34;</span> <span class="o">%</span> <span class="n">user</span><span class="o">.</span><span class="n">username</span>
-			<span class="k">except</span><span class="p">:</span>
-				<span class="n">state</span> <span class="o">=</span> <span class="s2">&#34;Unexpected error occured: </span><span class="si">%s</span><span class="s2">&#34;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[]</span>
-
-	<span class="k">return</span> <span class="n">render_to_response</span><span class="p">(</span><span class="s1">&#39;registration.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="n">state</span><span class="p">},</span> <span class="n">context_instance</span> <span class="o">=</span> <span class="n">RequestContext</span><span class="p">(</span><span class="n">request</span><span class="p">))</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>Here, I&rsquo;m checking to see of the username already exists with the filter. This is by using Django&rsquo;s model which models the database like hibernate. It&rsquo;s a simple query. And I&rsquo;m doing this, because this is faster than raising an exception. Later on, I&rsquo;ll be switching to a validation framework and django&rsquo;s own auth view. Because, why not.</p>
-<p>The URL conf looks like this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1">#myrpg/rpg/urls.py</span>
-<span class="kn">from</span> <span class="nn">django.conf.urls</span> <span class="kn">import</span> <span class="n">url</span>
-
-<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">views</span>
-
-<span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^$&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">),</span>
-    <span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^login/$&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">login_user</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;login&#39;</span><span class="p">),</span>
-    <span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^registration/$&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">registration</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;registration&#39;</span><span class="p">),</span>
-<span class="p">]</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>And this now, resides in a file under the RPG app and not the main one. The main one includes this one, like this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-python" data-lang="python"><span class="c1">#myrpg/urls.py</span>
-<span class="kn">from</span> <span class="nn">django.conf.urls</span> <span class="kn">import</span> <span class="n">include</span><span class="p">,</span> <span class="n">url</span>
-<span class="kn">from</span> <span class="nn">django.contrib</span> <span class="kn">import</span> <span class="n">admin</span>
-
-<span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="c1"># Examples:</span>
-    <span class="c1"># url(r&#39;^$&#39;, &#39;myrpg.views.home&#39;, name=&#39;home&#39;),</span>
-    <span class="c1"># url(r&#39;^blog/&#39;, include(&#39;blog.urls&#39;)),</span>
-
-    <span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^admin/&#39;</span><span class="p">,</span> <span class="n">include</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">urls</span><span class="p">)),</span>
-    <span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^rpg/&#39;</span><span class="p">,</span> <span class="n">include</span><span class="p">(</span><span class="s1">&#39;rpg.urls&#39;</span><span class="p">)),</span>
-<span class="p">]</span>
-</code></pre></td></tr></table>
-</div>
-</div><p>That&rsquo;s it for now. As always, you can check out the code under github.</p>
-<p>Tune in next time, when I&rsquo;ll attempt to create a view to create a Character for a logged in user and link it to the user. I&rsquo;ll do this with django&rsquo;s model framework.</p>
-<p>Thanks for reading,</p>
-<p>Gergely.</p>]]></description>
+      <description>&lt;p&gt;Hello.&lt;/p&gt;
+&lt;p&gt;Continuing where we left off with the Django RPG project. Next up is implementing a rudimentary registration and adding the ability to create a character. Maybe even, design the database through django&amp;rsquo;s modelling.&lt;/p&gt;</description>
     </item>
     
   </channel>

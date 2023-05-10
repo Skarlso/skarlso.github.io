@@ -1,68 +1,77 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <title>Commit-Build-Deploy With AWS CodeBuild and Lambda - Ramblings of a cloud engineer</title>
-  <meta name="renderer" content="webkit" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<html lang="en" dir="auto">
 
-<meta http-equiv="Cache-Control" content="no-transform" />
-<meta http-equiv="Cache-Control" content="no-siteapp" />
-
-<meta name="theme-color" content="#f8f5ec" />
-<meta name="msapplication-navbutton-color" content="#f8f5ec">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
-
-
-<meta name="author" content="hannibal" /><meta name="description" content="Intro Hi All.
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Commit-Build-Deploy With AWS CodeBuild and Lambda | Ramblings of a cloud engineer</title>
+<meta name="keywords" content="">
+<meta name="description" content="Intro Hi All.
 Today I would like to write about an AWS finger practice.
-Previously, I wrote about how I build and deploy my blog with Wercker. Since, I&amp;rsquo;m a cloud engineer and I dislike Oracle and it&amp;rsquo;s ever expending tenctacles into the abyss, I wanted to switch to use something else.
+Previously, I wrote about how I build and deploy my blog with Wercker. Since, I&rsquo;m a cloud engineer and I dislike Oracle and it&rsquo;s ever expending tenctacles into the abyss, I wanted to switch to use something else.
 My build and deploy cycle is simple.
-Commit to Blogsource Repo -&amp;gt; Wercker WebHook -&amp;gt; Builds my blog using Hugo -&amp;gt; Pushed to a Different Repository which my Github Blog." />
+Commit to Blogsource Repo -&gt; Wercker WebHook -&gt; Builds my blog using Hugo -&gt; Pushed to a Different Repository which my Github Blog.">
+<meta name="author" content="hannibal">
+<link rel="canonical" href="https://skarlso.github.io/2017/12/04/commit-build-deploy/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://skarlso.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://skarlso.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
 
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
 
+            .list {
+                background: var(--theme);
+            }
 
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
 
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
 
-
-<meta name="generator" content="Hugo 0.83.1 with theme even" />
-
-
-<link rel="canonical" href="https://skarlso.github.io/2017/12/04/commit-build-deploy/" />
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/manifest.json">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-
-
-
-<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
-
-
-
-<meta property="og:title" content="Commit-Build-Deploy With AWS CodeBuild and Lambda" />
+    </style>
+</noscript><meta property="og:title" content="Commit-Build-Deploy With AWS CodeBuild and Lambda" />
 <meta property="og:description" content="Intro Hi All.
 Today I would like to write about an AWS finger practice.
 Previously, I wrote about how I build and deploy my blog with Wercker. Since, I&rsquo;m a cloud engineer and I dislike Oracle and it&rsquo;s ever expending tenctacles into the abyss, I wanted to switch to use something else.
 My build and deploy cycle is simple.
 Commit to Blogsource Repo -&gt; Wercker WebHook -&gt; Builds my blog using Hugo -&gt; Pushed to a Different Repository which my Github Blog." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2017/12/04/commit-build-deploy/" /><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2017-12-04T22:34:00&#43;01:00" />
-<meta property="article:modified_time" content="2017-12-04T22:34:00&#43;01:00" />
+<meta property="og:url" content="https://skarlso.github.io/2017/12/04/commit-build-deploy/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2017-12-04T22:34:00+01:00" />
+<meta property="article:modified_time" content="2017-12-04T22:34:00+01:00" />
 
-<meta itemprop="name" content="Commit-Build-Deploy With AWS CodeBuild and Lambda">
-<meta itemprop="description" content="Intro Hi All.
-Today I would like to write about an AWS finger practice.
-Previously, I wrote about how I build and deploy my blog with Wercker. Since, I&rsquo;m a cloud engineer and I dislike Oracle and it&rsquo;s ever expending tenctacles into the abyss, I wanted to switch to use something else.
-My build and deploy cycle is simple.
-Commit to Blogsource Repo -&gt; Wercker WebHook -&gt; Builds my blog using Hugo -&gt; Pushed to a Different Repository which my Github Blog."><meta itemprop="datePublished" content="2017-12-04T22:34:00&#43;01:00" />
-<meta itemprop="dateModified" content="2017-12-04T22:34:00&#43;01:00" />
-<meta itemprop="wordCount" content="762">
-<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Commit-Build-Deploy With AWS CodeBuild and Lambda"/>
 <meta name="twitter:description" content="Intro Hi All.
 Today I would like to write about an AWS finger practice.
@@ -71,112 +80,132 @@ My build and deploy cycle is simple.
 Commit to Blogsource Repo -&gt; Wercker WebHook -&gt; Builds my blog using Hugo -&gt; Pushed to a Different Repository which my Github Blog."/>
 
 
-
-
-<!--[if lte IE 9]>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
-<![endif]-->
-
-<!--[if lt IE 9]>
-  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
-<![endif]-->
-
-</head>
-<body>
-  <div id="mobile-navbar" class="mobile-navbar">
-  <div class="mobile-header-logo">
-    <a href="/" class="logo">Ramblings of a cloud engineer</a>
-  </div>
-  <div class="mobile-navbar-icon">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
-</div>
-<nav id="mobile-menu" class="mobile-menu slideout-menu">
-  <ul class="mobile-menu-list">
-    <a href="/blog/">
-        <li class="mobile-menu-item">Archive</li>
-      </a><a href="/tags/">
-        <li class="mobile-menu-item">Tags</li>
-      </a><a href="/categories/">
-        <li class="mobile-menu-item">Categories</li>
-      </a>
-  </ul>
-
-  
-
-
-</nav>
-
-  <div class="container" id="mobile-panel">
-    <header id="header" class="header">
-        <div class="logo-wrapper">
-  <a href="/" class="logo">Ramblings of a cloud engineer</a>
-</div>
-
-
-
-
-
-<nav class="site-navbar">
-  <ul id="menu" class="menu">
-    <li class="menu-item">
-        <a class="menu-item-link" href="/blog/">Archive</a>
-      </li><li class="menu-item">
-        <a class="menu-item-link" href="/tags/">Tags</a>
-      </li><li class="menu-item">
-        <a class="menu-item-link" href="/categories/">Categories</a>
-      </li>
-  </ul>
-</nav>
-
-    </header>
-
-    <main id="main" class="main">
-      <div class="content-wrapper">
-        <div id="content" class="content">
-          <article class="post">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://skarlso.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "Commit-Build-Deploy With AWS CodeBuild and Lambda",
+      "item": "https://skarlso.github.io/2017/12/04/commit-build-deploy/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Commit-Build-Deploy With AWS CodeBuild and Lambda",
+  "name": "Commit-Build-Deploy With AWS CodeBuild and Lambda",
+  "description": "Intro Hi All.\nToday I would like to write about an AWS finger practice.\nPreviously, I wrote about how I build and deploy my blog with Wercker. Since, I\u0026rsquo;m a cloud engineer and I dislike Oracle and it\u0026rsquo;s ever expending tenctacles into the abyss, I wanted to switch to use something else.\nMy build and deploy cycle is simple.\nCommit to Blogsource Repo -\u0026gt; Wercker WebHook -\u0026gt; Builds my blog using Hugo -\u0026gt; Pushed to a Different Repository which my Github Blog.",
+  "keywords": [
     
-    <header class="post-header">
-      <h1 class="post-title">Commit-Build-Deploy With AWS CodeBuild and Lambda</h1>
+  ],
+  "articleBody": "Intro Hi All.\nToday I would like to write about an AWS finger practice.\nPreviously, I wrote about how I build and deploy my blog with Wercker. Since, I’m a cloud engineer and I dislike Oracle and it’s ever expending tenctacles into the abyss, I wanted to switch to use something else.\nMy build and deploy cycle is simple.\nCommit to Blogsource Repo -\u003e Wercker WebHook -\u003e Builds my blog using Hugo -\u003e Pushed to a Different Repository which my Github Blog.\nThat’s all.\nIt’s quiet possible to reproduce this on AWS without infering costs. Unless you publish like… a couple 100 posts / week.\nI’m going to use the following services: CloudFormation, AWS Lambda, CodeBuild, S3.\nTo deploy the below describe architecture in your account in us-east-1 region simply click this button: BEFORE doing that though you need the following created:\nHave a bucket for your lambda function. The lambda function can be found here:\nLambda Repository.\nZip up the lambda folder contents by doing this:\ncd lambda zip -r gitpusher.zip * aws s3 cp gitpusher.zip s3://your-lambda-bucket That’s it.\nTo read a description of the stack, please continue.\nTL;DR; The architecture I’m about to lay out is simple in its use and design. I tried not to complicate things, because I think the simpler something is, the less prone to failure it will be.\nIn its most basic form the flow is as follows:\n.\nYou push something into a repository you provide. CodeBuild has a webhook to this repository so on each commit it starts to build the blog. The build will use a so called buildspec.yaml file which describes how your blog should be built. Mine looks like this:\nversion: 0.2 phases: install: commands: - echo Installing required packages and Hugo - apt-get update - apt-get install -y git golang wget - wget -q https://github.com/gohugoio/hugo/releases/download/v0.31/hugo_0.31_Linux-64bit.deb -O /tmp/hugo.dep - dpkg -i /tmp/hugo.dep pre_build: commands: - echo Downloading source code - git clone https://github.com/Skarlso/blogsource.git /opt/app build: commands: - echo Build started on `date` - cd /opt/app \u0026\u0026 hugo --theme purehugo post_build: commands: - echo Build completed on `date` artifacts: files: - /opt/app/public/**/* When it’s finished, CodeBuild will upload everything in the public folder as a zip to a bucket. The bucket has a lambda attached which triggers on putObject event with the extension .zip. It downloads the archive, extracts it and pushes it to another repository, which is the repository for the blog.\nAnd done! That’s it. For an architecture overview, please read on.\nArchitecture Now, we are going to use CloudFormation stack to deploy these resources. Because we aren’t animals to create them by hand, yes?\nAn overview of my current architecture is best shown by this image:\n.\nLet’s go over these components one - by - one.\nLambda Role This is the Role which allows the Lambda to access things in your account. It needs the following service access: s3, logs, lambda; and the following permissions: logs:Create*, logs:PutLogEvents, s3:GetObject, s3:ListBucket.\nCode Build Role This is the role which allows CodeBuild to have access to services it needs. These services are the following: s3, logs, ssm, codebuild. CodeBuild also needs the following actions allowed: logs:Create*, logs:PutLogEvents, s3:GetObject, s3:PutObject, ssm:GetParameters.\nBuild Bucket This is the bucket in which CodeBuild will push the generated build artifact.\nBlog Pusher Function This is the heart of this project. It contains the logic to download the zipped artifact, extract it, create a hollow repository from the extracted archive and push the changes to the repository. And just the changes.\nThis is achieve by a short Python 3.6 script which can be found in the linked repository.\nParameters The stack requires you to provide a couple of parameters which are described in the template. Like, bucket name, github repository, git token and such. Please refer to the template for a full description of each.\nCharges I recently push a couple of builds to test this configuration and I inferred 0.2 USD in charges. But that was like 10-15 builds a day.\nDeploying In order to deploy this you can use Furnace to easily manage the template and it’s parameters. Once you copy the template to the target directory, simply run furnace aws create and provide the necessary parameters.\nConclusion And that is all. A nice little stack which does the same as Wercker without costs but the leisure of simply pushing up some change to a repository of your choosing.\nI hope you enjoyed this little write up as much as I enjoyed creating it.\nAs always, Thanks for reading! Gergely.\n",
+  "wordCount" : "758",
+  "inLanguage": "en",
+  "datePublished": "2017-12-04T22:34:00+01:00",
+  "dateModified": "2017-12-04T22:34:00+01:00",
+  "author":{
+    "@type": "Person",
+    "name": "hannibal"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://skarlso.github.io/2017/12/04/commit-build-deploy/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Ramblings of a cloud engineer",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://skarlso.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
 
-      <div class="post-meta">
-        <span class="post-time"> 2017-12-04 </span>
-        <div class="post-category">
-            <a href="/categories/aws/"> AWS </a>
-            <a href="/categories/go/"> Go </a>
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
             </div>
-        
-      </div>
-    </header>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://skarlso.github.io/posts/" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
 
-    <div class="post-toc" id="post-toc">
-  <h2 class="post-toc-title">Contents</h2>
-  <div class="post-toc-content always-active">
-    <nav id="TableOfContents">
-  <ul>
-    <li><a href="#intro">Intro</a></li>
-    <li><a href="#tldr">TL;DR;</a></li>
-    <li><a href="#architecture">Architecture</a>
-      <ul>
-        <li><a href="#lambda-role">Lambda Role</a></li>
-        <li><a href="#code-build-role">Code Build Role</a></li>
-        <li><a href="#build-bucket">Build Bucket</a></li>
-        <li><a href="#blog-pusher-function">Blog Pusher Function</a></li>
-        <li><a href="#parameters">Parameters</a></li>
-        <li><a href="#charges">Charges</a></li>
-      </ul>
-    </li>
-    <li><a href="#deploying">Deploying</a></li>
-    <li><a href="#conclusion">Conclusion</a></li>
-  </ul>
-</nav>
-  </div>
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title">
+      Commit-Build-Deploy With AWS CodeBuild and Lambda
+    </h1>
+    <div class="post-meta"><span title='2017-12-04 22:34:00 +0100 +0100'>December 4, 2017</span>&nbsp;·&nbsp;hannibal
+
 </div>
-    <div class="post-content">
-      <h1 id="intro">Intro</h1>
+  </header> 
+  <div class="post-content"><h1 id="intro">Intro<a hidden class="anchor" aria-hidden="true" href="#intro">#</a></h1>
 <p>Hi All.</p>
 <p>Today I would like to write about an AWS finger practice.</p>
 <p>Previously, I wrote about how I build and deploy my blog with <a href="www.wercker.com">Wercker</a>. Since, I&rsquo;m a cloud engineer and I dislike Oracle and it&rsquo;s ever expending tenctacles into the abyss, I wanted to switch to use something else.</p>
@@ -186,215 +215,155 @@ Commit to Blogsource Repo -&gt; Wercker WebHook -&gt; Builds my blog using Hugo 
 <p>It&rsquo;s quiet possible to reproduce this on AWS without infering costs. Unless you publish like&hellip; a couple 100 posts / week.</p>
 <p>I&rsquo;m going to use the following services: <a href="https://aws.amazon.com/cloudformation/">CloudFormation</a>, <a href="https://aws.amazon.com/lambda/details/">AWS Lambda</a>, <a href="https://aws.amazon.com/codebuild/">CodeBuild</a>, <a href="https://aws.amazon.com/s3/">S3</a>.</p>
 <p>To deploy the below describe architecture in your account in us-east-1 region simply click this button:
-<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=blogbuilder&amp;templateURL=https://s3.amazonaws.com/blog-builder-template-bucket/template.yaml"><img src="/img/cloudformation-launch-stack.png" alt="Launch Stack"></a></p>
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=blogbuilder&amp;templateURL=https://s3.amazonaws.com/blog-builder-template-bucket/template.yaml"><img loading="lazy" src="/img/cloudformation-launch-stack.png" alt="Launch Stack"  />
+</a></p>
 <p>BEFORE doing that though you need the following created:</p>
 <p>Have a bucket for your lambda function. The lambda function can be found here:</p>
 <p><a href="https://github.com/Skarlso/aws-lambda-code-pusher">Lambda Repository</a>.</p>
 <p>Zip up the lambda folder contents by doing this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">cd</span> lambda
-zip -r gitpusher.zip *
-aws s3 cp gitpusher.zip s3://your-lambda-bucket
-</code></pre></td></tr></table>
-</div>
-</div><p>That&rsquo;s it.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cd lambda
+</span></span><span style="display:flex;"><span>zip -r gitpusher.zip *
+</span></span><span style="display:flex;"><span>aws s3 cp gitpusher.zip s3://your-lambda-bucket
+</span></span></code></pre></div><p>That&rsquo;s it.</p>
 <p>To read a description of the stack, please continue.</p>
-<h1 id="tldr">TL;DR;</h1>
+<h1 id="tldr">TL;DR;<a hidden class="anchor" aria-hidden="true" href="#tldr">#</a></h1>
 <p>The architecture I&rsquo;m about to lay out is simple in its use and design. I tried not to complicate things, because I think the simpler something is, the less prone to failure it will be.</p>
 <p>In its most basic form the flow is as follows:</p>
-<p><img src="/img/blog_builder_flow.png" alt="Flow">.</p>
+<p><img loading="lazy" src="/img/blog_builder_flow.png" alt="Flow"  />
+.</p>
 <p>You push something into a repository you provide. CodeBuild has a webhook to this repository so on each commit it starts to build the blog. The build will use a so called <code>buildspec.yaml</code> file which describes how your blog should be built. Mine looks like this:</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="m">0.2</span><span class="w">
-</span><span class="w">
-</span><span class="w"></span><span class="nt">phases</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">commands</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="l">echo Installing required packages and Hugo</span><span class="w">
-</span><span class="w">      </span>- <span class="l">apt-get update</span><span class="w">
-</span><span class="w">      </span>- <span class="l">apt-get install -y git golang wget</span><span class="w">
-</span><span class="w">      </span>- <span class="l">wget -q https://github.com/gohugoio/hugo/releases/download/v0.31/hugo_0.31_Linux-64bit.deb -O /tmp/hugo.dep</span><span class="w">
-</span><span class="w">      </span>- <span class="l">dpkg -i /tmp/hugo.dep</span><span class="w">
-</span><span class="w">  </span><span class="nt">pre_build</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">commands</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="l">echo Downloading source code</span><span class="w">
-</span><span class="w">      </span>- <span class="l">git clone https://github.com/Skarlso/blogsource.git /opt/app</span><span class="w">
-</span><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">commands</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="l">echo Build started on `date`</span><span class="w">
-</span><span class="w">      </span>- <span class="l">cd /opt/app &amp;&amp; hugo --theme purehugo</span><span class="w">
-</span><span class="w">  </span><span class="nt">post_build</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">commands</span><span class="p">:</span><span class="w">
-</span><span class="w">      </span>- <span class="l">echo Build completed on `date`</span><span class="w">
-</span><span class="w"></span><span class="nt">artifacts</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">files</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="l">/opt/app/public/**/*</span><span class="w">
-</span></code></pre></td></tr></table>
-</div>
-</div><p>When it&rsquo;s finished, CodeBuild will upload everything in the public folder as a zip to a bucket. The bucket has a lambda attached which triggers on putObject event with the extension <code>.zip</code>. It downloads the archive, extracts it and pushes it to another repository, which is the repository for the blog.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">version</span>: <span style="color:#ae81ff">0.2</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">phases</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">install</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">commands</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">echo Installing required packages and Hugo</span>
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">apt-get update</span>
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">apt-get install -y git golang wget</span>
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">wget -q https://github.com/gohugoio/hugo/releases/download/v0.31/hugo_0.31_Linux-64bit.deb -O /tmp/hugo.dep</span>
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">dpkg -i /tmp/hugo.dep</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">pre_build</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">commands</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">echo Downloading source code</span>
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">git clone https://github.com/Skarlso/blogsource.git /opt/app</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">build</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">commands</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">echo Build started on `date`</span>
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">cd /opt/app &amp;&amp; hugo --theme purehugo</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">post_build</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">commands</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">echo Build completed on `date`</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">artifacts</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">files</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#ae81ff">/opt/app/public/**/*</span>
+</span></span></code></pre></div><p>When it&rsquo;s finished, CodeBuild will upload everything in the public folder as a zip to a bucket. The bucket has a lambda attached which triggers on putObject event with the extension <code>.zip</code>. It downloads the archive, extracts it and pushes it to another repository, which is the repository for the blog.</p>
 <p>And done! That&rsquo;s it. For an architecture overview, please read on.</p>
-<h1 id="architecture">Architecture</h1>
+<h1 id="architecture">Architecture<a hidden class="anchor" aria-hidden="true" href="#architecture">#</a></h1>
 <p>Now, we are going to use CloudFormation stack to deploy these resources. Because we aren&rsquo;t animals to create them by hand, yes?</p>
 <p>An overview of my current architecture is best shown by this image:</p>
-<p><img src="/img/blog_builder_cf_template.png" alt="AWS Stack">.</p>
+<p><img loading="lazy" src="/img/blog_builder_cf_template.png" alt="AWS Stack"  />
+.</p>
 <p>Let&rsquo;s go over these components one - by - one.</p>
-<h2 id="lambda-role">Lambda Role</h2>
+<h2 id="lambda-role">Lambda Role<a hidden class="anchor" aria-hidden="true" href="#lambda-role">#</a></h2>
 <p>This is the <a href="http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html">Role</a> which allows the Lambda to access things in your account. It needs the following service access: s3, logs, lambda; and the following permissions: logs:Create*, logs:PutLogEvents, s3:GetObject, s3:ListBucket.</p>
-<h2 id="code-build-role">Code Build Role</h2>
+<h2 id="code-build-role">Code Build Role<a hidden class="anchor" aria-hidden="true" href="#code-build-role">#</a></h2>
 <p>This is the role which allows CodeBuild to have access to services it needs. These services are the following: s3, logs, ssm, codebuild. CodeBuild also needs the following actions allowed: logs:Create*, logs:PutLogEvents, s3:GetObject, s3:PutObject, ssm:GetParameters.</p>
-<h2 id="build-bucket">Build Bucket</h2>
+<h2 id="build-bucket">Build Bucket<a hidden class="anchor" aria-hidden="true" href="#build-bucket">#</a></h2>
 <p>This is the bucket in which CodeBuild will push the generated build artifact.</p>
-<h2 id="blog-pusher-function">Blog Pusher Function</h2>
+<h2 id="blog-pusher-function">Blog Pusher Function<a hidden class="anchor" aria-hidden="true" href="#blog-pusher-function">#</a></h2>
 <p>This is the heart of this project. It contains the logic to download the zipped artifact, extract it, create a hollow repository from the extracted archive and push the changes to the repository. And just the changes.</p>
 <p>This is achieve by a short Python 3.6 script which can be found in the linked repository.</p>
-<h2 id="parameters">Parameters</h2>
+<h2 id="parameters">Parameters<a hidden class="anchor" aria-hidden="true" href="#parameters">#</a></h2>
 <p>The stack requires you to provide a couple of parameters which are described in the template. Like, bucket name, github repository, git token and such. Please refer to the template for a full description of each.</p>
-<h2 id="charges">Charges</h2>
+<h2 id="charges">Charges<a hidden class="anchor" aria-hidden="true" href="#charges">#</a></h2>
 <p>I recently push a couple of builds to test this configuration and I inferred 0.2 USD in charges. But that was like 10-15 builds a day.</p>
-<h1 id="deploying">Deploying</h1>
+<h1 id="deploying">Deploying<a hidden class="anchor" aria-hidden="true" href="#deploying">#</a></h1>
 <p>In order to deploy this you can use <a href="https://github.com/Skarlso/go-furnace">Furnace</a> to easily manage the template and it&rsquo;s parameters. Once you copy the template to the target directory, simply run <code>furnace aws create</code> and provide the necessary parameters.</p>
-<h1 id="conclusion">Conclusion</h1>
+<h1 id="conclusion">Conclusion<a hidden class="anchor" aria-hidden="true" href="#conclusion">#</a></h1>
 <p>And that is all. A nice little stack which does the same as Wercker without costs but the leisure of simply pushing up some change to a repository of your choosing.</p>
 <p>I hope you enjoyed this little write up as much as I enjoyed creating it.</p>
 <p>As always,
 Thanks for reading!
 Gergely.</p>
 
-    </div>
 
-    
-<footer class="post-footer">
-      
-      <nav class="post-nav">
-        <a class="prev" href="/2018/01/13/furnace-massive-update/">
-            <i class="iconfont icon-left"></i>
-            <span class="prev-text nav-default">Huge Furnace Update</span>
-            <span class="prev-text nav-mobile">Prev</span>
-          </a>
-        <a class="next" href="/2017/11/06/furnace-ikea-manual/">
-            <span class="next-text nav-default">Furnace Ikea Manual</span>
-            <span class="next-text nav-mobile">Next</span>
-            <i class="iconfont icon-right"></i>
-          </a>
-      </nav>
-    </footer>
-  </article>
-        </div>
-        <div id="disqus_thread"></div>
-    <script type="text/javascript">
-    (function() {
-      
-      
-      if (window.location.hostname === 'localhost') return;
-
-      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      var disqus_shortname = 'hannibalDisqus';
-      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-    })();
-    </script>
-    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-
-  
-
-  
-
-      </div>
-    </main>
-
-    <footer id="footer" class="footer">
-      <div class="social-links">
-      <a href="https://twitter.com/skarlso" class="iconfont icon-twitter" title="twitter"></a>
-      <a href="https://github.com/Skarlso" class="iconfont icon-github" title="github"></a>
-  <a href="https://skarlso.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
-</div>
-
-<div class="copyright">
-  <span class="power-by">
-    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
-  </span>
-  <span class="division">|</span>
-  <span class="theme-info">
-    Theme - 
-    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
-  </span>
-
-  
-
-  <span class="copyright-year">
-    &copy; 
-     - 
-    2023<span class="heart"><i class="iconfont icon-heart"></i></span><span>Gergely Brautigam</span>
-  </span>
-</div>
-
-    </footer>
-
-    <div class="back-to-top" id="back-to-top">
-      <i class="iconfont icon-up"></i>
-    </div>
   </div>
-  <script type="text/javascript" src="/lib/jquery/jquery-3.2.1.min.js"></script>
-  <script type="text/javascript" src="/lib/slideout/slideout-1.0.1.min.js"></script>
-  
 
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
 
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
 
-<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
 
-
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-69463020-2', 'auto');
-	
-	ga('send', 'pageview');
-}
 </script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
 
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
 
-
-
-
-
-
-
-
-
+</script>
 </body>
+
 </html>
