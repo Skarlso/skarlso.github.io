@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Using cert-manager as a subchart for your own Helm Chart | Ramblings of a cloud engineer</title>
+<meta name="keywords" content="">
+<meta name="description" content="Using cert-manager as a subchart Hello.
+In today&rsquo;s post, I would like to show how to set up cert-manager as a subchart. Not only that, but also, how to add a Job to make sure that cert-manager is installed and its webhook is up and running so it can process any Issuers that are going to be applied with your own chart.
+Let&rsquo;s get to it.
+Defining a subchart To define a subchart, simply add it as a dependency in your Charts.">
+<meta name="author" content="hannibal">
+<link rel="canonical" href="https://skarlso.github.io/2024/07/02/using-cert-manager-as-a-subchart-with-helm/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://skarlso.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://skarlso.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="Using cert-manager as a subchart for your own Helm Chart" />
+<meta property="og:description" content="Using cert-manager as a subchart Hello.
+In today&rsquo;s post, I would like to show how to set up cert-manager as a subchart. Not only that, but also, how to add a Job to make sure that cert-manager is installed and its webhook is up and running so it can process any Issuers that are going to be applied with your own chart.
+Let&rsquo;s get to it.
+Defining a subchart To define a subchart, simply add it as a dependency in your Charts." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://skarlso.github.io/2024/07/02/using-cert-manager-as-a-subchart-with-helm/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2024-07-02T01:01:00+01:00" />
+<meta property="article:modified_time" content="2024-07-02T01:01:00+01:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Using cert-manager as a subchart for your own Helm Chart"/>
+<meta name="twitter:description" content="Using cert-manager as a subchart Hello.
+In today&rsquo;s post, I would like to show how to set up cert-manager as a subchart. Not only that, but also, how to add a Job to make sure that cert-manager is installed and its webhook is up and running so it can process any Issuers that are going to be applied with your own chart.
+Let&rsquo;s get to it.
+Defining a subchart To define a subchart, simply add it as a dependency in your Charts."/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://skarlso.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "Using cert-manager as a subchart for your own Helm Chart",
+      "item": "https://skarlso.github.io/2024/07/02/using-cert-manager-as-a-subchart-with-helm/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Using cert-manager as a subchart for your own Helm Chart",
+  "name": "Using cert-manager as a subchart for your own Helm Chart",
+  "description": "Using cert-manager as a subchart Hello.\nIn today\u0026rsquo;s post, I would like to show how to set up cert-manager as a subchart. Not only that, but also, how to add a Job to make sure that cert-manager is installed and its webhook is up and running so it can process any Issuers that are going to be applied with your own chart.\nLet\u0026rsquo;s get to it.\nDefining a subchart To define a subchart, simply add it as a dependency in your Charts.",
+  "keywords": [
+    
+  ],
+  "articleBody": "Using cert-manager as a subchart Hello.\nIn today’s post, I would like to show how to set up cert-manager as a subchart. Not only that, but also, how to add a Job to make sure that cert-manager is installed and its webhook is up and running so it can process any Issuers that are going to be applied with your own chart.\nLet’s get to it.\nDefining a subchart To define a subchart, simply add it as a dependency in your Charts.yaml like this:\ndependencies: - name: cert-manager version: v1.14.5 repository: https://charts.jetstack.io condition: cert-manager.enabled Easy. Now, notice the condition. This value indicates that it needs to be set in order to install cert-manager. That happens by defining this in your values file:\ncert-manager: enabled: false namespace: cert-manager installCRDs: true fullnameOverride: \"cert-manager\" # this is needed for the certificate issuer to not throw an unknown authority error nameOverride: \"cert-manager\" # needed because otherwise it will call it `certManager` Once these values are defined, now comes the hard part.\nPost-install, Post-upgrade With Helm chart what you want is to make sure all things are up and running before continuing on. This is sometimes not easy to determine for helm especially if the deployed resource gives a thumbs-up even before everything is actually running. That can happen if Readiness isn’t define properly.\nWith cert-manager it happens that cert-manager is up and running, yet when it tries to apply the next thing in your chart which is an Issuer, it will error that cert-manager webhook could not be reached.\nTo work around that problem, helm introduced chart hooks1. They allow you to control when then next thing should run.\nThis is somewhat helpful, but we need even more control. We need to be able to make sure cert-manager is up and running. We can do that by running the following wait commands with kubectl.\nkubectl wait --for=condition=Available=True Deployment/cert-manager -n cert-manager --timeout=60s kubectl wait --for=condition=Available=True Deployment/cert-manager-webhook -n cert-manager --timeout=60s kubectl wait --for=condition=Available=True Deployment/cert-manager-cainjector -n cert-manager --timeout=60s But we need to be able to do that DURING helm install. That’s where the fun begins.\nJobs To run a command during install we can utilize a Job. How? By creating a Job deployment and putting it into the templates so it’s applied. Like this:\napiVersion: batch/v1 kind: Job metadata: name: wait-for-cert-manager namespace: cert-manager labels: app: {{ .Release.Name }}-wait-for-cert-manager annotations: \"helm.sh/hook\": post-install,post-upgrade \"helm.sh/hook-delete-policy\": before-hook-creation,hook-succeeded spec: template: spec: serviceAccountName: wait-for-cert-manager-sa containers: - name: wait-for-cert-manager image: bitnami/kubectl:latest command: - /bin/sh - -c - | kubectl wait --for=condition=Available=True Deployment/cert-manager -n cert-manager --timeout=60s kubectl wait --for=condition=Available=True Deployment/cert-manager-webhook -n cert-manager --timeout=60s kubectl wait --for=condition=Available=True Deployment/cert-manager-cainjector -n cert-manager --timeout=60s restartPolicy: OnFailure However, we only want to do this if cert-manager is enabled so we put a little templating in there:\n{{- if index .Values \"cert-manager\" \"enabled\" }} apiVersion: batch/v1 kind: Job metadata: name: wait-for-cert-manager namespace: cert-manager labels: app: {{ .Release.Name }}-wait-for-cert-manager annotations: \"helm.sh/hook\": post-install,post-upgrade \"helm.sh/hook-delete-policy\": before-hook-creation,hook-succeeded spec: template: spec: serviceAccountName: wait-for-cert-manager-sa containers: - name: wait-for-cert-manager image: bitnami/kubectl:latest command: - /bin/sh - -c - | kubectl wait --for=condition=Available=True Deployment/cert-manager -n cert-manager --timeout=60s kubectl wait --for=condition=Available=True Deployment/cert-manager-webhook -n cert-manager --timeout=60s kubectl wait --for=condition=Available=True Deployment/cert-manager-cainjector -n cert-manager --timeout=60s restartPolicy: OnFailure {{- end}} Now, what else we need are some roles and service account to run this with.\n{{- if index .Values \"cert-manager\" \"enabled\" }} apiVersion: rbac.authorization.k8s.io/v1 kind: ClusterRole metadata: name: wait-for-cert-manager-role rules: - apiGroups: [\"apps\"] resources: [\"deployments\"] verbs: [\"get\", \"list\", \"watch\"] {{- end}} {{- if index .Values \"cert-manager\" \"enabled\" }} apiVersion: rbac.authorization.k8s.io/v1 kind: ClusterRoleBinding metadata: name: wait-for-cert-manager-rolebinding subjects: - kind: ServiceAccount name: wait-for-cert-manager-sa namespace: cert-manager roleRef: kind: ClusterRole name: wait-for-cert-manager-role apiGroup: rbac.authorization.k8s.io {{- end}} {{- if index .Values \"cert-manager\" \"enabled\" }} apiVersion: v1 kind: ServiceAccount metadata: name: wait-for-cert-manager-sa namespace: cert-manager {{- end}} Put these into the template section too and run helm install.\n{{- if index .Values \"cert-manager\" \"enabled\" }} This is using index because the value in values.yaml is cert-manager with a hyphen.\nConclusion Once these values are set, you should be able to run helm install and have your Issuer run correctly AFTER cert-manager is up and running properly.\nA sample implementation of all of this can be found in this2 repository.\nThank you for reading!\nhttps://helm.sh/docs/topics/charts_hooks/ ↩︎\nhttps://github.com/open-component-model/ocm-controller/tree/6042a15dcb62942275aa310ac6c2383edb87ae12/deploy/templates ↩︎\n",
+  "wordCount" : "693",
+  "inLanguage": "en",
+  "datePublished": "2024-07-02T01:01:00+01:00",
+  "dateModified": "2024-07-02T01:01:00+01:00",
+  "author":{
+    "@type": "Person",
+    "name": "hannibal"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://skarlso.github.io/2024/07/02/using-cert-manager-as-a-subchart-with-helm/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Ramblings of a cloud engineer",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://skarlso.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://skarlso.github.io/archives" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/search/" title="Search">
+                    <span>Search</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://skarlso.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://skarlso.github.io">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      Using cert-manager as a subchart for your own Helm Chart
+    </h1>
+    <div class="post-meta"><span title='2024-07-02 01:01:00 +0100 +0100'>July 2, 2024</span>&nbsp;·&nbsp;4 min&nbsp;·&nbsp;hannibal
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#using-cert-manager-as-a-subchart" aria-label="Using cert-manager as a subchart">Using cert-manager as a subchart</a><ul>
+                        
+                <li>
+                    <a href="#defining-a-subchart" aria-label="Defining a subchart">Defining a subchart</a></li>
+                <li>
+                    <a href="#post-install-post-upgrade" aria-label="Post-install, Post-upgrade">Post-install, Post-upgrade</a></li>
+                <li>
+                    <a href="#jobs" aria-label="Jobs">Jobs</a></li>
+                <li>
+                    <a href="#conclusion" aria-label="Conclusion">Conclusion</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="using-cert-manager-as-a-subchart">Using cert-manager as a subchart<a hidden class="anchor" aria-hidden="true" href="#using-cert-manager-as-a-subchart">#</a></h1>
+<p>Hello.</p>
+<p>In today&rsquo;s post, I would like to show how to set up cert-manager as a subchart. Not only that,
+but also, how to add a <code>Job</code> to make sure that cert-manager is installed and its webhook is
+up and running so it can process any <code>Issuers</code> that are going to be applied with your own chart.</p>
+<p>Let&rsquo;s get to it.</p>
+<h2 id="defining-a-subchart">Defining a subchart<a hidden class="anchor" aria-hidden="true" href="#defining-a-subchart">#</a></h2>
+<p>To define a subchart, simply add it as a dependency in your <code>Charts.yaml</code> like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">dependencies</span>:
+</span></span><span style="display:flex;"><span>  - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cert-manager</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">version</span>: <span style="color:#ae81ff">v1.14.5</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">repository</span>: <span style="color:#ae81ff">https://charts.jetstack.io</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">condition</span>: <span style="color:#ae81ff">cert-manager.enabled</span>
+</span></span></code></pre></div><p>Easy. Now, notice the condition. This value indicates that it needs to be set in order to install cert-manager.
+That happens by defining this in your values file:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">cert-manager</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">enabled</span>: <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">cert-manager</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">installCRDs</span>: <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">fullnameOverride</span>: <span style="color:#e6db74">&#34;cert-manager&#34;</span> <span style="color:#75715e"># this is needed for the certificate issuer to not throw an unknown authority error</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">nameOverride</span>: <span style="color:#e6db74">&#34;cert-manager&#34;</span> <span style="color:#75715e"># needed because otherwise it will call it `certManager`</span>
+</span></span></code></pre></div><p>Once these values are defined, now comes the hard part.</p>
+<h2 id="post-install-post-upgrade">Post-install, Post-upgrade<a hidden class="anchor" aria-hidden="true" href="#post-install-post-upgrade">#</a></h2>
+<p>With Helm chart what you want is to make sure all things are up and running before continuing on. This is sometimes
+not easy to determine for helm especially if the deployed resource gives a thumbs-up even before everything is actually
+running. That can happen if Readiness isn&rsquo;t define properly.</p>
+<p>With cert-manager it happens that cert-manager is up and running, yet when it tries to apply the next thing in your chart
+which is an Issuer, it will error that cert-manager webhook could not be reached.</p>
+<p>To work around that problem, helm introduced chart hooks<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>. They allow you to control when then next thing should run.</p>
+<p>This is somewhat helpful, but we need even more control. We need to be able to make sure cert-manager is up and running.
+We can do that by running the following <code>wait</code> commands with <code>kubectl</code>.</p>
+<pre tabindex="0"><code>kubectl wait --for=condition=Available=True Deployment/cert-manager -n cert-manager --timeout=60s
+kubectl wait --for=condition=Available=True Deployment/cert-manager-webhook -n cert-manager --timeout=60s
+kubectl wait --for=condition=Available=True Deployment/cert-manager-cainjector -n cert-manager --timeout=60s
+</code></pre><p>But we need to be able to do that DURING <code>helm install</code>. That&rsquo;s where the fun begins.</p>
+<h2 id="jobs">Jobs<a hidden class="anchor" aria-hidden="true" href="#jobs">#</a></h2>
+<p>To run a command during install we can utilize a <code>Job</code>. How? By creating a <code>Job</code> deployment and putting it
+into the templates so it&rsquo;s applied. Like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">batch/v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Job</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">wait-for-cert-manager</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">cert-manager</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">labels</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">app</span>: {{ <span style="color:#ae81ff">.Release.Name }}-wait-for-cert-manager</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">annotations</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;helm.sh/hook&#34;: </span><span style="color:#ae81ff">post-install,post-upgrade</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;helm.sh/hook-delete-policy&#34;: </span><span style="color:#ae81ff">before-hook-creation,hook-succeeded</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">template</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">serviceAccountName</span>: <span style="color:#ae81ff">wait-for-cert-manager-sa</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">containers</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">wait-for-cert-manager</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">image</span>: <span style="color:#ae81ff">bitnami/kubectl:latest</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">command</span>:
+</span></span><span style="display:flex;"><span>            - <span style="color:#ae81ff">/bin/sh</span>
+</span></span><span style="display:flex;"><span>            - -<span style="color:#ae81ff">c</span>
+</span></span><span style="display:flex;"><span>            - |<span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">              kubectl wait --for=condition=Available=True Deployment/cert-manager -n cert-manager --timeout=60s
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">              kubectl wait --for=condition=Available=True Deployment/cert-manager-webhook -n cert-manager --timeout=60s
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">              kubectl wait --for=condition=Available=True Deployment/cert-manager-cainjector -n cert-manager --timeout=60s</span>              
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">restartPolicy</span>: <span style="color:#ae81ff">OnFailure</span>
+</span></span></code></pre></div><p>However, we only want to do this if cert-manager is enabled so we put a little templating in there:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>{{- <span style="color:#ae81ff">if index .Values &#34;cert-manager&#34; &#34;enabled&#34; }}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">batch/v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Job</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">wait-for-cert-manager</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">cert-manager</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">labels</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">app</span>: {{ <span style="color:#ae81ff">.Release.Name }}-wait-for-cert-manager</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">annotations</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;helm.sh/hook&#34;: </span><span style="color:#ae81ff">post-install,post-upgrade</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;helm.sh/hook-delete-policy&#34;: </span><span style="color:#ae81ff">before-hook-creation,hook-succeeded</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">template</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">serviceAccountName</span>: <span style="color:#ae81ff">wait-for-cert-manager-sa</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">containers</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">wait-for-cert-manager</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">image</span>: <span style="color:#ae81ff">bitnami/kubectl:latest</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">command</span>:
+</span></span><span style="display:flex;"><span>            - <span style="color:#ae81ff">/bin/sh</span>
+</span></span><span style="display:flex;"><span>            - -<span style="color:#ae81ff">c</span>
+</span></span><span style="display:flex;"><span>            - |<span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">              kubectl wait --for=condition=Available=True Deployment/cert-manager -n cert-manager --timeout=60s
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">              kubectl wait --for=condition=Available=True Deployment/cert-manager-webhook -n cert-manager --timeout=60s
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">              kubectl wait --for=condition=Available=True Deployment/cert-manager-cainjector -n cert-manager --timeout=60s</span>              
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">restartPolicy</span>: <span style="color:#ae81ff">OnFailure</span>
+</span></span><span style="display:flex;"><span>{{- <span style="color:#ae81ff">end}}</span>
+</span></span></code></pre></div><p>Now, what else we need are some roles and service account to run this with.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>{{- <span style="color:#ae81ff">if index .Values &#34;cert-manager&#34; &#34;enabled&#34; }}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">rbac.authorization.k8s.io/v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">ClusterRole</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">wait-for-cert-manager-role</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">rules</span>:
+</span></span><span style="display:flex;"><span>  - <span style="color:#f92672">apiGroups</span>: [<span style="color:#e6db74">&#34;apps&#34;</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">resources</span>: [<span style="color:#e6db74">&#34;deployments&#34;</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">verbs</span>: [<span style="color:#e6db74">&#34;get&#34;</span>, <span style="color:#e6db74">&#34;list&#34;</span>, <span style="color:#e6db74">&#34;watch&#34;</span>]
+</span></span><span style="display:flex;"><span>{{- <span style="color:#ae81ff">end}}</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>{{- <span style="color:#ae81ff">if index .Values &#34;cert-manager&#34; &#34;enabled&#34; }}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">rbac.authorization.k8s.io/v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">ClusterRoleBinding</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">wait-for-cert-manager-rolebinding</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">subjects</span>:
+</span></span><span style="display:flex;"><span>  - <span style="color:#f92672">kind</span>: <span style="color:#ae81ff">ServiceAccount</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">name</span>: <span style="color:#ae81ff">wait-for-cert-manager-sa</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">cert-manager</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">roleRef</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">kind</span>: <span style="color:#ae81ff">ClusterRole</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">wait-for-cert-manager-role</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">apiGroup</span>: <span style="color:#ae81ff">rbac.authorization.k8s.io</span>
+</span></span><span style="display:flex;"><span>{{- <span style="color:#ae81ff">end}}</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>{{- <span style="color:#ae81ff">if index .Values &#34;cert-manager&#34; &#34;enabled&#34; }}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">ServiceAccount</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">wait-for-cert-manager-sa</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">cert-manager</span>
+</span></span><span style="display:flex;"><span>{{- <span style="color:#ae81ff">end}}</span>
+</span></span></code></pre></div><p>Put these into the template section too and run <code>helm install</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>{{- <span style="color:#ae81ff">if index .Values &#34;cert-manager&#34; &#34;enabled&#34; }}</span>
+</span></span></code></pre></div><p>This is using <code>index</code> because the value in values.yaml is <code>cert-manager</code> with a hyphen.</p>
+<h2 id="conclusion">Conclusion<a hidden class="anchor" aria-hidden="true" href="#conclusion">#</a></h2>
+<p>Once these values are set, you should be able to run helm install and have your Issuer run correctly AFTER
+cert-manager is up and running properly.</p>
+<p>A sample implementation of all of this can be found in this<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> repository.</p>
+<p>Thank you for reading!</p>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p><a href="https://helm.sh/docs/topics/charts_hooks/">https://helm.sh/docs/topics/charts_hooks/</a>&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:2">
+<p><a href="https://github.com/open-component-model/ocm-controller/tree/6042a15dcb62942275aa310ac6c2383edb87ae12/deploy/templates">https://github.com/open-component-model/ocm-controller/tree/6042a15dcb62942275aa310ac6c2383edb87ae12/deploy/templates</a>&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+<nav class="paginav">
+  <a class="next" href="https://skarlso.github.io/2024/07/01/discoverable-functional-options/">
+    <span class="title">Next »</span>
+    <br>
+    <span>Discoverable functional options pattern</span>
+  </a>
+</nav>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    window.disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>
