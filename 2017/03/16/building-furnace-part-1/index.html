@@ -7,15 +7,20 @@
 <meta name="robots" content="index, follow">
 <title>Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1 | Ramblings of a cloud engineer</title>
 <meta name="keywords" content="">
-<meta name="description" content="Other posts: Part 2, Part 3, Part 4.
-Building Furnace: Part 1 Intro Hi folks.
-This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.
-The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them.">
+<meta name="description" content="Other posts:
+Part 2, Part 3, Part 4.
+Building Furnace: Part 1
+Intro
+Hi folks.
+This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go,
+with AWS. Including Unit testing and a experimental plugin feature.
+The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar
+with them. The second part will talk about the Go SDK and the project structure itself, how it can be used, improved, and how it can
+help in everyday life. The third part will talk about the experimental plugin system, and finally, we will tackle unit testing AWS
+in Go.">
 <meta name="author" content="hannibal">
 <link rel="canonical" href="https://skarlso.github.io/2017/03/16/building-furnace-part-1/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
-<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
-    onload="hljs.initHighlightingOnLoad();"></script>
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="https://skarlso.github.io/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
@@ -23,6 +28,7 @@ The first part will talk about the AWS services used in brief and will contain a
 <link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://skarlso.github.io/2017/03/16/building-furnace-part-1/">
 <noscript>
     <style>
         #theme-toggle,
@@ -40,7 +46,7 @@ The first part will talk about the AWS services used in brief and will contain a
                 --secondary: rgb(155, 156, 157);
                 --tertiary: rgb(65, 66, 68);
                 --content: rgb(196, 196, 197);
-                --hljs-bg: rgb(46, 46, 51);
+                --code-block-bg: rgb(46, 46, 51);
                 --code-bg: rgb(55, 56, 62);
                 --border: rgb(51, 51, 51);
             }
@@ -59,38 +65,51 @@ The first part will talk about the AWS services used in brief and will contain a
         }
 
     </style>
-</noscript><meta property="og:title" content="Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1" />
-<meta property="og:description" content="Other posts: Part 2, Part 3, Part 4.
-Building Furnace: Part 1 Intro Hi folks.
-This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.
-The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2017/03/16/building-furnace-part-1/" /><meta property="article:section" content="posts" />
-<meta property="article:published_time" content="2017-03-16T21:49:00+01:00" />
-<meta property="article:modified_time" content="2017-03-16T21:49:00+01:00" />
-
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1"/>
-<meta name="twitter:description" content="Other posts: Part 2, Part 3, Part 4.
-Building Furnace: Part 1 Intro Hi folks.
-This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.
-The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them."/>
+</noscript><meta property="og:title" content="Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1">
+<meta property="og:description" content="Other posts:
+Part 2, Part 3, Part 4.
+Building Furnace: Part 1
+Intro
+Hi folks.
+This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go,
+with AWS. Including Unit testing and a experimental plugin feature.
+The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar
+with them. The second part will talk about the Go SDK and the project structure itself, how it can be used, improved, and how it can
+help in everyday life. The third part will talk about the experimental plugin system, and finally, we will tackle unit testing AWS
+in Go.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://skarlso.github.io/2017/03/16/building-furnace-part-1/"><meta property="article:section" content="posts">
+<meta property="article:published_time" content="2017-03-16T21:49:00+01:00">
+<meta property="article:modified_time" content="2017-03-16T21:49:00+01:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1">
+<meta name="twitter:description" content="Other posts:
+Part 2, Part 3, Part 4.
+Building Furnace: Part 1
+Intro
+Hi folks.
+This is the first part of a 4 part series which talks about the process of building a middlish sized project in Go,
+with AWS. Including Unit testing and a experimental plugin feature.
+The first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar
+with them. The second part will talk about the Go SDK and the project structure itself, how it can be used, improved, and how it can
+help in everyday life. The third part will talk about the experimental plugin system, and finally, we will tackle unit testing AWS
+in Go.">
 
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
-  "itemListElement": [, 
+  "itemListElement": [
     {
       "@type": "ListItem",
-      "position":  2 ,
+      "position":  1 ,
       "name": "Posts",
       "item": "https://skarlso.github.io/posts/"
     }, 
     {
       "@type": "ListItem",
-      "position":  3 ,
+      "position":  2 ,
       "name": "Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1",
       "item": "https://skarlso.github.io/2017/03/16/building-furnace-part-1/"
     }
@@ -103,7 +122,7 @@ The first part will talk about the AWS services used in brief and will contain a
   "@type": "BlogPosting",
   "headline": "Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1",
   "name": "Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1",
-  "description": "Other posts: Part 2, Part 3, Part 4.\nBuilding Furnace: Part 1 Intro Hi folks.\nThis is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.\nThe first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them.",
+  "description": "Other posts: Part 2, Part 3, Part 4.\nBuilding Furnace: Part 1 Intro Hi folks.\nThis is the first part of a 4 part series which talks about the process of building a middlish sized project in Go, with AWS. Including Unit testing and a experimental plugin feature.\nThe first part will talk about the AWS services used in brief and will contain a basic description for those who are not familiar with them. The second part will talk about the Go SDK and the project structure itself, how it can be used, improved, and how it can help in everyday life. The third part will talk about the experimental plugin system, and finally, we will tackle unit testing AWS in Go.\n",
   "keywords": [
     
   ],
@@ -147,7 +166,7 @@ The first part will talk about the AWS services used in brief and will contain a
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <a href="https://skarlso.github.io/" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -199,8 +218,8 @@ The first part will talk about the AWS services used in brief and will contain a
 
 <article class="post-single">
   <header class="post-header">
-    <div class="breadcrumbs"><a href="https://skarlso.github.io">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
-    <h1 class="post-title">
+    <div class="breadcrumbs"><a href="https://skarlso.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
       Furnace - The building of an AWS CLI Tool for CloudFormation and CodeDeploy - Part 1
     </h1>
     <div class="post-meta"><span title='2017-03-16 21:49:00 +0100 +0100'>March 16, 2017</span>&nbsp;·&nbsp;7 min&nbsp;·&nbsp;hannibal
@@ -260,7 +279,7 @@ in Go.</p>
 <h1 id="aws">AWS<a hidden class="anchor" aria-hidden="true" href="#aws">#</a></h1>
 <h2 id="cloudformation">CloudFormation<a hidden class="anchor" aria-hidden="true" href="#cloudformation">#</a></h2>
 <p>If you haven&rsquo;t yet read about, or know off, AWS&rsquo; CloudFormation service, you can either go ahead and read the <a href="https://aws.amazon.com/cloudformation/">Documentation</a>
-or read on for a very quick summary. If you are familiar with CF, you should skip ahead to <a href="##CodeDeploy">CodeDeploy</a> section.</p>
+or read on for a very quick summary. If you are familiar with CF, you should skip ahead to <a href="/2017/03/16/building-furnace-part-1/##CodeDeploy">CodeDeploy</a> section.</p>
 <p>CF is a service which bundles together other AWS services (for example: EC2, S3, ELB, ASG, RDS) into one, easily manageable stack.
 After a stack has been created, all the resources can be handled as one, located, tagged and used via CF specific console commands.
 It&rsquo;s also possible to define any number of parameters, so a stack can actually be very versatile. A parameter can be anything, from
@@ -480,31 +499,13 @@ Gergely.</p>
   </a>
 </nav>
 
-  </footer><div id="disqus_thread"></div>
-<script type="application/javascript">
-    window.disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+  </footer>
 </article>
     </main>
     
 <footer class="footer">
-    <span>&copy; 2024 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+        <span>&copy; 2024 <a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a></span> · 
+
     <span>
         Powered by
         <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &

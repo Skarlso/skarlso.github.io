@@ -9,12 +9,85 @@
 <meta name="keywords" content="">
 <meta name="description" content="Quickly wrote up the Data Munger code kata in Go.
 Next time, I want better abstractions. And a way to select columns based on their header data. For now, this is not bad.
-package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34; &#34;os&#34; &#34;regexp&#34; &#34;strconv&#34; &#34;strings&#34; ) //Data which is Data type Data struct { columnName string compareOne float64 compareTwo float64 } func main() { // datas := []Data{WeatherData{}, FootballData{}} fmt.Println(&#34;Minimum weather data:&#34;, GetDataMinimumDiff(&#34;weather.">
+
+package main
+
+import (
+	&#34;bufio&#34;
+	&#34;fmt&#34;
+	&#34;log&#34;
+	&#34;math&#34;
+	&#34;os&#34;
+	&#34;regexp&#34;
+	&#34;strconv&#34;
+	&#34;strings&#34;
+)
+
+//Data which is Data
+type Data struct {
+	columnName string
+	compareOne float64
+	compareTwo float64
+}
+
+func main() {
+	// datas := []Data{WeatherData{}, FootballData{}}
+	fmt.Println(&#34;Minimum weather data:&#34;, GetDataMinimumDiff(&#34;weather.dat&#34;, , 1, 2))
+	fmt.Println(&#34;Minimum football data:&#34;, GetDataMinimumDiff(&#34;football.dat&#34;, 1, 6, 7))
+}
+
+//GetDataMinimumDiff gathers data from file to fill up Columns.
+func GetDataMinimumDiff(filename string, nameColumn int, compareColOne int, compareColTwo int) Data {
+	data := Data{}
+	minimum := math.MaxFloat64
+	readLines := ReadFile(filename)
+	for _, value := range readLines {
+		valueArrays := strings.Split(value, &#34;,&#34;)
+		name := valueArrays[nameColumn]
+		trimmedFirst, _ := strconv.ParseFloat(valueArrays[compareColOne], 64)
+		trimmedSecond, _ := strconv.ParseFloat(valueArrays[compareColTwo], 64)
+		diff := trimmedFirst - trimmedSecond
+		diff = math.Abs(diff)
+		if diff &lt;= minimum {
+			minimum = diff
+			data.columnName = name
+			data.compareOne = trimmedFirst
+			data.compareTwo = trimmedSecond
+		}
+	}
+	return data
+}
+
+//ReadFile reads lines from a file and gives back a string array which contains the lines.
+func ReadFile(fileName string) (fileLines []string) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	//Skipping the first line which is the header.
+	scanner.Scan()
+	for scanner.Scan() {
+		line := scanner.Text()
+		re := regexp.MustCompile(&#34;\\w&#43;&#34;)
+		lines := re.FindAllString(line, -1)
+		if len(lines) &gt;  {
+			fileLines = append(fileLines, strings.Join(lines, &#34;,&#34;))
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return
+}
+">
 <meta name="author" content="hannibal">
 <link rel="canonical" href="https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
-<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
-    onload="hljs.initHighlightingOnLoad();"></script>
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="https://skarlso.github.io/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
@@ -22,6 +95,7 @@ package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34;
 <link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/">
 <noscript>
     <style>
         #theme-toggle,
@@ -39,7 +113,7 @@ package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34;
                 --secondary: rgb(155, 156, 157);
                 --tertiary: rgb(65, 66, 68);
                 --content: rgb(196, 196, 197);
-                --hljs-bg: rgb(46, 46, 51);
+                --code-block-bg: rgb(46, 46, 51);
                 --code-bg: rgb(55, 56, 62);
                 --border: rgb(51, 51, 51);
             }
@@ -58,36 +132,185 @@ package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34;
         }
 
     </style>
-</noscript><meta property="og:title" content="DataMunger Kata with Go" />
+</noscript><meta property="og:title" content="DataMunger Kata with Go">
 <meta property="og:description" content="Quickly wrote up the Data Munger code kata in Go.
 Next time, I want better abstractions. And a way to select columns based on their header data. For now, this is not bad.
-package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34; &#34;os&#34; &#34;regexp&#34; &#34;strconv&#34; &#34;strings&#34; ) //Data which is Data type Data struct { columnName string compareOne float64 compareTwo float64 } func main() { // datas := []Data{WeatherData{}, FootballData{}} fmt.Println(&#34;Minimum weather data:&#34;, GetDataMinimumDiff(&#34;weather." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/" /><meta property="article:section" content="posts" />
-<meta property="article:published_time" content="2015-10-04T00:00:00+00:00" />
-<meta property="article:modified_time" content="2015-10-04T00:00:00+00:00" />
 
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="DataMunger Kata with Go"/>
+package main
+
+import (
+	&#34;bufio&#34;
+	&#34;fmt&#34;
+	&#34;log&#34;
+	&#34;math&#34;
+	&#34;os&#34;
+	&#34;regexp&#34;
+	&#34;strconv&#34;
+	&#34;strings&#34;
+)
+
+//Data which is Data
+type Data struct {
+	columnName string
+	compareOne float64
+	compareTwo float64
+}
+
+func main() {
+	// datas := []Data{WeatherData{}, FootballData{}}
+	fmt.Println(&#34;Minimum weather data:&#34;, GetDataMinimumDiff(&#34;weather.dat&#34;, , 1, 2))
+	fmt.Println(&#34;Minimum football data:&#34;, GetDataMinimumDiff(&#34;football.dat&#34;, 1, 6, 7))
+}
+
+//GetDataMinimumDiff gathers data from file to fill up Columns.
+func GetDataMinimumDiff(filename string, nameColumn int, compareColOne int, compareColTwo int) Data {
+	data := Data{}
+	minimum := math.MaxFloat64
+	readLines := ReadFile(filename)
+	for _, value := range readLines {
+		valueArrays := strings.Split(value, &#34;,&#34;)
+		name := valueArrays[nameColumn]
+		trimmedFirst, _ := strconv.ParseFloat(valueArrays[compareColOne], 64)
+		trimmedSecond, _ := strconv.ParseFloat(valueArrays[compareColTwo], 64)
+		diff := trimmedFirst - trimmedSecond
+		diff = math.Abs(diff)
+		if diff &lt;= minimum {
+			minimum = diff
+			data.columnName = name
+			data.compareOne = trimmedFirst
+			data.compareTwo = trimmedSecond
+		}
+	}
+	return data
+}
+
+//ReadFile reads lines from a file and gives back a string array which contains the lines.
+func ReadFile(fileName string) (fileLines []string) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	//Skipping the first line which is the header.
+	scanner.Scan()
+	for scanner.Scan() {
+		line := scanner.Text()
+		re := regexp.MustCompile(&#34;\\w&#43;&#34;)
+		lines := re.FindAllString(line, -1)
+		if len(lines) &gt;  {
+			fileLines = append(fileLines, strings.Join(lines, &#34;,&#34;))
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return
+}
+">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/"><meta property="article:section" content="posts">
+<meta property="article:published_time" content="2015-10-04T00:00:00+00:00">
+<meta property="article:modified_time" content="2015-10-04T00:00:00+00:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="DataMunger Kata with Go">
 <meta name="twitter:description" content="Quickly wrote up the Data Munger code kata in Go.
 Next time, I want better abstractions. And a way to select columns based on their header data. For now, this is not bad.
-package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34; &#34;os&#34; &#34;regexp&#34; &#34;strconv&#34; &#34;strings&#34; ) //Data which is Data type Data struct { columnName string compareOne float64 compareTwo float64 } func main() { // datas := []Data{WeatherData{}, FootballData{}} fmt.Println(&#34;Minimum weather data:&#34;, GetDataMinimumDiff(&#34;weather."/>
+
+package main
+
+import (
+	&#34;bufio&#34;
+	&#34;fmt&#34;
+	&#34;log&#34;
+	&#34;math&#34;
+	&#34;os&#34;
+	&#34;regexp&#34;
+	&#34;strconv&#34;
+	&#34;strings&#34;
+)
+
+//Data which is Data
+type Data struct {
+	columnName string
+	compareOne float64
+	compareTwo float64
+}
+
+func main() {
+	// datas := []Data{WeatherData{}, FootballData{}}
+	fmt.Println(&#34;Minimum weather data:&#34;, GetDataMinimumDiff(&#34;weather.dat&#34;, , 1, 2))
+	fmt.Println(&#34;Minimum football data:&#34;, GetDataMinimumDiff(&#34;football.dat&#34;, 1, 6, 7))
+}
+
+//GetDataMinimumDiff gathers data from file to fill up Columns.
+func GetDataMinimumDiff(filename string, nameColumn int, compareColOne int, compareColTwo int) Data {
+	data := Data{}
+	minimum := math.MaxFloat64
+	readLines := ReadFile(filename)
+	for _, value := range readLines {
+		valueArrays := strings.Split(value, &#34;,&#34;)
+		name := valueArrays[nameColumn]
+		trimmedFirst, _ := strconv.ParseFloat(valueArrays[compareColOne], 64)
+		trimmedSecond, _ := strconv.ParseFloat(valueArrays[compareColTwo], 64)
+		diff := trimmedFirst - trimmedSecond
+		diff = math.Abs(diff)
+		if diff &lt;= minimum {
+			minimum = diff
+			data.columnName = name
+			data.compareOne = trimmedFirst
+			data.compareTwo = trimmedSecond
+		}
+	}
+	return data
+}
+
+//ReadFile reads lines from a file and gives back a string array which contains the lines.
+func ReadFile(fileName string) (fileLines []string) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	//Skipping the first line which is the header.
+	scanner.Scan()
+	for scanner.Scan() {
+		line := scanner.Text()
+		re := regexp.MustCompile(&#34;\\w&#43;&#34;)
+		lines := re.FindAllString(line, -1)
+		if len(lines) &gt;  {
+			fileLines = append(fileLines, strings.Join(lines, &#34;,&#34;))
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return
+}
+">
 
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
-  "itemListElement": [, 
+  "itemListElement": [
     {
       "@type": "ListItem",
-      "position":  2 ,
+      "position":  1 ,
       "name": "Posts",
       "item": "https://skarlso.github.io/posts/"
     }, 
     {
       "@type": "ListItem",
-      "position":  3 ,
+      "position":  2 ,
       "name": "DataMunger Kata with Go",
       "item": "https://skarlso.github.io/2015/10/04/datamunger-kata-with-go/"
     }
@@ -100,7 +323,7 @@ package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34;
   "@type": "BlogPosting",
   "headline": "DataMunger Kata with Go",
   "name": "DataMunger Kata with Go",
-  "description": "Quickly wrote up the Data Munger code kata in Go.\nNext time, I want better abstractions. And a way to select columns based on their header data. For now, this is not bad.\npackage main import ( \u0026#34;bufio\u0026#34; \u0026#34;fmt\u0026#34; \u0026#34;log\u0026#34; \u0026#34;math\u0026#34; \u0026#34;os\u0026#34; \u0026#34;regexp\u0026#34; \u0026#34;strconv\u0026#34; \u0026#34;strings\u0026#34; ) //Data which is Data type Data struct { columnName string compareOne float64 compareTwo float64 } func main() { // datas := []Data{WeatherData{}, FootballData{}} fmt.Println(\u0026#34;Minimum weather data:\u0026#34;, GetDataMinimumDiff(\u0026#34;weather.",
+  "description": "Quickly wrote up the Data Munger code kata in Go.\nNext time, I want better abstractions. And a way to select columns based on their header data. For now, this is not bad.\npackage main import ( \u0026#34;bufio\u0026#34; \u0026#34;fmt\u0026#34; \u0026#34;log\u0026#34; \u0026#34;math\u0026#34; \u0026#34;os\u0026#34; \u0026#34;regexp\u0026#34; \u0026#34;strconv\u0026#34; \u0026#34;strings\u0026#34; ) //Data which is Data type Data struct { columnName string compareOne float64 compareTwo float64 } func main() { // datas := []Data{WeatherData{}, FootballData{}} fmt.Println(\u0026#34;Minimum weather data:\u0026#34;, GetDataMinimumDiff(\u0026#34;weather.dat\u0026#34;, , 1, 2)) fmt.Println(\u0026#34;Minimum football data:\u0026#34;, GetDataMinimumDiff(\u0026#34;football.dat\u0026#34;, 1, 6, 7)) } //GetDataMinimumDiff gathers data from file to fill up Columns. func GetDataMinimumDiff(filename string, nameColumn int, compareColOne int, compareColTwo int) Data { data := Data{} minimum := math.MaxFloat64 readLines := ReadFile(filename) for _, value := range readLines { valueArrays := strings.Split(value, \u0026#34;,\u0026#34;) name := valueArrays[nameColumn] trimmedFirst, _ := strconv.ParseFloat(valueArrays[compareColOne], 64) trimmedSecond, _ := strconv.ParseFloat(valueArrays[compareColTwo], 64) diff := trimmedFirst - trimmedSecond diff = math.Abs(diff) if diff \u0026lt;= minimum { minimum = diff data.columnName = name data.compareOne = trimmedFirst data.compareTwo = trimmedSecond } } return data } //ReadFile reads lines from a file and gives back a string array which contains the lines. func ReadFile(fileName string) (fileLines []string) { file, err := os.Open(fileName) if err != nil { log.Fatal(err) } defer file.Close() scanner := bufio.NewScanner(file) //Skipping the first line which is the header. scanner.Scan() for scanner.Scan() { line := scanner.Text() re := regexp.MustCompile(\u0026#34;\\\\w+\u0026#34;) lines := re.FindAllString(line, -1) if len(lines) \u0026gt; { fileLines = append(fileLines, strings.Join(lines, \u0026#34;,\u0026#34;)) } } if err := scanner.Err(); err != nil { log.Fatal(err) } return } ",
   "keywords": [
     
   ],
@@ -144,7 +367,7 @@ package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34;
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <a href="https://skarlso.github.io/" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -196,8 +419,8 @@ package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34;
 
 <article class="post-single">
   <header class="post-header">
-    <div class="breadcrumbs"><a href="https://skarlso.github.io">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
-    <h1 class="post-title">
+    <div class="breadcrumbs"><a href="https://skarlso.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
       DataMunger Kata with Go
     </h1>
     <div class="post-meta"><span title='2015-10-04 00:00:00 +0000 UTC'>October 4, 2015</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;hannibal
@@ -302,31 +525,13 @@ package main import ( &#34;bufio&#34; &#34;fmt&#34; &#34;log&#34; &#34;math&#34;
   </a>
 </nav>
 
-  </footer><div id="disqus_thread"></div>
-<script type="application/javascript">
-    window.disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+  </footer>
 </article>
     </main>
     
 <footer class="footer">
-    <span>&copy; 2024 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+        <span>&copy; 2024 <a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a></span> · 
+
     <span>
         Powered by
         <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &

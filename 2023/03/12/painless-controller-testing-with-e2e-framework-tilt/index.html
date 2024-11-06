@@ -8,15 +8,17 @@
 <title>Painless controller testing with e2e-framework and tilt | Ramblings of a cloud engineer</title>
 <meta name="keywords" content="">
 <meta name="description" content="Welcome dear reader.
-When last we met, we talked a lot about setting up Tilt for rapid controller development.
+When last we met, we talked a lot about setting up Tilt
+for rapid controller development.
 Now, let&rsquo;s see how powerful Tilt can be once we bring it together with Kubernetes&rsquo; e2e-framework.
-Controller E2E Framework I&rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run tests for controllers that work together.
-This framework can be used to integration test or e2e test controllers that work together.">
+Controller E2E Framework
+I&rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run
+tests for controllers that work together.
+This framework can be used to integration test or e2e test controllers that work together. They set up some kind of
+ref connection between certain objects and perform some operation on said object.">
 <meta name="author" content="hannibal">
 <link rel="canonical" href="https://skarlso.github.io/2023/03/12/painless-controller-testing-with-e2e-framework-tilt/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
-<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
-    onload="hljs.initHighlightingOnLoad();"></script>
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="https://skarlso.github.io/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
@@ -24,6 +26,7 @@ This framework can be used to integration test or e2e test controllers that work
 <link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://skarlso.github.io/2023/03/12/painless-controller-testing-with-e2e-framework-tilt/">
 <noscript>
     <style>
         #theme-toggle,
@@ -41,7 +44,7 @@ This framework can be used to integration test or e2e test controllers that work
                 --secondary: rgb(155, 156, 157);
                 --tertiary: rgb(65, 66, 68);
                 --content: rgb(196, 196, 197);
-                --hljs-bg: rgb(46, 46, 51);
+                --code-block-bg: rgb(46, 46, 51);
                 --code-bg: rgb(55, 56, 62);
                 --border: rgb(51, 51, 51);
             }
@@ -60,40 +63,47 @@ This framework can be used to integration test or e2e test controllers that work
         }
 
     </style>
-</noscript><meta property="og:title" content="Painless controller testing with e2e-framework and tilt" />
+</noscript><meta property="og:title" content="Painless controller testing with e2e-framework and tilt">
 <meta property="og:description" content="Welcome dear reader.
-When last we met, we talked a lot about setting up Tilt for rapid controller development.
+When last we met, we talked a lot about setting up Tilt
+for rapid controller development.
 Now, let&rsquo;s see how powerful Tilt can be once we bring it together with Kubernetes&rsquo; e2e-framework.
-Controller E2E Framework I&rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run tests for controllers that work together.
-This framework can be used to integration test or e2e test controllers that work together." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2023/03/12/painless-controller-testing-with-e2e-framework-tilt/" /><meta property="article:section" content="posts" />
-<meta property="article:published_time" content="2023-03-12T01:01:00+01:00" />
-<meta property="article:modified_time" content="2023-03-12T01:01:00+01:00" />
-
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Painless controller testing with e2e-framework and tilt"/>
+Controller E2E Framework
+I&rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run
+tests for controllers that work together.
+This framework can be used to integration test or e2e test controllers that work together. They set up some kind of
+ref connection between certain objects and perform some operation on said object.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://skarlso.github.io/2023/03/12/painless-controller-testing-with-e2e-framework-tilt/"><meta property="article:section" content="posts">
+<meta property="article:published_time" content="2023-03-12T01:01:00+01:00">
+<meta property="article:modified_time" content="2023-03-12T01:01:00+01:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Painless controller testing with e2e-framework and tilt">
 <meta name="twitter:description" content="Welcome dear reader.
-When last we met, we talked a lot about setting up Tilt for rapid controller development.
+When last we met, we talked a lot about setting up Tilt
+for rapid controller development.
 Now, let&rsquo;s see how powerful Tilt can be once we bring it together with Kubernetes&rsquo; e2e-framework.
-Controller E2E Framework I&rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run tests for controllers that work together.
-This framework can be used to integration test or e2e test controllers that work together."/>
+Controller E2E Framework
+I&rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run
+tests for controllers that work together.
+This framework can be used to integration test or e2e test controllers that work together. They set up some kind of
+ref connection between certain objects and perform some operation on said object.">
 
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
-  "itemListElement": [, 
+  "itemListElement": [
     {
       "@type": "ListItem",
-      "position":  2 ,
+      "position":  1 ,
       "name": "Posts",
       "item": "https://skarlso.github.io/posts/"
     }, 
     {
       "@type": "ListItem",
-      "position":  3 ,
+      "position":  2 ,
       "name": "Painless controller testing with e2e-framework and tilt",
       "item": "https://skarlso.github.io/2023/03/12/painless-controller-testing-with-e2e-framework-tilt/"
     }
@@ -106,7 +116,7 @@ This framework can be used to integration test or e2e test controllers that work
   "@type": "BlogPosting",
   "headline": "Painless controller testing with e2e-framework and tilt",
   "name": "Painless controller testing with e2e-framework and tilt",
-  "description": "Welcome dear reader.\nWhen last we met, we talked a lot about setting up Tilt for rapid controller development.\nNow, let\u0026rsquo;s see how powerful Tilt can be once we bring it together with Kubernetes\u0026rsquo; e2e-framework.\nController E2E Framework I\u0026rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run tests for controllers that work together.\nThis framework can be used to integration test or e2e test controllers that work together.",
+  "description": "Welcome dear reader.\nWhen last we met, we talked a lot about setting up Tilt for rapid controller development.\nNow, let\u0026rsquo;s see how powerful Tilt can be once we bring it together with Kubernetes\u0026rsquo; e2e-framework.\nController E2E Framework I\u0026rsquo;d like to present my controller-e2e-framework which brings Tilt and e2e-framework together to easily write and run tests for controllers that work together.\nThis framework can be used to integration test or e2e test controllers that work together. They set up some kind of ref connection between certain objects and perform some operation on said object.\n",
   "keywords": [
     
   ],
@@ -150,7 +160,7 @@ This framework can be used to integration test or e2e test controllers that work
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <a href="https://skarlso.github.io/" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -202,8 +212,8 @@ This framework can be used to integration test or e2e test controllers that work
 
 <article class="post-single">
   <header class="post-header">
-    <div class="breadcrumbs"><a href="https://skarlso.github.io">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
-    <h1 class="post-title">
+    <div class="breadcrumbs"><a href="https://skarlso.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
       Painless controller testing with e2e-framework and tilt
     </h1>
     <div class="post-meta"><span title='2023-03-12 01:01:00 +0100 +0100'>March 12, 2023</span>&nbsp;·&nbsp;7 min&nbsp;·&nbsp;hannibal
@@ -350,8 +360,7 @@ This will kick-start the whole process of reconciliation of the responder object
 <p>Once these two exists and we verified that they exist, we will wait for the label to be applied and the <code>Acquired</code> flag
 to be set to true.</p>
 <p>Let&rsquo;s look at the architecture of this whole thing.</p>
-<p><img loading="lazy" src="/img/2023/03/12/architecture.png" alt="architecture"  />
-</p>
+<p><img alt="architecture" loading="lazy" src="/img/2023/03/12/architecture.png"></p>
 <p>What happens here is as follows&hellip; e2e-framework has a <code>TestMain</code> function defined.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">TestMain</span>(<span style="color:#a6e22e">m</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">M</span>) {
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cfg</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">envconf</span>.<span style="color:#a6e22e">NewFromFlags</span>()
@@ -496,31 +505,13 @@ runner with some weird parameters. CI runs the same thing I&rsquo;m running on m
   </a>
 </nav>
 
-  </footer><div id="disqus_thread"></div>
-<script type="application/javascript">
-    window.disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+  </footer>
 </article>
     </main>
     
 <footer class="footer">
-    <span>&copy; 2024 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+        <span>&copy; 2024 <a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a></span> · 
+
     <span>
         Powered by
         <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &

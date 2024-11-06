@@ -11,12 +11,73 @@
 If you have the tendency, like me, to forget that you are on the corporate VPN, or leave a certain software open when you bring your laptop to work, this might be helpful to you too.
 It&rsquo;s a small script which kills a program when you change your Wifi network.
 Script:
-#!/bin/bash function log { directory=&#34;/Users/&lt;username&gt;/wifi_detect&#34; log_dir_exists=true if [ ! -d $directory ]; then echo &#34;Attempting to create =&gt; $directory&#34; mkdir -p $directory if [ !">
+
+#!/bin/bash
+
+function log {
+    directory=&#34;/Users/&lt;username&gt;/wifi_detect&#34;
+    log_dir_exists=true
+    if [ ! -d $directory ]; then
+        echo &#34;Attempting to create =&gt; $directory&#34;
+        mkdir -p $directory
+        if [ ! -d $directory ]; then
+            echo &#34;Could not create directory. Continue to log to echo.&#34;
+            log_dir_exists=false
+        fi
+    fi
+    if $log_dir_exists ; then
+        echo &#34;$(date):$1&#34; &gt;&gt; &#34;$directory/log.txt&#34;
+    else
+        echo &#34;$(date):$1&#34;
+    fi
+}
+
+function check_program {
+    to_kill=&#34;[${1::1}]${1:1}&#34;
+    log &#34;Checking if $to_kill really quit.&#34;
+    ps=$(ps aux |grep &#34;$to_kill&#34;)
+    log &#34;ps =&gt; $ps&#34;
+    if [ -z &#34;$ps&#34; ]; then
+	# 0 - True
+        return
+    else
+	# 1 - False
+        return 1
+    fi
+}
+
+function kill_program {
+    log &#34;Killing program&#34;
+    `pkill -f &#34;$1&#34;`
+    sleep 1
+    if ! check_program $1 ; then
+	log &#34;$1 Did not quit!&#34;
+    else
+	log &#34;$1 quit successfully&#34;
+    fi
+}
+
+wifi_name=$(networksetup -getairportnetwork en0 |awk -F&#34;: &#34; &#39;{print $2}&#39;)
+log &#34;Wifi name: $wifi_name&#34;
+if [ &#34;$wifi_name&#34; = &#34;&lt;wifi_name&gt;&#34; ]; then
+    log &#34;On corporate network... Killing Program&#34;
+    kill_program &#34;&lt;programname&gt;&#34;
+elif [ &#34;$wifi_name&#34; = &#34;&lt;home_wifi_name&gt;&#34; ]; then
+    # Kill &lt;program&gt; if enabled and if on &lt;home_wifi&gt; and if Tunnelblick is running.
+    log &#34;Not on corporate network... Killing &lt;program&gt; if Tunnelblick is active.&#34;
+    if ! check_program &#34;Tunnelblick&#34; ; then
+	log &#34;Tunnelblick is active. Killing &lt;program&gt;&#34;
+	kill_program &#34;&lt;program&gt;&#34;
+    else
+	log &#34;All good... Happy coding.&#34;
+    fi
+else
+    log &#34;No known Network...&#34;
+fi
+Now, the trick is, on OSX to only trigger this when your network changes. For this, you can have a &rsquo;launchd&rsquo; daemon, which is configured to watch three files which relate to a network being changed.">
 <meta name="author" content="hannibal">
 <link rel="canonical" href="https://skarlso.github.io/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
-<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
-    onload="hljs.initHighlightingOnLoad();"></script>
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="https://skarlso.github.io/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
@@ -24,6 +85,7 @@ Script:
 <link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://skarlso.github.io/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/">
 <noscript>
     <style>
         #theme-toggle,
@@ -41,7 +103,7 @@ Script:
                 --secondary: rgb(155, 156, 157);
                 --tertiary: rgb(65, 66, 68);
                 --content: rgb(196, 196, 197);
-                --hljs-bg: rgb(46, 46, 51);
+                --code-block-bg: rgb(46, 46, 51);
                 --code-bg: rgb(55, 56, 62);
                 --border: rgb(51, 51, 51);
             }
@@ -60,40 +122,165 @@ Script:
         }
 
     </style>
-</noscript><meta property="og:title" content="Kill a Program on Connecting to a specific WiFi – OSX" />
+</noscript><meta property="og:title" content="Kill a Program on Connecting to a specific WiFi – OSX">
 <meta property="og:description" content="Hi folks.
 If you have the tendency, like me, to forget that you are on the corporate VPN, or leave a certain software open when you bring your laptop to work, this might be helpful to you too.
 It&rsquo;s a small script which kills a program when you change your Wifi network.
 Script:
-#!/bin/bash function log { directory=&#34;/Users/&lt;username&gt;/wifi_detect&#34; log_dir_exists=true if [ ! -d $directory ]; then echo &#34;Attempting to create =&gt; $directory&#34; mkdir -p $directory if [ !" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/" /><meta property="article:section" content="posts" />
-<meta property="article:published_time" content="2015-10-26T00:00:00+00:00" />
-<meta property="article:modified_time" content="2015-10-26T00:00:00+00:00" />
 
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Kill a Program on Connecting to a specific WiFi – OSX"/>
+#!/bin/bash
+
+function log {
+    directory=&#34;/Users/&lt;username&gt;/wifi_detect&#34;
+    log_dir_exists=true
+    if [ ! -d $directory ]; then
+        echo &#34;Attempting to create =&gt; $directory&#34;
+        mkdir -p $directory
+        if [ ! -d $directory ]; then
+            echo &#34;Could not create directory. Continue to log to echo.&#34;
+            log_dir_exists=false
+        fi
+    fi
+    if $log_dir_exists ; then
+        echo &#34;$(date):$1&#34; &gt;&gt; &#34;$directory/log.txt&#34;
+    else
+        echo &#34;$(date):$1&#34;
+    fi
+}
+
+function check_program {
+    to_kill=&#34;[${1::1}]${1:1}&#34;
+    log &#34;Checking if $to_kill really quit.&#34;
+    ps=$(ps aux |grep &#34;$to_kill&#34;)
+    log &#34;ps =&gt; $ps&#34;
+    if [ -z &#34;$ps&#34; ]; then
+	# 0 - True
+        return
+    else
+	# 1 - False
+        return 1
+    fi
+}
+
+function kill_program {
+    log &#34;Killing program&#34;
+    `pkill -f &#34;$1&#34;`
+    sleep 1
+    if ! check_program $1 ; then
+	log &#34;$1 Did not quit!&#34;
+    else
+	log &#34;$1 quit successfully&#34;
+    fi
+}
+
+wifi_name=$(networksetup -getairportnetwork en0 |awk -F&#34;: &#34; &#39;{print $2}&#39;)
+log &#34;Wifi name: $wifi_name&#34;
+if [ &#34;$wifi_name&#34; = &#34;&lt;wifi_name&gt;&#34; ]; then
+    log &#34;On corporate network... Killing Program&#34;
+    kill_program &#34;&lt;programname&gt;&#34;
+elif [ &#34;$wifi_name&#34; = &#34;&lt;home_wifi_name&gt;&#34; ]; then
+    # Kill &lt;program&gt; if enabled and if on &lt;home_wifi&gt; and if Tunnelblick is running.
+    log &#34;Not on corporate network... Killing &lt;program&gt; if Tunnelblick is active.&#34;
+    if ! check_program &#34;Tunnelblick&#34; ; then
+	log &#34;Tunnelblick is active. Killing &lt;program&gt;&#34;
+	kill_program &#34;&lt;program&gt;&#34;
+    else
+	log &#34;All good... Happy coding.&#34;
+    fi
+else
+    log &#34;No known Network...&#34;
+fi
+Now, the trick is, on OSX to only trigger this when your network changes. For this, you can have a &rsquo;launchd&rsquo; daemon, which is configured to watch three files which relate to a network being changed.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://skarlso.github.io/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/"><meta property="article:section" content="posts">
+<meta property="article:published_time" content="2015-10-26T00:00:00+00:00">
+<meta property="article:modified_time" content="2015-10-26T00:00:00+00:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kill a Program on Connecting to a specific WiFi – OSX">
 <meta name="twitter:description" content="Hi folks.
 If you have the tendency, like me, to forget that you are on the corporate VPN, or leave a certain software open when you bring your laptop to work, this might be helpful to you too.
 It&rsquo;s a small script which kills a program when you change your Wifi network.
 Script:
-#!/bin/bash function log { directory=&#34;/Users/&lt;username&gt;/wifi_detect&#34; log_dir_exists=true if [ ! -d $directory ]; then echo &#34;Attempting to create =&gt; $directory&#34; mkdir -p $directory if [ !"/>
+
+#!/bin/bash
+
+function log {
+    directory=&#34;/Users/&lt;username&gt;/wifi_detect&#34;
+    log_dir_exists=true
+    if [ ! -d $directory ]; then
+        echo &#34;Attempting to create =&gt; $directory&#34;
+        mkdir -p $directory
+        if [ ! -d $directory ]; then
+            echo &#34;Could not create directory. Continue to log to echo.&#34;
+            log_dir_exists=false
+        fi
+    fi
+    if $log_dir_exists ; then
+        echo &#34;$(date):$1&#34; &gt;&gt; &#34;$directory/log.txt&#34;
+    else
+        echo &#34;$(date):$1&#34;
+    fi
+}
+
+function check_program {
+    to_kill=&#34;[${1::1}]${1:1}&#34;
+    log &#34;Checking if $to_kill really quit.&#34;
+    ps=$(ps aux |grep &#34;$to_kill&#34;)
+    log &#34;ps =&gt; $ps&#34;
+    if [ -z &#34;$ps&#34; ]; then
+	# 0 - True
+        return
+    else
+	# 1 - False
+        return 1
+    fi
+}
+
+function kill_program {
+    log &#34;Killing program&#34;
+    `pkill -f &#34;$1&#34;`
+    sleep 1
+    if ! check_program $1 ; then
+	log &#34;$1 Did not quit!&#34;
+    else
+	log &#34;$1 quit successfully&#34;
+    fi
+}
+
+wifi_name=$(networksetup -getairportnetwork en0 |awk -F&#34;: &#34; &#39;{print $2}&#39;)
+log &#34;Wifi name: $wifi_name&#34;
+if [ &#34;$wifi_name&#34; = &#34;&lt;wifi_name&gt;&#34; ]; then
+    log &#34;On corporate network... Killing Program&#34;
+    kill_program &#34;&lt;programname&gt;&#34;
+elif [ &#34;$wifi_name&#34; = &#34;&lt;home_wifi_name&gt;&#34; ]; then
+    # Kill &lt;program&gt; if enabled and if on &lt;home_wifi&gt; and if Tunnelblick is running.
+    log &#34;Not on corporate network... Killing &lt;program&gt; if Tunnelblick is active.&#34;
+    if ! check_program &#34;Tunnelblick&#34; ; then
+	log &#34;Tunnelblick is active. Killing &lt;program&gt;&#34;
+	kill_program &#34;&lt;program&gt;&#34;
+    else
+	log &#34;All good... Happy coding.&#34;
+    fi
+else
+    log &#34;No known Network...&#34;
+fi
+Now, the trick is, on OSX to only trigger this when your network changes. For this, you can have a &rsquo;launchd&rsquo; daemon, which is configured to watch three files which relate to a network being changed.">
 
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
-  "itemListElement": [, 
+  "itemListElement": [
     {
       "@type": "ListItem",
-      "position":  2 ,
+      "position":  1 ,
       "name": "Posts",
       "item": "https://skarlso.github.io/posts/"
     }, 
     {
       "@type": "ListItem",
-      "position":  3 ,
+      "position":  2 ,
       "name": "Kill a Program on Connecting to a specific WiFi – OSX",
       "item": "https://skarlso.github.io/2015/10/26/kill-a-program-on-connecting-to-a-specific-wifi-osx/"
     }
@@ -106,7 +293,7 @@ Script:
   "@type": "BlogPosting",
   "headline": "Kill a Program on Connecting to a specific WiFi – OSX",
   "name": "Kill a Program on Connecting to a specific WiFi – OSX",
-  "description": "Hi folks.\nIf you have the tendency, like me, to forget that you are on the corporate VPN, or leave a certain software open when you bring your laptop to work, this might be helpful to you too.\nIt\u0026rsquo;s a small script which kills a program when you change your Wifi network.\nScript:\n#!/bin/bash function log { directory=\u0026#34;/Users/\u0026lt;username\u0026gt;/wifi_detect\u0026#34; log_dir_exists=true if [ ! -d $directory ]; then echo \u0026#34;Attempting to create =\u0026gt; $directory\u0026#34; mkdir -p $directory if [ !",
+  "description": "Hi folks.\nIf you have the tendency, like me, to forget that you are on the corporate VPN, or leave a certain software open when you bring your laptop to work, this might be helpful to you too.\nIt\u0026rsquo;s a small script which kills a program when you change your Wifi network.\nScript:\n#!/bin/bash function log { directory=\u0026#34;/Users/\u0026lt;username\u0026gt;/wifi_detect\u0026#34; log_dir_exists=true if [ ! -d $directory ]; then echo \u0026#34;Attempting to create =\u0026gt; $directory\u0026#34; mkdir -p $directory if [ ! -d $directory ]; then echo \u0026#34;Could not create directory. Continue to log to echo.\u0026#34; log_dir_exists=false fi fi if $log_dir_exists ; then echo \u0026#34;$(date):$1\u0026#34; \u0026gt;\u0026gt; \u0026#34;$directory/log.txt\u0026#34; else echo \u0026#34;$(date):$1\u0026#34; fi } function check_program { to_kill=\u0026#34;[${1::1}]${1:1}\u0026#34; log \u0026#34;Checking if $to_kill really quit.\u0026#34; ps=$(ps aux |grep \u0026#34;$to_kill\u0026#34;) log \u0026#34;ps =\u0026gt; $ps\u0026#34; if [ -z \u0026#34;$ps\u0026#34; ]; then # 0 - True return else # 1 - False return 1 fi } function kill_program { log \u0026#34;Killing program\u0026#34; `pkill -f \u0026#34;$1\u0026#34;` sleep 1 if ! check_program $1 ; then log \u0026#34;$1 Did not quit!\u0026#34; else log \u0026#34;$1 quit successfully\u0026#34; fi } wifi_name=$(networksetup -getairportnetwork en0 |awk -F\u0026#34;: \u0026#34; \u0026#39;{print $2}\u0026#39;) log \u0026#34;Wifi name: $wifi_name\u0026#34; if [ \u0026#34;$wifi_name\u0026#34; = \u0026#34;\u0026lt;wifi_name\u0026gt;\u0026#34; ]; then log \u0026#34;On corporate network... Killing Program\u0026#34; kill_program \u0026#34;\u0026lt;programname\u0026gt;\u0026#34; elif [ \u0026#34;$wifi_name\u0026#34; = \u0026#34;\u0026lt;home_wifi_name\u0026gt;\u0026#34; ]; then # Kill \u0026lt;program\u0026gt; if enabled and if on \u0026lt;home_wifi\u0026gt; and if Tunnelblick is running. log \u0026#34;Not on corporate network... Killing \u0026lt;program\u0026gt; if Tunnelblick is active.\u0026#34; if ! check_program \u0026#34;Tunnelblick\u0026#34; ; then log \u0026#34;Tunnelblick is active. Killing \u0026lt;program\u0026gt;\u0026#34; kill_program \u0026#34;\u0026lt;program\u0026gt;\u0026#34; else log \u0026#34;All good... Happy coding.\u0026#34; fi else log \u0026#34;No known Network...\u0026#34; fi Now, the trick is, on OSX to only trigger this when your network changes. For this, you can have a \u0026rsquo;launchd\u0026rsquo; daemon, which is configured to watch three files which relate to a network being changed.\n",
   "keywords": [
     "launchd", "osx"
   ],
@@ -150,7 +337,7 @@ Script:
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <a href="https://skarlso.github.io/" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -202,8 +389,8 @@ Script:
 
 <article class="post-single">
   <header class="post-header">
-    <div class="breadcrumbs"><a href="https://skarlso.github.io">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
-    <h1 class="post-title">
+    <div class="breadcrumbs"><a href="https://skarlso.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
       Kill a Program on Connecting to a specific WiFi – OSX
     </h1>
     <div class="post-meta"><span title='2015-10-26 00:00:00 +0000 UTC'>October 26, 2015</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;hannibal
@@ -318,8 +505,8 @@ Script:
 
   <footer class="post-footer">
     <ul class="post-tags">
-      <li><a href="https://skarlso.github.io/tags/launchd/">launchd</a></li>
-      <li><a href="https://skarlso.github.io/tags/osx/">osx</a></li>
+      <li><a href="https://skarlso.github.io/tags/launchd/">Launchd</a></li>
+      <li><a href="https://skarlso.github.io/tags/osx/">Osx</a></li>
     </ul>
 <nav class="paginav">
   <a class="prev" href="https://skarlso.github.io/2015/11/09/go-progress-quest/">
@@ -334,31 +521,13 @@ Script:
   </a>
 </nav>
 
-  </footer><div id="disqus_thread"></div>
-<script type="application/javascript">
-    window.disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+  </footer>
 </article>
     </main>
     
 <footer class="footer">
-    <span>&copy; 2024 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+        <span>&copy; 2024 <a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a></span> · 
+
     <span>
         Powered by
         <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &

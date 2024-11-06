@@ -10,12 +10,175 @@
 <meta name="description" content="Hi folks.
 So, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial.
 It&rsquo;s still in it&rsquo;s infancy and I have a couple of more features I want to implement, but, here is the code.
-package main import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#34;fmt&#34; &#34;io/ioutil&#34; &#34;log&#34; &#34;net/http&#34; &#34;os&#34; &#34;github.com/BurntSushi/toml&#34; ) var configFile = &#34;~/.jira_config.toml&#34; var parameter string var flags struct { Comment string Description string IssueKey string Priority string Resolution string Title string Project string } //Issue is a representation of a Jira Issue type Issue struct { Fields struct { Project struct { Key string `json:&#34;key&#34;` } `json:&#34;project&#34;` Summary string `json:&#34;summary&#34;` Description string `json:&#34;description&#34;` Issuetype struct { Name string `json:&#34;name&#34;` } `json:&#34;issuetype&#34;` Priority struct { ID string `json:&#34;id&#34;` } `json:&#34;priority&#34;` } `json:&#34;fields&#34;` } //Transition defines a transition json object.">
+
+package main
+
+import (
+	&#34;bytes&#34;
+	&#34;encoding/json&#34;
+	&#34;flag&#34;
+	&#34;fmt&#34;
+	&#34;io/ioutil&#34;
+	&#34;log&#34;
+	&#34;net/http&#34;
+	&#34;os&#34;
+
+	&#34;github.com/BurntSushi/toml&#34;
+)
+
+var configFile = &#34;~/.jira_config.toml&#34;
+var parameter string
+
+var flags struct {
+	Comment     string
+	Description string
+	IssueKey    string
+	Priority    string
+	Resolution  string
+	Title       string
+	Project     string
+}
+
+//Issue is a representation of a Jira Issue
+type Issue struct {
+	Fields struct {
+		Project struct {
+			Key string `json:&#34;key&#34;`
+		} `json:&#34;project&#34;`
+		Summary     string `json:&#34;summary&#34;`
+		Description string `json:&#34;description&#34;`
+		Issuetype   struct {
+			Name string `json:&#34;name&#34;`
+		} `json:&#34;issuetype&#34;`
+		Priority struct {
+			ID string `json:&#34;id&#34;`
+		} `json:&#34;priority&#34;`
+	} `json:&#34;fields&#34;`
+}
+
+//Transition defines a transition json object. Used for starting, stoppinp
+//generally for state stranfer
+type Transition struct {
+	Fields struct {
+		Resolution struct {
+			Name string `json:&#34;name&#34;`
+		} `json:&#34;resolution&#34;`
+	} `json:&#34;fields&#34;`
+	Transition struct {
+		ID string `json:&#34;id&#34;`
+	} `json:&#34;transition&#34;`
+}
+
+//Credentials a representation of a JIRA config which helds API permissions
+type Credentials struct {
+	Username string
+	Password string
+	URL      string
+}
+
+func init() {
+	flag.StringVar(&amp;flags.Comment, &#34;m&#34;, &#34;Default Comment&#34;, &#34;A Comment when changing the status of an Issue.&#34;)
+	flag.StringVar(&amp;flags.Description, &#34;d&#34;, &#34;Default Description&#34;, &#34;Provide a description for a newly created Issue.&#34;)
+	flag.StringVar(&amp;flags.Priority, &#34;p&#34;, &#34;2&#34;, &#34;The priority of an Issue which will be set.&#34;)
+	flag.StringVar(&amp;flags.IssueKey, &#34;k&#34;, &#34;&#34;, &#34;Issue key of an issue.&#34;)
+	flag.StringVar(&amp;flags.Resolution, &#34;r&#34;, &#34;Done&#34;, &#34;Resolution when an issue is closed. Ex.: Done, Fixed, Won&#39;t fix.&#34;)
+	flag.StringVar(&amp;flags.Title, &#34;t&#34;, &#34;Default Title&#34;, &#34;Title of an Issue.&#34;)
+	flag.StringVar(&amp;flags.Project, &#34;o&#34;, &#34;IT&#34;, &#34;Define a Project to create a ticket in.&#34;)
+	flag.Parse()
+}
+
+func (cred *Credentials) initConfig() {
+	if _, err := os.Stat(configFile); err != nil {
+		log.Fatalf(&#34;Error using config file: %v&#34;, err)
+	}
+
+	if _, err := toml.DecodeFile(configFile, cred); err != nil {
+		log.Fatal(&#34;Error during decoding toml config: &#34;, err)
+	}
+}
+
+func main() {
+	if len(flag.Args()) &lt; 1 {
+		log.Fatal(&#34;Please provide an action to take. Usage information:&#34;)
+	}
+	parameter = flag.Arg()
+	switch parameter {
+	case &#34;close&#34;:
+		closeIssue(flags.IssueKey)
+	case &#34;start&#34;:
+		startIssue(flags.IssueKey)
+	case &#34;create&#34;:
+		createIssue()
+	}
+}
+
+func closeIssue(issueKey string) {
+	if issueKey == &#34;&#34; {
+		log.Fatal(&#34;Please provide an issueID with -k&#34;)
+	}
+	fmt.Println(&#34;Closing issue number: &#34;, issueKey)
+
+	var trans Transition
+
+	//TODO: Add the ability to define a comment for the close reason
+	trans.Fields.Resolution.Name = flags.Resolution
+	trans.Transition.ID = &#34;2&#34;
+	marhsalledTrans, err := json.Marshal(trans)
+	if err != nil {
+		log.Fatal(&#34;Error occured when marshaling transition: &#34;, err)
+	}
+	fmt.Println(&#34;Marshalled:&#34;, trans)
+	sendRequest(marhsalledTrans, &#34;POST&#34;, issueKey&#43;&#34;/transitions?expand=transitions.fields&#34;)
+}
+
+func startIssue(issueID string) {
+	if issueID == &#34;&#34; {
+		log.Fatal(&#34;Please provide an issueID with -i&#34;)
+	}
+
+	fmt.Println(&#34;Starting issue number:&#34;, issueID)
+}
+
+func createIssue() {
+	fmt.Println(&#34;Creating new issue.&#34;)
+	var issue Issue
+	issue.Fields.Description = flags.Description
+	issue.Fields.Priority.ID = flags.Priority
+	issue.Fields.Summary = flags.Title
+	issue.Fields.Project.Key = flags.Project
+	issue.Fields.Issuetype.Name = &#34;Task&#34;
+	marshalledIssue, err := json.Marshal(issue)
+	if err != nil {
+		log.Fatal(&#34;Error occured when Marshaling Issue:&#34;, err)
+	}
+	sendRequest(marshalledIssue, &#34;POST&#34;, &#34;&#34;)
+}
+
+func sendRequest(jsonStr []byte, method string, url string) {
+	cred := &amp;Credentials{}
+	cred.initConfig()
+	fmt.Println(&#34;Json:&#34;, string(jsonStr))
+	req, err := http.NewRequest(method, cred.URL&#43;url, bytes.NewBuffer(jsonStr))
+	req.Header.Set(&#34;Content-Type&#34;, &#34;application/json&#34;)
+	req.SetBasicAuth(cred.Username, cred.Password)
+
+	client := &amp;http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	fmt.Println(&#34;response Status:&#34;, resp.Status)
+	fmt.Println(&#34;response Headers:&#34;, resp.Header)
+	body, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println(&#34;response Body:&#34;, string(body))
+
+}
+It can also be found under my github page: GoJira Github.">
 <meta name="author" content="hannibal">
 <link rel="canonical" href="https://skarlso.github.io/2015/11/20/go-jira-api-client/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
-<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
-    onload="hljs.initHighlightingOnLoad();"></script>
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="https://skarlso.github.io/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
@@ -23,6 +186,7 @@ package main import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#3
 <link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://skarlso.github.io/2015/11/20/go-jira-api-client/">
 <noscript>
     <style>
         #theme-toggle,
@@ -40,7 +204,7 @@ package main import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#3
                 --secondary: rgb(155, 156, 157);
                 --tertiary: rgb(65, 66, 68);
                 --content: rgb(196, 196, 197);
-                --hljs-bg: rgb(46, 46, 51);
+                --code-block-bg: rgb(46, 46, 51);
                 --code-bg: rgb(55, 56, 62);
                 --border: rgb(51, 51, 51);
             }
@@ -59,38 +223,367 @@ package main import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#3
         }
 
     </style>
-</noscript><meta property="og:title" content="Go JIRA API client" />
+</noscript><meta property="og:title" content="Go JIRA API client">
 <meta property="og:description" content="Hi folks.
 So, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial.
 It&rsquo;s still in it&rsquo;s infancy and I have a couple of more features I want to implement, but, here is the code.
-package main import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#34;fmt&#34; &#34;io/ioutil&#34; &#34;log&#34; &#34;net/http&#34; &#34;os&#34; &#34;github.com/BurntSushi/toml&#34; ) var configFile = &#34;~/.jira_config.toml&#34; var parameter string var flags struct { Comment string Description string IssueKey string Priority string Resolution string Title string Project string } //Issue is a representation of a Jira Issue type Issue struct { Fields struct { Project struct { Key string `json:&#34;key&#34;` } `json:&#34;project&#34;` Summary string `json:&#34;summary&#34;` Description string `json:&#34;description&#34;` Issuetype struct { Name string `json:&#34;name&#34;` } `json:&#34;issuetype&#34;` Priority struct { ID string `json:&#34;id&#34;` } `json:&#34;priority&#34;` } `json:&#34;fields&#34;` } //Transition defines a transition json object." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2015/11/20/go-jira-api-client/" /><meta property="article:section" content="posts" />
-<meta property="article:published_time" content="2015-11-20T00:00:00+00:00" />
-<meta property="article:modified_time" content="2015-11-20T00:00:00+00:00" />
 
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Go JIRA API client"/>
+package main
+
+import (
+	&#34;bytes&#34;
+	&#34;encoding/json&#34;
+	&#34;flag&#34;
+	&#34;fmt&#34;
+	&#34;io/ioutil&#34;
+	&#34;log&#34;
+	&#34;net/http&#34;
+	&#34;os&#34;
+
+	&#34;github.com/BurntSushi/toml&#34;
+)
+
+var configFile = &#34;~/.jira_config.toml&#34;
+var parameter string
+
+var flags struct {
+	Comment     string
+	Description string
+	IssueKey    string
+	Priority    string
+	Resolution  string
+	Title       string
+	Project     string
+}
+
+//Issue is a representation of a Jira Issue
+type Issue struct {
+	Fields struct {
+		Project struct {
+			Key string `json:&#34;key&#34;`
+		} `json:&#34;project&#34;`
+		Summary     string `json:&#34;summary&#34;`
+		Description string `json:&#34;description&#34;`
+		Issuetype   struct {
+			Name string `json:&#34;name&#34;`
+		} `json:&#34;issuetype&#34;`
+		Priority struct {
+			ID string `json:&#34;id&#34;`
+		} `json:&#34;priority&#34;`
+	} `json:&#34;fields&#34;`
+}
+
+//Transition defines a transition json object. Used for starting, stoppinp
+//generally for state stranfer
+type Transition struct {
+	Fields struct {
+		Resolution struct {
+			Name string `json:&#34;name&#34;`
+		} `json:&#34;resolution&#34;`
+	} `json:&#34;fields&#34;`
+	Transition struct {
+		ID string `json:&#34;id&#34;`
+	} `json:&#34;transition&#34;`
+}
+
+//Credentials a representation of a JIRA config which helds API permissions
+type Credentials struct {
+	Username string
+	Password string
+	URL      string
+}
+
+func init() {
+	flag.StringVar(&amp;flags.Comment, &#34;m&#34;, &#34;Default Comment&#34;, &#34;A Comment when changing the status of an Issue.&#34;)
+	flag.StringVar(&amp;flags.Description, &#34;d&#34;, &#34;Default Description&#34;, &#34;Provide a description for a newly created Issue.&#34;)
+	flag.StringVar(&amp;flags.Priority, &#34;p&#34;, &#34;2&#34;, &#34;The priority of an Issue which will be set.&#34;)
+	flag.StringVar(&amp;flags.IssueKey, &#34;k&#34;, &#34;&#34;, &#34;Issue key of an issue.&#34;)
+	flag.StringVar(&amp;flags.Resolution, &#34;r&#34;, &#34;Done&#34;, &#34;Resolution when an issue is closed. Ex.: Done, Fixed, Won&#39;t fix.&#34;)
+	flag.StringVar(&amp;flags.Title, &#34;t&#34;, &#34;Default Title&#34;, &#34;Title of an Issue.&#34;)
+	flag.StringVar(&amp;flags.Project, &#34;o&#34;, &#34;IT&#34;, &#34;Define a Project to create a ticket in.&#34;)
+	flag.Parse()
+}
+
+func (cred *Credentials) initConfig() {
+	if _, err := os.Stat(configFile); err != nil {
+		log.Fatalf(&#34;Error using config file: %v&#34;, err)
+	}
+
+	if _, err := toml.DecodeFile(configFile, cred); err != nil {
+		log.Fatal(&#34;Error during decoding toml config: &#34;, err)
+	}
+}
+
+func main() {
+	if len(flag.Args()) &lt; 1 {
+		log.Fatal(&#34;Please provide an action to take. Usage information:&#34;)
+	}
+	parameter = flag.Arg()
+	switch parameter {
+	case &#34;close&#34;:
+		closeIssue(flags.IssueKey)
+	case &#34;start&#34;:
+		startIssue(flags.IssueKey)
+	case &#34;create&#34;:
+		createIssue()
+	}
+}
+
+func closeIssue(issueKey string) {
+	if issueKey == &#34;&#34; {
+		log.Fatal(&#34;Please provide an issueID with -k&#34;)
+	}
+	fmt.Println(&#34;Closing issue number: &#34;, issueKey)
+
+	var trans Transition
+
+	//TODO: Add the ability to define a comment for the close reason
+	trans.Fields.Resolution.Name = flags.Resolution
+	trans.Transition.ID = &#34;2&#34;
+	marhsalledTrans, err := json.Marshal(trans)
+	if err != nil {
+		log.Fatal(&#34;Error occured when marshaling transition: &#34;, err)
+	}
+	fmt.Println(&#34;Marshalled:&#34;, trans)
+	sendRequest(marhsalledTrans, &#34;POST&#34;, issueKey&#43;&#34;/transitions?expand=transitions.fields&#34;)
+}
+
+func startIssue(issueID string) {
+	if issueID == &#34;&#34; {
+		log.Fatal(&#34;Please provide an issueID with -i&#34;)
+	}
+
+	fmt.Println(&#34;Starting issue number:&#34;, issueID)
+}
+
+func createIssue() {
+	fmt.Println(&#34;Creating new issue.&#34;)
+	var issue Issue
+	issue.Fields.Description = flags.Description
+	issue.Fields.Priority.ID = flags.Priority
+	issue.Fields.Summary = flags.Title
+	issue.Fields.Project.Key = flags.Project
+	issue.Fields.Issuetype.Name = &#34;Task&#34;
+	marshalledIssue, err := json.Marshal(issue)
+	if err != nil {
+		log.Fatal(&#34;Error occured when Marshaling Issue:&#34;, err)
+	}
+	sendRequest(marshalledIssue, &#34;POST&#34;, &#34;&#34;)
+}
+
+func sendRequest(jsonStr []byte, method string, url string) {
+	cred := &amp;Credentials{}
+	cred.initConfig()
+	fmt.Println(&#34;Json:&#34;, string(jsonStr))
+	req, err := http.NewRequest(method, cred.URL&#43;url, bytes.NewBuffer(jsonStr))
+	req.Header.Set(&#34;Content-Type&#34;, &#34;application/json&#34;)
+	req.SetBasicAuth(cred.Username, cred.Password)
+
+	client := &amp;http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	fmt.Println(&#34;response Status:&#34;, resp.Status)
+	fmt.Println(&#34;response Headers:&#34;, resp.Header)
+	body, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println(&#34;response Body:&#34;, string(body))
+
+}
+It can also be found under my github page: GoJira Github.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://skarlso.github.io/2015/11/20/go-jira-api-client/"><meta property="article:section" content="posts">
+<meta property="article:published_time" content="2015-11-20T00:00:00+00:00">
+<meta property="article:modified_time" content="2015-11-20T00:00:00+00:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Go JIRA API client">
 <meta name="twitter:description" content="Hi folks.
 So, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial.
 It&rsquo;s still in it&rsquo;s infancy and I have a couple of more features I want to implement, but, here is the code.
-package main import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#34;fmt&#34; &#34;io/ioutil&#34; &#34;log&#34; &#34;net/http&#34; &#34;os&#34; &#34;github.com/BurntSushi/toml&#34; ) var configFile = &#34;~/.jira_config.toml&#34; var parameter string var flags struct { Comment string Description string IssueKey string Priority string Resolution string Title string Project string } //Issue is a representation of a Jira Issue type Issue struct { Fields struct { Project struct { Key string `json:&#34;key&#34;` } `json:&#34;project&#34;` Summary string `json:&#34;summary&#34;` Description string `json:&#34;description&#34;` Issuetype struct { Name string `json:&#34;name&#34;` } `json:&#34;issuetype&#34;` Priority struct { ID string `json:&#34;id&#34;` } `json:&#34;priority&#34;` } `json:&#34;fields&#34;` } //Transition defines a transition json object."/>
+
+package main
+
+import (
+	&#34;bytes&#34;
+	&#34;encoding/json&#34;
+	&#34;flag&#34;
+	&#34;fmt&#34;
+	&#34;io/ioutil&#34;
+	&#34;log&#34;
+	&#34;net/http&#34;
+	&#34;os&#34;
+
+	&#34;github.com/BurntSushi/toml&#34;
+)
+
+var configFile = &#34;~/.jira_config.toml&#34;
+var parameter string
+
+var flags struct {
+	Comment     string
+	Description string
+	IssueKey    string
+	Priority    string
+	Resolution  string
+	Title       string
+	Project     string
+}
+
+//Issue is a representation of a Jira Issue
+type Issue struct {
+	Fields struct {
+		Project struct {
+			Key string `json:&#34;key&#34;`
+		} `json:&#34;project&#34;`
+		Summary     string `json:&#34;summary&#34;`
+		Description string `json:&#34;description&#34;`
+		Issuetype   struct {
+			Name string `json:&#34;name&#34;`
+		} `json:&#34;issuetype&#34;`
+		Priority struct {
+			ID string `json:&#34;id&#34;`
+		} `json:&#34;priority&#34;`
+	} `json:&#34;fields&#34;`
+}
+
+//Transition defines a transition json object. Used for starting, stoppinp
+//generally for state stranfer
+type Transition struct {
+	Fields struct {
+		Resolution struct {
+			Name string `json:&#34;name&#34;`
+		} `json:&#34;resolution&#34;`
+	} `json:&#34;fields&#34;`
+	Transition struct {
+		ID string `json:&#34;id&#34;`
+	} `json:&#34;transition&#34;`
+}
+
+//Credentials a representation of a JIRA config which helds API permissions
+type Credentials struct {
+	Username string
+	Password string
+	URL      string
+}
+
+func init() {
+	flag.StringVar(&amp;flags.Comment, &#34;m&#34;, &#34;Default Comment&#34;, &#34;A Comment when changing the status of an Issue.&#34;)
+	flag.StringVar(&amp;flags.Description, &#34;d&#34;, &#34;Default Description&#34;, &#34;Provide a description for a newly created Issue.&#34;)
+	flag.StringVar(&amp;flags.Priority, &#34;p&#34;, &#34;2&#34;, &#34;The priority of an Issue which will be set.&#34;)
+	flag.StringVar(&amp;flags.IssueKey, &#34;k&#34;, &#34;&#34;, &#34;Issue key of an issue.&#34;)
+	flag.StringVar(&amp;flags.Resolution, &#34;r&#34;, &#34;Done&#34;, &#34;Resolution when an issue is closed. Ex.: Done, Fixed, Won&#39;t fix.&#34;)
+	flag.StringVar(&amp;flags.Title, &#34;t&#34;, &#34;Default Title&#34;, &#34;Title of an Issue.&#34;)
+	flag.StringVar(&amp;flags.Project, &#34;o&#34;, &#34;IT&#34;, &#34;Define a Project to create a ticket in.&#34;)
+	flag.Parse()
+}
+
+func (cred *Credentials) initConfig() {
+	if _, err := os.Stat(configFile); err != nil {
+		log.Fatalf(&#34;Error using config file: %v&#34;, err)
+	}
+
+	if _, err := toml.DecodeFile(configFile, cred); err != nil {
+		log.Fatal(&#34;Error during decoding toml config: &#34;, err)
+	}
+}
+
+func main() {
+	if len(flag.Args()) &lt; 1 {
+		log.Fatal(&#34;Please provide an action to take. Usage information:&#34;)
+	}
+	parameter = flag.Arg()
+	switch parameter {
+	case &#34;close&#34;:
+		closeIssue(flags.IssueKey)
+	case &#34;start&#34;:
+		startIssue(flags.IssueKey)
+	case &#34;create&#34;:
+		createIssue()
+	}
+}
+
+func closeIssue(issueKey string) {
+	if issueKey == &#34;&#34; {
+		log.Fatal(&#34;Please provide an issueID with -k&#34;)
+	}
+	fmt.Println(&#34;Closing issue number: &#34;, issueKey)
+
+	var trans Transition
+
+	//TODO: Add the ability to define a comment for the close reason
+	trans.Fields.Resolution.Name = flags.Resolution
+	trans.Transition.ID = &#34;2&#34;
+	marhsalledTrans, err := json.Marshal(trans)
+	if err != nil {
+		log.Fatal(&#34;Error occured when marshaling transition: &#34;, err)
+	}
+	fmt.Println(&#34;Marshalled:&#34;, trans)
+	sendRequest(marhsalledTrans, &#34;POST&#34;, issueKey&#43;&#34;/transitions?expand=transitions.fields&#34;)
+}
+
+func startIssue(issueID string) {
+	if issueID == &#34;&#34; {
+		log.Fatal(&#34;Please provide an issueID with -i&#34;)
+	}
+
+	fmt.Println(&#34;Starting issue number:&#34;, issueID)
+}
+
+func createIssue() {
+	fmt.Println(&#34;Creating new issue.&#34;)
+	var issue Issue
+	issue.Fields.Description = flags.Description
+	issue.Fields.Priority.ID = flags.Priority
+	issue.Fields.Summary = flags.Title
+	issue.Fields.Project.Key = flags.Project
+	issue.Fields.Issuetype.Name = &#34;Task&#34;
+	marshalledIssue, err := json.Marshal(issue)
+	if err != nil {
+		log.Fatal(&#34;Error occured when Marshaling Issue:&#34;, err)
+	}
+	sendRequest(marshalledIssue, &#34;POST&#34;, &#34;&#34;)
+}
+
+func sendRequest(jsonStr []byte, method string, url string) {
+	cred := &amp;Credentials{}
+	cred.initConfig()
+	fmt.Println(&#34;Json:&#34;, string(jsonStr))
+	req, err := http.NewRequest(method, cred.URL&#43;url, bytes.NewBuffer(jsonStr))
+	req.Header.Set(&#34;Content-Type&#34;, &#34;application/json&#34;)
+	req.SetBasicAuth(cred.Username, cred.Password)
+
+	client := &amp;http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	fmt.Println(&#34;response Status:&#34;, resp.Status)
+	fmt.Println(&#34;response Headers:&#34;, resp.Header)
+	body, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println(&#34;response Body:&#34;, string(body))
+
+}
+It can also be found under my github page: GoJira Github.">
 
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
-  "itemListElement": [, 
+  "itemListElement": [
     {
       "@type": "ListItem",
-      "position":  2 ,
+      "position":  1 ,
       "name": "Posts",
       "item": "https://skarlso.github.io/posts/"
     }, 
     {
       "@type": "ListItem",
-      "position":  3 ,
+      "position":  2 ,
       "name": "Go JIRA API client",
       "item": "https://skarlso.github.io/2015/11/20/go-jira-api-client/"
     }
@@ -103,7 +596,7 @@ package main import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#3
   "@type": "BlogPosting",
   "headline": "Go JIRA API client",
   "name": "Go JIRA API client",
-  "description": "Hi folks.\nSo, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial.\nIt\u0026rsquo;s still in it\u0026rsquo;s infancy and I have a couple of more features I want to implement, but, here is the code.\npackage main import ( \u0026#34;bytes\u0026#34; \u0026#34;encoding/json\u0026#34; \u0026#34;flag\u0026#34; \u0026#34;fmt\u0026#34; \u0026#34;io/ioutil\u0026#34; \u0026#34;log\u0026#34; \u0026#34;net/http\u0026#34; \u0026#34;os\u0026#34; \u0026#34;github.com/BurntSushi/toml\u0026#34; ) var configFile = \u0026#34;~/.jira_config.toml\u0026#34; var parameter string var flags struct { Comment string Description string IssueKey string Priority string Resolution string Title string Project string } //Issue is a representation of a Jira Issue type Issue struct { Fields struct { Project struct { Key string `json:\u0026#34;key\u0026#34;` } `json:\u0026#34;project\u0026#34;` Summary string `json:\u0026#34;summary\u0026#34;` Description string `json:\u0026#34;description\u0026#34;` Issuetype struct { Name string `json:\u0026#34;name\u0026#34;` } `json:\u0026#34;issuetype\u0026#34;` Priority struct { ID string `json:\u0026#34;id\u0026#34;` } `json:\u0026#34;priority\u0026#34;` } `json:\u0026#34;fields\u0026#34;` } //Transition defines a transition json object.",
+  "description": "Hi folks.\nSo, I was playing around and created a client for JIRA written in Go. It was nice to do some JSON transformation. And sending POSTS was really trivial.\nIt\u0026rsquo;s still in it\u0026rsquo;s infancy and I have a couple of more features I want to implement, but, here is the code.\npackage main import ( \u0026#34;bytes\u0026#34; \u0026#34;encoding/json\u0026#34; \u0026#34;flag\u0026#34; \u0026#34;fmt\u0026#34; \u0026#34;io/ioutil\u0026#34; \u0026#34;log\u0026#34; \u0026#34;net/http\u0026#34; \u0026#34;os\u0026#34; \u0026#34;github.com/BurntSushi/toml\u0026#34; ) var configFile = \u0026#34;~/.jira_config.toml\u0026#34; var parameter string var flags struct { Comment string Description string IssueKey string Priority string Resolution string Title string Project string } //Issue is a representation of a Jira Issue type Issue struct { Fields struct { Project struct { Key string `json:\u0026#34;key\u0026#34;` } `json:\u0026#34;project\u0026#34;` Summary string `json:\u0026#34;summary\u0026#34;` Description string `json:\u0026#34;description\u0026#34;` Issuetype struct { Name string `json:\u0026#34;name\u0026#34;` } `json:\u0026#34;issuetype\u0026#34;` Priority struct { ID string `json:\u0026#34;id\u0026#34;` } `json:\u0026#34;priority\u0026#34;` } `json:\u0026#34;fields\u0026#34;` } //Transition defines a transition json object. Used for starting, stoppinp //generally for state stranfer type Transition struct { Fields struct { Resolution struct { Name string `json:\u0026#34;name\u0026#34;` } `json:\u0026#34;resolution\u0026#34;` } `json:\u0026#34;fields\u0026#34;` Transition struct { ID string `json:\u0026#34;id\u0026#34;` } `json:\u0026#34;transition\u0026#34;` } //Credentials a representation of a JIRA config which helds API permissions type Credentials struct { Username string Password string URL string } func init() { flag.StringVar(\u0026amp;flags.Comment, \u0026#34;m\u0026#34;, \u0026#34;Default Comment\u0026#34;, \u0026#34;A Comment when changing the status of an Issue.\u0026#34;) flag.StringVar(\u0026amp;flags.Description, \u0026#34;d\u0026#34;, \u0026#34;Default Description\u0026#34;, \u0026#34;Provide a description for a newly created Issue.\u0026#34;) flag.StringVar(\u0026amp;flags.Priority, \u0026#34;p\u0026#34;, \u0026#34;2\u0026#34;, \u0026#34;The priority of an Issue which will be set.\u0026#34;) flag.StringVar(\u0026amp;flags.IssueKey, \u0026#34;k\u0026#34;, \u0026#34;\u0026#34;, \u0026#34;Issue key of an issue.\u0026#34;) flag.StringVar(\u0026amp;flags.Resolution, \u0026#34;r\u0026#34;, \u0026#34;Done\u0026#34;, \u0026#34;Resolution when an issue is closed. Ex.: Done, Fixed, Won\u0026#39;t fix.\u0026#34;) flag.StringVar(\u0026amp;flags.Title, \u0026#34;t\u0026#34;, \u0026#34;Default Title\u0026#34;, \u0026#34;Title of an Issue.\u0026#34;) flag.StringVar(\u0026amp;flags.Project, \u0026#34;o\u0026#34;, \u0026#34;IT\u0026#34;, \u0026#34;Define a Project to create a ticket in.\u0026#34;) flag.Parse() } func (cred *Credentials) initConfig() { if _, err := os.Stat(configFile); err != nil { log.Fatalf(\u0026#34;Error using config file: %v\u0026#34;, err) } if _, err := toml.DecodeFile(configFile, cred); err != nil { log.Fatal(\u0026#34;Error during decoding toml config: \u0026#34;, err) } } func main() { if len(flag.Args()) \u0026lt; 1 { log.Fatal(\u0026#34;Please provide an action to take. Usage information:\u0026#34;) } parameter = flag.Arg() switch parameter { case \u0026#34;close\u0026#34;: closeIssue(flags.IssueKey) case \u0026#34;start\u0026#34;: startIssue(flags.IssueKey) case \u0026#34;create\u0026#34;: createIssue() } } func closeIssue(issueKey string) { if issueKey == \u0026#34;\u0026#34; { log.Fatal(\u0026#34;Please provide an issueID with -k\u0026#34;) } fmt.Println(\u0026#34;Closing issue number: \u0026#34;, issueKey) var trans Transition //TODO: Add the ability to define a comment for the close reason trans.Fields.Resolution.Name = flags.Resolution trans.Transition.ID = \u0026#34;2\u0026#34; marhsalledTrans, err := json.Marshal(trans) if err != nil { log.Fatal(\u0026#34;Error occured when marshaling transition: \u0026#34;, err) } fmt.Println(\u0026#34;Marshalled:\u0026#34;, trans) sendRequest(marhsalledTrans, \u0026#34;POST\u0026#34;, issueKey+\u0026#34;/transitions?expand=transitions.fields\u0026#34;) } func startIssue(issueID string) { if issueID == \u0026#34;\u0026#34; { log.Fatal(\u0026#34;Please provide an issueID with -i\u0026#34;) } fmt.Println(\u0026#34;Starting issue number:\u0026#34;, issueID) } func createIssue() { fmt.Println(\u0026#34;Creating new issue.\u0026#34;) var issue Issue issue.Fields.Description = flags.Description issue.Fields.Priority.ID = flags.Priority issue.Fields.Summary = flags.Title issue.Fields.Project.Key = flags.Project issue.Fields.Issuetype.Name = \u0026#34;Task\u0026#34; marshalledIssue, err := json.Marshal(issue) if err != nil { log.Fatal(\u0026#34;Error occured when Marshaling Issue:\u0026#34;, err) } sendRequest(marshalledIssue, \u0026#34;POST\u0026#34;, \u0026#34;\u0026#34;) } func sendRequest(jsonStr []byte, method string, url string) { cred := \u0026amp;Credentials{} cred.initConfig() fmt.Println(\u0026#34;Json:\u0026#34;, string(jsonStr)) req, err := http.NewRequest(method, cred.URL+url, bytes.NewBuffer(jsonStr)) req.Header.Set(\u0026#34;Content-Type\u0026#34;, \u0026#34;application/json\u0026#34;) req.SetBasicAuth(cred.Username, cred.Password) client := \u0026amp;http.Client{} resp, err := client.Do(req) if err != nil { panic(err) } defer resp.Body.Close() fmt.Println(\u0026#34;response Status:\u0026#34;, resp.Status) fmt.Println(\u0026#34;response Headers:\u0026#34;, resp.Header) body, _ := ioutil.ReadAll(resp.Body) fmt.Println(\u0026#34;response Body:\u0026#34;, string(body)) } It can also be found under my github page: GoJira Github.\n",
   "keywords": [
     
   ],
@@ -147,7 +640,7 @@ package main import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#3
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <a href="https://skarlso.github.io/" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -199,8 +692,8 @@ package main import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#3
 
 <article class="post-single">
   <header class="post-header">
-    <div class="breadcrumbs"><a href="https://skarlso.github.io">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
-    <h1 class="post-title">
+    <div class="breadcrumbs"><a href="https://skarlso.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
       Go JIRA API client
     </h1>
     <div class="post-meta"><span title='2015-11-20 00:00:00 +0000 UTC'>November 20, 2015</span>&nbsp;·&nbsp;3 min&nbsp;·&nbsp;hannibal
@@ -400,31 +893,13 @@ package main import ( &#34;bytes&#34; &#34;encoding/json&#34; &#34;flag&#34; &#3
   </a>
 </nav>
 
-  </footer><div id="disqus_thread"></div>
-<script type="application/javascript">
-    window.disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+  </footer>
 </article>
     </main>
     
 <footer class="footer">
-    <span>&copy; 2024 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+        <span>&copy; 2024 <a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a></span> · 
+
     <span>
         Powered by
         <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &

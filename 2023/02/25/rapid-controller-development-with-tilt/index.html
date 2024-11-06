@@ -8,13 +8,24 @@
 <title>Rapid Kubernetes Controller Development with Tilt | Ramblings of a cloud engineer</title>
 <meta name="keywords" content="">
 <meta name="description" content="Welcome dear reader.
-Today, we are going to dive into how to use Tilt to speed up the feedback loop of developing a Kubernetes controller. We are going to do that using an open-source project called OCM which has a controller called ocm-controller. I&rsquo;m going to walk through the following process:
-researching tilt what it could do for me understanding the Tilt file trivial mapping of the developer process understanding Starlark adding more features tackling hot swapping troubleshooting Let&rsquo;s dive in.">
+Today, we are going to dive into how to use Tilt to speed up the feedback loop of developing a
+Kubernetes controller. We are going to do that using an open-source project called OCM which has
+a controller called ocm-controller. I&rsquo;m going to walk through the
+following process:
+
+researching tilt
+what it could do for me
+understanding the Tilt file
+trivial mapping of the developer process
+understanding Starlark
+adding more features
+tackling hot swapping
+troubleshooting
+
+Let&rsquo;s dive in.">
 <meta name="author" content="hannibal">
 <link rel="canonical" href="https://skarlso.github.io/2023/02/25/rapid-controller-development-with-tilt/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
-<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
-    onload="hljs.initHighlightingOnLoad();"></script>
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="https://skarlso.github.io/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
@@ -22,6 +33,7 @@ researching tilt what it could do for me understanding the Tilt file trivial map
 <link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://skarlso.github.io/2023/02/25/rapid-controller-development-with-tilt/">
 <noscript>
     <style>
         #theme-toggle,
@@ -39,7 +51,7 @@ researching tilt what it could do for me understanding the Tilt file trivial map
                 --secondary: rgb(155, 156, 157);
                 --tertiary: rgb(65, 66, 68);
                 --content: rgb(196, 196, 197);
-                --hljs-bg: rgb(46, 46, 51);
+                --code-block-bg: rgb(46, 46, 51);
                 --code-bg: rgb(55, 56, 62);
                 --border: rgb(51, 51, 51);
             }
@@ -58,36 +70,61 @@ researching tilt what it could do for me understanding the Tilt file trivial map
         }
 
     </style>
-</noscript><meta property="og:title" content="Rapid Kubernetes Controller Development with Tilt" />
+</noscript><meta property="og:title" content="Rapid Kubernetes Controller Development with Tilt">
 <meta property="og:description" content="Welcome dear reader.
-Today, we are going to dive into how to use Tilt to speed up the feedback loop of developing a Kubernetes controller. We are going to do that using an open-source project called OCM which has a controller called ocm-controller. I&rsquo;m going to walk through the following process:
-researching tilt what it could do for me understanding the Tilt file trivial mapping of the developer process understanding Starlark adding more features tackling hot swapping troubleshooting Let&rsquo;s dive in." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2023/02/25/rapid-controller-development-with-tilt/" /><meta property="article:section" content="posts" />
-<meta property="article:published_time" content="2023-02-25T01:01:00+01:00" />
-<meta property="article:modified_time" content="2023-02-25T01:01:00+01:00" />
+Today, we are going to dive into how to use Tilt to speed up the feedback loop of developing a
+Kubernetes controller. We are going to do that using an open-source project called OCM which has
+a controller called ocm-controller. I&rsquo;m going to walk through the
+following process:
 
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Rapid Kubernetes Controller Development with Tilt"/>
+researching tilt
+what it could do for me
+understanding the Tilt file
+trivial mapping of the developer process
+understanding Starlark
+adding more features
+tackling hot swapping
+troubleshooting
+
+Let&rsquo;s dive in.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://skarlso.github.io/2023/02/25/rapid-controller-development-with-tilt/"><meta property="article:section" content="posts">
+<meta property="article:published_time" content="2023-02-25T01:01:00+01:00">
+<meta property="article:modified_time" content="2023-02-25T01:01:00+01:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Rapid Kubernetes Controller Development with Tilt">
 <meta name="twitter:description" content="Welcome dear reader.
-Today, we are going to dive into how to use Tilt to speed up the feedback loop of developing a Kubernetes controller. We are going to do that using an open-source project called OCM which has a controller called ocm-controller. I&rsquo;m going to walk through the following process:
-researching tilt what it could do for me understanding the Tilt file trivial mapping of the developer process understanding Starlark adding more features tackling hot swapping troubleshooting Let&rsquo;s dive in."/>
+Today, we are going to dive into how to use Tilt to speed up the feedback loop of developing a
+Kubernetes controller. We are going to do that using an open-source project called OCM which has
+a controller called ocm-controller. I&rsquo;m going to walk through the
+following process:
+
+researching tilt
+what it could do for me
+understanding the Tilt file
+trivial mapping of the developer process
+understanding Starlark
+adding more features
+tackling hot swapping
+troubleshooting
+
+Let&rsquo;s dive in.">
 
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
-  "itemListElement": [, 
+  "itemListElement": [
     {
       "@type": "ListItem",
-      "position":  2 ,
+      "position":  1 ,
       "name": "Posts",
       "item": "https://skarlso.github.io/posts/"
     }, 
     {
       "@type": "ListItem",
-      "position":  3 ,
+      "position":  2 ,
       "name": "Rapid Kubernetes Controller Development with Tilt",
       "item": "https://skarlso.github.io/2023/02/25/rapid-controller-development-with-tilt/"
     }
@@ -100,7 +137,7 @@ researching tilt what it could do for me understanding the Tilt file trivial map
   "@type": "BlogPosting",
   "headline": "Rapid Kubernetes Controller Development with Tilt",
   "name": "Rapid Kubernetes Controller Development with Tilt",
-  "description": "Welcome dear reader.\nToday, we are going to dive into how to use Tilt to speed up the feedback loop of developing a Kubernetes controller. We are going to do that using an open-source project called OCM which has a controller called ocm-controller. I\u0026rsquo;m going to walk through the following process:\nresearching tilt what it could do for me understanding the Tilt file trivial mapping of the developer process understanding Starlark adding more features tackling hot swapping troubleshooting Let\u0026rsquo;s dive in.",
+  "description": "Welcome dear reader.\nToday, we are going to dive into how to use Tilt to speed up the feedback loop of developing a Kubernetes controller. We are going to do that using an open-source project called OCM which has a controller called ocm-controller. I\u0026rsquo;m going to walk through the following process:\nresearching tilt what it could do for me understanding the Tilt file trivial mapping of the developer process understanding Starlark adding more features tackling hot swapping troubleshooting Let\u0026rsquo;s dive in.\n",
   "keywords": [
     
   ],
@@ -144,7 +181,7 @@ researching tilt what it could do for me understanding the Tilt file trivial map
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <a href="https://skarlso.github.io/" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -196,8 +233,8 @@ researching tilt what it could do for me understanding the Tilt file trivial map
 
 <article class="post-single">
   <header class="post-header">
-    <div class="breadcrumbs"><a href="https://skarlso.github.io">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
-    <h1 class="post-title">
+    <div class="breadcrumbs"><a href="https://skarlso.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
       Rapid Kubernetes Controller Development with Tilt
     </h1>
     <div class="post-meta"><span title='2023-02-25 01:01:00 +0100 +0100'>February 25, 2023</span>&nbsp;·&nbsp;23 min&nbsp;·&nbsp;hannibal
@@ -291,9 +328,8 @@ following process:</p>
 <p>Let&rsquo;s dive in.</p>
 <h1 id="rapid-controller-development-with-tilt">Rapid controller development with Tilt<a hidden class="anchor" aria-hidden="true" href="#rapid-controller-development-with-tilt">#</a></h1>
 <h2 id="tilt">Tilt<a hidden class="anchor" aria-hidden="true" href="#tilt">#</a></h2>
-<p><img loading="lazy" src="/img/2023/02/25/tilt.png" alt="tilt"  />
-</p>
-<p>If you know some things about Tilt already, skip ahead to where I&rsquo;ll be applying its concepts to the controller <a href="#development-process-of-an-controller">here</a>.</p>
+<p><img alt="tilt" loading="lazy" src="/img/2023/02/25/tilt.png"></p>
+<p>If you know some things about Tilt already, skip ahead to where I&rsquo;ll be applying its concepts to the controller <a href="/2023/02/25/rapid-controller-development-with-tilt/#development-process-of-an-controller">here</a>.</p>
 <h3 id="what-is-tilt">What is Tilt<a hidden class="anchor" aria-hidden="true" href="#what-is-tilt">#</a></h3>
 <p>Tilt is a tool we can use to automate build and deploy processes for microservices. Technically, it can handle so much
 more than just a simple controller, but we are going to use this example to keep it simple for a first start.</p>
@@ -304,8 +340,7 @@ deleted. But it <em>does</em> update them if the configuration changes. For exam
 name, and change its name, there won&rsquo;t be two secrets, one with the correct name, and the other with an incorrect name,
 but one secret with the correct name.</p>
 <h3 id="reading-the-documentation---where-to-start">Reading the documentation - where to start<a hidden class="anchor" aria-hidden="true" href="#reading-the-documentation---where-to-start">#</a></h3>
-<p><img loading="lazy" src="/img/2023/02/25/documentation-hell.png" alt="document-hell"  />
-</p>
+<p><img alt="document-hell" loading="lazy" src="/img/2023/02/25/documentation-hell.png"></p>
 <p>You can start by visiting the <a href="https://docs.tilt.dev">docs</a> and then jumping right into <a href="https://docs.tilt.dev/tutorial/index.html">First Look At Tilt</a>.</p>
 <p>This will guide you through setting up Tilt. There is one thing I don&rsquo;t like here&hellip; It&rsquo;s starting by using a demo
 application and a special command called <code>tilt demo</code>. I believe that this is not a great way to begin because you will
@@ -381,8 +416,7 @@ extensions that are loaded using an expression like this <code>load('ext://resta
 demystifying and understanding the dialect. It&rsquo;s rather basic but that&rsquo;s all you need to get started. So next, let&rsquo;s
 dive into how to gradually build up a complex Tiltfile and development process.</p>
 <h2 id="the-development-process-of-a-controller">The development process of a controller<a hidden class="anchor" aria-hidden="true" href="#the-development-process-of-a-controller">#</a></h2>
-<p><img loading="lazy" src="/img/2023/02/25/yaml-hell.png" alt="yaml-hell"  />
-</p>
+<p><img alt="yaml-hell" loading="lazy" src="/img/2023/02/25/yaml-hell.png"></p>
 <h3 id="basic-flow">Basic flow<a hidden class="anchor" aria-hidden="true" href="#basic-flow">#</a></h3>
 <p>When you are building a controller you have a couple of choices:</p>
 <ul>
@@ -408,8 +442,7 @@ docker push localhost:5001/open-component-model/ocm-controller:v0.0.1
 my machine, it takes about two minutes or so. Then push and deploy takes another couple of seconds.</p>
 <p>Tilt can help a lot in speeding up this process. We&rsquo;ll see about that later.</p>
 <h3 id="mapping-flow-to-tiltfile">Mapping flow to Tiltfile<a hidden class="anchor" aria-hidden="true" href="#mapping-flow-to-tiltfile">#</a></h3>
-<p><img loading="lazy" src="/img/2023/02/25/tilt-go-with-the-flow.png" alt="tilt-with-the-flow"  />
-</p>
+<p><img alt="tilt-with-the-flow" loading="lazy" src="/img/2023/02/25/tilt-go-with-the-flow.png"></p>
 <p>We are going to choose the third option. Tilt has its local registry and uses unique build tags for each container to be
 able to debug problems for a specific change.</p>
 <p>As a first step, to keep it simple, we map the process of installing controller resources and deploying them using
@@ -487,8 +520,7 @@ merge the two produced dict results.</p>
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>We can override any values in our settings and customize the deployment.</p>
 <h3 id="adding-more-features">Adding more features<a hidden class="anchor" aria-hidden="true" href="#adding-more-features">#</a></h3>
-<p><img loading="lazy" src="/img/2023/02/25/feature-hell.png" alt="feature-hell"  />
-</p>
+<p><img alt="feature-hell" loading="lazy" src="/img/2023/02/25/feature-hell.png"></p>
 <p>Let&rsquo;s add some more features. ocm uses <a href="https://github.com/fluxcd/flux2">flux</a> for deployment and various other tasks.
 To help the user, add a simple flux bootstrap OR install. Maybe the user doesn&rsquo;t want to bootstrap a repository but
 does want flux CRDs and components installed in the cluster. The two commands we would like to replicate are:</p>
@@ -604,8 +636,7 @@ some deployment or translate some weird script into a higher-order definition or
 </span></span><span style="display:flex;"><span>    k8s_resource(<span style="color:#e6db74">&#39;ocm-controller&#39;</span>, extra_pod_selectors <span style="color:#f92672">=</span> [{<span style="color:#e6db74">&#39;app&#39;</span>: <span style="color:#e6db74">&#39;registry&#39;</span>}], port_forwards<span style="color:#f92672">=</span><span style="color:#ae81ff">5000</span>)
 </span></span></code></pre></div><p>This looks pretty nice already. But there is a lot more that we can do.</p>
 <h4 id="adding-secrets">Adding secrets<a hidden class="anchor" aria-hidden="true" href="#adding-secrets">#</a></h4>
-<p><img loading="lazy" src="/img/2023/02/25/secrets.jpg" alt="secrets"  />
-</p>
+<p><img alt="secrets" loading="lazy" src="/img/2023/02/25/secrets.jpg"></p>
 <p>Another thing that OCM needs ( or any other deployment really ) is creating secrets for various things and deployments.
 OCM needs some docker registry credentials and some other credentials to pull things from outside repositories.</p>
 <p>Creating secrets can be done by using an extension. The particular extension we are looking for is <a href="https://github.com/tilt-dev/tilt-extensions/tree/master/secret">secrets</a>.</p>
@@ -777,8 +808,7 @@ binary the deployment only needs to care about that!</p>
 <p>The rest is taken care of by a Tilt wrapper; a bash script that can swap out processes. That&rsquo;s what
 <code>docker_build_with_restart</code> does. It wraps our container and Dockerfile into its container and runs our <code>entrypoint</code>.</p>
 <h4 id="attaching-a-debugger">Attaching a debugger<a hidden class="anchor" aria-hidden="true" href="#attaching-a-debugger">#</a></h4>
-<p><img loading="lazy" src="/img/2023/02/25/tilt-debug.png" alt="debugger"  />
-</p>
+<p><img alt="debugger" loading="lazy" src="/img/2023/02/25/tilt-debug.png"></p>
 <blockquote>
 <p>But I&rsquo;m running the manager locally because I use a debugger.</p>
 </blockquote>
@@ -1093,8 +1123,7 @@ pretty annoying. Luckily, Tilt got you covered. If you would like to pause for a
 disable the <code>local_resource</code> ( whatever you named it, for me it&rsquo;s <code>manager</code> ) that is the Go Build. If you do that, no
 changes will be reconciled, which means, the container will not be hot-swapped either.</p>
 <p>Looks like this:</p>
-<p><img loading="lazy" src="/img/2023/02/25/tilt-disabled.png" alt="tilt-disabled"  />
-</p>
+<p><img alt="tilt-disabled" loading="lazy" src="/img/2023/02/25/tilt-disabled.png"></p>
 <p>Once re-enabled, you can continue your development cycle.</p>
 <h2 id="conclusion">Conclusion<a hidden class="anchor" aria-hidden="true" href="#conclusion">#</a></h2>
 <p>Tilt is not easy to set up at times. Especially when you have to fiddle with a lot of access and custom-built stuff.
@@ -1128,31 +1157,13 @@ Gergely.</p>
   </a>
 </nav>
 
-  </footer><div id="disqus_thread"></div>
-<script type="application/javascript">
-    window.disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+  </footer>
 </article>
     </main>
     
 <footer class="footer">
-    <span>&copy; 2024 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+        <span>&copy; 2024 <a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a></span> · 
+
     <span>
         Powered by
         <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &

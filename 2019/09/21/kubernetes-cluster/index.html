@@ -7,17 +7,31 @@
 <meta name="robots" content="index, follow">
 <title>Using a Kubernetes based Cluster for Various Services with auto HTTPS | Ramblings of a cloud engineer</title>
 <meta name="keywords" content="">
-<meta name="description" content="Intro Hi folks.
+<meta name="description" content="Intro
+Hi folks.
 Today, I would like to show you how my infrastructure is deployed and managed. Spoiler alert, I&rsquo;m using Kubernetes to do that.
 I know&hellip; What a twist!
 Let&rsquo;s get to it.
-What What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:
-Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RPG online checker My WebSite (gergelybrautigam.">
+What
+
+What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:
+
+Athens Go Proxy
+Gitea
+The Lounge (IRC bouncer)
+Two CronJobs
+
+Fork Updater
+IDLE RPG online checker
+
+
+My WebSite (gergelybrautigam.com)
+Monitoring
+
+And it&rsquo;s really simple to add more.">
 <meta name="author" content="hannibal">
 <link rel="canonical" href="https://skarlso.github.io/2019/09/21/kubernetes-cluster/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
-<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
-    onload="hljs.initHighlightingOnLoad();"></script>
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="https://skarlso.github.io/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="https://skarlso.github.io/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="https://skarlso.github.io/favicon-32x32.png">
@@ -25,6 +39,7 @@ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RP
 <link rel="mask-icon" href="https://skarlso.github.io/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://skarlso.github.io/2019/09/21/kubernetes-cluster/">
 <noscript>
     <style>
         #theme-toggle,
@@ -42,7 +57,7 @@ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RP
                 --secondary: rgb(155, 156, 157);
                 --tertiary: rgb(65, 66, 68);
                 --content: rgb(196, 196, 197);
-                --hljs-bg: rgb(46, 46, 51);
+                --code-block-bg: rgb(46, 46, 51);
                 --code-bg: rgb(55, 56, 62);
                 --border: rgb(51, 51, 51);
             }
@@ -61,42 +76,73 @@ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RP
         }
 
     </style>
-</noscript><meta property="og:title" content="Using a Kubernetes based Cluster for Various Services with auto HTTPS" />
-<meta property="og:description" content="Intro Hi folks.
+</noscript><meta property="og:title" content="Using a Kubernetes based Cluster for Various Services with auto HTTPS">
+<meta property="og:description" content="Intro
+Hi folks.
 Today, I would like to show you how my infrastructure is deployed and managed. Spoiler alert, I&rsquo;m using Kubernetes to do that.
 I know&hellip; What a twist!
 Let&rsquo;s get to it.
-What What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:
-Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RPG online checker My WebSite (gergelybrautigam." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://skarlso.github.io/2019/09/21/kubernetes-cluster/" /><meta property="article:section" content="posts" />
-<meta property="article:published_time" content="2019-09-21T21:01:00+01:00" />
-<meta property="article:modified_time" content="2019-09-21T21:01:00+01:00" />
+What
 
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Using a Kubernetes based Cluster for Various Services with auto HTTPS"/>
-<meta name="twitter:description" content="Intro Hi folks.
+What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:
+
+Athens Go Proxy
+Gitea
+The Lounge (IRC bouncer)
+Two CronJobs
+
+Fork Updater
+IDLE RPG online checker
+
+
+My WebSite (gergelybrautigam.com)
+Monitoring
+
+And it&rsquo;s really simple to add more.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://skarlso.github.io/2019/09/21/kubernetes-cluster/"><meta property="article:section" content="posts">
+<meta property="article:published_time" content="2019-09-21T21:01:00+01:00">
+<meta property="article:modified_time" content="2019-09-21T21:01:00+01:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Using a Kubernetes based Cluster for Various Services with auto HTTPS">
+<meta name="twitter:description" content="Intro
+Hi folks.
 Today, I would like to show you how my infrastructure is deployed and managed. Spoiler alert, I&rsquo;m using Kubernetes to do that.
 I know&hellip; What a twist!
 Let&rsquo;s get to it.
-What What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:
-Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RPG online checker My WebSite (gergelybrautigam."/>
+What
+
+What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:
+
+Athens Go Proxy
+Gitea
+The Lounge (IRC bouncer)
+Two CronJobs
+
+Fork Updater
+IDLE RPG online checker
+
+
+My WebSite (gergelybrautigam.com)
+Monitoring
+
+And it&rsquo;s really simple to add more.">
 
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
-  "itemListElement": [, 
+  "itemListElement": [
     {
       "@type": "ListItem",
-      "position":  2 ,
+      "position":  1 ,
       "name": "Posts",
       "item": "https://skarlso.github.io/posts/"
     }, 
     {
       "@type": "ListItem",
-      "position":  3 ,
+      "position":  2 ,
       "name": "Using a Kubernetes based Cluster for Various Services with auto HTTPS",
       "item": "https://skarlso.github.io/2019/09/21/kubernetes-cluster/"
     }
@@ -109,7 +155,7 @@ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RP
   "@type": "BlogPosting",
   "headline": "Using a Kubernetes based Cluster for Various Services with auto HTTPS",
   "name": "Using a Kubernetes based Cluster for Various Services with auto HTTPS",
-  "description": "Intro Hi folks.\nToday, I would like to show you how my infrastructure is deployed and managed. Spoiler alert, I\u0026rsquo;m using Kubernetes to do that.\nI know\u0026hellip; What a twist!\nLet\u0026rsquo;s get to it.\nWhat What services am I running exactly? Here is a list I\u0026rsquo;m running at the time of this writing:\nAthens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RPG online checker My WebSite (gergelybrautigam.",
+  "description": "Intro Hi folks.\nToday, I would like to show you how my infrastructure is deployed and managed. Spoiler alert, I\u0026rsquo;m using Kubernetes to do that.\nI know\u0026hellip; What a twist!\nLet\u0026rsquo;s get to it.\nWhat What services am I running exactly? Here is a list I\u0026rsquo;m running at the time of this writing:\nAthens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RPG online checker My WebSite (gergelybrautigam.com) Monitoring And it\u0026rsquo;s really simple to add more.\n",
   "keywords": [
     
   ],
@@ -153,7 +199,7 @@ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RP
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="https://skarlso.github.io" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
+            <a href="https://skarlso.github.io/" accesskey="h" title="Ramblings of a cloud engineer (Alt + H)">Ramblings of a cloud engineer</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -205,8 +251,8 @@ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RP
 
 <article class="post-single">
   <header class="post-header">
-    <div class="breadcrumbs"><a href="https://skarlso.github.io">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
-    <h1 class="post-title">
+    <div class="breadcrumbs"><a href="https://skarlso.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://skarlso.github.io/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
       Using a Kubernetes based Cluster for Various Services with auto HTTPS
     </h1>
     <div class="post-meta"><span title='2019-09-21 21:01:00 +0100 +0100'>September 21, 2019</span>&nbsp;·&nbsp;21 min&nbsp;·&nbsp;hannibal
@@ -274,7 +320,7 @@ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RP
                 <li>
                     <a href="#the-service-1" aria-label="The service">The service</a></li>
                 <li>
-                    <a href="#side-track----debugging" aria-label="Side track &amp;ndash; debugging">Side track &ndash; debugging</a></li></ul>
+                    <a href="#side-track----debugging" aria-label="Side track &ndash; debugging">Side track &ndash; debugging</a></li></ul>
                 </li>
                 <li>
                     <a href="#gitea" aria-label="Gitea">Gitea</a><ul>
@@ -321,8 +367,7 @@ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RP
 <p>I know&hellip; What a twist!</p>
 <p>Let&rsquo;s get to it.</p>
 <h1 id="what">What<a hidden class="anchor" aria-hidden="true" href="#what">#</a></h1>
-<p><img loading="lazy" src="/img/hosting/kube-architecture.png" alt="kube-architecture"  />
-</p>
+<p><img alt="kube-architecture" loading="lazy" src="/img/hosting/kube-architecture.png"></p>
 <p>What services am I running exactly? Here is a list I&rsquo;m running at the time of this writing:</p>
 <ul>
 <li>Athens Go Proxy</li>
@@ -340,8 +385,7 @@ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RP
 <p>And it&rsquo;s really simple to add more.</p>
 <h1 id="where">Where<a hidden class="anchor" aria-hidden="true" href="#where">#</a></h1>
 <p>My cluster is deployed at DigitalOcean using two droplets each 1vCPU and 2GB RAM.</p>
-<p><img loading="lazy" src="/img/hosting/kube-on-digitalocean.png" alt="kube-on-digitalocean"  />
-</p>
+<p><img alt="kube-on-digitalocean" loading="lazy" src="/img/hosting/kube-on-digitalocean.png"></p>
 <h1 id="what-not">What Not<a hidden class="anchor" aria-hidden="true" href="#what-not">#</a></h1>
 <p>This isn&rsquo;t going to be a production grade cluster. What I don&rsquo;t include in here:</p>
 <h2 id="rbac-for-various-services-and-users">RBAC for various services and users<a hidden class="anchor" aria-hidden="true" href="#rbac-for-various-services-and-users">#</a></h2>
@@ -360,13 +404,11 @@ Athens Go Proxy Gitea The Lounge (IRC bouncer) Two CronJobs Fork Updater IDLE RP
 <p>Okay, with that out of the way, let&rsquo;s get into the hows of things&hellip;</p>
 <h1 id="beginning">Beginning<a hidden class="anchor" aria-hidden="true" href="#beginning">#</a></h1>
 <p>The most important thing that you need to do in order to use Kubernetes is Containerizing all the things.</p>
-<p><img loading="lazy" src="/img/hosting/containers.png" alt="containers"  />
-</p>
+<p><img alt="containers" loading="lazy" src="/img/hosting/containers.png"></p>
 <p>Since Kubernetes is a container orchestration tool, without containers it&rsquo;s pretty useless.</p>
 <p>As a driver, I&rsquo;m going to use Docker. Kubernetes can use anything that&rsquo;s OCI compatible, which means if you would like to use runc as a container engine, you can do that. I&rsquo;d like to keep my sanity though.</p>
 <h2 id="example">Example<a hidden class="anchor" aria-hidden="true" href="#example">#</a></h2>
-<p><img loading="lazy" src="/img/hosting/fork-updater.png" alt="fork-updater"  />
-</p>
+<p><img alt="fork-updater" loading="lazy" src="/img/hosting/fork-updater.png"></p>
 <p>To show you what I mean&hellip; I have a cronjob which is running every month. It gathers all my forks on github and updates them with the latest from their parents. This a small ruby script located here: <a href="https://gist.github.com/Skarlso/fd5bd5971a78a5fa9760b31683de690e">Fork Updater</a>. How do we run this? It requires two things. First, a token. We pass that currently as an environment property. It could be in a file in a vault or a secret mounted in as a file it doesn&rsquo;t matter. Currently, it&rsquo;s an environment property. The second thing is more subtle.</p>
 <p>I&rsquo;m pushing the changes back into my remote forks. I&rsquo;m doing this via SSH. So, we need a key in there too. How we&rsquo;ll get that in there, I&rsquo;ll talk about later when we are talking about how to set this cron job up. For now though, the container needs to look for a key in a specific location because we don&rsquo;t want to over-mount <code>/root/.ssh/</code> and we also don&rsquo;t want to use an initContainer to copy over an SSH key (because it&rsquo;s mounted in as a symlink (but that&rsquo;s a different issue all together)). Also, we certianly do NOT want to have a key in the container.</p>
 <p>To achieve this, we simply set up a <code>config</code> file for SSH like this one:</p>
@@ -512,8 +554,7 @@ gergelybrautigam-tls   True    gergelybrautigam-tls   86d
 <h2 id="irc-bouncer">IRC bouncer<a hidden class="anchor" aria-hidden="true" href="#irc-bouncer">#</a></h2>
 <p>That wasn&rsquo;t too bad, right? Let&rsquo;s do something a bit more complex this time. We are going to deploy <a href="https://github.com/thelounge/thelounge">The lounge</a> irc bouncer.</p>
 <p>It&rsquo;s actually quite easy to do but can be daunting to look at at first.</p>
-<p><img loading="lazy" src="/img/hosting/the-climb.png" alt="easy"  />
-</p>
+<p><img alt="easy" loading="lazy" src="/img/hosting/the-climb.png"></p>
 <h3 id="the-container">The container<a hidden class="anchor" aria-hidden="true" href="#the-container">#</a></h3>
 <p>Lucky for us, the bouncer already provides a container located here: <a href="https://hub.docker.com/r/thelounge/thelounge/">The Lounge Docker Hub</a>.</p>
 <p>We just need two things. To expose the port 9000 and to give it something called a PersistentVolume. What&rsquo;s a persistent volume? Well, look it up here: <a href="https://kubernetes.io/docs/concepts/storage/persistent-volumes/">Kubernetes Persistent Volumes</a>.</p>
@@ -967,8 +1008,7 @@ root@irc-app-5f87688f98-dqsvb:/#
 <p>User creation is done by using the gitea admin CLI tool described here: <a href="https://docs.gitea.io/en-us/command-line/">Gitea Documentation</a>.</p>
 <p>It is important to note that we don&rsquo;t use <code>latest</code> anywhere. It&rsquo;s just not good if you are trying to update a service later on. We could set ImagePolicy to AlwaysPull but that&rsquo;s just not a good thing to do if you have a 2 gig image. Always use version and policy <code>imagePullPolicy: IfNotPresent</code> to save yourself some bandwidth.</p>
 <h2 id="idle-checker">Idle Checker<a hidden class="anchor" aria-hidden="true" href="#idle-checker">#</a></h2>
-<p><img loading="lazy" src="/img/hosting/idle-checker.png" alt="idle-checker"  />
-</p>
+<p><img alt="idle-checker" loading="lazy" src="/img/hosting/idle-checker.png"></p>
 <p>Let&rsquo;s create a last resource, then we&rsquo;ll call it a day.</p>
 <p>The idle RPG is a cool little game that you play by&hellip; not playing. At all. If you play, you get penalties. Here is a cool resource to start: <a href="https://idlerpg.lolhosting.net">Idle RPG</a>. It looks something like this:</p>
 <pre tabindex="0"><code>21:56 &lt;@IdleBot&gt; Verily I say unto thee, the Heavens have burst forth, and the blessed hand of God carried ganome 0 days, 03:52:11 toward level 45.
@@ -1059,31 +1099,13 @@ Gergely.</p>
   </a>
 </nav>
 
-  </footer><div id="disqus_thread"></div>
-<script type="application/javascript">
-    window.disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "hannibalDisqus" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+  </footer>
 </article>
     </main>
     
 <footer class="footer">
-    <span>&copy; 2024 <a href="https://skarlso.github.io">Ramblings of a cloud engineer</a></span>
+        <span>&copy; 2024 <a href="https://skarlso.github.io/">Ramblings of a cloud engineer</a></span> · 
+
     <span>
         Powered by
         <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
