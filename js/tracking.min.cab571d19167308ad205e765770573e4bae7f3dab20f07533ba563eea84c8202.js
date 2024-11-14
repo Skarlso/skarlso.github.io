@@ -1,1 +1,0 @@
-var cookieConsent=!1,googleAnalytics='UA-69463020-2';cookieConsent&&(typeof Cookies=='undefined'||Cookies.get('cookieconsent')!=='accept')&&(window['ga-disable-'+googleAnalytics]=!0)
