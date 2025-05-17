@@ -18,7 +18,7 @@ Let's dive in.
 
 CRDs as described in the official [Kubernetes Documentation page](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) are objects that can extend the API of Kubernetes.
 
-But what does this actually mean? It means, that it will extend the API with functionality that you, as the author of the CRD provide it with. But the CRD alone is of no real use. It's merrily a vessel for information at that point that Kubernetes objects are not aware of. However, combine it with a custom operator, now you have a fully fledged leg in the Kubernetes ecosystem. That ecosystem 
+But what does this actually mean? It means, that it will extend the API with functionality that you, as the author of the CRD provide it with. But the CRD alone is of no real use. It's merrily a vessel for information at that point that Kubernetes objects are not aware of. However, combine it with a custom operator, now you have a fully fledged leg in the Kubernetes ecosystem.
 
 A custom controller will keep your object at the state you request it in. It will give you a hook into the Kubernetes API. We will see in great detail how it does that. First, let's take a look at how a CRD looks like and what it contains.
 
