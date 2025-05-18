@@ -58,11 +58,11 @@ spec:
 
 Here are some images that set up this MFA device on an AWS account:
 
-![mfa-1.png](img/2025/05/mfa-1.png)
-![mfa-1.png](img/2025/05/mfa-2.png)
+![mfa-1.png](/img/2025/05/mfa-1.png)
+![mfa-1.png](/img/2025/05/mfa-2.png)
 
 To show the secret that needs to be provided to the MFA generator, simply click on Show secret key.
-![mfa-show-secret.png](img/2025/05/mfa-show-secret.png).
+![mfa-show-secret.png](/img/2025/05/mfa-show-secret.png).
 
 Sometimes a provider will require some additional configs. For example, a longer token ( longer than 6 digits ) or a longer time ( default is 30 seconds ) or a different encoding scheme ( default from the RFC is SHA1 ).
 
