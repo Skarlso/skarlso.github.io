@@ -47,16 +47,16 @@ Here is an example:
 
 You have an index.yaml file like this:
 
-```markdown
+~~~markdown
 # Adventure Voter Story Index
 # This file defines the starting point for the adventure.
 # The story graph is automatically built by scanning the markdown files in the chapters directory.
 
 start: intro
-```
+~~~
 
 And your first story yaml like this:
-```markdown
+~~~markdown
 ---
 id: intro
 type: story
@@ -70,10 +70,10 @@ Welcome to this interactive journey through deploying Kubernetes from scratch. W
 This is based on Kelsey Hightower's famous guide, but with a twist: you'll vote on the decisions we make along the way. Some paths lead to success, others to spectacular failures.
 
 Let's see if the crowd can configure Kubernetes correctly!
-```
+~~~
 
 This is a decision:
-```markdown
+~~~markdown
 ---
 id: etcd-choice
 type: decision
@@ -95,7 +95,7 @@ choices:
 
 With certificates ready, we need to set up etcd, Kubernetes' distributed key-value store. How should we configure it?
 
-```
+~~~
 
 This is a dead end:
 ~~~markdown
@@ -126,7 +126,7 @@ This is why Kelsey recommends cfssl. You've learned the hard way why certificate
 ~~~
 
 And this is the end of the story:
-~~~yaml
+~~~markdown
 ---
 id: final-success
 type: terminal
