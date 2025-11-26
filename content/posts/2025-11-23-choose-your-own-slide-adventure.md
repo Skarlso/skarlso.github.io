@@ -3,7 +3,7 @@ author = "hannibal"
 categories = ["go", "adventure-voter"]
 date = "2025-11-23T01:01:00+01:00"
 title = "Choose your own slide adventure"
-url = "/2025/11/23/choose-your-own-slide-adventure
+url = "/2025/11/23/choose-your-own-slide-adventure"
 comments = true
 +++
 
