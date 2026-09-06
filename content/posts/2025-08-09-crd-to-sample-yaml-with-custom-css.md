@@ -24,6 +24,5 @@ Enjoy!
 Thanks for reading,
 Gergely.
 
-
 [^1]: https://github.com/Skarlso/crd-to-sample-yaml
 [^2]: https://github.com/Skarlso/crd-to-sample-yaml?tab=readme-ov-file#custom-css
